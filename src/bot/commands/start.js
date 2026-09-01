@@ -1,5 +1,7 @@
 import { deleteUserMessage, replyWithAutoDelete } from '../utils.js';
 
+let lastGroupStartMsgId = null;
+
 export const startHandler = async (ctx) => {
   const isPrivate = ctx.chat?.type === 'private';
   const username = ctx.from?.first_name || ctx.from?.username || 'Пользователь';
@@ -8,9 +10,17 @@ export const startHandler = async (ctx) => {
   if (!isPrivate) {
     await deleteUserMessage(ctx);
     
+    // Удаляем предыдущее сообщение от бота, чтобы не спамить
+    if (lastGroupStartMsgId) {
+      try {
+        await ctx.telegram.deleteMessage(ctx.chat.id, lastGroupStartMsgId);
+      } catch (e) {}
+    }
+
+    let msg;
     // Если пользователь уже зарегистрирован
     if (ctx.state.user && ctx.state.user.status === 'approved') {
-      return ctx.reply(
+      msg = await ctx.reply(
         `👋 Привет, ${username}! Вы зарегистрированы как <b>${ctx.state.user.callsign}</b>.\n\n` +
         `<b>Доступные команды в группе:</b>\n` +
         `🔸 <code>/stats</code> — Ваша статистика\n` +
@@ -24,23 +34,35 @@ export const startHandler = async (ctx) => {
           }
         }
       );
-    }
-    
-    // Для новых пользователей в группе
-    return ctx.reply(
-      `👋 Привет, ${username}!\n\n` +
-      `📻 <b>Бот RU-POTA</b> — ваш помощник для работы с кластером POTA.\n\n` +
-      `<b>Доступные команды:</b>\n` +
-      `🔸 <code>/stats [ПОЗЫВНОЙ]</code> — Статистика радиолюбителя\n` +
-      `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n\n` +
-      `Чтобы подписываться на споты нужного вам активатора либо самому отправлять споты, пройдите в личные сообщения 👇`, 
-      {
-        parse_mode: 'HTML',
-        reply_markup: {
-          inline_keyboard: [[{ text: '👉 Открыть личные сообщения 👈', url: `https://t.me/${ctx.botInfo.username}` }]]
+    } else {
+      // Для новых пользователей в группе
+      msg = await ctx.reply(
+        `👋 Привет, ${username}!\n\n` +
+        `📻 <b>Бот RU-POTA</b> — ваш помощник для работы с кластером POTA.\n\n` +
+        `<b>Доступные команды:</b>\n` +
+        `🔸 <code>/stats [ПОЗЫВНОЙ]</code> — Статистика радиолюбителя\n` +
+        `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n\n` +
+        `Чтобы подписываться на споты нужного вам активатора либо самому отправлять споты, пройдите в личные сообщения 👇`, 
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [[{ text: '👉 Открыть личные сообщения 👈', url: `https://t.me/${ctx.botInfo.username}` }]]
+          }
         }
-      }
-    );
+      );
+    }
+
+    lastGroupStartMsgId = msg.message_id;
+
+    // Авто-удаление сообщения через 2 минуты
+    setTimeout(async () => {
+      try {
+        await ctx.telegram.deleteMessage(ctx.chat.id, msg.message_id);
+        if (lastGroupStartMsgId === msg.message_id) lastGroupStartMsgId = null;
+      } catch (e) {}
+    }, 2 * 60 * 1000);
+
+    return;
   }
 
   // Define main menu keyboard

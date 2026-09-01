@@ -37,26 +37,49 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS subscriptions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     telegram_id INTEGER NOT NULL,
-    target_callsign TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'callsign',
+    target TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(telegram_id, target_callsign)
+    UNIQUE(telegram_id, type, target)
   );
 `);
 
 // Migration for existing tables
 try {
-  const columns = db.pragma('table_info(users)');
+  const userColumns = db.pragma('table_info(users)');
   
-  const hasStatus = columns.some(col => col.name === 'status');
+  const hasStatus = userColumns.some(col => col.name === 'status');
   if (!hasStatus) {
     db.exec(`ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'approved'`);
     console.log('[DB] Migrated users table: added status column');
   }
 
-  const hasRejectReason = columns.some(col => col.name === 'reject_reason');
+  const hasRejectReason = userColumns.some(col => col.name === 'reject_reason');
   if (!hasRejectReason) {
     db.exec(`ALTER TABLE users ADD COLUMN reject_reason TEXT`);
     console.log('[DB] Migrated users table: added reject_reason column');
+  }
+
+  const subColumns = db.pragma('table_info(subscriptions)');
+  const hasTargetCallsign = subColumns.some(col => col.name === 'target_callsign');
+  const hasType = subColumns.some(col => col.name === 'type');
+
+  if (hasTargetCallsign && !hasType) {
+    db.exec(`
+      CREATE TABLE subscriptions_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        telegram_id INTEGER NOT NULL,
+        type TEXT NOT NULL DEFAULT 'callsign',
+        target TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(telegram_id, type, target)
+      );
+      INSERT INTO subscriptions_new (id, telegram_id, type, target, created_at)
+      SELECT id, telegram_id, 'callsign', target_callsign, created_at FROM subscriptions;
+      DROP TABLE subscriptions;
+      ALTER TABLE subscriptions_new RENAME TO subscriptions;
+    `);
+    console.log('[DB] Migrated subscriptions table: added type and target columns');
   }
 } catch (e) {
   console.error('[DB] Migration error:', e.message);

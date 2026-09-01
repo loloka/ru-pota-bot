@@ -8,14 +8,15 @@ import { rateLimit } from './middlewares/rateLimit.js';
 // Import command handlers
 import { callsignHandler } from './commands/callsign.js';
 import { statsHandler } from './commands/stats.js';
-import { subHandler, getSubsKeyboard } from './commands/sub.js';
-import { banHandler, muteHandler } from './commands/mod.js';
+import { subHandler, getSubsKeyboard, getDeleteSubsKeyboard } from './commands/sub.js';
+import { banHandler, muteHandler, kickHandler } from './commands/mod.js';
 
 // Import scenes
 import { spotWizard } from './scenes/spotWizard.js';
 import { callsignWizard } from './scenes/callsignWizard.js';
 import { parkWizard } from './scenes/parkWizard.js';
 import { editSpotWizard } from './scenes/editSpotWizard.js';
+import { subWizard } from './scenes/subWizard.js';
 
 // Import background worker
 import { startClusterWorker } from '../services/clusterWorker.js';
@@ -41,7 +42,7 @@ bot.use(deleteSystemMessages);
 bot.use(requireRegistration);
 
 // Configure scenes and sessions
-const stage = new Scenes.Stage([spotWizard, callsignWizard, parkWizard, editSpotWizard]);
+const stage = new Scenes.Stage([spotWizard, callsignWizard, parkWizard, editSpotWizard, subWizard]);
 bot.use(session());
 bot.use(rateLimit({ window: 5000, limit: 4 }));
 bot.use(stage.middleware());
@@ -59,6 +60,21 @@ bot.start(startHandler);
 
 // Interactive actions
 bot.action('start_callsign', (ctx) => ctx.scene.enter('CALLSIGN_WIZARD'));
+bot.action('sub_add_callsign', (ctx) => ctx.scene.enter('SUB_WIZARD', { subType: 'callsign' }));
+bot.action('sub_add_park', (ctx) => ctx.scene.enter('SUB_WIZARD', { subType: 'park' }));
+
+bot.action('sub_delete_menu', async (ctx) => {
+  await ctx.answerCbQuery();
+  const { text, reply_markup } = getDeleteSubsKeyboard(ctx.from.id);
+  await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
+});
+
+bot.action('sub_action_back', async (ctx) => {
+  await ctx.answerCbQuery();
+  const { text, reply_markup } = getSubsKeyboard(ctx.from.id);
+  await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
+});
+
 bot.action(/^delete_msg:(\d+)$/, async (ctx) => {
   const allowedUserId = parseInt(ctx.match[1], 10);
   const clickerId = ctx.from?.id;
@@ -75,16 +91,17 @@ bot.action(/^delete_msg:(\d+)$/, async (ctx) => {
   }
 });
 
-bot.action(/^delsub:(.+)$/, async (ctx) => {
-  const targetCallsign = ctx.match[1];
+bot.action(/^delsub:(callsign|park):(.+)$/, async (ctx) => {
+  const type = ctx.match[1];
+  const target = ctx.match[2];
   const userId = ctx.from.id;
   
   try {
     const db = (await import('../db/database.js')).default;
-    db.prepare('DELETE FROM subscriptions WHERE telegram_id = ? AND target_callsign = ?').run(userId, targetCallsign);
-    await ctx.answerCbQuery(`Отписались от ${targetCallsign}`);
+    db.prepare('DELETE FROM subscriptions WHERE telegram_id = ? AND type = ? AND target = ?').run(userId, type, target);
+    await ctx.answerCbQuery(`Удалена подписка: ${target}`);
     
-    const { text, reply_markup } = getSubsKeyboard(userId);
+    const { text, reply_markup } = getDeleteSubsKeyboard(userId);
     await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
   } catch (e) {
     console.error('Error deleting sub from inline button:', e);
@@ -210,7 +227,7 @@ bot.on('new_chat_members', async (ctx) => {
   if (newMembers.length === 0) return;
 
   const names = newMembers.map(m => m.first_name).join(', ');
-  const text = `👋 Добро пожаловать, ${names}! Рады видеть вас в сообществе RU-POTA 🌲\n\n🤖 Для отправки спотов и просмотра статистики перейдите в личные сообщения: @${ctx.botInfo.username}`;
+  const text = `👋 Добро пожаловать, ${names}! Рады видеть вас в сообществе RU-POTA 🌲\n\n🤖 Для отправки спотов и подписки на нужного корреспондента можете перейти в личные сообщения: @${ctx.botInfo.username} либо нажмите /start`;
 
   if (lastWelcomeMsgId) {
     try {
@@ -242,6 +259,7 @@ bot.command('start', startHandler);
 bot.command('stats', statsHandler);
 bot.command('sub', subHandler);
 bot.command('ban', banHandler);
+bot.command('kick', kickHandler);
 bot.command('mute', muteHandler);
 
 bot.command('park', (ctx) => {
@@ -349,6 +367,7 @@ bot.hears('📡 Управление спотами', async (ctx) => {
 
 bot.hears('📊 Моя статистика', (ctx) => { ctx.message.text='/stats'; return import('./commands/stats.js').then(m=>m.statsHandler(ctx)); });
 bot.hears('🏞 Инфо по парку', (ctx) => { ctx.message.text='/park'; return ctx.scene.enter('PARK_WIZARD'); });
+bot.hears('🔔 Мои подписки', (ctx) => { ctx.message.text='/sub'; return import('./commands/sub.js').then(m=>m.subHandler(ctx)); });
 
 // Handle lingering wizard buttons if pressed out of context
 bot.hears(['СЕЙЧАС НА СВЯЗИ', 'ПЛАНИРУЮ'], (ctx) => {

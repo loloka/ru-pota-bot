@@ -10,7 +10,7 @@ const ALLOWED_PREFIXES = (process.env.ALLOWED_PREFIXES || 'RU-,BY-,KZ-').split('
 export const startClusterWorker = (telegramClient) => {
   console.log(`[Cluster Worker] Started. Polling every ${POLL_INTERVAL_MS}ms. Prefix filter: ${ALLOWED_PREFIXES.join(', ')}`);
 
-  setInterval(async () => {
+  const pollCluster = async () => {
     try {
       const spots = await potaApi.getSpots();
       if (!Array.isArray(spots)) return;
@@ -21,8 +21,7 @@ export const startClusterWorker = (telegramClient) => {
         const isAllowed = ALLOWED_PREFIXES.some(prefix => ref.startsWith(prefix));
         if (!isAllowed) continue;
 
-        // 2. Deduplication Check
-        // spotId is a unique identifier from the POTA API
+        // 2. Deduplication Check by spotId
         if (!spot.spotId) continue; 
         
         const checkStmt = db.prepare('SELECT id FROM spots WHERE spot_id = ?');
@@ -30,12 +29,13 @@ export const startClusterWorker = (telegramClient) => {
           continue; // Already processed this spot
         }
 
+
         // 3. Save to DB to prevent duplicate processing
         const insertStmt = db.prepare(`
           INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source)
           VALUES (?, ?, ?, ?, ?, ?, 'cluster')
         `);
-        insertStmt.run(spot.spotId, spot.activator, ref, spot.frequency || '', spot.mode || '', spot.comments || '',);
+        insertStmt.run(spot.spotId, spot.activator, ref, spot.frequency || '', spot.mode || '', spot.comments || '');
 
         // 4. Format and Broadcast to Activity Channel
         const actLink = `<a href="https://next.pota.app/profile/${spot.activator}">${spot.activator}</a>`;
@@ -62,20 +62,40 @@ export const startClusterWorker = (telegramClient) => {
           console.error('[Cluster Worker] Failed to send spot to channel:', e.message);
         }
         
-        // 5. Notify Subscribed Users
-        const subsStmt = db.prepare('SELECT telegram_id FROM subscriptions WHERE target_callsign = ?');
-        const subscribers = subsStmt.all((spot.activator || '').toUpperCase());
-        
-        for (const sub of subscribers) {
+        // 5. Notify Subscribed Users (Callsigns and Parks)
+        const activator = (spot.activator || '').toUpperCase();
+        const callsignSubscribers = db.prepare('SELECT telegram_id FROM subscriptions WHERE type = ? AND target = ?').all('callsign', activator);
+        const parkSubscribers = db.prepare('SELECT telegram_id FROM subscriptions WHERE type = ? AND target = ?').all('park', ref.toUpperCase());
+
+        // Merge subscribers and track the reasons for notification
+        const notificationsMap = new Map();
+
+        for (const sub of callsignSubscribers) {
+          notificationsMap.set(sub.telegram_id, `🚨 <b>Ваш друг ${spot.activator} сейчас в эфире!</b>\n\n${msg}`);
+        }
+
+        for (const sub of parkSubscribers) {
+          if (!notificationsMap.has(sub.telegram_id)) {
+            notificationsMap.set(sub.telegram_id, `🏞 <b>Новая активность в отслеживаемом парке ${ref}!</b>\n\n${msg}`);
+          }
+        }
+
+        for (const [userId, userMsg] of notificationsMap.entries()) {
           try {
-            await telegramClient.sendMessage(sub.telegram_id, `🔔 <b>Уведомление о подписке!</b>\n\n${msg}`, { parse_mode: 'HTML', disable_web_page_preview: true });
+            await telegramClient.sendMessage(userId, userMsg, { parse_mode: 'HTML', disable_web_page_preview: true });
           } catch (e) {
-            console.error(`[Cluster Worker] Failed to notify subscriber ${sub.telegram_id}:`, e.message);
+            console.error(`[Cluster Worker] Failed to notify subscriber ${userId}:`, e.message);
           }
         }
       }
     } catch (error) {
       console.error('[Cluster Worker] Error during poll cycle:', error.message);
     }
-  }, POLL_INTERVAL_MS);
+  };
+
+  // Run immediately on start
+  pollCluster();
+  
+  // Then schedule loop
+  setInterval(pollCluster, POLL_INTERVAL_MS);
 };

@@ -1,6 +1,7 @@
 import { Telegraf, Scenes, session } from 'telegraf';
 import dotenv from 'dotenv';
 import { SocksProxyAgent } from 'socks-proxy-agent';
+import https from 'https';
 
 // Import middlewares
 import { chatFilter, requireRegistration, deleteSystemMessages } from './middlewares/chatFilter.js';
@@ -37,7 +38,10 @@ const telegrafOptions = {};
 
 // 1. HTTP Proxy via apiRoot (Cloudflare Worker)
 if (process.env.TG_API_ROOT) {
-  telegrafOptions.telegram = { apiRoot: process.env.TG_API_ROOT };
+  telegrafOptions.telegram = { 
+    apiRoot: process.env.TG_API_ROOT,
+    agent: new https.Agent({ keepAlive: true }) // Reuse TCP connection to bypass provider SYN throttling!
+  };
 } 
 // 2. SOCKS5 Proxy (VLESS / Tor)
 else if (process.env.TG_PROXY) {

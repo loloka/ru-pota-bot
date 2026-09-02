@@ -34,7 +34,11 @@ if (!BOT_TOKEN) {
   process.exit(1);
 }
 
-const bot = new Telegraf(BOT_TOKEN);
+const bot = new Telegraf(process.env.BOT_TOKEN, {
+  telegram: {
+    apiRoot: process.env.TG_API_ROOT || 'https://api.telegram.org'
+  }
+});
 
 // Global middlewares BEFORE scenes
 bot.use(chatFilter);

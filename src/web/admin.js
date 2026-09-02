@@ -133,7 +133,7 @@ export const startAdminServer = (telegramClient) => {
     }
 
     try {
-      await telegramClient.sendMessage(targetId, message);
+      await telegramClient.sendMessage(targetId, message, { parse_mode: 'HTML' });
       console.log(`[Broadcast] Admin sent message to ${target} (${targetId})`);
       res.redirect('/');
     } catch (err) {

@@ -31,8 +31,17 @@ export const parkWizard = new Scenes.WizardScene(
     };
 
     if (ref === '/CANCEL') {
-      await ctx.reply('🚫 Поиск парка отменен.', { reply_markup: { remove_keyboard: true } });
+      await ctx.reply('🚫 Действие отменено.', { reply_markup: { remove_keyboard: true } });
       return ctx.scene.leave();
+    }
+    
+    if (ref.startsWith('/') || ctx.message.text.includes('Регистрация') || ctx.message.text.includes('Подписки') || ctx.message.text.includes('Инфо')) {
+      await ctx.scene.leave();
+      // We don't reply, just leave the scene so they can use the menu normally or we let the global handlers pick it up.
+      // To ensure the global handler processes this command, we can re-emit it, but for simplicity, 
+      // we'll just ask them to click again.
+      await ctx.reply('🚫 Ввод отменен. Пожалуйста, повторите вашу команду.');
+      return;
     }
 
     if (!/^[A-Z0-9]{1,4}-\d{4}$/.test(ref)) {

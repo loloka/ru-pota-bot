@@ -7,7 +7,7 @@ const BASE_URL = process.env.POTA_API_BASE_URL || 'https://api.pota.app';
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 25000,
   headers: {
     'User-Agent': 'RU-POTA-Bot/1.0 (Telegram Bot; Node.js)'
   }

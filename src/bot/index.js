@@ -412,8 +412,18 @@ const helpText = `📚 *Справка по боту RU-POTA*
 🛠 *Бот работает в режиме бета-тестирования.*
 По всем вопросам, багам и предложениям пишите: @r9ogl`;
 
-bot.command('help', (ctx) => ctx.reply(helpText, { parse_mode: 'Markdown' }));
-bot.hears('❓ Справка', (ctx) => ctx.reply(helpText, { parse_mode: 'Markdown' }));
+const helpHandler = async (ctx) => {
+  if (ctx.chat?.type !== 'private') {
+    const { deleteUserMessage, replyWithAutoDelete } = await import('./utils.js');
+    await deleteUserMessage(ctx);
+    await replyWithAutoDelete(ctx, helpText, { parse_mode: 'Markdown' });
+  } else {
+    await ctx.reply(helpText, { parse_mode: 'Markdown' });
+  }
+};
+
+bot.command('help', helpHandler);
+bot.hears('❓ Справка', helpHandler);
 
 // Handle keyboard buttons if pressed out of context
 bot.hears(['СЕЙЧАС НА СВЯЗИ', 'ПЛАНИРУЮ'], (ctx) => {

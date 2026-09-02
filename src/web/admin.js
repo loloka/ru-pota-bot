@@ -132,6 +132,17 @@ export const startAdminServer = (telegramClient) => {
       return res.status(400).send('Ошибка: ID целевого чата не задан в конфигурации (.env)');
     }
 
+    // Нормализация ID (как в clusterWorker.js), если юзер забыл -100
+    if (!targetId.toString().startsWith('-100') && !targetId.toString().startsWith('@') && /^[0-9-]+$/.test(targetId)) {
+      if (targetId.toString().startsWith('-')) {
+        targetId = '-100' + targetId.toString().substring(1);
+      } else {
+        targetId = '-100' + targetId;
+      }
+    } else if (targetId.toString().includes('t.me/')) {
+      targetId = '@' + targetId.toString().split('t.me/')[1].replace('/', '');
+    }
+
     try {
       await telegramClient.sendMessage(targetId, message, { parse_mode: 'HTML' });
       console.log(`[Broadcast] Admin sent message to ${target} (${targetId})`);

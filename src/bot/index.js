@@ -57,7 +57,7 @@ bot.use(deleteSystemMessages);
 bot.use(requireRegistration);
 
 // Configure scenes and sessions
-const stage = new Scenes.Stage([spotWizard, callsignWizard, parkWizard, editSpotWizard, subWizard]);
+const stage = new Scenes.Stage([spotWizard, callsignWizard, parkWizard, editSpotWizard, subWizard, statsWizard]);
 bot.use(session());
 bot.use(rateLimit({ window: 5000, limit: 4 }));
 bot.action(/^admin_appr:(\d+)$/, async (ctx) => {

@@ -87,7 +87,8 @@ export const startHandler = async (ctx) => {
         `🔸 <code>/spot</code> (или кнопка) — Управление спотами\n` +
         `🔸 <code>/stats</code> — Ваша статистика (чужая: <code>/stats ПОЗЫВНОЙ</code>)\n` +
         `🔸 <code>/sub</code> — Подписка на споты (друга/активатора)\n` +
-        `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n\n` +
+        `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n` +
+        `🔸 <code>/help</code> — Полная справка\n\n` +
         `Используйте меню ниже для быстрой работы:`,
         { parse_mode: 'HTML', reply_markup: mainMenu }
       );
@@ -126,7 +127,8 @@ export const startHandler = async (ctx) => {
     `🔸 <code>/stats [ПОЗЫВНОЙ]</code> — Статистика радиолюбителя\n` +
     `🔸 <code>/sub</code> — Подписка на споты (друга/активатора)\n` +
     `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n` +
-    `🔸 <code>/callsign</code> — Зарегистрировать позывной\n\n` +
+    `🔸 <code>/callsign</code> — Зарегистрировать позывной\n` +
+    `🔸 <code>/help</code> — Полная справка\n\n` +
     `Чтобы получить доступ к <b>отправке спотов</b>, необходимо зарегистрировать свой радиолюбительский позывной.`,
     {
       parse_mode: 'HTML',

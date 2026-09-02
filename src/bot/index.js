@@ -319,7 +319,7 @@ bot.action('spot_action_delete', async (ctx) => {
   const user = db.prepare('SELECT last_spot_msg_id FROM users WHERE telegram_id = ?').get(ctx.from.id);
   
   if (user && user.last_spot_msg_id) {
-    let channelId = ACTIVITY_CHANNEL_ID;
+    let channelId = process.env.ACTIVITY_CHANNEL_ID;
     if (channelId && !channelId.startsWith('-100') && !channelId.startsWith('@') && /^[0-9-]+$/.test(channelId)) {
       channelId = channelId.startsWith('-') ? `-100${channelId.substring(1)}` : `-100${channelId}`;
     } else if (channelId && channelId.includes('t.me/')) {

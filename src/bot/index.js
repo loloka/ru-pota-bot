@@ -416,8 +416,13 @@ console.log(`
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);
 
-// Start the bot without blocking
-bot.launch().then(() => {
+// Launch bot
+bot.launch({
+  drop_pending_updates: true,
+  polling: {
+    timeout: 20 // Set to 20 seconds to prevent Cloudflare Worker 30s limit kills
+  }
+}).then(() => {
   console.log('\x1b[32m[Telegram Bot]\x1b[0m ✅ Бот успешно подключен к Telegram и принимает команды!');
 }).catch(err => {
   console.error('\x1b[31m[Telegram Bot]\x1b[0m ❌ Ошибка запуска бота:', err.message);

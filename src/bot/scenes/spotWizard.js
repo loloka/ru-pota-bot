@@ -56,12 +56,12 @@ export const spotWizard = new Scenes.WizardScene(
     if (status === 'ПЛАНИРУЮ') {
       await ctx.reply('📅 Введите дату и примерное время в UTC\n\n<i>(Например: 02.09 ~12:00 или точно 12:00-14:00)</i>:', {
         parse_mode: 'HTML',
-        reply_markup: { remove_keyboard: true }
+        /* removed */
       });
     } else {
       await ctx.reply('⏳ До какого времени вы планируете работать в UTC?\n\n<i>(Можно просто написать 17:00, бот сам добавит "до". Либо отправьте "-", чтобы пропустить этот шаг)</i>', {
         parse_mode: 'HTML',
-        reply_markup: { remove_keyboard: true }
+        /* removed */
       });
     }
     return ctx.wizard.next();
@@ -134,7 +134,7 @@ export const spotWizard = new Scenes.WizardScene(
     if (!ctx.message?.text) return;
     ctx.wizard.state.spot.mode = ctx.message.text.toUpperCase();
     await ctx.reply('⚡ Введите мощность (например, 100W или 5W QRP):', {
-      reply_markup: { remove_keyboard: true }
+      /* removed */
     });
     return ctx.wizard.next();
   },
@@ -223,7 +223,7 @@ export const spotWizard = new Scenes.WizardScene(
 
     try {
       const msg = await ctx.telegram.sendMessage(channelId, formattedSpot, { parse_mode: 'HTML', disable_web_page_preview: true });
-      await ctx.reply('✅ Спот успешно опубликован в канале активности!', { reply_markup: { remove_keyboard: true } });
+      await ctx.reply('✅ Спот успешно опубликован в канале активности!');
       
       // Save spot to DB for editing later
       s.baseComment = baseComment;
@@ -310,6 +310,6 @@ export const spotWizard = new Scenes.WizardScene(
 );
 
 spotWizard.command('cancel', async (ctx) => {
-  await ctx.reply('🚫 Оформление спота отменено. Для начала работы нажмите /start', { reply_markup: { remove_keyboard: true } });
+  await ctx.reply('🚫 Оформление спота отменено. Для начала работы нажмите /start');
   return ctx.scene.leave();
 });

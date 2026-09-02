@@ -55,7 +55,7 @@ export const callsignWizard = new Scenes.WizardScene(
     }
     await ctx.reply('📡 Пожалуйста, введите ваш радиолюбительский позывной:\n\n<i>Для отмены введите /cancel</i>', {
       parse_mode: 'HTML',
-      reply_markup: { remove_keyboard: true }
+      /* removed */
     });
     return ctx.wizard.next();
   },
@@ -133,6 +133,6 @@ export const callsignWizard = new Scenes.WizardScene(
 );
 
 callsignWizard.command('cancel', async (ctx) => {
-  await ctx.reply('🚫 Регистрация отменена. Для начала работы нажмите /start', { reply_markup: { remove_keyboard: true } });
+  await ctx.reply('🚫 Регистрация отменена. Для начала работы нажмите /start');
   return ctx.scene.leave();
 });

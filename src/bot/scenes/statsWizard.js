@@ -20,7 +20,7 @@ export const statsWizard = new Scenes.WizardScene(
     const callsign = ctx.message.text.toUpperCase().trim();
 
     if (callsign === '/CANCEL') {
-      await ctx.reply('🚫 Поиск отменен.', { reply_markup: { remove_keyboard: true } });
+      await ctx.reply('🚫 Поиск отменен.');
       return ctx.scene.leave();
     }
     
@@ -39,6 +39,6 @@ export const statsWizard = new Scenes.WizardScene(
 );
 
 statsWizard.command('cancel', async (ctx) => {
-  await ctx.reply('🚫 Поиск позывного отменен.', { reply_markup: { remove_keyboard: true } });
+  await ctx.reply('🚫 Поиск позывного отменен.');
   return ctx.scene.leave();
 });

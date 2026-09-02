@@ -31,7 +31,7 @@ export const parkWizard = new Scenes.WizardScene(
     };
 
     if (ref === '/CANCEL') {
-      await ctx.reply('🚫 Действие отменено.', { reply_markup: { remove_keyboard: true } });
+      await ctx.reply('🚫 Действие отменено.');
       return ctx.scene.leave();
     }
     
@@ -143,6 +143,6 @@ export const parkWizard = new Scenes.WizardScene(
 );
 
 parkWizard.command('cancel', async (ctx) => {
-  await ctx.reply('🚫 Поиск парка отменен.', { reply_markup: { remove_keyboard: true } });
+  await ctx.reply('🚫 Поиск парка отменен.');
   return ctx.scene.leave();
 });

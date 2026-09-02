@@ -390,7 +390,28 @@ bot.hears('🏞 Инфо по парку', (ctx) => { ctx.message.text='/park'; 
 bot.hears('🔔 Мои подписки', (ctx) => { ctx.message.text='/sub'; return import('./commands/sub.js').then(m=>m.subHandler(ctx)); });
 bot.hears('📝 Регистрация', (ctx) => { ctx.message.text='/callsign'; return ctx.scene.enter('CALLSIGN_WIZARD'); });
 
-// Handle lingering wizard buttons if pressed out of context
+// Help handlers
+const helpText = `📚 *Справка по боту RU-POTA*
+
+*Основные команды:*
+/start — Главное меню и клавиатура
+/spot — Отправить спот в кластер (только для одобренных)
+/stats [позывной] — Посмотреть статистику (свою или чужую)
+/park [референция] — Узнать информацию о парке (например, RU-0065)
+/sub — Настроить подписки на других активаторов
+
+*Как отправить спот?*
+1. Пройдите регистрацию (кнопка в меню).
+2. Дождитесь одобрения администратора.
+3. Нажмите "Управление спотами" или введите /spot.
+
+*Ошибки и зависания?*
+Если бот не отвечает, попробуйте отправить /cancel или /start.`;
+
+bot.command('help', (ctx) => ctx.reply(helpText, { parse_mode: 'Markdown' }));
+bot.hears('❓ Справка', (ctx) => ctx.reply(helpText, { parse_mode: 'Markdown' }));
+
+// Handle keyboard buttons if pressed out of context
 bot.hears(['СЕЙЧАС НА СВЯЗИ', 'ПЛАНИРУЮ'], (ctx) => {
   return ctx.reply('⚠️ Пожалуйста, начните создание спота заново с помощью команды /spot');
 });

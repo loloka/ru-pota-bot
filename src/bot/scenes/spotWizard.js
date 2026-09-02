@@ -2,7 +2,7 @@ import { Scenes } from 'telegraf';
 import dotenv from 'dotenv';
 import db from '../../db/database.js';
 import { potaApi } from '../../api/potaApi.js';
-import { deleteUserMessage, replyWithAutoDelete } from '../utils.js';
+import { deleteUserMessage, replyWithAutoDelete, getMainMenu } from '../utils.js';
 import axios from 'axios';
 dotenv.config();
 
@@ -223,7 +223,7 @@ export const spotWizard = new Scenes.WizardScene(
 
     try {
       const msg = await ctx.telegram.sendMessage(channelId, formattedSpot, { parse_mode: 'HTML', disable_web_page_preview: true });
-      await ctx.reply('✅ Спот успешно опубликован в канале активности!');
+      await ctx.reply('✅ Спот успешно опубликован в канале активности!', { reply_markup: getMainMenu(ctx) });
       
       // Save spot to DB for editing later
       s.baseComment = baseComment;
@@ -302,7 +302,7 @@ export const spotWizard = new Scenes.WizardScene(
       
     } catch (err) {
       console.error('Failed to send spot to channel', err.message);
-      await ctx.reply(`❌ Ошибка при публикации спота: ${err.message}`);
+      await ctx.reply(`❌ Ошибка при публикации спота: ${err.message}`, { reply_markup: getMainMenu(ctx) });
     }
     
     return ctx.scene.leave();
@@ -310,6 +310,6 @@ export const spotWizard = new Scenes.WizardScene(
 );
 
 spotWizard.command('cancel', async (ctx) => {
-  await ctx.reply('🚫 Оформление спота отменено. Для начала работы нажмите /start');
+  await ctx.reply('🚫 Оформление спота отменено.', { reply_markup: getMainMenu(ctx) });
   return ctx.scene.leave();
 });

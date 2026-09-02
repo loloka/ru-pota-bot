@@ -23,3 +23,24 @@ export const replyWithAutoDelete = async (ctx, text, options = {}, delayMs = 700
     console.error('Failed to reply:', e);
   }
 };
+
+export const getMainMenu = (ctx) => {
+  if (ctx.state.user && ctx.state.user.status === 'approved') {
+    return {
+      keyboard: [
+        [{ text: '📡 Управление спотами' }, { text: '📊 Моя статистика' }],
+        [{ text: '🏞 Инфо по парку' }, { text: '🔍 Поиск позывного' }],
+        [{ text: '🔔 Мои подписки' }, { text: '❓ Справка' }]
+      ],
+      resize_keyboard: true
+    };
+  }
+  return {
+    keyboard: [
+      [{ text: '📝 Регистрация' }, { text: '🔔 Мои подписки' }],
+      [{ text: '📊 Моя статистика' }, { text: '🏞 Инфо по парку' }],
+      [{ text: '🔍 Поиск позывного' }, { text: '❓ Справка' }]
+    ],
+    resize_keyboard: true
+  };
+};

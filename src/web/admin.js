@@ -26,6 +26,12 @@ export const startAdminServer = (telegramClient) => {
       attempt.count = 0; // Reset after 15m
     }
 
+    // Если заголовка авторизации еще нет — браузер только открывает окно логина (challenge)
+    if (!req.headers.authorization) {
+      res.set('WWW-Authenticate', 'Basic realm="Admin Panel"');
+      return res.status(401).send('Требуется авторизация.');
+    }
+
     const adminPassword = process.env.ADMIN_PASSWORD || 'qwerty12345';
     const b64auth = (req.headers.authorization || '').split(' ')[1] || '';
     const [login, password] = Buffer.from(b64auth, 'base64').toString().split(':');
@@ -35,6 +41,7 @@ export const startAdminServer = (telegramClient) => {
       return next();
     }
     
+    // Неудачная попытка только если пользователь реально отправил логин/пароль и ошибся
     attempt.count += 1;
     attempt.lastTry = now;
     failedAttempts.set(ip, attempt);

@@ -406,7 +406,10 @@ const helpText = `📚 *Справка по боту RU-POTA*
 3. Нажмите "Управление спотами" или введите /spot.
 
 *Ошибки и зависания?*
-Если бот не отвечает, попробуйте отправить /cancel или /start.`;
+Если бот не отвечает, попробуйте отправить /cancel или /start.
+
+🛠 *Бот работает в режиме бета-тестирования.*
+По всем вопросам, багам и предложениям пишите: @r9ogl`;
 
 bot.command('help', (ctx) => ctx.reply(helpText, { parse_mode: 'Markdown' }));
 bot.hears('❓ Справка', (ctx) => ctx.reply(helpText, { parse_mode: 'Markdown' }));

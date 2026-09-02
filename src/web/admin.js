@@ -43,6 +43,9 @@ export const startAdminServer = (telegramClient) => {
         .btn-reject { background: #f44336; }
         .btn-delete { background: #9e9e9e; }
         .actions { margin-top: 10px; }
+        .broadcast-form { background: white; padding: 15px; margin-bottom: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 5px solid #2196F3; }
+        .broadcast-form textarea { width: 100%; height: 80px; margin-top: 10px; margin-bottom: 10px; font-family: inherit; padding: 8px; box-sizing: border-box; resize: vertical; }
+        .broadcast-form select { padding: 8px; margin-top: 10px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
       </style>
     </head>
     <body>
@@ -85,6 +88,21 @@ export const startAdminServer = (telegramClient) => {
 
     let html = '';
     
+    html += `
+      <div class="broadcast-form">
+        <h2>📢 Рассылка от имени бота</h2>
+        <form method="POST" action="/broadcast">
+          <label for="target">Куда отправить:</label>
+          <select name="target" id="target">
+            <option value="group">Основная группа (MAIN_CHAT_ID)</option>
+            <option value="channel">Канал активности (ACTIVITY_CHANNEL_ID)</option>
+          </select>
+          <textarea name="message" placeholder="Введите текст сообщения..." required></textarea>
+          <button type="submit" class="btn btn-approve">Отправить сообщение</button>
+        </form>
+      </div>
+    `;
+
     html += `<h2>Заявки на модерацию (${pending.length})</h2>`;
     if (pending.length === 0) html += '<p>Нет новых заявок.</p>';
     else html += pending.map(generateUserCard).join('');
@@ -97,6 +115,31 @@ export const startAdminServer = (telegramClient) => {
     if (rejected.length > 0) html += rejected.map(generateUserCard).join('');
 
     res.send(renderHTML(html));
+  });
+
+  // Broadcast route
+  app.post('/broadcast', async (req, res) => {
+    const { target, message } = req.body;
+    
+    let targetId;
+    if (target === 'group') {
+      targetId = process.env.MAIN_CHAT_ID;
+    } else if (target === 'channel') {
+      targetId = process.env.ACTIVITY_CHANNEL_ID;
+    }
+
+    if (!targetId) {
+      return res.status(400).send('Ошибка: ID целевого чата не задан в конфигурации (.env)');
+    }
+
+    try {
+      await telegramClient.sendMessage(targetId, message);
+      console.log(`[Broadcast] Admin sent message to ${target} (${targetId})`);
+      res.redirect('/');
+    } catch (err) {
+      console.error('[Broadcast] Error sending message:', err);
+      res.status(500).send(`Ошибка отправки сообщения: ${err.message}`);
+    }
   });
 
   // Approve route

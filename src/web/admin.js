@@ -9,15 +9,36 @@ export const startAdminServer = (telegramClient) => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Basic HTTP Authentication
+  const failedAttempts = new Map();
+
+  // Basic HTTP Authentication with Rate Limiting
   app.use((req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    const attempt = failedAttempts.get(ip) || { count: 0, lastTry: 0 };
+    
+    // 5 attempts max, 15 minutes lockout
+    if (attempt.count >= 5 && (now - attempt.lastTry) < 15 * 60 * 1000) {
+      return res.status(429).send('Слишком много неудачных попыток. Попробуйте через 15 минут.');
+    }
+    
+    if (attempt.count >= 5 && (now - attempt.lastTry) >= 15 * 60 * 1000) {
+      attempt.count = 0; // Reset after 15m
+    }
+
     const adminPassword = process.env.ADMIN_PASSWORD || 'qwerty12345';
     const b64auth = (req.headers.authorization || '').split(' ')[1] || '';
     const [login, password] = Buffer.from(b64auth, 'base64').toString().split(':');
     
     if (login === 'admin' && password === adminPassword) {
+      failedAttempts.delete(ip);
       return next();
     }
+    
+    attempt.count += 1;
+    attempt.lastTry = now;
+    failedAttempts.set(ip, attempt);
+    console.warn(`[Security] Failed admin login from ${ip} (Attempt ${attempt.count}/5)`);
     
     res.set('WWW-Authenticate', 'Basic realm="Admin Panel"');
     res.status(401).send('Требуется авторизация.');

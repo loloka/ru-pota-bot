@@ -7,7 +7,7 @@ const hasLetterRegex = /[A-Z]/;
 const parkRefRegex = /^[A-Z0-9]{1,4}-\d{4,5}$/;
 
 export const getSubsKeyboard = (userId) => {
-  const stmt = db.prepare('SELECT type, target FROM subscriptions WHERE telegram_id = ? ORDER BY type, target');
+  const stmt = db.prepare('SELECT type, target, target_name FROM subscriptions WHERE telegram_id = ? ORDER BY type, target');
   const subs = stmt.all(userId);
   
   const callsignSubs = subs.filter(s => s.type === 'callsign');
@@ -22,10 +22,16 @@ export const getSubsKeyboard = (userId) => {
   } else {
     text += '<b>Ваши активные подписки:</b>\n\n';
     if (callsignSubs.length > 0) {
-      text += '📻 <b>Позывные:</b>\n' + callsignSubs.map(s => `• <code>${s.target}</code>`).join('\n') + '\n\n';
+      text += '📻 <b>Позывные:</b>\n' + callsignSubs.map(s => {
+        const nameStr = s.target_name ? ` — <i>${s.target_name}</i>` : '';
+        return `• <code>${s.target}</code>${nameStr}`;
+      }).join('\n') + '\n\n';
     }
     if (parkSubs.length > 0) {
-      text += '🏞 <b>Парки POTA:</b>\n' + parkSubs.map(s => `• <code>${s.target}</code>`).join('\n') + '\n\n';
+      text += '🏞 <b>Парки POTA:</b>\n' + parkSubs.map(s => {
+        const nameStr = s.target_name ? ` — <i>${s.target_name}</i>` : '';
+        return `• <code>${s.target}</code>${nameStr}`;
+      }).join('\n') + '\n\n';
     }
     text += 'Нажмите кнопку ниже, чтобы добавить подписку или удалить ненужные.';
   }
@@ -48,7 +54,7 @@ export const getSubsKeyboard = (userId) => {
 };
 
 export const getDeleteSubsKeyboard = (userId) => {
-  const stmt = db.prepare('SELECT id, type, target FROM subscriptions WHERE telegram_id = ? ORDER BY type, target');
+  const stmt = db.prepare('SELECT id, type, target, target_name FROM subscriptions WHERE telegram_id = ? ORDER BY type, target');
   const subs = stmt.all(userId);
 
   if (subs.length === 0) {
@@ -57,7 +63,10 @@ export const getDeleteSubsKeyboard = (userId) => {
 
   const inline_keyboard = subs.map(s => {
     const icon = s.type === 'callsign' ? '📻' : '🏞';
-    return [{ text: `❌ ${icon} ${s.target}`, callback_data: `delsub:${s.type}:${s.target}` }];
+    const label = s.target_name ? `❌ ${icon} ${s.target} (${s.target_name})` : `❌ ${icon} ${s.target}`;
+    // Telegram inline button text limit is 64 chars, keep it concise
+    const trimmedLabel = label.length > 40 ? label.substring(0, 37) + '...' : label;
+    return [{ text: trimmedLabel, callback_data: `delsub:${s.type}:${s.target}` }];
   });
 
   inline_keyboard.push([{ text: '🔙 Назад к списку', callback_data: 'sub_action_back' }]);
@@ -103,9 +112,9 @@ export const subHandler = async (ctx) => {
       const existing = db.prepare('SELECT id FROM subscriptions WHERE telegram_id = ? AND type = ? AND target = ?').get(userId, 'park', target);
       if (existing) {
         db.prepare('DELETE FROM subscriptions WHERE id = ?').run(existing.id);
-        return ctx.reply(`❌ Вы отписались от парка <b>${target}</b>.`, { parse_mode: 'HTML' });
+        return ctx.reply(`❌ Вы отписались от парка <b>${target}</b> (<i>${park.name}</i>).`, { parse_mode: 'HTML' });
       } else {
-        db.prepare('INSERT INTO subscriptions (telegram_id, type, target) VALUES (?, ?, ?)').run(userId, 'park', target);
+        db.prepare('INSERT INTO subscriptions (telegram_id, type, target, target_name) VALUES (?, ?, ?, ?)').run(userId, 'park', target, park.name);
         return ctx.reply(`✅ Вы успешно подписались на парк <b>${target}</b> (<i>${park.name}</i>)!`, { parse_mode: 'HTML' });
       }
     } catch (e) {
@@ -126,14 +135,24 @@ export const subHandler = async (ctx) => {
     );
   }
 
+  let callsignName = null;
+  try {
+    const stats = await potaApi.getStats(target);
+    if (stats && stats.name) {
+      callsignName = stats.name;
+    }
+  } catch (e) {}
+
   try {
     const existing = db.prepare('SELECT id FROM subscriptions WHERE telegram_id = ? AND type = ? AND target = ?').get(userId, 'callsign', target);
     if (existing) {
       db.prepare('DELETE FROM subscriptions WHERE id = ?').run(existing.id);
-      return ctx.reply(`❌ Вы отписались от уведомлений о спотах от <b>${target}</b>.`, { parse_mode: 'HTML' });
+      const nameSuffix = callsignName ? ` (<i>${callsignName}</i>)` : '';
+      return ctx.reply(`❌ Вы отписались от уведомлений о спотах от <b>${target}</b>${nameSuffix}.`, { parse_mode: 'HTML' });
     } else {
-      db.prepare('INSERT INTO subscriptions (telegram_id, type, target) VALUES (?, ?, ?)').run(userId, 'callsign', target);
-      return ctx.reply(`✅ Вы успешно подписались на уведомления о спотах от <b>${target}</b>!`, { parse_mode: 'HTML' });
+      db.prepare('INSERT INTO subscriptions (telegram_id, type, target, target_name) VALUES (?, ?, ?, ?)').run(userId, 'callsign', target, callsignName);
+      const nameSuffix = callsignName ? ` (<i>${callsignName}</i>)` : '';
+      return ctx.reply(`✅ Вы успешно подписались на уведомления о спотах от <b>${target}</b>${nameSuffix}!`, { parse_mode: 'HTML' });
     }
   } catch (error) {
     console.error('Error toggling callsign sub:', error);

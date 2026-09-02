@@ -67,10 +67,19 @@ export const subWizard = new Scenes.WizardScene(
         return;
       }
 
+      let callsignName = null;
       try {
-        const stmt = db.prepare('INSERT INTO subscriptions (telegram_id, type, target) VALUES (?, ?, ?)');
-        stmt.run(userId, 'callsign', input);
-        await ctx.reply(`✅ Вы успешно подписались на позывной <b>${input}</b>!`, { parse_mode: 'HTML' });
+        const stats = await potaApi.getStats(input);
+        if (stats && stats.name) {
+          callsignName = stats.name;
+        }
+      } catch (e) {}
+
+      try {
+        const stmt = db.prepare('INSERT INTO subscriptions (telegram_id, type, target, target_name) VALUES (?, ?, ?, ?)');
+        stmt.run(userId, 'callsign', input, callsignName);
+        const nameSuffix = callsignName ? ` (<i>${callsignName}</i>)` : '';
+        await ctx.reply(`✅ Вы успешно подписались на позывной <b>${input}</b>${nameSuffix}!`, { parse_mode: 'HTML' });
       } catch (e) {
         if (e.code === 'SQLITE_CONSTRAINT_UNIQUE' || e.message?.includes('UNIQUE')) {
           await ctx.reply(`ℹ️ Вы уже подписаны на позывной <b>${input}</b>.`, { parse_mode: 'HTML' });
@@ -96,8 +105,8 @@ export const subWizard = new Scenes.WizardScene(
           return;
         }
 
-        const stmt = db.prepare('INSERT INTO subscriptions (telegram_id, type, target) VALUES (?, ?, ?)');
-        stmt.run(userId, 'park', input);
+        const stmt = db.prepare('INSERT INTO subscriptions (telegram_id, type, target, target_name) VALUES (?, ?, ?, ?)');
+        stmt.run(userId, 'park', input, park.name);
         await ctx.reply(`✅ Вы успешно подписались на парк <b>${input}</b> (<i>${park.name}</i>)!`, { parse_mode: 'HTML' });
       } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT_UNIQUE' || err.message?.includes('UNIQUE')) {

@@ -39,6 +39,7 @@ db.exec(`
     telegram_id INTEGER NOT NULL,
     type TEXT NOT NULL DEFAULT 'callsign',
     target TEXT NOT NULL,
+    target_name TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(telegram_id, type, target)
   );
@@ -63,6 +64,7 @@ try {
   const subColumns = db.pragma('table_info(subscriptions)');
   const hasTargetCallsign = subColumns.some(col => col.name === 'target_callsign');
   const hasType = subColumns.some(col => col.name === 'type');
+  const hasTargetName = subColumns.some(col => col.name === 'target_name');
 
   if (hasTargetCallsign && !hasType) {
     db.exec(`
@@ -71,6 +73,7 @@ try {
         telegram_id INTEGER NOT NULL,
         type TEXT NOT NULL DEFAULT 'callsign',
         target TEXT NOT NULL,
+        target_name TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(telegram_id, type, target)
       );
@@ -80,6 +83,9 @@ try {
       ALTER TABLE subscriptions_new RENAME TO subscriptions;
     `);
     console.log('[DB] Migrated subscriptions table: added type and target columns');
+  } else if (!hasTargetName) {
+    db.exec(`ALTER TABLE subscriptions ADD COLUMN target_name TEXT`);
+    console.log('[DB] Migrated subscriptions table: added target_name column');
   }
 } catch (e) {
   console.error('[DB] Migration error:', e.message);

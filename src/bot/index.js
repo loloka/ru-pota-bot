@@ -59,76 +59,6 @@ bot.use(requireRegistration);
 const stage = new Scenes.Stage([spotWizard, callsignWizard, parkWizard, editSpotWizard, subWizard]);
 bot.use(session());
 bot.use(rateLimit({ window: 5000, limit: 4 }));
-bot.use(stage.middleware());
-
-// Debug & Console user activity logger
-bot.use((ctx, next) => {
-  if (ctx.message?.text) {
-    const fromUser = ctx.from?.username ? `@${ctx.from.username}` : (ctx.from?.first_name || ctx.from?.id);
-    const chatType = ctx.chat?.type === 'private' ? 'ЛС' : `Чат (${ctx.chat?.title || ctx.chat?.id})`;
-    console.log(`\x1b[36m[User Msg]\x1b[0m \x1b[33m${fromUser}\x1b[0m [${chatType}]: \x1b[1m${ctx.message.text}\x1b[0m`);
-  } else if (ctx.callbackQuery?.data) {
-    const fromUser = ctx.from?.username ? `@${ctx.from.username}` : (ctx.from?.first_name || ctx.from?.id);
-    console.log(`\x1b[35m[Inline Action]\x1b[0m \x1b[33m${fromUser}\x1b[0m: клик \x1b[1m${ctx.callbackQuery.data}\x1b[0m`);
-  }
-  return next();
-});
-
-import { startHandler } from './commands/start.js';
-// Start command
-bot.start(startHandler);
-
-// Interactive actions
-bot.action('start_callsign', (ctx) => ctx.scene.enter('CALLSIGN_WIZARD'));
-bot.action('sub_add_callsign', (ctx) => ctx.scene.enter('SUB_WIZARD', { subType: 'callsign' }));
-bot.action('sub_add_park', (ctx) => ctx.scene.enter('SUB_WIZARD', { subType: 'park' }));
-
-bot.action('sub_delete_menu', async (ctx) => {
-  await ctx.answerCbQuery();
-  const { text, reply_markup } = getDeleteSubsKeyboard(ctx.from.id);
-  await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
-});
-
-bot.action('sub_action_back', async (ctx) => {
-  await ctx.answerCbQuery();
-  const { text, reply_markup } = getSubsKeyboard(ctx.from.id);
-  await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
-});
-
-bot.action(/^delete_msg:(\d+)$/, async (ctx) => {
-  const allowedUserId = parseInt(ctx.match[1], 10);
-  const clickerId = ctx.from?.id;
-  const adminId = parseInt(process.env.ADMIN_ID, 10);
-  
-  if (clickerId === allowedUserId || clickerId === adminId) {
-    try {
-      await ctx.deleteMessage();
-    } catch (e) {}
-  } else {
-    try {
-      await ctx.answerCbQuery('⛔ Только автор запроса (или администратор) может удалить это сообщение.', { show_alert: true });
-    } catch (e) {}
-  }
-});
-
-bot.action(/^delsub:(callsign|park):(.+)$/, async (ctx) => {
-  const type = ctx.match[1];
-  const target = ctx.match[2];
-  const userId = ctx.from.id;
-  
-  try {
-    const db = (await import('../db/database.js')).default;
-    db.prepare('DELETE FROM subscriptions WHERE telegram_id = ? AND type = ? AND target = ?').run(userId, type, target);
-    await ctx.answerCbQuery(`Удалена подписка: ${target}`);
-    
-    const { text, reply_markup } = getDeleteSubsKeyboard(userId);
-    await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
-  } catch (e) {
-    console.error('Error deleting sub from inline button:', e);
-    await ctx.answerCbQuery('Ошибка при удалении подписки.', { show_alert: true });
-  }
-});
-
 bot.action(/^admin_appr:(\d+)$/, async (ctx) => {
   if (ctx.from.id.toString() !== process.env.ADMIN_ID) return;
   const targetId = parseInt(ctx.match[1], 10);
@@ -196,6 +126,76 @@ bot.action(/^admin_rej:(\d+)$/, async (ctx) => {
   } catch (e) {
     console.error(e);
     await ctx.answerCbQuery('Ошибка', { show_alert: true });
+  }
+});
+
+bot.use(stage.middleware());
+
+// Debug & Console user activity logger
+bot.use((ctx, next) => {
+  if (ctx.message?.text) {
+    const fromUser = ctx.from?.username ? `@${ctx.from.username}` : (ctx.from?.first_name || ctx.from?.id);
+    const chatType = ctx.chat?.type === 'private' ? 'ЛС' : `Чат (${ctx.chat?.title || ctx.chat?.id})`;
+    console.log(`\x1b[36m[User Msg]\x1b[0m \x1b[33m${fromUser}\x1b[0m [${chatType}]: \x1b[1m${ctx.message.text}\x1b[0m`);
+  } else if (ctx.callbackQuery?.data) {
+    const fromUser = ctx.from?.username ? `@${ctx.from.username}` : (ctx.from?.first_name || ctx.from?.id);
+    console.log(`\x1b[35m[Inline Action]\x1b[0m \x1b[33m${fromUser}\x1b[0m: клик \x1b[1m${ctx.callbackQuery.data}\x1b[0m`);
+  }
+  return next();
+});
+
+import { startHandler } from './commands/start.js';
+// Start command
+bot.start(startHandler);
+
+// Interactive actions
+bot.action('start_callsign', (ctx) => ctx.scene.enter('CALLSIGN_WIZARD'));
+bot.action('sub_add_callsign', (ctx) => ctx.scene.enter('SUB_WIZARD', { subType: 'callsign' }));
+bot.action('sub_add_park', (ctx) => ctx.scene.enter('SUB_WIZARD', { subType: 'park' }));
+
+bot.action('sub_delete_menu', async (ctx) => {
+  await ctx.answerCbQuery();
+  const { text, reply_markup } = getDeleteSubsKeyboard(ctx.from.id);
+  await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
+});
+
+bot.action('sub_action_back', async (ctx) => {
+  await ctx.answerCbQuery();
+  const { text, reply_markup } = getSubsKeyboard(ctx.from.id);
+  await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
+});
+
+bot.action(/^delete_msg:(\d+)$/, async (ctx) => {
+  const allowedUserId = parseInt(ctx.match[1], 10);
+  const clickerId = ctx.from?.id;
+  const adminId = parseInt(process.env.ADMIN_ID, 10);
+  
+  if (clickerId === allowedUserId || clickerId === adminId) {
+    try {
+      await ctx.deleteMessage();
+    } catch (e) {}
+  } else {
+    try {
+      await ctx.answerCbQuery('⛔ Только автор запроса (или администратор) может удалить это сообщение.', { show_alert: true });
+    } catch (e) {}
+  }
+});
+
+bot.action(/^delsub:(callsign|park):(.+)$/, async (ctx) => {
+  const type = ctx.match[1];
+  const target = ctx.match[2];
+  const userId = ctx.from.id;
+  
+  try {
+    const db = (await import('../db/database.js')).default;
+    db.prepare('DELETE FROM subscriptions WHERE telegram_id = ? AND type = ? AND target = ?').run(userId, type, target);
+    await ctx.answerCbQuery(`Удалена подписка: ${target}`);
+    
+    const { text, reply_markup } = getDeleteSubsKeyboard(userId);
+    await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
+  } catch (e) {
+    console.error('Error deleting sub from inline button:', e);
+    await ctx.answerCbQuery('Ошибка при удалении подписки.', { show_alert: true });
   }
 });
 

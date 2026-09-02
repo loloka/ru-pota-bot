@@ -85,7 +85,7 @@ export const startHandler = async (ctx) => {
         `✅ Ваш позывной в системе: <b>${ctx.state.user.callsign}</b>\n\n` +
         `<b>Ваши возможности:</b>\n` +
         `🔸 <code>/spot</code> (или кнопка) — Управление спотами\n` +
-        `🔸 <code>/stats</code> — Ваша статистика\n` +
+        `🔸 <code>/stats</code> — Ваша статистика (чужая: <code>/stats ПОЗЫВНОЙ</code>)\n` +
         `🔸 <code>/sub</code> — Подписка на споты (друга/активатора)\n` +
         `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n\n` +
         `Используйте меню ниже для быстрой работы:`,

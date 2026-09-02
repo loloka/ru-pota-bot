@@ -97,6 +97,10 @@ export const statsHandler = async (ctx) => {
                 
     await ctx.reply(msg, { parse_mode: 'HTML', reply_markup: successMarkup });
   } catch (error) {
-    await ctx.reply(`❌ Не удалось получить статистику для ${callsign}. Возможно, позывной не найден.`, { reply_markup: deleteBtn });
+    let errMsg = `❌ Не удалось получить статистику для <b>${callsign}</b>.\n\n` +
+                 `Возможно, позывной не зарегистрирован в базе POTA, либо произошла ошибка сети.\n` +
+                 `Вы можете посмотреть инфу другого активатора/охотника командой:\n` +
+                 `👉 <code>/stats ПОЗЫВНОЙ</code>`;
+    await ctx.reply(errMsg, { parse_mode: 'HTML', reply_markup: deleteBtn });
   }
 };

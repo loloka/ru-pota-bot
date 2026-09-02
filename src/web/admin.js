@@ -9,6 +9,20 @@ export const startAdminServer = (telegramClient) => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Basic HTTP Authentication
+  app.use((req, res, next) => {
+    const adminPassword = process.env.ADMIN_PASSWORD || 'qwerty12345';
+    const b64auth = (req.headers.authorization || '').split(' ')[1] || '';
+    const [login, password] = Buffer.from(b64auth, 'base64').toString().split(':');
+    
+    if (login === 'admin' && password === adminPassword) {
+      return next();
+    }
+    
+    res.set('WWW-Authenticate', 'Basic realm="Admin Panel"');
+    res.status(401).send('Требуется авторизация.');
+  });
+
   // Basic HTML template function
   const renderHTML = (content) => `
     <!DOCTYPE html>

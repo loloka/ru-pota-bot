@@ -98,6 +98,9 @@ export const startAdminServer = (telegramClient) => {
             <option value="channel">Канал активности (ACTIVITY_CHANNEL_ID)</option>
           </select>
           <textarea name="message" placeholder="Введите текст сообщения..." required></textarea>
+          <label style="display: block; margin-top: 10px; margin-bottom: 10px;">
+            <input type="checkbox" name="pin" value="true"> 📌 Закрепить сообщение
+          </label>
           <button type="submit" class="btn btn-approve">Отправить сообщение</button>
         </form>
       </div>
@@ -119,7 +122,7 @@ export const startAdminServer = (telegramClient) => {
 
   // Broadcast route
   app.post('/broadcast', async (req, res) => {
-    const { target, message } = req.body;
+    const { target, message, pin } = req.body;
     
     let targetId;
     if (target === 'group') {
@@ -144,8 +147,14 @@ export const startAdminServer = (telegramClient) => {
     }
 
     try {
-      await telegramClient.sendMessage(targetId, message, { parse_mode: 'HTML' });
+      const sentMsg = await telegramClient.sendMessage(targetId, message, { parse_mode: 'HTML', disable_web_page_preview: true });
       console.log(`[Broadcast] Admin sent message to ${target} (${targetId})`);
+      
+      if (pin === 'true') {
+        await telegramClient.pinChatMessage(targetId, sentMsg.message_id);
+        console.log(`[Broadcast] Message pinned successfully.`);
+      }
+
       res.redirect('/');
     } catch (err) {
       console.error('[Broadcast] Error sending message:', err);

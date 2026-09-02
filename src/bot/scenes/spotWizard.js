@@ -37,7 +37,7 @@ export const spotWizard = new Scenes.WizardScene(
     
     ctx.wizard.state.spot = { callsign: user.callsign };
     
-    await ctx.reply('🚀 Оформление нового спота. Укажите статус:\n\n<i>или введите /cancel для отмены</i>', {
+    await ctx.reply('🚀 Оформление нового спота. Укажите статус (выберите на клавиатуре внизу 👇):\n\n<i>или введите /cancel для отмены</i>', {
       parse_mode: 'HTML',
       reply_markup: {
         keyboard: [[{ text: 'СЕЙЧАС НА СВЯЗИ' }, { text: 'ПЛАНИРУЮ' }]],
@@ -54,14 +54,15 @@ export const spotWizard = new Scenes.WizardScene(
     ctx.wizard.state.spot.status = status;
     
     if (status === 'ПЛАНИРУЮ') {
-      await ctx.reply('📅 Введите дату и примерное время в UTC\n\n<i>(Например: 02.09 ~12:00 или точно 12:00-14:00)</i>:', {
-        parse_mode: 'HTML',
-        /* removed */
+      const today = new Date();
+      const exDate = String(today.getUTCDate()).padStart(2, '0') + '.' + String(today.getUTCMonth() + 1).padStart(2, '0');
+      const exTime = String((today.getUTCHours() + 2) % 24).padStart(2, '0') + ':00';
+      await ctx.reply(`📅 Введите дату и примерное время в UTC\n\n<i>(Например: ${exDate} ~${exTime} или точно 12:00-14:00)\n\nили /cancel для отмены</i>:`, {
+        parse_mode: 'HTML'
       });
     } else {
-      await ctx.reply('⏳ До какого времени вы планируете работать в UTC?\n\n<i>(Можно просто написать 17:00, бот сам добавит "до". Либо отправьте "-", чтобы пропустить этот шаг)</i>', {
-        parse_mode: 'HTML',
-        /* removed */
+      await ctx.reply('⏳ До какого времени вы планируете работать в UTC?\n\n<i>(Можно просто написать 17:00, бот сам добавит "до". Либо отправьте "-", чтобы пропустить этот шаг)\n\nили /cancel для отмены</i>', {
+        parse_mode: 'HTML'
       });
     }
     return ctx.wizard.next();
@@ -70,14 +71,14 @@ export const spotWizard = new Scenes.WizardScene(
   async (ctx) => {
     if (!ctx.message?.text) return;
     ctx.wizard.state.spot.timeStr = ctx.message.text !== '-' ? ctx.message.text : '';
-    await ctx.reply('📡 Введите точную частоту (например, 7.175, 7.175 MHz или 7175):');
+    await ctx.reply('📡 Введите точную частоту (например, 7.175, 7.175 MHz или 7175):\n\n<i>или /cancel для отмены</i>', { parse_mode: 'HTML' });
     return ctx.wizard.next();
   },
   // Step 4: Park Reference
   async (ctx) => {
     if (!ctx.message?.text) return;
     ctx.wizard.state.spot.freq = ctx.message.text;
-    await ctx.reply('🏞️ Введите референцию парка POTA (например, RU-0073). Название парка подгрузится автоматически:');
+    await ctx.reply('🏞️ Введите референцию парка POTA (например, RU-0073). Название парка подгрузится автоматически:\n\n<i>или /cancel для отмены</i>', { parse_mode: 'HTML' });
     return ctx.wizard.next();
   },
   // Step 5: Park Fetch & RDA
@@ -86,7 +87,7 @@ export const spotWizard = new Scenes.WizardScene(
     const ref = ctx.message.text.toUpperCase().trim();
     
     if (!/^[A-Z0-9]{1,4}-\d{4}$/.test(ref)) {
-      await ctx.reply('❌ Неверный формат. Пожалуйста, введите референцию в формате RU-1234:');
+      await ctx.reply('❌ Неверный формат. Пожалуйста, введите референцию в формате RU-1234:\n\n<i>или /cancel для отмены</i>', { parse_mode: 'HTML' });
       return;
     }
 
@@ -102,13 +103,13 @@ export const spotWizard = new Scenes.WizardScene(
         await ctx.reply(
           `✅ Найден парк: <b>${fullParkName}</b>\n\n` +
           `📍 Введите RDA (например, MA-01). Если это граница районов, укажите через дробь (например, NS-03/NS-04).\n\n` +
-          `<i>Отправьте "-", чтобы пропустить.</i>`, 
+          `<i>Отправьте "-", чтобы пропустить.\n\nили /cancel для отмены</i>`, 
           { parse_mode: 'HTML' }
         );
         return ctx.wizard.next();
       }
     } catch (err) {
-      await ctx.reply(`❌ Парк ${ref} не найден в базе POTA.\nПожалуйста, проверьте номер и введите заново:`);
+      await ctx.reply(`❌ Парк ${ref} не найден в базе POTA.\nПожалуйста, проверьте номер и введите заново:\n\n<i>или /cancel для отмены</i>`, { parse_mode: 'HTML' });
       return;
     }
   },
@@ -117,7 +118,8 @@ export const spotWizard = new Scenes.WizardScene(
     if (!ctx.message?.text) return;
     ctx.wizard.state.spot.rda = ctx.message.text !== '-' ? ctx.message.text.toUpperCase() : '';
     
-    await ctx.reply('⚙️ Введите модуляцию (выберите на клавиатуре или введите вручную, например CW/SSB):', {
+    await ctx.reply('⚙️ Введите модуляцию (выберите на клавиатуре внизу 👇 или введите вручную, например CW/SSB):\n\n<i>или /cancel для отмены</i>', {
+      parse_mode: 'HTML',
       reply_markup: {
         keyboard: [
           [{ text: 'CW' }, { text: 'SSB' }, { text: 'FT8' }],
@@ -133,16 +135,14 @@ export const spotWizard = new Scenes.WizardScene(
   async (ctx) => {
     if (!ctx.message?.text) return;
     ctx.wizard.state.spot.mode = ctx.message.text.toUpperCase();
-    await ctx.reply('⚡ Введите мощность (например, 100W или 5W QRP):', {
-      /* removed */
-    });
+    await ctx.reply('⚡ Введите мощность (например, 100W или 5W QRP):\n\n<i>или /cancel для отмены</i>', { parse_mode: 'HTML' });
     return ctx.wizard.next();
   },
   // Step 8: Comment
   async (ctx) => {
     if (!ctx.message?.text) return;
     ctx.wizard.state.spot.pwr = ctx.message.text;
-    await ctx.reply('📝 Введите любой комментарий (например, информация об антенне).\n\n<i>Отправьте "-", чтобы пропустить.</i>', {
+    await ctx.reply('📝 Введите любой комментарий (например, информация об антенне).\n\n<i>Отправьте "-", чтобы пропустить.\n\nили /cancel для отмены</i>', {
       parse_mode: 'HTML'
     });
     return ctx.wizard.next();

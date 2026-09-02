@@ -47,10 +47,16 @@ bot.use(session());
 bot.use(rateLimit({ window: 5000, limit: 4 }));
 bot.use(stage.middleware());
 
-// Debug all incoming updates
+// Debug & Console user activity logger
 bot.use((ctx, next) => {
-  const logStr = 'Received update: ' + JSON.stringify(ctx.update) + '\n';
-  import('fs').then(fs => fs.appendFileSync('debug.log', logStr));
+  if (ctx.message?.text) {
+    const fromUser = ctx.from?.username ? `@${ctx.from.username}` : (ctx.from?.first_name || ctx.from?.id);
+    const chatType = ctx.chat?.type === 'private' ? 'ЛС' : `Чат (${ctx.chat?.title || ctx.chat?.id})`;
+    console.log(`\x1b[36m[User Msg]\x1b[0m \x1b[33m${fromUser}\x1b[0m [${chatType}]: \x1b[1m${ctx.message.text}\x1b[0m`);
+  } else if (ctx.callbackQuery?.data) {
+    const fromUser = ctx.from?.username ? `@${ctx.from.username}` : (ctx.from?.first_name || ctx.from?.id);
+    console.log(`\x1b[35m[Inline Action]\x1b[0m \x1b[33m${fromUser}\x1b[0m: клик \x1b[1m${ctx.callbackQuery.data}\x1b[0m`);
+  }
   return next();
 });
 
@@ -392,14 +398,19 @@ bot.catch((err, ctx) => {
   console.error(`Ooops, encountered an error for ${ctx.updateType}`, err);
 });
 
-console.log('🤖 Запуск RU-POTA бота...');
+console.log(`
+\x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.1.0\x1b[0m 📡               \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
+\x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
+`);
 
 // Start the bot without blocking
-bot.launch().catch(err => {
-  console.error('Failed to launch bot:', err);
+bot.launch().then(() => {
+  console.log('\x1b[32m[Telegram Bot]\x1b[0m ✅ Бот успешно подключен к Telegram и принимает команды!');
+}).catch(err => {
+  console.error('\x1b[31m[Telegram Bot]\x1b[0m ❌ Ошибка запуска бота:', err.message);
 });
-
-console.log('✅ Бот успешно запущен и готов к работе!');
 
 // Start the background cluster worker
 startClusterWorker(bot.telegram);
@@ -408,5 +419,11 @@ startClusterWorker(bot.telegram);
 startAdminServer(bot.telegram);
 
 // Enable graceful stop
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+process.once('SIGINT', () => {
+  console.log('\n\x1b[33m[Shutdown]\x1b[0m Остановка бота по сигналу SIGINT...');
+  bot.stop('SIGINT');
+});
+process.once('SIGTERM', () => {
+  console.log('\n\x1b[33m[Shutdown]\x1b[0m Остановка бота по сигналу SIGTERM...');
+  bot.stop('SIGTERM');
+});

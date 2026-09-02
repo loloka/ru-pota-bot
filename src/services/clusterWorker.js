@@ -8,13 +8,16 @@ const ACTIVITY_CHANNEL_ID = process.env.ACTIVITY_CHANNEL_ID;
 const ALLOWED_PREFIXES = (process.env.ALLOWED_PREFIXES || 'RU-,BY-,KZ-').split(',').map(p => p.trim());
 
 export const startClusterWorker = (telegramClient) => {
-  console.log(`[Cluster Worker] Started. Polling every ${POLL_INTERVAL_MS}ms. Prefix filter: ${ALLOWED_PREFIXES.join(', ')}`);
+  const intervalSec = Math.round(POLL_INTERVAL_MS / 1000);
+  console.log(`\x1b[36m[Cluster Worker]\x1b[0m 🚀 Запущен воркер кластера (опрос каждые ${intervalSec}с, фильтр: \x1b[33m${ALLOWED_PREFIXES.join(', ')}\x1b[0m)`);
 
   const pollCluster = async () => {
     try {
       const spots = await potaApi.getSpots();
-      if (!Array.isArray(spots)) return;
+      if (!Array.isArray(spots) || spots.length === 0) return;
       
+      let processedCount = 0;
+
       for (const spot of spots) {
         // 1. GEO Filter (Check reference prefix)
         const ref = spot.reference || '';
@@ -29,6 +32,8 @@ export const startClusterWorker = (telegramClient) => {
           continue; // Already processed this spot
         }
 
+        processedCount++;
+        console.log(`\x1b[32m[Cluster Spot]\x1b[0m 📻 Новый спот: \x1b[1m${spot.activator}\x1b[0m @ \x1b[33m${ref}\x1b[0m (${spot.frequency} kHz, ${spot.mode})`);
 
         // 3. Save to DB to prevent duplicate processing
         const insertStmt = db.prepare(`
@@ -58,8 +63,9 @@ export const startClusterWorker = (telegramClient) => {
                     
         try {
           await telegramClient.sendMessage(channelId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+          console.log(`\x1b[34m[Broadcast]\x1b[0m 📢 Спот ${spot.activator} опубликован в канал`);
         } catch (e) {
-          console.error('[Cluster Worker] Failed to send spot to channel:', e.message);
+          console.error(`\x1b[31m[Broadcast Error]\x1b[0m Не удалось отправить спот в канал:`, e.message);
         }
         
         // 5. Notify Subscribed Users (Callsigns and Parks)
@@ -83,13 +89,14 @@ export const startClusterWorker = (telegramClient) => {
         for (const [userId, userMsg] of notificationsMap.entries()) {
           try {
             await telegramClient.sendMessage(userId, userMsg, { parse_mode: 'HTML', disable_web_page_preview: true });
+            console.log(`\x1b[35m[Notification]\x1b[0m 🔔 Уведомление отправлено пользователю ${userId}`);
           } catch (e) {
-            console.error(`[Cluster Worker] Failed to notify subscriber ${userId}:`, e.message);
+            console.error(`\x1b[31m[Notification Error]\x1b[0m Ошибка отправки подписчику ${userId}:`, e.message);
           }
         }
       }
     } catch (error) {
-      console.error('[Cluster Worker] Error during poll cycle:', error.message);
+      console.warn(`\x1b[33m[Cluster Worker]\x1b[0m ⚠️ Ошибка цикла опроса: ${error.message}`);
     }
   };
 

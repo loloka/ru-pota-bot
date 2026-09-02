@@ -23,7 +23,8 @@ export const potaApi = {
       const response = await apiClient.get('/spot/activator');
       return response.data;
     } catch (error) {
-      console.error('Error fetching POTA spots:', error.message);
+      const code = error.code || (error.response ? `HTTP ${error.response.status}` : 'Unknown');
+      console.warn(`[POTA API] ⚠️ Временная задержка сети (${code}). Ожидание следующего цикла...`);
       return [];
     }
   },

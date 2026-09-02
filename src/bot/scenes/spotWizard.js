@@ -37,7 +37,7 @@ export const spotWizard = new Scenes.WizardScene(
     
     ctx.wizard.state.spot = { callsign: user.callsign };
     
-    await ctx.reply('🚀 Оформление нового спота. Укажите статус (выберите на клавиатуре внизу 👇):\n\n<i>или введите /cancel для отмены</i>', {
+    await ctx.reply('🚀 Оформление нового спота. Укажите статус:\n\n<i>(выберите на клавиатуре внизу 👇 или напишите текстом: <b>Онлайн</b> / <b>План</b>)\nили введите /cancel для отмены</i>', {
       parse_mode: 'HTML',
       reply_markup: {
         keyboard: [[{ text: 'СЕЙЧАС НА СВЯЗИ' }, { text: 'ПЛАНИРУЮ' }]],
@@ -50,7 +50,34 @@ export const spotWizard = new Scenes.WizardScene(
   // Step 2: Time
   async (ctx) => {
     if (!ctx.message?.text) return;
-    const status = ctx.message.text.toUpperCase();
+    const raw = ctx.message.text.trim().toUpperCase();
+
+    let status = null;
+    if (['СЕЙЧАС НА СВЯЗИ', 'СЕЙЧАС', 'В ЭФИРЕ', 'ОНЛАЙН', 'ONLINE', 'NOW', '1'].includes(raw) || /^(СЕЙЧАС|ЭФИР|ОНЛАЙН|ONLINE|NOW)/i.test(raw)) {
+      status = 'СЕЙЧАС НА СВЯЗИ';
+    } else if (['ПЛАНИРУЮ', 'ПЛАН', 'PLANNED', 'PLAN', '2'].includes(raw) || /^(ПЛАН|PLAN)/i.test(raw)) {
+      status = 'ПЛАНИРУЮ';
+    }
+
+    if (!status) {
+      await ctx.reply(
+        '⚠️ <b>Неизвестный статус.</b>\n\n' +
+        'Пожалуйста, выберите кнопку внизу или введите текстом:\n' +
+        '• <b>СЕЙЧАС НА СВЯЗИ</b> (или <i>Онлайн</i> / <i>1</i>)\n' +
+        '• <b>ПЛАНИРУЮ</b> (или <i>План</i> / <i>2</i>)\n\n' +
+        '<i>или введите /cancel для отмены</i>',
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            keyboard: [[{ text: 'СЕЙЧАС НА СВЯЗИ' }, { text: 'ПЛАНИРУЮ' }]],
+            one_time_keyboard: true,
+            resize_keyboard: true
+          }
+        }
+      );
+      return; // Stay on this step!
+    }
+
     ctx.wizard.state.spot.status = status;
     
     if (status === 'ПЛАНИРУЮ') {

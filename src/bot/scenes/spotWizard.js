@@ -55,6 +55,7 @@ export const spotWizard = new Scenes.WizardScene(
     
     if (status === 'ПЛАНИРУЮ') {
       const today = new Date();
+      today.setUTCDate(today.getUTCDate() + 1); // Завтрашний день для примера
       const exDate = String(today.getUTCDate()).padStart(2, '0') + '.' + String(today.getUTCMonth() + 1).padStart(2, '0');
       const exTime = String((today.getUTCHours() + 2) % 24).padStart(2, '0') + ':00';
       await ctx.reply(`📅 Введите дату и примерное время в UTC\n\n<i>(Например: ${exDate} ~${exTime} или точно 12:00-14:00)\n\nили /cancel для отмены</i>:`, {

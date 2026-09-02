@@ -69,8 +69,8 @@ export const startHandler = async (ctx) => {
   const mainMenu = {
     keyboard: [
       [{ text: '📡 Управление спотами' }, { text: '📊 Моя статистика' }],
-      [{ text: '🏞 Инфо по парку' }, { text: '🔔 Мои подписки' }],
-      [{ text: '❓ Справка' }]
+      [{ text: '🏞 Инфо по парку' }, { text: '🔍 Поиск позывного' }],
+      [{ text: '🔔 Мои подписки' }, { text: '❓ Справка' }]
     ],
     resize_keyboard: true
   };
@@ -114,7 +114,7 @@ export const startHandler = async (ctx) => {
     keyboard: [
       [{ text: '📝 Регистрация' }, { text: '🔔 Мои подписки' }],
       [{ text: '📊 Моя статистика' }, { text: '🏞 Инфо по парку' }],
-      [{ text: '❓ Справка' }]
+      [{ text: '🔍 Поиск позывного' }, { text: '❓ Справка' }]
     ],
     resize_keyboard: true
   };

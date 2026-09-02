@@ -19,6 +19,7 @@ import { callsignWizard } from './scenes/callsignWizard.js';
 import { parkWizard } from './scenes/parkWizard.js';
 import { editSpotWizard } from './scenes/editSpotWizard.js';
 import { subWizard } from './scenes/subWizard.js';
+import { statsWizard } from './scenes/statsWizard.js';
 
 // Import background worker
 import { startClusterWorker } from '../services/clusterWorker.js';
@@ -387,6 +388,7 @@ bot.hears('📡 Управление спотами', async (ctx) => {
 
 bot.hears('📊 Моя статистика', (ctx) => { ctx.message.text='/stats'; return import('./commands/stats.js').then(m=>m.statsHandler(ctx)); });
 bot.hears('🏞 Инфо по парку', (ctx) => { ctx.message.text='/park'; return ctx.scene.enter('PARK_WIZARD'); });
+bot.hears('🔍 Поиск позывного', (ctx) => { return ctx.scene.enter('STATS_WIZARD'); });
 bot.hears('🔔 Мои подписки', (ctx) => { ctx.message.text='/sub'; return import('./commands/sub.js').then(m=>m.subHandler(ctx)); });
 bot.hears('📝 Регистрация', (ctx) => { ctx.message.text='/callsign'; return ctx.scene.enter('CALLSIGN_WIZARD'); });
 

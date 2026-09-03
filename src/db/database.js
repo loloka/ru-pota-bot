@@ -87,6 +87,13 @@ try {
     db.exec(`ALTER TABLE subscriptions ADD COLUMN target_name TEXT`);
     console.log('[DB] Migrated subscriptions table: added target_name column');
   }
+
+  const spotColumns = db.pragma('table_info(spots)');
+  const hasMsgId = spotColumns.some(col => col.name === 'msg_id');
+  if (!hasMsgId) {
+    db.exec(`ALTER TABLE spots ADD COLUMN msg_id INTEGER`);
+    console.log('[DB] Migrated spots table: added msg_id column');
+  }
 } catch (e) {
   console.error('[DB] Migration error:', e.message);
 }

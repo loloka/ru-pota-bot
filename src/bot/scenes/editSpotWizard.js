@@ -131,9 +131,9 @@ export const editSpotWizard = new Scenes.WizardScene(
       if (spotId && spotId > 0) {
         try {
           db.prepare(`
-            INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source)
-            VALUES (?, ?, ?, ?, ?, ?, 'bot_edit')
-          `).run(spotId, s.callsign, s.reference, freqNumber, s.mode, s.comment || '');
+            INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source, msg_id)
+            VALUES (?, ?, ?, ?, ?, ?, 'bot_edit', ?)
+          `).run(spotId, s.callsign, s.reference, freqNumber, s.mode, s.comment || '', u.last_spot_msg_id);
         } catch(e) {} // ignore unique constraint if it somehow matches
       }
 

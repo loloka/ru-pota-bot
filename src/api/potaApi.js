@@ -9,7 +9,7 @@ const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 25000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.2.0 (Telegram Bot; Node.js)'
+    'User-Agent': 'RU-POTA-Bot/1.4.0 (Telegram Bot; Node.js)'
   }
 });
 
@@ -95,6 +95,12 @@ export const potaApi = {
    * @returns {Promise<number|null>} The new spotId or null on failure
    */
   async postSpot(spotData) {
+    if (process.env.MOCK_POTA_API === 'true') {
+      console.log(`[POTA API MOCK] 🛑 Отправка спота перехвачена (MOCK_POTA_API=true):`, spotData);
+      // Возвращаем фейковый ID спота для базы данных
+      return Math.floor(Math.random() * 1000000) + 9000000;
+    }
+
     try {
       const response = await apiClient.post('/spot', spotData);
       // The API returns the list of all active spots. We find ours to extract the ID.

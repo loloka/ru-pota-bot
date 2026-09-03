@@ -35,14 +35,7 @@ export const startClusterWorker = (telegramClient) => {
         processedCount++;
         console.log(`\x1b[32m[Cluster Spot]\x1b[0m 📻 Новый спот: \x1b[1m${spot.activator}\x1b[0m @ \x1b[33m${ref}\x1b[0m (${spot.frequency} kHz, ${spot.mode})`);
 
-        // 3. Save to DB to prevent duplicate processing
-        const insertStmt = db.prepare(`
-          INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source)
-          VALUES (?, ?, ?, ?, ?, ?, 'cluster')
-        `);
-        insertStmt.run(spot.spotId, spot.activator, ref, spot.frequency || '', spot.mode || '', spot.comments || '');
-
-        // 4. Format and Broadcast to Activity Channel
+        // 3. Format and Broadcast to Activity Channel
         const actLink = `<a href="https://next.pota.app/profile/${spot.activator}">${spot.activator}</a>`;
         const refLink = `<a href="https://next.pota.app/park/${ref}">${ref}</a>`;
         const msg = `🌐 <b>POTA Cluster Spot</b>\n` +
@@ -60,13 +53,22 @@ export const startClusterWorker = (telegramClient) => {
         } else if (channelId && channelId.includes('t.me/')) {
           channelId = '@' + channelId.split('t.me/')[1].replace('/', '');
         }
-                    
+        
+        let msgId = null;            
         try {
-          await telegramClient.sendMessage(channelId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+          const sentMsg = await telegramClient.sendMessage(channelId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+          msgId = sentMsg.message_id;
           console.log(`\x1b[34m[Broadcast]\x1b[0m 📢 Спот ${spot.activator} опубликован в канал`);
         } catch (e) {
           console.error(`\x1b[31m[Broadcast Error]\x1b[0m Не удалось отправить спот в канал:`, e.message);
         }
+
+        // 4. Save to DB to prevent duplicate processing (and save msgId for web panel deletion)
+        const insertStmt = db.prepare(`
+          INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source, msg_id)
+          VALUES (?, ?, ?, ?, ?, ?, 'cluster', ?)
+        `);
+        insertStmt.run(spot.spotId, spot.activator, ref, spot.frequency || '', spot.mode || '', spot.comments || '', msgId);
         
         // 5. Notify Subscribed Users (Callsigns and Parks)
         const activator = (spot.activator || '').toUpperCase();

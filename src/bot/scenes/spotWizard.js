@@ -275,10 +275,10 @@ export const spotWizard = new Scenes.WizardScene(
         if (spotId > 0) {
           // Add to DB so clusterWorker ignores it
           const insertStmt = db.prepare(`
-            INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source)
-            VALUES (?, ?, ?, ?, ?, ?, 'bot')
+            INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source, msg_id)
+            VALUES (?, ?, ?, ?, ?, ?, 'bot', ?)
           `);
-          insertStmt.run(spotId, s.callsign, s.reference, freqNumber, s.mode, comment);
+          insertStmt.run(spotId, s.callsign, s.reference, freqNumber, s.mode, comment, msg.message_id);
         }
         
         // Auto-respot logic
@@ -315,9 +315,9 @@ export const spotWizard = new Scenes.WizardScene(
               });
               if (newSpotId && newSpotId > 0) {
                 db.prepare(`
-                  INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source)
-                  VALUES (?, ?, ?, ?, ?, ?, 'bot_respot')
-                `).run(newSpotId, latestSpot.callsign, latestSpot.reference, latestFreq, latestSpot.mode, latestSpot.comment);
+                  INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source, msg_id)
+                  VALUES (?, ?, ?, ?, ?, ?, 'bot_respot', ?)
+                `).run(newSpotId, latestSpot.callsign, latestSpot.reference, latestFreq, latestSpot.mode, latestSpot.comment, msg.message_id);
               }
             } catch(e) {
               console.error('Auto-respot error:', e.message);

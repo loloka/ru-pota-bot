@@ -1,6 +1,6 @@
 # RU-POTA Telegram Bot 🌲📡
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](package.json)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![Telegraf](https://img.shields.io/badge/telegraf-4.x-orange.svg)](https://telegraf.js.org/)
 [![Database](https://img.shields.io/badge/SQLite-better--sqlite3%20(WAL)-lightgrey.svg)](https://github.com/WiseLibs/better-sqlite3)
@@ -50,7 +50,12 @@ The bot connects the Telegram community, the official POTA cluster API, personal
   - **Interactive Links:** Park codes (e.g., [RU-0065](https://next.pota.app/park/RU-0065)) and operator callsigns are formatted as direct clickable links to the `next.pota.app` portal.
 - **`/park [reference]`:** Park information cards with coordinates, RDA districts, hunter stats, and dynamic Yandex Maps integration.
 
-### 🖥 5. Web Admin Dashboard 2.0
+### 📻 5. Who's On Air Right Now (/onair)
+- **Instant Feed:** Live summary of activators currently operating, complete with spot comments, spotters, and clickable POTA links.
+- **Unified Smart Mode (RU/CIS + World):** Displays domestic stations proudly at the top (`RU-, BY-, KZ-`), accompanied by top worldwide spots below.
+- **Interactive Switching:** Inline toggle buttons between `🇷🇺 Только RU/СНГ` and `🌐 RU/СНГ + МИР`, with instant refresh and safe group permissions.
+
+### 🖥 6. Web Admin Dashboard 2.0
 Built-in authenticated web interface powered by Express 5 and Bootstrap 5 (`http://localhost:3000`):
 - 🔐 **Session Authentication:** Password protected with persistent `cookie-session` storage and anti-bruteforce rate limiting.
 - 👤 **Telegram Profile Integration:** Automatically fetches and displays user avatars, full names, and @usernames via the Telegram Bot API.
@@ -59,7 +64,7 @@ Built-in authenticated web interface powered by Express 5 and Bootstrap 5 (`http
 - 💻 **Live Activity Console:** In-memory 200-event ring buffer capturing bot events in real time with circular JSON protection and ANSI color filtering.
 - 📢 **Broadcaster:** Send formatted announcements to the channel or group with optional automatic pin.
 
-### 🛡 6. Chat Cleanliness & Moderation
+### 🛡 7. Chat Cleanliness & Moderation
 - **Gatekeeper:** Automatically purges Telegram service messages ("User joined/left the group") and sends a temporary welcome greeting that auto-deletes after 2 minutes.
 - **Command Auto-Deletion:** User command messages in public groups are automatically removed to keep chat history clean.
 - **Moderator Commands:** `/ban`, `/kick`, `/mute` executed via Reply to offending messages.
@@ -72,6 +77,7 @@ Built-in authenticated web interface powered by Express 5 and Bootstrap 5 (`http
 |---|---|---|
 | `/start` | DM / Group | Bot launch, greeting, main menu, and callsign registration |
 | `/spot` | DM | Create a new spot or manage your current active spot |
+| `/onair` | DM / Group | Summary of stations currently on air (RU/CIS and Worldwide) |
 | `/sub` | DM | Manage personal alerts for callsigns and park references |
 | `/sub [callsign]` | DM | Quick subscribe/unsubscribe for an operator (e.g. `/sub R9OGL`) |
 | `/sub [park]` | DM | Quick subscribe/unsubscribe for a park code (e.g. `/sub RU-0065`) |

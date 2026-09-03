@@ -12,6 +12,7 @@ import { callsignHandler } from './commands/callsign.js';
 import { statsHandler } from './commands/stats.js';
 import { subHandler, getSubsKeyboard, getDeleteSubsKeyboard } from './commands/sub.js';
 import { banHandler, muteHandler, kickHandler } from './commands/mod.js';
+import { onairHandler, onairActionHandler } from './commands/onair.js';
 
 // Import scenes
 import { spotWizard } from './scenes/spotWizard.js';
@@ -171,7 +172,15 @@ bot.action(/^delete_msg:(\d+)$/, async (ctx) => {
   const clickerId = ctx.from?.id;
   const adminId = parseInt(process.env.ADMIN_ID, 10);
   
-  if (clickerId === allowedUserId || clickerId === adminId) {
+  let isChatAdmin = false;
+  if (ctx.chat?.type !== 'private') {
+    try {
+      const member = await ctx.getChatMember(clickerId);
+      isChatAdmin = ['creator', 'administrator'].includes(member.status);
+    } catch (e) {}
+  }
+
+  if (clickerId === allowedUserId || clickerId === adminId || isChatAdmin) {
     try {
       await ctx.deleteMessage();
     } catch (e) {}
@@ -181,6 +190,8 @@ bot.action(/^delete_msg:(\d+)$/, async (ctx) => {
     } catch (e) {}
   }
 });
+
+bot.action(/^onair_(view|refresh):(.+)$/, onairActionHandler);
 
 bot.action(/^delsub:(callsign|park):(.+)$/, async (ctx) => {
   const type = ctx.match[1];
@@ -277,6 +288,7 @@ bot.on('left_chat_member', async (ctx) => {
 });
 
 bot.command('start', startHandler);
+bot.command('onair', onairHandler);
 bot.command('stats', statsHandler);
 bot.command('sub', subHandler);
 bot.command('ban', banHandler);
@@ -386,6 +398,7 @@ bot.hears('📡 Управление спотами', async (ctx) => {
   return ctx.scene.enter('SPOT_WIZARD');
 });
 
+bot.hears(['📻 Кто в эфире', '📻 В эфире'], onairHandler);
 bot.hears('📊 Моя статистика', (ctx) => { ctx.message.text='/stats'; return import('./commands/stats.js').then(m=>m.statsHandler(ctx)); });
 bot.hears('🏞 Инфо по парку', (ctx) => { ctx.message.text='/park'; return ctx.scene.enter('PARK_WIZARD'); });
 bot.hears('🔍 Поиск позывного', (ctx) => { return ctx.scene.enter('STATS_WIZARD'); });
@@ -402,6 +415,8 @@ const helpText = `📚 *Справка по боту RU-POTA*
 /stats ПОЗЫВНОЙ — Узнать статистику другого радиолюбителя
 /park [референция] — Узнать информацию о парке (например, RU-0065)
 /sub — Открыть меню управления подписками\n/sub [ПОЗЫВНОЙ] — Быстрая подписка/отписка на позывной\n/sub [ПАРК] — Быстрая подписка/отписка на парк (напр. /sub RU-0065)
+/callsign — Сменить или зарегистрировать позывной (при необходимости)
+/onair — Кто в эфире прямо сейчас (активные активаторы)
 
 *Как отправить спот?*
 1. Пройдите регистрацию (кнопка в меню).
@@ -452,7 +467,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.5.0\x1b[0m 📡               \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.6.0\x1b[0m 📡               \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

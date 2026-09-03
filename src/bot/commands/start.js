@@ -23,6 +23,7 @@ export const startHandler = async (ctx) => {
       msg = await ctx.reply(
         `👋 Привет, ${username}! Вы зарегистрированы как <b>${ctx.state.user.callsign}</b>.\n\n` +
         `<b>Доступные команды в группе:</b>\n` +
+        `🔸 <code>/onair</code> — Кто в эфире прямо сейчас\n` +
         `🔸 <code>/stats</code> — Ваша статистика\n` +
         `🔸 <code>/stats [ПОЗЫВНОЙ]</code> — Статистика радиолюбителя\n` +
         `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n\n` +
@@ -40,6 +41,7 @@ export const startHandler = async (ctx) => {
         `👋 Привет, ${username}!\n\n` +
         `📻 <b>Бот RU-POTA</b> — ваш помощник для работы с кластером POTA.\n\n` +
         `<b>Доступные команды:</b>\n` +
+        `🔸 <code>/onair</code> — Кто в эфире прямо сейчас\n` +
         `🔸 <code>/stats [ПОЗЫВНОЙ]</code> — Статистика радиолюбителя\n` +
         `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n\n` +
         `Чтобы подписываться на споты нужного вам активатора либо самому отправлять споты, пройдите в личные сообщения 👇`, 
@@ -70,7 +72,8 @@ export const startHandler = async (ctx) => {
     keyboard: [
       [{ text: '📡 Управление спотами' }, { text: '📊 Моя статистика' }],
       [{ text: '🏞 Инфо по парку' }, { text: '🔍 Поиск позывного' }],
-      [{ text: '🔔 Мои подписки' }, { text: '❓ Справка' }]
+      [{ text: '🔔 Мои подписки' }, { text: '📻 Кто в эфире' }],
+      [{ text: '❓ Справка' }]
     ],
     resize_keyboard: true
   };
@@ -88,6 +91,8 @@ export const startHandler = async (ctx) => {
         `🔸 <code>/stats</code> — Ваша статистика (чужая: <code>/stats ПОЗЫВНОЙ</code>)\n` +
         `🔸 <code>/sub [ПОЗЫВНОЙ/ПАРК]</code> — Подписка на споты (напр. /sub R9OGL, /sub RU-0065)\n` +
         `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n` +
+        `🔸 <code>/callsign</code> — Сменить позывной (при необходимости)\n` +
+        `🔸 <code>/onair</code> (или кнопка) — Кто в эфире прямо сейчас\n` +
         `🔸 <code>/help</code> — Полная справка\n\n` +
         `Используйте меню ниже для быстрой работы:`,
         { parse_mode: 'HTML', reply_markup: mainMenu }
@@ -112,9 +117,10 @@ export const startHandler = async (ctx) => {
   // Define unregistered user menu
   const unregisteredMenu = {
     keyboard: [
-      [{ text: '📝 Регистрация' }, { text: '🔔 Мои подписки' }],
-      [{ text: '📊 Моя статистика' }, { text: '🏞 Инфо по парку' }],
-      [{ text: '🔍 Поиск позывного' }, { text: '❓ Справка' }]
+      [{ text: '📝 Регистрация' }, { text: '📊 Моя статистика' }],
+      [{ text: '🏞 Инфо по парку' }, { text: '🔍 Поиск позывного' }],
+      [{ text: '🔔 Мои подписки' }, { text: '📻 Кто в эфире' }],
+      [{ text: '❓ Справка' }]
     ],
     resize_keyboard: true
   };
@@ -128,6 +134,7 @@ export const startHandler = async (ctx) => {
     `🔸 <code>/sub [ПОЗЫВНОЙ/ПАРК]</code> — Подписка на споты (напр. /sub R9OGL, /sub RU-0065)\n` +
     `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n` +
     `🔸 <code>/callsign</code> — Зарегистрировать позывной\n` +
+    `🔸 <code>/onair</code> (или кнопка) — Кто в эфире прямо сейчас\n` +
     `🔸 <code>/help</code> — Полная справка\n\n` +
     `Чтобы получить доступ к <b>отправке спотов</b>, необходимо зарегистрировать свой радиолюбительский позывной.`,
     {

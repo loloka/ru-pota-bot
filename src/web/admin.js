@@ -209,7 +209,7 @@ export const startAdminServer = (telegramClient) => {
         <td><span class="badge ${u.status === 'approved' ? 'bg-success' : u.status === 'pending' ? 'bg-warning text-dark' : 'bg-danger'}">${u.status.toUpperCase()}</span></td>
         <td>${new Date(u.created_at).toLocaleString('ru-RU')}</td>
         <td>
-          ${u.status !== 'approved' ? `<form method="POST" action="/approve/${u.telegram_id}" class="d-inline"><button type="submit" class="btn btn-sm btn-success">Одобрить</button></form>` : ''}
+          ${u.status !== 'approved' ? `<button type="button" class="btn btn-sm btn-success approve-user-btn" data-id="${u.telegram_id}">Одобрить</button>` : ''}
           ${u.status !== 'rejected' ? `<button type="button" class="btn btn-sm btn-danger reject-user-btn" data-id="${u.telegram_id}">Отклонить</button>` : ''}
           <button type="button" class="btn btn-sm btn-secondary delete-user-btn" data-id="${u.telegram_id}">Удалить</button>
         </td>
@@ -395,57 +395,89 @@ export const startAdminServer = (telegramClient) => {
             });
           });
 
-          function rejectUserBtn(btn) {
+          async function approveUserBtn(btn) {
             const id = btn.getAttribute('data-id');
+            try {
+              const res = await fetch('/approve/' + id, { method: 'POST' });
+              if (res.ok) {
+                if (Toast) Toast.fire({ icon: 'success', title: 'Заявка одобрена!' });
+                setTimeout(() => window.location.reload(), 500);
+              }
+            } catch (e) {
+              if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка' });
+            }
+          }
+
+          async function rejectUserBtn(btn) {
+            const id = btn.getAttribute('data-id');
+            let isConfirmed = false;
+            let reason = 'Причина не указана';
+            
             if (typeof Swal === 'undefined') {
               const r = prompt('Причина отклонения:');
               if (r === null) return;
-              submitForm('/reject/' + id, { reason: r });
-              return;
+              isConfirmed = true;
+              reason = r;
+            } else {
+              const result = await Swal.fire({
+                title: 'Отклонить заявку',
+                input: 'text',
+                inputLabel: 'Причина отклонения:',
+                inputPlaceholder: 'Введите причину...',
+                showCancelButton: true,
+                confirmButtonColor: '#d33'
+              });
+              isConfirmed = result.isConfirmed;
+              reason = result.value || 'Причина не указана';
             }
-            Swal.fire({
-              title: 'Отклонить заявку',
-              input: 'text',
-              inputLabel: 'Причина отклонения:',
-              inputPlaceholder: 'Введите причину...',
-              showCancelButton: true,
-              confirmButtonColor: '#d33'
-            }).then(result => {
-              if (result.isConfirmed) submitForm('/reject/' + id, { reason: result.value || 'Причина не указана' });
-            });
+
+            if (isConfirmed) {
+              try {
+                const res = await fetch('/reject/' + id, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ reason })
+                });
+                if (res.ok) {
+                  const row = document.getElementById('user-row-' + id);
+                  if (row) { row.classList.add('spot-row-leave'); setTimeout(() => row.remove(), 500); }
+                  if (Toast) Toast.fire({ icon: 'success', title: 'Заявка отклонена' });
+                }
+              } catch (e) {
+                if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка сервера' });
+              }
+            }
           }
 
-          function deleteUserBtn(btn) {
+          async function deleteUserBtn(btn) {
             const id = btn.getAttribute('data-id');
+            let isConfirmed = false;
             if (typeof Swal === 'undefined') {
-              if (confirm('Удалить пользователя из БД навсегда?')) submitForm('/delete-user/' + id);
-              return;
+              isConfirmed = confirm('Удалить пользователя из БД навсегда?');
+            } else {
+              const result = await Swal.fire({
+                title: 'Удалить пользователя?',
+                text: 'Пользователь будет навсегда удален из БД!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Да, удалить!'
+              });
+              isConfirmed = result.isConfirmed;
             }
-            Swal.fire({
-              title: 'Удалить пользователя?',
-              text: 'Пользователь будет навсегда удален из БД!',
-              icon: 'warning',
-              showCancelButton: true,
-              confirmButtonColor: '#d33',
-              confirmButtonText: 'Да, удалить!'
-            }).then(result => {
-              if (result.isConfirmed) submitForm('/delete-user/' + id);
-            });
-          }
 
-          function submitForm(action, data = {}) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = action;
-            for (const key in data) {
-              const input = document.createElement('input');
-              input.type = 'hidden';
-              input.name = key;
-              input.value = data[key];
-              form.appendChild(input);
+            if (isConfirmed) {
+              try {
+                const res = await fetch('/delete-user/' + id, { method: 'POST' });
+                if (res.ok) {
+                  const row = document.getElementById('user-row-' + id);
+                  if (row) { row.classList.add('spot-row-leave'); setTimeout(() => row.remove(), 500); }
+                  if (Toast) Toast.fire({ icon: 'success', title: 'Пользователь удален' });
+                }
+              } catch(e) {
+                if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка удаления' });
+              }
             }
-            document.body.appendChild(form);
-            form.submit();
           }
 
           async function deleteSpotBtn(btn) {
@@ -549,6 +581,12 @@ export const startAdminServer = (telegramClient) => {
             if (rejectBtn) {
               e.preventDefault();
               rejectUserBtn(rejectBtn);
+              return;
+            }
+            const approveBtn = e.target.closest('.approve-user-btn');
+            if (approveBtn) {
+              e.preventDefault();
+              approveUserBtn(approveBtn);
               return;
             }
           });

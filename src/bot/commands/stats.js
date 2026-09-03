@@ -72,8 +72,9 @@ export const statsHandler = async (ctx) => {
     // Последняя поездка
     if (profile.recent_activity?.activations && profile.recent_activity.activations.length > 0) {
       const last = profile.recent_activity.activations[0];
+      const parkLink = `<a href="https://next.pota.app/park/${last.reference}">${last.reference}</a>`;
       msg += `\n🚗 <b>Последняя поездка:</b>\n` +
-             `${last.date} | ${last.reference}\n` +
+             `${last.date} | ${parkLink}\n` +
              `Всего QSO: ${last.total || 0} ` +
              `(CW: ${last.cw || 0}, DIGI: ${last.data || 0}, SSB: ${last.phone || 0})\n`;
     }
@@ -84,7 +85,9 @@ export const statsHandler = async (ctx) => {
       const recentHunts = profile.recent_activity.hunter_qsos.slice(0, 3);
       recentHunts.forEach(hunt => {
         const dateStr = hunt.date.split('T')[0];
-        msg += `- <b>${hunt.callsign}</b> в ${hunt.reference} (${dateStr})\n`;
+        const huntCallLink = `<a href="https://next.pota.app/profile/${hunt.callsign}">${hunt.callsign}</a>`;
+        const huntParkLink = `<a href="https://next.pota.app/park/${hunt.reference}">${hunt.reference}</a>`;
+        msg += `- <b>${huntCallLink}</b> в ${huntParkLink} (${dateStr})\n`;
       });
     }
                 

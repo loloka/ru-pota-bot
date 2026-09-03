@@ -63,7 +63,7 @@ export const parkWizard = new Scenes.WizardScene(
       const territory = park.entityName || 'Не указано';
       
       const firstActivator = park.firstActivator 
-        ? `${park.firstActivator} (${park.firstActivationDate})` 
+        ? `<a href="https://next.pota.app/profile/${park.firstActivator}">${park.firstActivator}</a> (${park.firstActivationDate})` 
         : 'Ещё не активирован';
         
       // Calculate stats
@@ -73,13 +73,16 @@ export const parkWizard = new Scenes.WizardScene(
       // Leader
       let leader = 'Нет данных';
       if (leaderboard.activator_qsos && leaderboard.activator_qsos.length > 0) {
-        leader = `${leaderboard.activator_qsos[0].callsign} (${leaderboard.activator_qsos[0].count} QSO)`;
+        const leadCall = leaderboard.activator_qsos[0].callsign;
+        leader = `<a href="https://next.pota.app/profile/${leadCall}">${leadCall}</a> (${leaderboard.activator_qsos[0].count} QSO)`;
       }
       
       // Last activator
       let lastActivator = 'Нет данных';
       if (recent && recent.length > 0) {
-        lastActivator = `${recent[0].activeCallsign} (${recent[0].qso_date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')})`;
+        const lastCall = recent[0].activeCallsign;
+        const lastDate = recent[0].qso_date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+        lastActivator = `<a href="https://next.pota.app/profile/${lastCall}">${lastCall}</a> (${lastDate})`;
       }
       
       // User's own activity
@@ -95,10 +98,10 @@ export const parkWizard = new Scenes.WizardScene(
       let topHuntersStr = '';
       if (leaderboard.hunter_qsos && leaderboard.hunter_qsos.length > 0) {
         const topHunters = leaderboard.hunter_qsos.slice(0, 3);
-        topHuntersStr = `Топ Охотники: ` + topHunters.map(h => `${h.callsign} (${h.count})`).join(', ') + `\n`;
+        topHuntersStr = `Топ Охотники: ` + topHunters.map(h => `<a href="https://next.pota.app/profile/${h.callsign}">${h.callsign}</a> (${h.count})`).join(', ') + `\n`;
       }
       
-      let msg = `🏞️ <b>Парк ${ref}</b>\n\n` +
+      let msg = `🏞️ <b>Парк <a href="https://next.pota.app/park/${ref}">${ref}</a></b>\n\n` +
                 `<b>Название:</b> ${name} ${type}\n` +
                 `<b>Локация:</b> ${location}\n` +
                 `<b>Территория:</b> ${territory}\n\n` +
@@ -110,7 +113,7 @@ export const parkWizard = new Scenes.WizardScene(
                 topHuntersStr;
                 
       if (myCall) {
-        msg += `\n🎯 <b>Ваша активность (${myCall}):</b>\n` +
+        msg += `\n🎯 <b>Ваша активность (<a href="https://next.pota.app/profile/${myCall}">${myCall}</a>):</b>\n` +
                `Активатор: ${myAct > 0 ? myAct : '-'}, Охотник: ${myHunt > 0 ? myHunt : '-'}\n`;
       }
 

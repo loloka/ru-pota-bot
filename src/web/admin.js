@@ -507,7 +507,7 @@ export const startAdminServer = (telegramClient) => {
               if (typeof Swal === 'undefined') {
                 // Fallback if CDN is blocked
                 const plainText = warningHtml.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ');
-                isConfirmed = confirm("Удалить спот?\n\n" + plainText);
+                isConfirmed = confirm("Удалить спот?\\n\\n" + plainText);
               } else {
                 const result = await Swal.fire({
                   title: 'Удалить спот?',

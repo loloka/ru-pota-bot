@@ -14,13 +14,20 @@ const originalWarn = console.warn;
 const originalError = console.error;
 
 function captureLog(type, args) {
-  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
-  // ANSI colors are nice in terminal, but let's just store raw strings and maybe strip ANSI for web if needed, 
-  // or we can let the web frontend handle it (we'll strip ANSI in the frontend or here).
-  // Removing ANSI codes for the web display:
-  const cleanMsg = msg.replace(/\x1b\[[0-9;]*m/g, '');
-  logBuffer.push({ timestamp: new Date().toISOString(), type, message: cleanMsg });
-  if (logBuffer.length > MAX_LOGS) logBuffer.shift();
+  try {
+    const msg = args.map(a => {
+      if (typeof a === 'object') {
+        try { return JSON.stringify(a); }
+        catch (e) { return '[Object]'; }
+      }
+      return String(a);
+    }).join(' ');
+    const cleanMsg = msg.replace(/\x1b\[[0-9;]*m/g, '');
+    logBuffer.push({ timestamp: new Date().toISOString(), type, message: cleanMsg });
+    if (logBuffer.length > MAX_LOGS) logBuffer.shift();
+  } catch (err) {
+    // ignore
+  }
 }
 
 console.log = (...args) => { captureLog('log', args); originalLog.apply(console, args); };
@@ -47,6 +54,9 @@ export const startAdminServer = (telegramClient) => {
   const requireAuth = (req, res, next) => {
     if (req.session && req.session.authed) {
       return next();
+    }
+    if (req.xhr || req.path.startsWith('/api') || req.method === 'POST') {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
     res.redirect('/login');
   };
@@ -675,41 +685,45 @@ export const startAdminServer = (telegramClient) => {
 
   // Action routes
   app.post('/approve/:id', requireAuth, async (req, res) => {
-    const telegramId = req.params.id;
+    const telegramId = Number(req.params.id);
     try {
       db.prepare("UPDATE users SET status = 'approved' WHERE telegram_id = ?").run(telegramId);
-      await telegramClient.sendMessage(telegramId, '🎉 Ваш аккаунт подтвержден. Спасибо что вы с нами :)\\nТеперь у вас есть возможность отправлять споты в наш канал и кластер POTA!\\n\\nИспользуйте меню ниже, либо нажмите /start');
-      res.redirect('/');
+      try {
+        await telegramClient.sendMessage(telegramId, '✅ Ваша заявка одобрена! Теперь вам доступны все функции бота.');
+      } catch (e) {}
+      res.json({ success: true });
     } catch (err) {
       console.error('Error approving user:', err);
-      res.status(500).send('Error approving user');
+      res.status(500).json({ error: 'Error approving user' });
     }
   });
 
   app.post('/reject/:id', requireAuth, async (req, res) => {
-    const telegramId = req.params.id;
+    const telegramId = Number(req.params.id);
     const reason = req.body.reason || 'Причина не указана';
     try {
       db.prepare("UPDATE users SET status = 'rejected', reject_reason = ? WHERE telegram_id = ?").run(reason, telegramId);
-      await telegramClient.sendMessage(telegramId, `❌ Ваша заявка на регистрацию была отклонена.\\n\\nПричина: ${reason}\\n\\nВы можете подать заявку повторно, используя команду /callsign`);
-      res.redirect('/');
+      try {
+        await telegramClient.sendMessage(telegramId, `❌ Ваша заявка на регистрацию была отклонена.\n\nПричина: ${reason}\n\nВы можете подать заявку повторно, используя команду /callsign`);
+      } catch (e) {}
+      res.json({ success: true });
     } catch (err) {
       console.error('Error rejecting user:', err);
-      res.status(500).send('Error rejecting user');
+      res.status(500).json({ error: 'Error rejecting user' });
     }
   });
 
   app.post('/delete-user/:id', requireAuth, async (req, res) => {
-    const telegramId = req.params.id;
+    const telegramId = Number(req.params.id);
     try {
       db.prepare("DELETE FROM users WHERE telegram_id = ?").run(telegramId);
       try {
         await telegramClient.sendMessage(telegramId, '⚠️ Ваш аккаунт был удален администратором. Вы можете зарегистрироваться заново с помощью команды /callsign');
       } catch (e) {}
-      res.redirect('/');
+      res.json({ success: true });
     } catch (err) {
       console.error('Error deleting user:', err);
-      res.status(500).send('Error deleting user');
+      res.status(500).json({ error: 'Error deleting user' });
     }
   });
 

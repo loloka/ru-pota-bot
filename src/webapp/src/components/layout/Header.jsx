@@ -375,10 +375,27 @@ export default function Header({
 
 
             {/* Footer inside drawer */}
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-center">
-              <p className="text-xs font-mono text-slate-400 dark:text-slate-500">RU-POTA Bot & TMA v1.8.0</p>
-
-              <p className="text-[11px] text-slate-500 dark:text-slate-600 mt-1">73 & 44 to all radio amateurs!</p>
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-center space-y-1.5">
+              <p className="text-xs font-mono font-semibold text-slate-400 dark:text-slate-500">
+                RU-POTA Bot &amp; TMA v1.11.2
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                Автор: <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">R9OGL</span>
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                По предложениям, багам и вопросам:{" "}
+                <a 
+                  href="https://t.me/r9ogl" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="font-medium text-blue-500 hover:text-blue-400 underline underline-offset-2 transition"
+                >
+                  @r9ogl
+                </a>
+              </p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-600 pt-1">
+                73 &amp; 44 to all radio amateurs!
+              </p>
             </div>
           </div>
         </div>

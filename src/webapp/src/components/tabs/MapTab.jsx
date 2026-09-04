@@ -992,12 +992,15 @@ export default function MapTab({
                 
                 <div className="grid grid-cols-2 gap-2">
                   {Object.entries(BASE_MAPS).map(([key, cfg]) => {
-                    const isSelected = baseMap === key;
+                    const isSelected = baseMapType === key;
                     return (
                       <button
                         key={key}
                         type="button"
-                        onClick={() => handleSelectBaseMap(key)}
+                        onClick={() => {
+                          telegram.haptic.selection();
+                          setBaseMapType(key);
+                        }}
                         className={`p-2.5 rounded-xl text-xs font-semibold text-left transition flex items-center justify-between border ${
                           isSelected
                             ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 shadow-glow-pill font-bold'
@@ -1014,19 +1017,28 @@ export default function MapTab({
 
               {/* R1CF WMS Overlays Toggles */}
               <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <span>🛰️</span>
-                  <span>Специальные радиолюбительские слои (R1CF)</span>
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <span>🛰️</span>
+                    <span>Специальные радиолюбительские слои (R1CF)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={resetLayersToDefault}
+                    className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                  >
+                    По умолчанию
+                  </button>
+                </div>
 
                 <div className="space-y-1.5">
-                  {Object.entries(R1CF_LAYERS).map(([key, cfg]) => {
-                    const isActive = activeWmsLayers[key] !== false; // Active by default
+                  {WMS_LAYERS_CONFIG.map((cfg) => {
+                    const isActive = Boolean(activeLayers[cfg.id]);
                     return (
                       <button
-                        key={key}
+                        key={cfg.id}
                         type="button"
-                        onClick={() => toggleWmsLayer(key)}
+                        onClick={() => toggleWmsLayer(cfg.id)}
                         className={`w-full p-2.5 rounded-xl text-xs transition flex items-center justify-between border ${
                           isActive
                             ? 'bg-slate-100/90 dark:bg-slate-800/90 text-slate-900 dark:text-white border-emerald-500/40'
@@ -1045,7 +1057,11 @@ export default function MapTab({
                           </div>
                         </div>
 
-                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0 ml-2">
+                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ml-2 ${
+                          isActive 
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20' 
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                        }`}>
                           {cfg.layer}
                         </span>
                       </button>

@@ -72,7 +72,7 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.13.9 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.13.10 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
     let anyUpdated = false;

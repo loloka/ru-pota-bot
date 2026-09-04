@@ -837,7 +837,19 @@ export const startAdminServer = (telegramClient) => {
   app.post('/delete-user/:id', requireAuth, async (req, res) => {
     const telegramId = Number(req.params.id);
     try {
+      const userRow = db.prepare('SELECT last_spot_msg_id FROM users WHERE telegram_id = ?').get(telegramId);
+      if (userRow && userRow.last_spot_msg_id && ACTIVITY_CHANNEL_ID) {
+        let channelId = ACTIVITY_CHANNEL_ID;
+        if (channelId.includes('t.me/')) {
+          channelId = '@' + channelId.split('t.me/')[1].replace('/', '');
+        }
+        try {
+          await pinManager.unpinSpotNow(telegramClient, channelId, userRow.last_spot_msg_id);
+          await telegramClient.deleteMessage(channelId, userRow.last_spot_msg_id);
+        } catch (e) {}
+      }
       db.prepare("DELETE FROM users WHERE telegram_id = ?").run(telegramId);
+      db.prepare("DELETE FROM subscriptions WHERE telegram_id = ?").run(telegramId);
       try {
         await telegramClient.sendMessage(telegramId, '⚠️ Ваш аккаунт был удален администратором. Вы можете зарегистрироваться заново с помощью команды /callsign');
       } catch (e) {}

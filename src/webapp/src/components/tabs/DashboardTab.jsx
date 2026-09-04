@@ -9,7 +9,9 @@ import {
   Square, 
   ArrowRight,
   MapPin,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  Clock
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -69,6 +71,16 @@ export default function DashboardTab({
 
   const handleSpotSubmit = async (e) => {
     e.preventDefault();
+    if (!user || user.status !== 'approved' || !user.callsign) {
+      telegram.haptic.notification('error');
+      setErrorMessage(
+        language === 'RU'
+          ? 'Только подтвержденные радиолюбители с одобренным позывным могут публиковать споты.'
+          : 'Only verified operators with an approved callsign can post spots.'
+      );
+      return;
+    }
+
     setErrorMessage('');
     setSubmitting(true);
     telegram.haptic.impact('medium');
@@ -111,6 +123,15 @@ export default function DashboardTab({
   const handleRespot = async () => {
     telegram.haptic.impact('medium');
     if (!activeSpot) return;
+    if (!user || user.status !== 'approved' || !user.callsign) {
+      telegram.haptic.notification('error');
+      alert(
+        language === 'RU'
+          ? 'Только подтвержденные радиолюбители с одобренным позывным могут публиковать споты.'
+          : 'Only verified operators with an approved callsign can post spots.'
+      );
+      return;
+    }
 
     try {
       await api.postSpot({
@@ -282,30 +303,73 @@ export default function DashboardTab({
                 {t('dash_not_on_air_desc')}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                telegram.haptic.impact('medium');
-                if (!user) {
-                  if (onRequireAuth) {
-                    onRequireAuth(
-                      language === 'RU' ? 'Отправка спота в эфир' : 'Post Spot to Cluster',
-                      language === 'RU'
-                        ? 'Для отправки спотов от своего позывного запустите RU-POTA Hub внутри Telegram-бота @ru_pota_bot.'
-                        : 'To post spots with your callsign, please launch RU-POTA Hub inside our Telegram bot @ru_pota_bot.'
-                    );
-                  } else {
-                    telegram.openTelegramBot('hub');
+            {/* Spot Action Button depends on verification status */}
+            {!user || !user.callsign || user.status === 'guest' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('light');
+                  if (!user) {
+                    if (onRequireAuth) {
+                      onRequireAuth(
+                        language === 'RU' ? 'Отправка спота в эфир' : 'Post Spot to Cluster',
+                        language === 'RU'
+                          ? 'Для отправки спотов от своего позывного запустите RU-POTA Hub внутри Telegram-бота @ru_pota_bot.'
+                          : 'To post spots with your callsign, please launch RU-POTA Hub inside our Telegram bot @ru_pota_bot.'
+                      );
+                    } else {
+                      telegram.openTelegramBot('hub');
+                    }
+                    return;
                   }
-                  return;
-                }
-                setSpotModalOpen(true);
-              }}
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-slate-950 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 shadow-glow-emerald transition-all active:scale-95"
-            >
-              <Send className="w-4 h-4" />
-              <span>{t('dash_send_spot_btn')}</span>
-            </button>
+                  if (onNavigate) onNavigate('profile');
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-slate-700 dark:text-slate-300 bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-700/80 border border-slate-300 dark:border-slate-700 transition-all active:scale-95"
+              >
+                <Lock className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <span>{t('dash_spot_locked_guest')}</span>
+              </button>
+            ) : user.status === 'pending' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.notification('warning');
+                  alert(
+                    language === 'RU'
+                      ? `⏳ Ваш позывной ${user.callsign} находится на проверке администратором. Публикация спотов станет доступна сразу после одобрения заявки!`
+                      : `⏳ Your callsign ${user.callsign} is pending administrator review. Spotting will be enabled once approved!`
+                  );
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-amber-800 dark:text-amber-200 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 transition-all active:scale-95"
+              >
+                <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span>{t('dash_spot_locked_pending')}</span>
+              </button>
+            ) : user.status === 'rejected' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.notification('error');
+                  if (onNavigate) onNavigate('profile');
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-rose-800 dark:text-rose-200 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 transition-all active:scale-95"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                <span>{t('dash_spot_locked_rejected')}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('medium');
+                  setSpotModalOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-slate-950 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 shadow-glow-emerald transition-all active:scale-95"
+              >
+                <Send className="w-4 h-4" />
+                <span>{t('dash_send_spot_btn')}</span>
+              </button>
+            )}
           </div>
         )}
       </div>

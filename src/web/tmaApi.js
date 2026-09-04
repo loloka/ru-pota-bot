@@ -72,7 +72,7 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.13.1 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.13.2 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
     let anyUpdated = false;
@@ -803,12 +803,14 @@ export function createTmaRouter(telegramClient) {
   // ==========================================
   router.post('/spots', requireTmaAuth, async (req, res) => {
     try {
-      const dbUser = req.dbUser;
       const tgUser = req.telegramUser;
+
+      // Strictly verify from SQLite DB that user exists and is approved
+      const dbUser = db.prepare('SELECT telegram_id, callsign, status FROM users WHERE telegram_id = ?').get(tgUser.id);
 
       if (!dbUser || dbUser.status !== 'approved' || !dbUser.callsign) {
         return res.status(403).json({
-          error: 'Только подтвержденные радиолюбители с позывным могут публиковать споты.',
+          error: 'Только подтвержденные радиолюбители с одобренным позывным могут публиковать споты в канал.',
           code: 'FORBIDDEN_CALLSIGN_REQUIRED'
         });
       }
@@ -969,7 +971,13 @@ export function createTmaRouter(telegramClient) {
     try {
       const tgUser = req.telegramUser;
 
-      const existingUser = db.prepare('SELECT last_spot_msg_id FROM users WHERE telegram_id = ?').get(tgUser.id);
+      const existingUser = db.prepare('SELECT last_spot_msg_id, status, callsign FROM users WHERE telegram_id = ?').get(tgUser.id);
+      if (!existingUser || existingUser.status !== 'approved') {
+        return res.status(403).json({
+          error: 'Действие недоступно для неподтвержденных пользователей.',
+          code: 'FORBIDDEN'
+        });
+      }
       if (existingUser && existingUser.last_spot_msg_id && ACTIVITY_CHANNEL_ID) {
         let channelId = ACTIVITY_CHANNEL_ID;
         if (channelId.includes('t.me/')) {

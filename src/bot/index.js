@@ -257,8 +257,21 @@ bot.command('spot', async (ctx) => {
   
   try {
     const db = (await import('../db/database.js')).default;
-    const user = db.prepare('SELECT last_spot_msg_id FROM users WHERE telegram_id = ?').get(ctx.from.id);
-    if (user && user.last_spot_msg_id) {
+    const user = db.prepare('SELECT last_spot_msg_id, status, callsign, reject_reason FROM users WHERE telegram_id = ?').get(ctx.from.id);
+    if (!user || !user.callsign) {
+      return ctx.reply('⚠️ Позывной не найден. Для публикации спотов в канал зарегистрируйтесь с помощью команды /callsign');
+    }
+    if (user.status === 'pending') {
+      return ctx.reply(`⏳ Ваш позывной <b>${user.callsign}</b> находится на проверке администратором. Публикация спотов в канал станет доступна сразу после одобрения заявки!`, { parse_mode: 'HTML' });
+    }
+    if (user.status === 'rejected') {
+      const reason = user.reject_reason ? `\nПричина: <i>${user.reject_reason}</i>` : '';
+      return ctx.reply(`❌ Ваша заявка на позывной <b>${user.callsign}</b> была отклонена.${reason}\n\nВы можете подать заявку повторно с помощью команды /callsign`, { parse_mode: 'HTML' });
+    }
+    if (user.status !== 'approved') {
+      return ctx.reply('⚠️ Публикация спотов доступна только подтвержденным радиолюбителям.');
+    }
+    if (user.last_spot_msg_id) {
       return ctx.reply('У вас есть ранее опубликованный спот. Что вы хотите с ним сделать?', {
         reply_markup: {
           inline_keyboard: [
@@ -386,6 +399,10 @@ bot.action('spot_action_new', async (ctx) => {
   await ctx.answerCbQuery();
   await ctx.deleteMessage().catch(()=>{});
   const db = (await import('../db/database.js')).default;
+  const user = db.prepare('SELECT status, callsign FROM users WHERE telegram_id = ?').get(ctx.from.id);
+  if (!user || user.status !== 'approved' || !user.callsign) {
+    return ctx.reply('⚠️ Публикация спотов доступна только подтвержденным радиолюбителям с позывным.');
+  }
   db.prepare('UPDATE users SET last_spot_msg_id = NULL, last_spot_data = NULL WHERE telegram_id = ?').run(ctx.from.id);
   return ctx.scene.enter('SPOT_WIZARD');
 });
@@ -431,6 +448,11 @@ bot.action('spot_action_delete', async (ctx) => {
 
 bot.action('spot_action_edit', async (ctx) => {
   await ctx.answerCbQuery();
+  const db = (await import('../db/database.js')).default;
+  const user = db.prepare('SELECT status, callsign FROM users WHERE telegram_id = ?').get(ctx.from.id);
+  if (!user || user.status !== 'approved' || !user.callsign) {
+    return ctx.reply('⚠️ Публикация спотов доступна только подтвержденным радиолюбителям с позывным.');
+  }
   await ctx.editMessageText('Какой пункт вы хотите изменить?', {
     reply_markup: {
       inline_keyboard: [
@@ -447,8 +469,21 @@ bot.hears('📡 Управление спотами', async (ctx) => {
   ctx.message.text = '/spot'; // simulate command
   try {
     const db = (await import('../db/database.js')).default;
-    const user = db.prepare('SELECT last_spot_msg_id, last_spot_data FROM users WHERE telegram_id = ?').get(ctx.from.id);
-    if (user && user.last_spot_msg_id) {
+    const user = db.prepare('SELECT last_spot_msg_id, last_spot_data, status, callsign, reject_reason FROM users WHERE telegram_id = ?').get(ctx.from.id);
+    if (!user || !user.callsign) {
+      return ctx.reply('⚠️ Позывной не найден. Для публикации спотов в канал зарегистрируйтесь с помощью команды /callsign');
+    }
+    if (user.status === 'pending') {
+      return ctx.reply(`⏳ Ваш позывной <b>${user.callsign}</b> находится на проверке администратором. Публикация спотов в канал станет доступна сразу после одобрения заявки!`, { parse_mode: 'HTML' });
+    }
+    if (user.status === 'rejected') {
+      const reason = user.reject_reason ? `\nПричина: <i>${user.reject_reason}</i>` : '';
+      return ctx.reply(`❌ Ваша заявка на позывной <b>${user.callsign}</b> была отклонена.${reason}\n\nВы можете подать заявку повторно с помощью команды /callsign`, { parse_mode: 'HTML' });
+    }
+    if (user.status !== 'approved') {
+      return ctx.reply('⚠️ Публикация спотов доступна только подтвержденным радиолюбителям.');
+    }
+    if (user.last_spot_msg_id) {
       let isAutoRespot = false;
       try {
         if (user.last_spot_data) {
@@ -545,7 +580,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.13.1\x1b[0m 📡              \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.13.2\x1b[0m 📡              \x1b[32m║\x1b[0m
 
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m

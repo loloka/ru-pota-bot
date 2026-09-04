@@ -154,7 +154,7 @@ export default function DashboardTab({
   const isOnAir = Boolean(activeSpot);
 
   return (
-    <div className="space-y-4 pb-32 pb-safe animate-fade-in">
+    <div className="space-y-4 pb-tab-bottom animate-fade-in">
       {/* 1. Welcome & Callsign Badge OR Guest Banner */}
       {user ? (
         <div className="flex items-center justify-between p-4 rounded-2xl glass-card">

@@ -58,7 +58,7 @@ export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAut
   // Guest view outside Telegram
   if (!user) {
     return (
-      <div className="space-y-4 pb-32 pb-safe animate-fade-in">
+      <div className="space-y-4 pb-tab-bottom animate-fade-in">
         {/* Guest Profile Banner */}
         <div className="p-6 rounded-3xl glass-card border border-sky-500/30 text-center space-y-4 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-40 h-40 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -144,7 +144,7 @@ export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAut
   }
 
   return (
-    <div className="space-y-4 pb-32 pb-safe animate-fade-in">
+    <div className="space-y-4 pb-tab-bottom animate-fade-in">
       {/* 1. Profile Identity Header */}
       <div className="p-4 rounded-2xl glass-card relative overflow-hidden">
         {/* Ambient glow decoration */}

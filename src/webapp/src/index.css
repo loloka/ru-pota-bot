@@ -125,6 +125,11 @@
   padding-bottom: max(var(--sab), 0.75rem);
 }
 
+/* Generous bottom clearance for scrollable tabs above fixed BottomNav */
+.pb-tab-bottom {
+  padding-bottom: calc(7.5rem + max(var(--sab), 0.75rem)) !important;
+}
+
 /* Leaflet map container rules for TMA */
 .leaflet-pane {
   z-index: 10 !important;

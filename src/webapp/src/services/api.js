@@ -8,7 +8,12 @@ const API_BASE = '/api/tma';
  */
 async function request(endpoint, options = {}) {
   const initData = telegram.getInitData();
-  const isMock = !telegram.isAvailable;
+  const isExplicitDevMock = Boolean(
+    import.meta.env.DEV && 
+    typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && 
+    window.location.search.includes('dev_mock=1')
+  );
 
   const headers = {
     'Content-Type': 'application/json',
@@ -21,7 +26,7 @@ async function request(endpoint, options = {}) {
     headers['X-Telegram-Init-Data'] = initData;
   }
 
-  if (isMock) {
+  if (isExplicitDevMock) {
     headers['X-Dev-Mock'] = 'true';
   }
 

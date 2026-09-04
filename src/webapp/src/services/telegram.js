@@ -5,8 +5,8 @@
 
 const tg = typeof window !== 'undefined' ? window.Telegram?.WebApp : null;
 
-// Mock user profile for local browser development
-const MOCK_USER = {
+// Optional mock user profile ONLY for localhost dev when ?dev_mock=1 is explicitly in URL
+const DEV_MOCK_USER = {
   id: 890862502,
   first_name: 'Сан Саныч',
   last_name: '',
@@ -16,6 +16,9 @@ const MOCK_USER = {
   isMock: true,
 };
 
+export const BOT_USERNAME = 'ru_pota_bot';
+export const BOT_URL = `https://t.me/${BOT_USERNAME}`;
+
 export const telegram = {
   /**
    * Reference to native Telegram WebApp object
@@ -23,7 +26,13 @@ export const telegram = {
   raw: tg,
 
   /**
-   * Check if running inside real Telegram client
+   * Bot username and deep-link URLs
+   */
+  botUsername: BOT_USERNAME,
+  botUrl: BOT_URL,
+
+  /**
+   * Check if running inside real Telegram client with valid auth session
    */
   isAvailable: Boolean(tg && tg.initData),
 
@@ -32,7 +41,7 @@ export const telegram = {
    */
   init() {
     if (!tg) {
-      console.info('[Telegram Service] Running in desktop browser (Dev Mock active)');
+      console.info('[Telegram Service] Running in standard web browser (Guest Mode)');
       return;
     }
 
@@ -55,16 +64,30 @@ export const telegram = {
   },
 
   /**
-   * Get current Telegram user profile or dev mock
+   * Get current Telegram user profile or null for guests
    */
   getUser() {
-    if (tg?.initDataUnsafe?.user) {
+    if (tg?.initDataUnsafe?.user && tg?.initData) {
       return {
         ...tg.initDataUnsafe.user,
-        isMock: false,
+        isGuest: false,
       };
     }
-    return MOCK_USER;
+
+    // Only allow explicit mock if localhost, Vite dev mode, AND ?dev_mock=1 query param
+    const isExplicitLocalMock = Boolean(
+      import.meta.env.DEV && 
+      typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && 
+      window.location.search.includes('dev_mock=1')
+    );
+
+    if (isExplicitLocalMock) {
+      return DEV_MOCK_USER;
+    }
+
+    // Standard Guest mode (outside Telegram)
+    return null;
   },
 
   /**
@@ -72,6 +95,20 @@ export const telegram = {
    */
   getInitData() {
     return tg?.initData || '';
+  },
+
+  /**
+   * Open official bot link in Telegram
+   */
+  openTelegramBot(startParam = 'hub') {
+    const url = `https://t.me/${BOT_USERNAME}?start=${startParam}`;
+    if (tg && typeof tg.openTelegramLink === 'function') {
+      try {
+        tg.openTelegramLink(url);
+        return;
+      } catch (e) {}
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
   },
 
   /**

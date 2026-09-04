@@ -18,7 +18,7 @@ import { formatTimeAgoLocale } from '../../services/i18n.js';
 const BANDS = ['Все', '40m', '20m', '15m', '10m', '2m'];
 const MODES = ['Все', 'SSB', 'CW', 'FT8', 'FM'];
 
-export default function ClusterTab({ onNavigate, clusterFilter, language = 'RU', t = (k) => k }) {
+export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFilter, language = 'RU', t = (k) => k }) {
   const [scope, setScope] = useState(() => clusterFilter?.scope || 'ru');
   const [selectedBand, setSelectedBand] = useState('Все');
   const [selectedMode, setSelectedMode] = useState('Все');
@@ -54,29 +54,22 @@ export default function ClusterTab({ onNavigate, clusterFilter, language = 'RU',
     }
   }, [highlightCallsign, spots]);
 
-
-
-  const fetchSpots = useCallback(async (isManual = false) => {
-    if (isManual) {
-      telegram.haptic.impact('light');
-      setIsRefreshing(true);
-    }
+  const fetchSpots = useCallback(async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    else setIsRefreshing(true);
+    setError(null);
 
     try {
-      const res = await api.getSpots({
+      const data = await api.getSpots({
         scope,
         band: selectedBand,
         mode: selectedMode,
         search: searchQuery,
       });
-
-      setSpots(res.spots || []);
-      setError(null);
-      if (isManual) telegram.haptic.notification('success');
+      setSpots(data.spots || []);
     } catch (err) {
-      console.warn('[Cluster] Failed to fetch spots:', err.message);
+      console.warn('[ClusterTab] Fetch error:', err.message);
       setError(err.message);
-      if (isManual) telegram.haptic.notification('error');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -85,13 +78,29 @@ export default function ClusterTab({ onNavigate, clusterFilter, language = 'RU',
 
   useEffect(() => {
     fetchSpots();
-    // Auto-poll spots every 20 seconds
-    const timer = setInterval(() => fetchSpots(), 20000);
+    // Auto-refresh every 20 seconds
+    const timer = setInterval(() => {
+      fetchSpots(true);
+    }, 20000);
     return () => clearInterval(timer);
   }, [fetchSpots]);
 
   const handleSubscribe = async (callsign) => {
     telegram.haptic.impact('medium');
+    if (!user) {
+      if (onRequireAuth) {
+        onRequireAuth(
+          language === 'RU' ? 'Подписка на позывной' : 'Follow Callsign',
+          language === 'RU'
+            ? `Чтобы бот присылал вам в ЛС уведомления о спотах оператора ${callsign}, откройте приложение через Telegram-бота @ru_pota_bot.`
+            : `To get DM alerts whenever ${callsign} spots from a park, please open this app inside @ru_pota_bot.`
+        );
+      } else {
+        telegram.openTelegramBot('hub');
+      }
+      return;
+    }
+
     try {
       await api.addSubscription({ type: 'callsign', target: callsign });
       telegram.haptic.notification('success');

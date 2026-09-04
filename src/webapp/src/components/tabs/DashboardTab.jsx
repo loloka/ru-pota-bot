@@ -24,6 +24,7 @@ export default function DashboardTab({
   subscriptionsCount = 0,
   onRefreshProfile,
   onNavigate,
+  onRequireAuth,
   language = 'RU',
   t = (k) => k
 }) {
@@ -99,24 +100,26 @@ export default function DashboardTab({
     try {
       await api.stopSpot();
       telegram.haptic.notification('success');
+      alert(language === 'RU' ? 'Сессия в эфире завершена (QRT)!' : 'Session finished (QRT)!');
       if (onRefreshProfile) await onRefreshProfile();
     } catch (err) {
       telegram.haptic.notification('error');
-      alert(`Ошибка QRT: ${err.message}`);
+      alert(`Error: ${err.message}`);
     }
   };
 
   const handleRespot = async () => {
-    if (!activeSpot) return;
     telegram.haptic.impact('medium');
+    if (!activeSpot) return;
 
     try {
       await api.postSpot({
         reference: activeSpot.reference,
         frequency: activeSpot.frequency,
         mode: activeSpot.mode,
-        comment: activeSpot.comment ? `${activeSpot.comment} (Respot)` : 'Respot',
+        comment: activeSpot.comment || '',
       });
+
       telegram.haptic.notification('success');
       alert(language === 'RU' ? 'Спот успешно обновлен в эфире!' : 'Spot successfully renewed on air!');
       if (onRefreshProfile) await onRefreshProfile();
@@ -130,42 +133,86 @@ export default function DashboardTab({
 
   return (
     <div className="space-y-4 pb-20 animate-fade-in">
-      {/* 1. Welcome & Callsign Badge */}
-      <div className="flex items-center justify-between p-4 rounded-2xl glass-card">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono font-bold text-lg text-emerald-600 dark:text-emerald-400 shadow-inner">
-            {user.callsign ? user.callsign.substring(0, 2) : 'RU'}
-          </div>
-          <div>
-            <h1 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
-              {t('dash_hello')}, {user.first_name || t('dash_operator')}! 👋
-            </h1>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-md border ${
-                user.status === 'approved' 
-                  ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
-                  : 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/30'
-              }`}>
-                {user.callsign || t('dash_no_callsign')}
-              </span>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                • {user.status === 'approved' ? t('dash_approved') : user.status === 'pending' ? t('dash_pending') : t('dash_guest')}
-              </span>
+      {/* 1. Welcome & Callsign Badge OR Guest Banner */}
+      {user ? (
+        <div className="flex items-center justify-between p-4 rounded-2xl glass-card">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono font-bold text-lg text-emerald-600 dark:text-emerald-400 shadow-inner">
+              {user.callsign ? user.callsign.substring(0, 2) : 'RU'}
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
+                {t('dash_hello')}, {user.first_name || t('dash_operator')}! 👋
+              </h1>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-md border ${
+                  user.status === 'approved' 
+                    ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+                    : 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/30'
+                }`}>
+                  {user.callsign || t('dash_no_callsign')}
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  • {user.status === 'approved' ? t('dash_approved') : user.status === 'pending' ? t('dash_pending') : t('dash_guest')}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            telegram.haptic.impact('light');
-            onNavigate('profile');
-          }}
-          className="text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2.5 py-1.5 rounded-xl bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700/70 transition"
-        >
-          {t('dash_cabinet')}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => {
+              telegram.haptic.impact('light');
+              onNavigate('profile');
+            }}
+            className="text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-2.5 py-1.5 rounded-xl bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700/70 transition"
+          >
+            {t('dash_cabinet')}
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between p-4 rounded-2xl glass-card border border-sky-500/30 bg-gradient-to-r from-sky-500/10 via-slate-800/30 to-emerald-500/10">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-500/20 shrink-0">
+              <Send className="w-5 h-5 -translate-x-0.5 translate-y-0.5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">
+                  {t('guest_welcome')}
+                </h1>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+                  {t('guest_badge')}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {t('guest_subtitle')}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              telegram.haptic.impact('light');
+              if (onRequireAuth) {
+                onRequireAuth(
+                  language === 'RU' ? 'Вход через Telegram' : 'Login via Telegram',
+                  language === 'RU' 
+                    ? 'Откройте RU-POTA Hub внутри Telegram-бота @ru_pota_bot для автоматической авторизации вашего позывного.' 
+                    : 'Open RU-POTA Hub inside @ru_pota_bot to automatically authorize your callsign.'
+                );
+              } else {
+                telegram.openTelegramBot('hub');
+              }
+            }}
+            className="flex items-center gap-1 text-xs font-bold text-white px-2.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 shadow-md shadow-sky-500/20 transition active:scale-95 shrink-0"
+          >
+            <Send className="w-3 h-3" />
+            <span>{t('guest_login_btn')}</span>
+          </button>
+        </div>
+      )}
 
       {/* 2. On-Air Status Widget */}
       <div className="p-4 rounded-2xl glass-card relative overflow-hidden">
@@ -239,6 +286,19 @@ export default function DashboardTab({
               type="button"
               onClick={() => {
                 telegram.haptic.impact('medium');
+                if (!user) {
+                  if (onRequireAuth) {
+                    onRequireAuth(
+                      language === 'RU' ? 'Отправка спота в эфир' : 'Post Spot to Cluster',
+                      language === 'RU'
+                        ? 'Для отправки спотов от своего позывного запустите RU-POTA Hub внутри Telegram-бота @ru_pota_bot.'
+                        : 'To post spots with your callsign, please launch RU-POTA Hub inside our Telegram bot @ru_pota_bot.'
+                    );
+                  } else {
+                    telegram.openTelegramBot('hub');
+                  }
+                  return;
+                }
                 setSpotModalOpen(true);
               }}
               className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-slate-950 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 shadow-glow-emerald transition-all active:scale-95"
@@ -254,6 +314,7 @@ export default function DashboardTab({
       <PotaLookupWidget
         user={user}
         onNavigate={onNavigate}
+        onRequireAuth={onRequireAuth}
         language={language}
         t={t}
       />
@@ -342,6 +403,15 @@ export default function DashboardTab({
         <div 
           onClick={() => {
             telegram.haptic.impact('light');
+            if (!user && onRequireAuth) {
+              onRequireAuth(
+                language === 'RU' ? 'Статистика оператора' : 'Operator Statistics',
+                language === 'RU'
+                  ? 'Чтобы просматривать личную статистику активаций и дипломов, откройте RU-POTA Hub в Telegram-боте @ru_pota_bot.'
+                  : 'To track personal activations and awards, please launch RU-POTA Hub inside @ru_pota_bot.'
+              );
+              return;
+            }
             onNavigate('profile');
           }}
           className="p-3.5 rounded-2xl glass-card hover:border-emerald-500/40 cursor-pointer transition active:scale-95"
@@ -353,26 +423,41 @@ export default function DashboardTab({
             <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
           </div>
           <h4 className="font-bold text-xs text-slate-800 dark:text-slate-300 mt-2">{t('dash_my_stats')}</h4>
-          <div className="mt-2 space-y-1 text-[11px]">
-            <div className="flex justify-between text-slate-500 dark:text-slate-400">
-              <span>{t('dash_activations')}</span>
-              <span className="font-mono font-bold text-slate-900 dark:text-white">{stats?.activations || 0}</span>
+          {user ? (
+            <div className="mt-2 space-y-1 text-[11px]">
+              <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                <span>{t('dash_activations')}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">{stats?.activations || 0}</span>
+              </div>
+              <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                <span>{t('dash_unique_parks')}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">{stats?.uniqueParks || 0}</span>
+              </div>
+              <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                <span>{t('dash_qsos')}</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{stats?.qsos || 0}</span>
+              </div>
             </div>
-            <div className="flex justify-between text-slate-500 dark:text-slate-400">
-              <span>{t('dash_unique_parks')}</span>
-              <span className="font-mono font-bold text-slate-900 dark:text-white">{stats?.uniqueParks || 0}</span>
-            </div>
-            <div className="flex justify-between text-slate-500 dark:text-slate-400">
-              <span>{t('dash_qsos')}</span>
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{stats?.qsos || 0}</span>
-            </div>
-          </div>
+          ) : (
+            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 italic">
+              {t('guest_stats_hint')}
+            </p>
+          )}
         </div>
 
         {/* Metric 2: Subscriptions */}
         <div 
           onClick={() => {
             telegram.haptic.impact('light');
+            if (!user && onRequireAuth) {
+              onRequireAuth(
+                language === 'RU' ? 'Персональные подписки' : 'Personal Subscriptions',
+                language === 'RU'
+                  ? 'Чтобы получать push-уведомления в Telegram о выходе парков и друзей в эфир, откройте приложение через бота @ru_pota_bot.'
+                  : 'To receive instant Telegram alerts when your favourite parks or friends go on air, open the app inside @ru_pota_bot.'
+              );
+              return;
+            }
             onNavigate('subscriptions');
           }}
           className="p-3.5 rounded-2xl glass-card hover:border-blue-500/40 cursor-pointer transition active:scale-95"
@@ -384,20 +469,26 @@ export default function DashboardTab({
             <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
           </div>
           <h4 className="font-bold text-xs text-slate-800 dark:text-slate-300 mt-2">{t('dash_my_subs')}</h4>
-          <div className="mt-2 space-y-1 text-[11px]">
-            <div className="flex justify-between text-slate-500 dark:text-slate-400">
-              <span>{t('dash_total_subs')}</span>
-              <span className="font-mono font-bold text-slate-900 dark:text-white">{subscriptionsCount}</span>
+          {user ? (
+            <div className="mt-2 space-y-1 text-[11px]">
+              <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                <span>{t('dash_total_subs')}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">{subscriptionsCount}</span>
+              </div>
+              <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                <span>{t('dash_dm_alerts')}</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">{t('dash_enabled')}</span>
+              </div>
+              <div className="flex justify-between text-slate-500 dark:text-slate-400">
+                <span>{t('dash_status')}</span>
+                <span className="font-bold text-blue-600 dark:text-blue-400">{t('dash_active')}</span>
+              </div>
             </div>
-            <div className="flex justify-between text-slate-500 dark:text-slate-400">
-              <span>{t('dash_dm_alerts')}</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">{t('dash_enabled')}</span>
-            </div>
-            <div className="flex justify-between text-slate-500 dark:text-slate-400">
-              <span>{t('dash_status')}</span>
-              <span className="font-bold text-blue-600 dark:text-blue-400">{t('dash_active')}</span>
-            </div>
-          </div>
+          ) : (
+            <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 italic">
+              {t('guest_subs_hint')}
+            </p>
+          )}
         </div>
       </div>
 

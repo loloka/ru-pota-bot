@@ -22,6 +22,7 @@ import RouteModal from '../modals/RouteModal.jsx';
 export default function PotaLookupWidget({ 
   user, 
   onNavigate, 
+  onRequireAuth,
   language = 'RU', 
   t = (k) => k 
 }) {
@@ -268,26 +269,42 @@ export default function PotaLookupWidget({
                   👤 {user.callsign} ({language === 'RU' ? 'Я' : 'Me'})
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery('R9OGL');
-                  handleSearch('R9OGL');
-                }}
-                className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-mono font-semibold hover:border-emerald-500/40 transition active:scale-95"
-              >
-                R9OGL
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery('R2BBX');
-                  handleSearch('R2BBX');
-                }}
-                className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-mono font-semibold hover:border-emerald-500/40 transition active:scale-95"
-              >
-                R2BBX
-              </button>
+              {(!user?.callsign || user.callsign !== 'R2BBX') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('R2BBX');
+                    handleSearch('R2BBX');
+                  }}
+                  className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-mono font-semibold hover:border-emerald-500/40 transition active:scale-95"
+                >
+                  R2BBX
+                </button>
+              )}
+              {(!user?.callsign || user.callsign !== 'UA9OTW') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('UA9OTW');
+                    handleSearch('UA9OTW');
+                  }}
+                  className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-mono font-semibold hover:border-emerald-500/40 transition active:scale-95"
+                >
+                  UA9OTW
+                </button>
+              )}
+              {!user?.callsign && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('RA3ATX');
+                    handleSearch('RA3ATX');
+                  }}
+                  className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-mono font-semibold hover:border-emerald-500/40 transition active:scale-95"
+                >
+                  RA3ATX
+                </button>
+              )}
             </>
           ) : (
             <>

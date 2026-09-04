@@ -7,6 +7,7 @@ import MapTab from './components/tabs/MapTab.jsx';
 import SubscriptionsTab from './components/tabs/SubscriptionsTab.jsx';
 import ProfileTab from './components/tabs/ProfileTab.jsx';
 import OsmAndModal from './components/modals/OsmAndModal.jsx';
+import TelegramAuthModal from './components/modals/TelegramAuthModal.jsx';
 import { telegram } from './services/telegram.js';
 
 import { api } from './services/api.js';
@@ -34,6 +35,12 @@ export default function App() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [showOsmAndModal, setShowOsmAndModal] = useState(false);
   const [mapTarget, setMapTarget] = useState(null);
+
+  // Guest Telegram Authorization Prompt Modal
+  const [authModal, setAuthModal] = useState({ open: false, title: '', reason: '' });
+  const handleRequireAuth = (title = '', reason = '') => {
+    setAuthModal({ open: true, title, reason });
+  };
 
   const handleNavigate = (tabId, params = {}) => {
     if (tabId === 'cluster' && (params.scope || params.search !== undefined || params.highlightCallsign !== undefined)) {
@@ -76,17 +83,20 @@ export default function App() {
   const loadProfile = useCallback(async () => {
     try {
       const data = await api.getMe();
-      if (data.user) {
+      if (data?.user) {
         setUser(prev => ({
-          ...prev,
+          ...(prev || {}),
           ...data.user,
         }));
+      } else {
+        setUser(null);
       }
-      setActiveSpot(data.activeSpot || null);
-      setStats(data.stats || null);
-      setSubscriptionsCount(data.subscriptionsCount || 0);
+      setActiveSpot(data?.activeSpot || null);
+      setStats(data?.stats || null);
+      setSubscriptionsCount(data?.subscriptionsCount || 0);
     } catch (err) {
       console.warn('[App] Could not load operator profile from API:', err.message);
+      setUser(null);
     } finally {
       setLoadingProfile(false);
     }
@@ -118,7 +128,7 @@ export default function App() {
         ) : (
           <>
             <div className="absolute -top-32 -left-32 w-80 h-80 bg-emerald-500/5 rounded-full blur-[100px]" />
-            <div className="absolute top-1/3 -right-32 w-96 h-96 bg-blue-500/5 rounded-full blur-[120px]" />
+            <div className="absolute top-1/3 -right-32 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px]" />
           </>
         )}
       </div>
@@ -147,6 +157,7 @@ export default function App() {
               subscriptionsCount={subscriptionsCount}
               onRefreshProfile={loadProfile}
               onNavigate={handleNavigate}
+              onRequireAuth={handleRequireAuth}
               language={language}
               t={t}
             />
@@ -154,7 +165,9 @@ export default function App() {
 
           {activeTab === 'cluster' && (
             <ClusterTab 
+              user={user}
               onNavigate={handleNavigate} 
+              onRequireAuth={handleRequireAuth}
               clusterFilter={clusterFilter}
               language={language}
               t={t}
@@ -173,7 +186,9 @@ export default function App() {
 
           {activeTab === 'subscriptions' && (
             <SubscriptionsTab 
+              user={user}
               onCountChange={setSubscriptionsCount} 
+              onRequireAuth={handleRequireAuth}
               language={language}
               t={t}
             />
@@ -184,6 +199,7 @@ export default function App() {
               user={user} 
               stats={stats}
               onRefreshProfile={loadProfile}
+              onRequireAuth={handleRequireAuth}
               language={language}
               t={t}
             />
@@ -203,6 +219,16 @@ export default function App() {
           <OsmAndModal 
             language={language}
             onClose={() => setShowOsmAndModal(false)}
+          />
+        )}
+
+        {/* Guest Telegram Authorization Prompt Modal */}
+        {authModal.open && (
+          <TelegramAuthModal 
+            language={language}
+            title={authModal.title}
+            reason={authModal.reason}
+            onClose={() => setAuthModal({ open: false, title: '', reason: '' })}
           />
         )}
       </div>

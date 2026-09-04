@@ -59,7 +59,7 @@ export function verifyTelegramInitData(initDataString, botToken = BOT_TOKEN) {
   }
 }
 
-// Default Dev Mock User for local testing without active Telegram session
+// Optional Dev Mock User ONLY when explicitly requested on localhost in development mode
 const DEV_MOCK_USER = {
   id: parseInt(process.env.ADMIN_ID || '890862502', 10),
   first_name: 'Сан Саныч',
@@ -71,12 +71,15 @@ const DEV_MOCK_USER = {
 };
 
 /**
- * Express Middleware for authenticating Telegram Mini App requests
+ * Express Middleware for resolving Telegram Mini App user identity.
+ * Does NOT block requests if unauthenticated — sets req.telegramUser = null for guests.
  */
-export function tmaAuthMiddleware(req, res, next) {
+export function tmaUserMiddleware(req, res, next) {
   const authHeader = req.headers['authorization'] || '';
   const initDataHeader = req.headers['x-telegram-init-data'] || '';
-  const isDevMock = req.headers['x-dev-mock'] === 'true' || req.query.dev_mock === 'true';
+  const isDevMock = (req.headers['x-dev-mock'] === 'true' || req.query.dev_mock === 'true') && 
+                    (req.hostname === 'localhost' || req.hostname === '127.0.0.1') && 
+                    process.env.NODE_ENV === 'development';
 
   let rawInitData = '';
   if (authHeader.startsWith('tma ')) {
@@ -85,12 +88,9 @@ export function tmaAuthMiddleware(req, res, next) {
     rawInitData = initDataHeader.trim();
   }
 
-  // 1. Check Dev Mock (allowed in non-production or localhost)
-  const isLocal = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
-  if ((!rawInitData || isDevMock) && (process.env.NODE_ENV !== 'production' || isLocal)) {
+  // 1. Explicit Local Dev Mock (strictly localhost in dev mode)
+  if (isDevMock) {
     req.telegramUser = DEV_MOCK_USER;
-    
-    // Look up or seed DB user
     let dbUser = db.prepare('SELECT telegram_id, callsign, status, last_spot_data, last_spot_msg_id FROM users WHERE telegram_id = ?').get(DEV_MOCK_USER.id);
     if (!dbUser) {
       dbUser = {
@@ -108,25 +108,24 @@ export function tmaAuthMiddleware(req, res, next) {
     return next();
   }
 
-  // 2. Validate Real Telegram initData
+  // 2. Guest request without Telegram session
   if (!rawInitData) {
-    return res.status(401).json({
-      error: 'Unauthorized: Missing Telegram WebApp initData',
-      code: 'AUTH_REQUIRED'
-    });
+    req.telegramUser = null;
+    req.dbUser = null;
+    return next();
   }
 
+  // 3. Validate Real Telegram initData via HMAC-SHA256
   const verification = verifyTelegramInitData(rawInitData, BOT_TOKEN);
   if (!verification.valid || !verification.user) {
-    return res.status(401).json({
-      error: `Unauthorized: ${verification.error || 'Invalid session'}`,
-      code: 'INVALID_SIGNATURE'
-    });
+    req.telegramUser = null;
+    req.dbUser = null;
+    return next();
   }
 
   req.telegramUser = verification.user;
 
-  // 3. Resolve user in SQLite
+  // 4. Resolve user profile in SQLite
   let dbUser = db.prepare('SELECT telegram_id, callsign, status, last_spot_data, last_spot_msg_id FROM users WHERE telegram_id = ?').get(verification.user.id);
   
   if (!dbUser) {
@@ -143,3 +142,23 @@ export function tmaAuthMiddleware(req, res, next) {
   req.dbUser = dbUser;
   next();
 }
+
+/**
+ * Guard middleware for endpoints that require active Telegram Mini App authentication
+ */
+export function requireTmaAuth(req, res, next) {
+  if (!req.telegramUser) {
+    return res.status(401).json({
+      error: 'Для этого действия необходимо открыть приложение через Telegram-бота',
+      code: 'AUTH_REQUIRED',
+      botUrl: 'https://t.me/ru_pota_bot'
+    });
+  }
+  next();
+}
+
+/**
+ * Backward compatibility alias
+ */
+export const tmaAuthMiddleware = tmaUserMiddleware;
+

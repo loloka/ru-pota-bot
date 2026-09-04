@@ -2,7 +2,7 @@ import { Router } from 'express';
 import axios from 'axios';
 import db from '../db/database.js';
 import { potaApi } from '../api/potaApi.js';
-import { tmaAuthMiddleware } from './tmaAuth.js';
+import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -91,8 +91,8 @@ function formatTimeAgo(dateString) {
 export function createTmaRouter(telegramClient) {
   const router = Router();
 
-  // All routes below require TMA authentication (or dev mock)
-  router.use(tmaAuthMiddleware);
+  // Extract TMA user identity (sets req.telegramUser or null for guests)
+  router.use(tmaUserMiddleware);
 
   // ==========================================
   // 1. GET /api/tma/me - Operator Profile
@@ -101,6 +101,17 @@ export function createTmaRouter(telegramClient) {
     try {
       const tgUser = req.telegramUser;
       const dbUser = req.dbUser;
+
+      // Guest / unauthenticated visitor outside Telegram
+      if (!tgUser || !dbUser) {
+        return res.json({
+          user: null,
+          activeSpot: null,
+          stats: null,
+          subscriptionsCount: 0,
+          isGuest: true,
+        });
+      }
 
       let activeSpot = null;
       if (dbUser.last_spot_data) {
@@ -698,7 +709,7 @@ export function createTmaRouter(telegramClient) {
   // ==========================================
   // 3. POST /api/tma/spots - Publish / Respot
   // ==========================================
-  router.post('/spots', async (req, res) => {
+  router.post('/spots', requireTmaAuth, async (req, res) => {
     try {
       const dbUser = req.dbUser;
       const tgUser = req.telegramUser;
@@ -856,7 +867,7 @@ export function createTmaRouter(telegramClient) {
   // ==========================================
   // 4. POST /api/tma/spots/qrt - Finish Session
   // ==========================================
-  router.post('/spots/qrt', async (req, res) => {
+  router.post('/spots/qrt', requireTmaAuth, async (req, res) => {
     try {
       const tgUser = req.telegramUser;
 
@@ -881,7 +892,7 @@ export function createTmaRouter(telegramClient) {
   // ==========================================
   // 5. GET /api/tma/subscriptions - Get Subs
   // ==========================================
-  router.get('/subscriptions', (req, res) => {
+  router.get('/subscriptions', requireTmaAuth, (req, res) => {
     try {
       const tgUser = req.telegramUser;
       const userRecord = db.prepare('SELECT notifications_enabled FROM users WHERE telegram_id = ?').get(tgUser.id);
@@ -912,7 +923,7 @@ export function createTmaRouter(telegramClient) {
   // ==========================================
   // 6. POST /api/tma/subscriptions/toggle-alerts
   // ==========================================
-  router.post('/subscriptions/toggle-alerts', async (req, res) => {
+  router.post('/subscriptions/toggle-alerts', requireTmaAuth, async (req, res) => {
     try {
       const tgUser = req.telegramUser;
       const { enabled } = req.body;
@@ -944,7 +955,7 @@ export function createTmaRouter(telegramClient) {
   // ==========================================
   // 7. POST /api/tma/subscriptions - Add Sub
   // ==========================================
-  router.post('/subscriptions', async (req, res) => {
+  router.post('/subscriptions', requireTmaAuth, async (req, res) => {
     try {
       const tgUser = req.telegramUser;
       let { type, target } = req.body;
@@ -1028,7 +1039,7 @@ export function createTmaRouter(telegramClient) {
   // ==========================================
   // 7. DELETE /api/tma/subscriptions/:id
   // ==========================================
-  router.delete('/subscriptions/:id', (req, res) => {
+  router.delete('/subscriptions/:id', requireTmaAuth, (req, res) => {
     try {
       const tgUser = req.telegramUser;
       const subId = parseInt(req.params.id, 10);
@@ -1048,7 +1059,7 @@ export function createTmaRouter(telegramClient) {
   // ==========================================
   // 8. POST /api/tma/callsign/request
   // ==========================================
-  router.post('/callsign/request', (req, res) => {
+  router.post('/callsign/request', requireTmaAuth, (req, res) => {
     try {
       const tgUser = req.telegramUser;
       let { newCallsign } = req.body;

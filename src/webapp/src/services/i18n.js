@@ -79,6 +79,7 @@ export const translations = {
     cluster_ru_quiet_desc: 'В данный момент в домашнем регионе нет активных активаций. Переключитесь на эфир мира, чтобы увидеть активные станции POTA!',
     cluster_show_world_btn: '🌐 Показать станции мира (POTA World)',
     cluster_follow_btn: 'Следить',
+    cluster_unfollow_btn: 'Отписаться',
     cluster_on_map_btn: 'На карте',
     cluster_by: 'от',
 
@@ -208,6 +209,7 @@ export const translations = {
     cluster_ru_quiet_desc: 'Currently no active activations in the home region. Switch to world feed to see global POTA stations!',
     cluster_show_world_btn: '🌐 Show World Stations (POTA World)',
     cluster_follow_btn: 'Follow',
+    cluster_unfollow_btn: 'Unfollow',
     cluster_on_map_btn: 'On Map',
     cluster_by: 'by',
 

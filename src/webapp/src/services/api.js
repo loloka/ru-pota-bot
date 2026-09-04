@@ -164,6 +164,17 @@ export const api = {
   },
 
   /**
+   * Delete subscription by target name/callsign
+   * @param {'callsign'|'park'} type
+   * @param {string} target
+   */
+  async deleteSubscriptionByTarget(type, target) {
+    return request(`/subscriptions/target/${type}/${encodeURIComponent(target)}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
    * Toggle DM notifications in Telegram bot
    * @param {boolean} enabled 
    */

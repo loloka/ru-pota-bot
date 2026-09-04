@@ -133,13 +133,15 @@ export default function App() {
     };
   }, [loadProfile]);
 
-  // 3. Fast smart auto-poll (every 3 seconds) while status is 'pending' so approval applies immediately without re-opening app!
+  // 3. Smart auto-poll (every 5 seconds) while status is 'pending' so approval applies immediately without re-opening app!
   useEffect(() => {
     if (user?.status !== 'pending') return;
 
     const interval = setInterval(() => {
-      loadProfile(true);
-    }, 3000);
+      if (document.visibilityState === 'visible') {
+        loadProfile(true);
+      }
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [user?.status, loadProfile]);

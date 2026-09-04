@@ -316,16 +316,60 @@ export default function MapTab({
     });
   }, []);
 
-  // Handle external navigation target (e.g. from PotaLookupWidget "На карте")
+  // Handle external navigation target (e.g. from ClusterTab or PotaLookupWidget "На карте")
   useEffect(() => {
-    if (mapTarget && parks.length > 0 && mapInstanceRef.current) {
-      const target = parks.find(p => p.reference.toUpperCase() === mapTarget.toUpperCase());
-      if (target) {
-        focusItem(target, 12);
+    if (!mapTarget) return;
+
+    const clean = mapTarget.trim().toUpperCase();
+
+    const applyFocus = async () => {
+      const map = mapInstanceRef.current;
+      if (!map) return;
+
+      map.invalidateSize();
+
+      // 1. Try to find in loaded parks list
+      let target = parks.find(p => p.reference && p.reference.toUpperCase() === clean);
+
+      if (target && target.lat && target.lon) {
+        setSearchQuery(clean);
+        focusItem(target, 13);
+        if (onClearMapTarget) onClearMapTarget();
+        return;
       }
-      onClearMapTarget();
-    }
-  }, [mapTarget, parks, focusItem, onClearMapTarget]);
+
+      // If parks are still being fetched, wait for parks to load
+      if (parks.length === 0 && loading) {
+        return;
+      }
+
+      // 2. Fallback: Park not in local database (e.g. World park like US-0010)
+      try {
+        const res = await api.lookupPark(clean);
+        if (res && res.lat && res.lon) {
+          const customItem = {
+            reference: res.reference || clean,
+            name: res.name || 'Заповедник POTA',
+            lat: parseFloat(res.lat),
+            lon: parseFloat(res.lon),
+            region: res.region || '',
+            grid: res.grid || '',
+            isActive: Boolean(res.isActive),
+            activeStation: res.activeStation || null,
+          };
+          setSearchQuery(clean);
+          focusItem(customItem, 13);
+        }
+      } catch (e) {
+        console.warn('[MapTab] Could not lookup external park target:', clean, e.message);
+      }
+
+      if (onClearMapTarget) onClearMapTarget();
+    };
+
+    const timer = setTimeout(applyFocus, 250);
+    return () => clearTimeout(timer);
+  }, [mapTarget, parks, loading, focusItem, onClearMapTarget]);
 
   // Handle Search Typing with debounced Airfield lookup
   const handleSearchChange = (val) => {

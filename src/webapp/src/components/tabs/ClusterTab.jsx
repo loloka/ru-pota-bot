@@ -4,6 +4,7 @@ import {
   Search, 
   MapPin, 
   Bell, 
+  BellOff,
   Clock, 
   RefreshCw,
   Compass,
@@ -85,6 +86,32 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
     return () => clearInterval(timer);
   }, [fetchSpots]);
 
+  const [subscribedCallsigns, setSubscribedCallsigns] = useState(new Set());
+
+  // Load user subscriptions to display active follow state on cards
+  const loadSubscriptions = useCallback(async () => {
+    if (!user) {
+      setSubscribedCallsigns(new Set());
+      return;
+    }
+    try {
+      const res = await api.getSubscriptions();
+      const set = new Set();
+      (res.callsigns || []).forEach(sub => {
+        if (sub.target) {
+          const t = sub.target.toUpperCase();
+          set.add(t);
+          set.add(t.split('/')[0]);
+        }
+      });
+      setSubscribedCallsigns(set);
+    } catch (e) {}
+  }, [user]);
+
+  useEffect(() => {
+    loadSubscriptions();
+  }, [loadSubscriptions]);
+
   const handleSubscribe = async (callsign) => {
     telegram.haptic.impact('medium');
     if (!user) {
@@ -104,7 +131,40 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
     try {
       await api.addSubscription({ type: 'callsign', target: callsign });
       telegram.haptic.notification('success');
-      alert(language === 'RU' ? `Вы успешно подписались на позывной ${callsign}!` : `Subscribed to ${callsign}!`);
+      setSubscribedCallsigns(prev => {
+        const next = new Set(prev);
+        const up = callsign.toUpperCase();
+        next.add(up);
+        next.add(up.split('/')[0]);
+        return next;
+      });
+      // Focus on station upon following
+      setHighlightCallsign(callsign);
+    } catch (err) {
+      telegram.haptic.notification('error');
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  const handleUnsubscribe = async (callsign) => {
+    telegram.haptic.impact('light');
+    try {
+      await api.deleteSubscriptionByTarget('callsign', callsign);
+      telegram.haptic.notification('success');
+      setSubscribedCallsigns(prev => {
+        const next = new Set(prev);
+        const up = callsign.toUpperCase();
+        next.delete(up);
+        next.delete(up.split('/')[0]);
+        return next;
+      });
+      // Remove focus upon unfollowing
+      setHighlightCallsign(prev => {
+        if (!prev) return null;
+        const cleanPrev = prev.toUpperCase().split('/')[0];
+        const cleanCall = callsign.toUpperCase().split('/')[0];
+        return (cleanPrev === cleanCall) ? null : prev;
+      });
     } catch (err) {
       telegram.haptic.notification('error');
       alert(`Error: ${err.message}`);
@@ -357,26 +417,48 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
                   ) : <span />}
 
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSubscribe(spot.callsign);
-                      }}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-white/80 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition"
-                    >
-                      <Bell className="w-3 h-3 text-amber-500 dark:text-amber-400" />
-                      <span>{t('cluster_follow_btn')}</span>
-                    </button>
+                    {(() => {
+                      const cleanCall = spot.callsign.split('/')[0].toUpperCase();
+                      const isSubscribed = subscribedCallsigns.has(spot.callsign.toUpperCase()) || subscribedCallsigns.has(cleanCall);
+
+                      return isSubscribed ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUnsubscribe(spot.callsign);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-rose-700 dark:text-rose-300 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 transition shadow-sm"
+                          title={language === 'RU' ? 'Отписаться от позывного' : 'Unfollow callsign'}
+                        >
+                          <BellOff className="w-3 h-3 text-rose-500 shrink-0" />
+                          <span>{t('cluster_unfollow_btn')}</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSubscribe(spot.callsign);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-white/80 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition"
+                          title={language === 'RU' ? 'Следить за позывным' : 'Follow callsign'}
+                        >
+                          <Bell className="w-3 h-3 text-amber-500 dark:text-amber-400 shrink-0" />
+                          <span>{t('cluster_follow_btn')}</span>
+                        </button>
+                      );
+                    })()}
 
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         telegram.haptic.impact('light');
-                        onNavigate('map');
+                        onNavigate('map', { focusParkRef: spot.park });
                       }}
                       className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 transition"
+                      title={language === 'RU' ? 'Показать парк на карте' : 'Show park on map'}
                     >
                       <Compass className="w-3 h-3" />
                       <span>{t('cluster_on_map_btn')}</span>

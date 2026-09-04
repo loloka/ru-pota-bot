@@ -72,7 +72,7 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.13.3 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.13.4 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
     let anyUpdated = false;
@@ -1168,6 +1168,28 @@ export function createTmaRouter(telegramClient) {
       res.json({ success: true, message: 'Подписка удалена' });
     } catch (err) {
       console.error('[TMA API] Error deleting subscription:', err.message);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  // ==========================================
+  // 7.1. DELETE /api/tma/subscriptions/target/:type/:target
+  // ==========================================
+  router.delete('/subscriptions/target/:type/:target', requireTmaAuth, (req, res) => {
+    try {
+      const tgUser = req.telegramUser;
+      const type = (req.params.type || '').toLowerCase();
+      const target = (req.params.target || '').trim().toUpperCase();
+      const cleanTarget = target.split('/')[0];
+
+      const result = db.prepare(`
+        DELETE FROM subscriptions 
+        WHERE telegram_id = ? AND type = ? AND (target = ? OR target = ?)
+      `).run(tgUser.id, type, target, cleanTarget);
+
+      res.json({ success: true, changes: result.changes });
+    } catch (err) {
+      console.error('[TMA API] Error deleting subscription by target:', err.message);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });

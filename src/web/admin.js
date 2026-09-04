@@ -3,6 +3,11 @@ import cookieSession from 'cookie-session';
 import db from '../db/database.js';
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { createTmaRouter } from './tmaApi.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -47,6 +52,17 @@ export const startAdminServer = (telegramClient) => {
     keys: [process.env.SESSION_SECRET || 'rupota_admin_secret_key'],
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }));
+
+  // Telegram Mini App static distribution (SPA)
+  const webappDist = path.resolve(__dirname, '../../dist/webapp');
+  app.use('/app', express.static(webappDist));
+  app.get(/^\/app(\/.*)?$/, (req, res) => {
+    res.sendFile(path.join(webappDist, 'index.html'));
+  });
+
+  // Telegram Mini App REST API
+  app.use('/api/tma', createTmaRouter(telegramClient));
+
 
   const failedAttempts = new Map();
 
@@ -801,5 +817,7 @@ export const startAdminServer = (telegramClient) => {
 
   app.listen(PORT, () => {
     console.log(`🌐 Admin panel listening on http://localhost:${PORT}`);
+    console.log(`📱 Telegram Mini App available at http://localhost:${PORT}/app`);
   });
 };
+

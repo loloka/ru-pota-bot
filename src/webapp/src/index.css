@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+  }
+
+  body {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  .dark body,
+  body.dark {
+    background-color: #0b0f19;
+    color: #f1f5f9;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(100, 116, 139, 0.1);
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: rgba(11, 15, 25, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Glassmorphism helpers with Light & Dark support */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(203, 213, 225, 0.8);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.dark .glass-card {
+  background: rgba(19, 27, 46, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+.glass-nav {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(203, 213, 225, 0.8);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.dark .glass-nav {
+  background: rgba(11, 15, 25, 0.88);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-header {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(203, 213, 225, 0.8);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.dark .glass-header {
+  background: rgba(11, 15, 25, 0.88);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Focused / Selected Spot Card styling for Light & Dark themes */
+.spot-card-focused {
+  background: #ecfdf5 !important;
+  border: 2px solid #059669 !important;
+  border-left: 6px solid #059669 !important;
+  box-shadow: 0 10px 25px -4px rgba(5, 150, 105, 0.25), 0 4px 6px -2px rgba(5, 150, 105, 0.15) !important;
+  transform: translateY(-2px);
+}
+
+.dark .spot-card-focused {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border: 2px solid #10b981 !important;
+  border-left: 6px solid #10b981 !important;
+  box-shadow: 0 0 25px -2px rgba(16, 185, 129, 0.45), inset 0 0 15px rgba(16, 185, 129, 0.08) !important;
+  transform: translateY(-2px);
+}
+
+
+/* Safe area padding utilities */
+.pt-safe {
+  padding-top: max(var(--sat), 0.75rem);
+}
+
+.pb-safe {
+  padding-bottom: max(var(--sab), 0.75rem);
+}
+
+/* Leaflet map container rules for TMA */
+.leaflet-pane {
+  z-index: 10 !important;
+}
+.leaflet-top, .leaflet-bottom {
+  z-index: 20 !important;
+}
+.leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+.leaflet-control-zoom-in, .leaflet-control-zoom-out {
+  background-color: rgba(15, 23, 42, 0.85) !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+.leaflet-control-attribution {
+  display: none !important;
+}
+

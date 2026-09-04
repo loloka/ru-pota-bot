@@ -28,20 +28,27 @@ ACTIVITY_CHANNEL_ID=-1001234567890
 3. Запустите сервер в v2rayA (кнопка Ready -> Running).
 4. В файле `.env` пропишите `TG_PROXY=socks5h://127.0.0.1:20170`.
 
-## Панель модерации (Web Admin)
-Бот автоматически запускает локальный веб-сервер для администрирования заявок на регистрацию позывных.
-- **Порт:** 3005 (по умолчанию)
-- **Доступ:** Basic Auth (укажите пароль в `.env` переменной `ADMIN_PASSWORD`)
-- **Адрес:** `http://localhost:3005` (пробросьте через Nginx для доступа извне).
+## Веб-сервер и Telegram Mini App (TMA)
+Бот запускает встроенный HTTP-сервер на Express (по умолчанию порт 3000):
+- **Панель модерации (Web Admin):** `http://localhost:3000/` (доступ по паролю `ADMIN_PASSWORD`)
+- **Telegram Mini App (TMA):** `http://localhost:3000/app` (современный мобильный веб-интерфейс)
+- Подробное руководство по Mini App: [`docs/MINIAPP_GUIDE.md`](docs/MINIAPP_GUIDE.md).
+
+Перед запуском на сервере обязательно выполните сборку фронтенда:
+```bash
+npm run build
+```
 
 ## Запуск в Production (PM2)
 
 Рекомендуется использовать PM2 для демонизации процесса:
 ```bash
+npm run build
 npm install -g pm2
 pm2 start src/bot/index.js --name ru-pota-bot
 pm2 save
 pm2 startup
 ```
 
-Скрипт автообновления: используйте готовый bash-скрипт `./update-bot.sh` для `git pull` и перезапуска PM2 с обновлением переменных среды (`--update-env`).
+Скрипт автообновления: используйте готовый bash-скрипт `./update-bot.sh` (включает `git pull`, `npm install`, `npm run build` и перезапуск PM2 с `--update-env`).
+

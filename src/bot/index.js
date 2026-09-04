@@ -2,6 +2,8 @@ import { Telegraf, Scenes, session } from 'telegraf';
 import dotenv from 'dotenv';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 import https from 'https';
+import db from '../db/database.js';
+
 
 // Import middlewares
 import { chatFilter, requireRegistration, deleteSystemMessages } from './middlewares/chatFilter.js';
@@ -28,7 +30,14 @@ import { startClusterWorker } from '../services/clusterWorker.js';
 // Import admin server
 import { startAdminServer } from '../web/admin.js';
 
-dotenv.config();
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config(); // fallback to cwd
+
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (!BOT_TOKEN) {
@@ -167,6 +176,19 @@ bot.action('sub_action_back', async (ctx) => {
   await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
 });
 
+bot.action('sub_toggle_alerts', async (ctx) => {
+  const userId = ctx.from.id;
+  const userRecord = db.prepare('SELECT notifications_enabled FROM users WHERE telegram_id = ?').get(userId);
+  const current = userRecord ? Boolean(userRecord.notifications_enabled ?? 1) : true;
+  const next = current ? 0 : 1;
+  db.prepare('UPDATE users SET notifications_enabled = ? WHERE telegram_id = ?').run(next, userId);
+
+  await ctx.answerCbQuery(next === 1 ? '🔔 Оповещения в ЛС включены' : '🔕 Оповещения временно отключены');
+  const { text, reply_markup } = getSubsKeyboard(userId);
+  await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
+});
+
+
 bot.action(/^delete_msg:(\d+)$/, async (ctx) => {
   const allowedUserId = parseInt(ctx.match[1], 10);
   const clickerId = ctx.from?.id;
@@ -191,7 +213,7 @@ bot.action(/^delete_msg:(\d+)$/, async (ctx) => {
   }
 });
 
-bot.action(/^onair_(view|refresh):(.+)$/, onairActionHandler);
+bot.action(/^onair_(view|refresh|flt):(.+)$/, onairActionHandler);
 
 bot.action(/^delsub:(callsign|park):(.+)$/, async (ctx) => {
   const type = ctx.match[1];
@@ -467,7 +489,8 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.6.0\x1b[0m 📡               \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.10.0\x1b[0m 📡              \x1b[32m║\x1b[0m
+
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

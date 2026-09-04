@@ -10,6 +10,9 @@ export const getSubsKeyboard = (userId) => {
   const stmt = db.prepare('SELECT type, target, target_name FROM subscriptions WHERE telegram_id = ? ORDER BY type, target');
   const subs = stmt.all(userId);
   
+  const userRecord = db.prepare('SELECT notifications_enabled FROM users WHERE telegram_id = ?').get(userId);
+  const notificationsEnabled = userRecord ? Boolean(userRecord.notifications_enabled ?? 1) : true;
+
   const callsignSubs = subs.filter(s => s.type === 'callsign');
   const parkSubs = subs.filter(s => s.type === 'park');
 
@@ -33,14 +36,23 @@ export const getSubsKeyboard = (userId) => {
         return `• <code>${s.target}</code>${nameStr}`;
       }).join('\n') + '\n\n';
     }
-    text += 'Нажмите кнопку ниже, чтобы добавить подписку или удалить ненужные.';
   }
+
+  text += '\n' + (notificationsEnabled 
+    ? '🔔 <b>Оповещения в ЛС:</b> Включены ✅' 
+    : '🔕 <b>Оповещения в ЛС:</b> Временно отключены ⏸') +
+    '\n\nНажмите кнопку ниже, чтобы настроить оповещения или подписки:';
+
+  const notifyBtn = notificationsEnabled
+    ? { text: '🔕 Временно отключить уведомления', callback_data: 'sub_toggle_alerts' }
+    : { text: '🔔 Включить уведомления в ЛС', callback_data: 'sub_toggle_alerts' };
 
   const inline_keyboard = [
     [
       { text: '➕ Позывной', callback_data: 'sub_add_callsign' },
       { text: '➕ Парк', callback_data: 'sub_add_park' }
-    ]
+    ],
+    [notifyBtn]
   ];
 
   if (subs.length > 0) {
@@ -52,6 +64,7 @@ export const getSubsKeyboard = (userId) => {
     reply_markup: { inline_keyboard }
   };
 };
+
 
 export const getDeleteSubsKeyboard = (userId) => {
   const stmt = db.prepare('SELECT id, type, target, target_name FROM subscriptions WHERE telegram_id = ? ORDER BY type, target');

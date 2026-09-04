@@ -72,8 +72,19 @@ export const startClusterWorker = (telegramClient) => {
         
         // 5. Notify Subscribed Users (Callsigns and Parks)
         const activator = (spot.activator || '').toUpperCase();
-        const callsignSubscribers = db.prepare('SELECT telegram_id FROM subscriptions WHERE type = ? AND target = ?').all('callsign', activator);
-        const parkSubscribers = db.prepare('SELECT telegram_id FROM subscriptions WHERE type = ? AND target = ?').all('park', ref.toUpperCase());
+        const callsignSubscribers = db.prepare(`
+          SELECT s.telegram_id 
+          FROM subscriptions s
+          LEFT JOIN users u ON u.telegram_id = s.telegram_id
+          WHERE s.type = ? AND s.target = ? AND (u.notifications_enabled IS NULL OR u.notifications_enabled = 1)
+        `).all('callsign', activator);
+        const parkSubscribers = db.prepare(`
+          SELECT s.telegram_id 
+          FROM subscriptions s
+          LEFT JOIN users u ON u.telegram_id = s.telegram_id
+          WHERE s.type = ? AND s.target = ? AND (u.notifications_enabled IS NULL OR u.notifications_enabled = 1)
+        `).all('park', ref.toUpperCase());
+
 
         // Merge subscribers and track the reasons for notification
         const notificationsMap = new Map();

@@ -61,6 +61,19 @@ try {
     console.log('[DB] Migrated users table: added reject_reason column');
   }
 
+  const hasNotificationsEnabled = userColumns.some(col => col.name === 'notifications_enabled');
+  if (!hasNotificationsEnabled) {
+    db.exec(`ALTER TABLE users ADD COLUMN notifications_enabled INTEGER DEFAULT 1`);
+    console.log('[DB] Migrated users table: added notifications_enabled column');
+  }
+
+  const hasOnairFilters = userColumns.some(col => col.name === 'onair_filters');
+  if (!hasOnairFilters) {
+    db.exec(`ALTER TABLE users ADD COLUMN onair_filters TEXT`);
+    console.log('[DB] Migrated users table: added onair_filters column');
+  }
+
+
   const subColumns = db.pragma('table_info(subscriptions)');
   const hasTargetCallsign = subColumns.some(col => col.name === 'target_callsign');
   const hasType = subColumns.some(col => col.name === 'type');

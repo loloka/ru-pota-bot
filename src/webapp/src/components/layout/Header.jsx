@@ -37,8 +37,23 @@ export default function Header({
       <header className="sticky top-0 z-40 w-full glass-header pt-safe">
         <div className="flex items-center justify-between px-4 py-3">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-2.5">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 border border-emerald-500/30 shadow-glow-emerald">
+          <div 
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              handleAction();
+              setMenuOpen(true);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleAction();
+                setMenuOpen(true);
+              }
+            }}
+            className="flex items-center gap-2.5 cursor-pointer select-none group"
+            title="Меню приложения"
+          >
+            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-blue-500/20 border border-emerald-500/30 shadow-glow-emerald group-hover:scale-105 transition-transform">
               <span className="text-xl select-none">🌲</span>
               <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 border border-emerald-500/50">
                 <span className="relative flex h-2 w-2">
@@ -49,7 +64,7 @@ export default function Header({
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
+                <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">
                   {t('header_title')}
                 </span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">

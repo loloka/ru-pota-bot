@@ -1,5 +1,12 @@
 # История изменений (Changelog)
 
+## [1.13.1] - 2026-09-04 (Security Fix: Web Admin Authentication Enforcement)
+### Исправлено
+- **Критическое исправление безопасности в Web Admin 2.0**:
+  - Удален временный отладочный байпас (`return next()`) в мидлваре `requireAuth` файла `src/web/admin.js`.
+  - Все страницы дашборда (`/`) и защищенные API-маршруты (`/api/logs`, `/api/user-info`, `/api/spots`, `/approve`, `/reject`, `/broadcast`, `/api/edit-pinned`) теперь строго требуют сессионной авторизации администратора по паролю `ADMIN_PASSWORD`.
+  - Добавлена настройка `app.set('trust proxy', 1)` для корректной работы rate limiting попыток входа и валидации сессий за обратными прокси-серверами (Nginx).
+
 ## [1.13.0] - 2026-09-04 (Intelligent RBN Cluster Anti-Spam Throttling & Band/Mode Detection)
 ### Добавлено
 - **Интеллектуальный антиспам и троттлинг спотов кластера (RBN Skimmer Flood Protection)**:

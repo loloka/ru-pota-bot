@@ -42,6 +42,7 @@ console.error = (...args) => { captureLog('error', args); originalError.apply(co
 
 export const startAdminServer = (telegramClient) => {
   const app = express();
+  app.set('trust proxy', 1);
   const PORT = process.env.PORT || 3000;
 
   app.use(express.json());
@@ -69,7 +70,6 @@ export const startAdminServer = (telegramClient) => {
 
   // Authentication Middleware
   const requireAuth = (req, res, next) => {
-    return next(); // Temporarily bypass for debugging
     if (req.session && req.session.authed) {
       return next();
     }

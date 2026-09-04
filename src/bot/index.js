@@ -30,6 +30,7 @@ import { pinManager, isChannelChat } from '../services/pinManager.js';
 
 // Import admin server
 import { startAdminServer } from '../web/admin.js';
+import { WELCOME_PINNED_POST } from './texts/welcomePost.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -339,6 +340,38 @@ bot.command('sub', subHandler);
 bot.command('ban', banHandler);
 bot.command('kick', kickHandler);
 bot.command('mute', muteHandler);
+
+// Admin-only command to update pinned welcome message in groups
+bot.command('editwelcome', async (ctx) => {
+  const adminId = process.env.ADMIN_ID;
+  if (!ctx.from || ctx.from.id.toString() !== adminId) {
+    return ctx.reply('⛔ Команда доступна только администратору бота.');
+  }
+
+  const args = ctx.message.text.split(' ').filter(Boolean);
+  let targetChatId = ctx.chat.id;
+  let targetMsgId = 474;
+
+  if (args.length === 2) {
+    // e.g. /editwelcome 474
+    targetMsgId = parseInt(args[1], 10);
+  } else if (args.length >= 3) {
+    // e.g. /editwelcome -1004485477242 474
+    targetChatId = args[1];
+    targetMsgId = parseInt(args[2], 10);
+  }
+
+  try {
+    await ctx.telegram.editMessageText(targetChatId, targetMsgId, undefined, WELCOME_PINNED_POST, {
+      parse_mode: 'HTML',
+      disable_web_page_preview: true
+    });
+    await ctx.reply(`✅ Закрепленное сообщение #${targetMsgId} успешно обновлено новыми данными!`);
+  } catch (err) {
+    console.error('Failed to edit welcome post via bot command:', err);
+    await ctx.reply(`❌ Ошибка обновления: ${err.message}`);
+  }
+});
 
 bot.command('park', (ctx) => {
   const args = ctx.message.text.split(' ');

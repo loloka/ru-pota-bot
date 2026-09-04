@@ -1,6 +1,6 @@
 # RU-POTA Telegram Bot 🌲📡
 
-[![Version](https://img.shields.io/badge/version-1.12.1-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.13.0-blue.svg)](package.json)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![Telegraf](https://img.shields.io/badge/telegraf-4.x-orange.svg)](https://telegraf.js.org/)
 [![Database](https://img.shields.io/badge/SQLite-better--sqlite3%20(WAL)-lightgrey.svg)](https://github.com/WiseLibs/better-sqlite3)
@@ -45,7 +45,9 @@ The bot connects the Telegram community, the official POTA cluster API, personal
 ### 🌐 3. Background Cluster Polling Worker
 - Polls `api.pota.app` periodically every minute.
 - Geo-prefix filtering (defaults to `RU-`, `BY-`, `KZ-`).
-- Automatically broadcasts new spots to the community channel and delivers alerts to active subscribers.
+- **Intelligent RBN Anti-Spam Throttling:** Suppresses repetitive spots from automated skimmers (20-minute cooldown on same band & mode), while instantly passing broadcasts upon band change, mode change, park movement, or QRT announcements.
+- Timed spot pinning and auto-unpinning after 30 minutes via `Pin Manager`.
+- Automatically broadcasts new spots to the community channel and delivers alerts to active subscribers (with base callsign matching).
 
 ### 📊 4. Statistics & Park Directory
 - **`/stats [callsign]`:** Comprehensive profile cards for activators and hunters (activations, unique parks, QSOs by mode, awards, recent expeditions).

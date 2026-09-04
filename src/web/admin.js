@@ -217,7 +217,7 @@ export const startAdminServer = (telegramClient) => {
     const rejected = allUsers.filter(u => u.status === 'rejected');
 
     // 2. Spots
-    const spotsStmt = db.prepare("SELECT id, callsign, reference, frequency, mode, comment, source, created_at, msg_id FROM spots ORDER BY created_at DESC LIMIT 100");
+    const spotsStmt = db.prepare("SELECT id, callsign, reference, frequency, mode, comment, source, created_at, msg_id FROM spots WHERE source != 'cluster_throttled' ORDER BY created_at DESC LIMIT 100");
     const latestSpots = spotsStmt.all();
 
     const generateUserRow = (u) => `
@@ -850,7 +850,7 @@ export const startAdminServer = (telegramClient) => {
 
   // API for spots
   app.get('/api/spots', requireAuth, (req, res) => {
-    const spotsStmt = db.prepare("SELECT id, callsign, reference, frequency, mode, comment, source, created_at, msg_id FROM spots ORDER BY created_at DESC LIMIT 100");
+    const spotsStmt = db.prepare("SELECT id, callsign, reference, frequency, mode, comment, source, created_at, msg_id FROM spots WHERE source != 'cluster_throttled' ORDER BY created_at DESC LIMIT 100");
     res.json(spotsStmt.all());
   });
 

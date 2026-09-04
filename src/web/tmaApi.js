@@ -72,7 +72,7 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.12.1 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.13.0 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
     let anyUpdated = false;
@@ -330,7 +330,7 @@ export function createTmaRouter(telegramClient) {
       const localSpots = db.prepare(`
         SELECT id, callsign, reference, frequency, mode, comment, source, created_at, msg_id 
         FROM spots 
-        WHERE created_at >= datetime('now', '-45 minutes') 
+        WHERE source = 'local' AND created_at >= datetime('now', '-45 minutes') 
         ORDER BY created_at DESC LIMIT 50
       `).all();
 
@@ -485,7 +485,7 @@ export function createTmaRouter(telegramClient) {
       const localActive = db.prepare(`
         SELECT reference, callsign, frequency, mode, comment, created_at 
         FROM spots 
-        WHERE created_at >= datetime('now', '-45 minutes')
+        WHERE source != 'cluster_throttled' AND created_at >= datetime('now', '-45 minutes')
         ORDER BY created_at ASC
       `).all();
 
@@ -761,7 +761,7 @@ export function createTmaRouter(telegramClient) {
         const local = db.prepare(`
           SELECT callsign, frequency, mode, comment, created_at 
           FROM spots 
-          WHERE reference = ? AND created_at >= datetime('now', '-45 minutes')
+          WHERE reference = ? AND source != 'cluster_throttled' AND created_at >= datetime('now', '-45 minutes')
           ORDER BY created_at DESC LIMIT 1
         `).get(ref);
         if (local && getDiffMinutes(local.created_at) <= 45) {

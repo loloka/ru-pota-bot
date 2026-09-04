@@ -47,7 +47,12 @@ export const telegram = {
 
     try {
       tg.ready();
-      tg.expand();
+      // On mobile (iOS, Android), expand to full screen.
+      // On desktop (tdesktop, macos, web), avoid force-expanding to prevent window pushed off-screen.
+      const isDesktopPlatform = tg.platform === 'tdesktop' || tg.platform === 'macos' || tg.platform === 'web' || tg.platform === 'weba';
+      if (!isDesktopPlatform) {
+        tg.expand();
+      }
       if (typeof tg.enableClosingConfirmation === 'function') {
         tg.enableClosingConfirmation();
       }

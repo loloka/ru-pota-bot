@@ -3,13 +3,16 @@ set -e
 
 echo "🌲 [RU-POTA] Обновление бота и Telegram Mini App..."
 
-# 1. Получение последних изменений из репозитория
+# 1. Сброс локальных авто-изменений package-lock
+git checkout package-lock.json 2>/dev/null || true
+
+# 2. Получение последних изменений из репозитория
 git pull
 
-# 2. Установка зависимостей
-npm install
+# 3. Установка зависимостей (включая сборщик)
+npm install --include=dev
 
-# 3. Сборка фронтенда Telegram Mini App
+# 4. Сборка фронтенда Telegram Mini App
 npm run build
 
 # 4. Перезапуск процесса в PM2

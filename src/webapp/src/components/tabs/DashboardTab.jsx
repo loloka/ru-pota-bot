@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Radio, 
   Send, 
@@ -153,7 +154,7 @@ export default function DashboardTab({
   const isOnAir = Boolean(activeSpot);
 
   return (
-    <div className="space-y-4 pb-20 animate-fade-in">
+    <div className="space-y-4 pb-32 pb-safe animate-fade-in">
       {/* 1. Welcome & Callsign Badge OR Guest Banner */}
       {user ? (
         <div className="flex items-center justify-between p-4 rounded-2xl glass-card">
@@ -556,7 +557,7 @@ export default function DashboardTab({
       </div>
 
       {/* Spot Modal */}
-      {spotModalOpen && (
+      {spotModalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => !submitting && setSpotModalOpen(false)} />
           <div className="relative w-full max-w-sm glass-card rounded-2xl p-5 shadow-2xl space-y-4 animate-slide-up">
@@ -640,7 +641,8 @@ export default function DashboardTab({
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

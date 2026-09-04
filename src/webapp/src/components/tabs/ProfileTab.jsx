@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   User, 
   Award, 
@@ -57,7 +58,7 @@ export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAut
   // Guest view outside Telegram
   if (!user) {
     return (
-      <div className="space-y-4 pb-20 animate-fade-in">
+      <div className="space-y-4 pb-32 pb-safe animate-fade-in">
         {/* Guest Profile Banner */}
         <div className="p-6 rounded-3xl glass-card border border-sky-500/30 text-center space-y-4 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-40 h-40 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -143,7 +144,7 @@ export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAut
   }
 
   return (
-    <div className="space-y-4 pb-20 animate-fade-in">
+    <div className="space-y-4 pb-32 pb-safe animate-fade-in">
       {/* 1. Profile Identity Header */}
       <div className="p-4 rounded-2xl glass-card relative overflow-hidden">
         {/* Ambient glow decoration */}
@@ -365,7 +366,7 @@ export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAut
       </div>
 
       {/* Callsign Change Modal */}
-      {changeCallsignModal && (
+      {changeCallsignModal && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => !submitting && setChangeCallsignModal(false)} />
           <div className="relative w-full max-w-sm glass-card rounded-2xl p-5 shadow-2xl space-y-4 animate-slide-up">
@@ -419,7 +420,8 @@ export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAut
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

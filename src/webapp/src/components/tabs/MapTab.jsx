@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { 
@@ -945,7 +946,7 @@ export default function MapTab({
       )}
 
       {/* 6. R1CF WMS Layers & Base Map Drawer */}
-      {showLayersSheet && (
+      {showLayersSheet && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 pt-12 pb-safe">
           <div 
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm animate-fade-in" 
@@ -979,74 +980,66 @@ export default function MapTab({
               </button>
             </div>
 
-            <div className="overflow-y-auto space-y-3.5 pr-1">
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto overscroll-contain space-y-4 pr-1 -mr-1 py-1">
+              
               {/* Base Map Selector */}
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
-                  Подложка карты:
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <span>🗺️</span>
+                  <span>Базовая карта (подложка)</span>
                 </span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {Object.entries(BASE_MAPS).map(([key, cfg]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => {
-                        telegram.haptic.selection();
-                        setBaseMapType(key);
-                      }}
-                      className={`py-2 px-1.5 rounded-xl text-xs font-bold border transition active:scale-95 ${
-                        baseMapType === key
-                          ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-glow-emerald'
-                          : 'bg-slate-100 dark:bg-slate-800/70 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                      }`}
-                    >
-                      {cfg.name}
-                    </button>
-                  ))}
+                
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(BASE_MAPS).map(([key, cfg]) => {
+                    const isSelected = baseMap === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => handleSelectBaseMap(key)}
+                        className={`p-2.5 rounded-xl text-xs font-semibold text-left transition flex items-center justify-between border ${
+                          isSelected
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 shadow-glow-pill font-bold'
+                            : 'bg-slate-100 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <span className="truncate">{cfg.name}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* R1CF WMS Overlays */}
-              <div className="space-y-2 pt-1 border-t border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                    Радиолюбительские слои R1CF:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={resetLayersToDefault}
-                    className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-semibold"
-                  >
-                    Сбросить к RDA
-                  </button>
-                </div>
+              {/* R1CF WMS Overlays Toggles */}
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <span>🛰️</span>
+                  <span>Специальные радиолюбительские слои (R1CF)</span>
+                </span>
 
                 <div className="space-y-1.5">
-                  {WMS_LAYERS_CONFIG.map((cfg) => {
-                    const isActive = Boolean(activeLayers[cfg.id]);
+                  {Object.entries(R1CF_LAYERS).map(([key, cfg]) => {
+                    const isActive = activeWmsLayers[key] !== false; // Active by default
                     return (
                       <button
-                        key={cfg.id}
+                        key={key}
                         type="button"
-                        onClick={() => toggleWmsLayer(cfg.id)}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-xl border transition active:scale-[0.99] text-left ${
-                          isActive 
-                            ? 'bg-emerald-500/10 border-emerald-500/40 text-slate-900 dark:text-white' 
-                            : 'bg-slate-100 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400'
+                        onClick={() => toggleWmsLayer(key)}
+                        className={`w-full p-2.5 rounded-xl text-xs transition flex items-center justify-between border ${
+                          isActive
+                            ? 'bg-slate-100/90 dark:bg-slate-800/90 text-slate-900 dark:text-white border-emerald-500/40'
+                            : 'bg-slate-50 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-800 opacity-60'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className={`w-4 h-4 rounded-md flex items-center justify-center border transition shrink-0 ${
-                            isActive ? 'bg-emerald-500 border-emerald-400 text-slate-950' : 'border-slate-400 dark:border-slate-600'
-                          }`}>
-                            {isActive && <Check className="w-3 h-3 stroke-[3]" />}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs select-none">{cfg.icon}</span>
-                              <span className="font-semibold text-xs truncate">{cfg.name}</span>
-                            </div>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500 block truncate">
+                        <div className="flex items-center gap-2.5 text-left truncate">
+                          <span className="text-base select-none">{cfg.icon}</span>
+                          <div className="truncate">
+                            <span className={`font-bold block truncate ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
+                              {cfg.name}
+                            </span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
                               {cfg.desc}
                             </span>
                           </div>
@@ -1073,7 +1066,8 @@ export default function MapTab({
               Геосервер: map.r1cf.ru • Проекция EPSG:3857
             </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 7. Multi-app Route Modal (Yandex, 2GIS, OsmAnd, Copy) */}

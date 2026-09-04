@@ -73,7 +73,7 @@ export default function SubscriptionsTab({ user, onCountChange, onRequireAuth, o
   // Guest view outside Telegram
   if (!user) {
     return (
-      <div className="space-y-4 pb-20 animate-fade-in">
+      <div className="space-y-4 pb-32 pb-safe animate-fade-in">
         <div className="p-6 rounded-3xl glass-card border border-sky-500/30 text-center space-y-4 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-40 h-40 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
           
@@ -177,7 +177,7 @@ export default function SubscriptionsTab({ user, onCountChange, onRequireAuth, o
   };
 
   return (
-    <div className="space-y-4 pb-20 animate-fade-in">
+    <div className="space-y-4 pb-32 pb-safe animate-fade-in">
       {/* 1. Master Toggle for DM notifications */}
       <div className="flex items-center justify-between p-3.5 rounded-2xl glass-card">
         <div className="flex items-center gap-3">

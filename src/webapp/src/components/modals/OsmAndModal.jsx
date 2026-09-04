@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Download, 
   Layers, 
@@ -62,7 +63,7 @@ export default function OsmAndModal({ onClose, language = 'RU' }) {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 pt-14 pb-safe">
       {/* Backdrop */}
       <div 
@@ -296,4 +297,7 @@ export default function OsmAndModal({ onClose, language = 'RU' }) {
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modalContent, document.body);
 }

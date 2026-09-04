@@ -172,7 +172,7 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
   };
 
   return (
-    <div className="space-y-3 pb-20 animate-fade-in">
+    <div className="space-y-3 pb-32 pb-safe animate-fade-in">
       {/* 1. Scope Switch (RU/CIS vs World) & Refresh */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex p-1 rounded-xl bg-slate-200/80 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 flex-1">

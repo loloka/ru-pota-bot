@@ -1,5 +1,6 @@
 import { potaApi } from '../api/potaApi.js';
 import db from '../db/database.js';
+import { pinManager } from './pinManager.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -59,6 +60,12 @@ export const startClusterWorker = (telegramClient) => {
           const sentMsg = await telegramClient.sendMessage(channelId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
           msgId = sentMsg.message_id;
           console.log(`\x1b[34m[Broadcast]\x1b[0m 📢 Спот ${spot.activator} опубликован в канал`);
+
+          // Pin spot silently in channel and schedule auto-unpin after 30 minutes
+          try {
+            await telegramClient.pinChatMessage(channelId, msgId, { disable_notification: true });
+          } catch (pinErr) {}
+          pinManager.scheduleSpotUnpin(telegramClient, channelId, msgId);
         } catch (e) {
           console.error(`\x1b[31m[Broadcast Error]\x1b[0m Не удалось отправить спот в канал:`, e.message);
         }

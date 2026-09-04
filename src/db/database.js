@@ -43,6 +43,18 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(telegram_id, type, target)
   );
+
+  CREATE TABLE IF NOT EXISTS pinned_spots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id TEXT NOT NULL,
+    message_id INTEGER NOT NULL,
+    pinned_at INTEGER NOT NULL,
+    unpin_at INTEGER NOT NULL,
+    status TEXT DEFAULT 'pinned',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(chat_id, message_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_pinned_spots_status_unpin ON pinned_spots (status, unpin_at);
 `);
 
 // Migration for existing tables
@@ -107,6 +119,21 @@ try {
     db.exec(`ALTER TABLE spots ADD COLUMN msg_id INTEGER`);
     console.log('[DB] Migrated spots table: added msg_id column');
   }
+
+  // Ensure pinned_spots table exists
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pinned_spots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chat_id TEXT NOT NULL,
+      message_id INTEGER NOT NULL,
+      pinned_at INTEGER NOT NULL,
+      unpin_at INTEGER NOT NULL,
+      status TEXT DEFAULT 'pinned',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(chat_id, message_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_pinned_spots_status_unpin ON pinned_spots (status, unpin_at);
+  `);
 } catch (e) {
   console.error('[DB] Migration error:', e.message);
 }

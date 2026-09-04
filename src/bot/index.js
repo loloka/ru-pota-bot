@@ -24,8 +24,9 @@ import { editSpotWizard } from './scenes/editSpotWizard.js';
 import { subWizard } from './scenes/subWizard.js';
 import { statsWizard } from './scenes/statsWizard.js';
 
-// Import background worker
+// Import background workers
 import { startClusterWorker } from '../services/clusterWorker.js';
+import { pinManager, isChannelChat } from '../services/pinManager.js';
 
 // Import admin server
 import { startAdminServer } from '../web/admin.js';
@@ -270,11 +271,10 @@ bot.command('spot', async (ctx) => {
   } catch(e) {}
   return ctx.scene.enter('SPOT_WIZARD');
 });
-let lastWelcomeMsgId = null;
-
+// Persistent Welcome Message for new members (never deleted, visible to everyone)
 bot.on('new_chat_members', async (ctx) => {
   try {
-    await ctx.deleteMessage(); // Delete the "user joined" system message
+    await ctx.deleteMessage(); // Delete the "user joined" service message to avoid clutter
   } catch (e) {}
 
   const newMembers = ctx.message.new_chat_members.filter(m => !m.is_bot);
@@ -283,23 +283,8 @@ bot.on('new_chat_members', async (ctx) => {
   const names = newMembers.map(m => m.first_name).join(', ');
   const text = `👋 Добро пожаловать, ${names}! Рады видеть вас в сообществе RU-POTA 🌲\n\n🤖 Для отправки спотов и подписки на нужного корреспондента можете перейти в личные сообщения: @${ctx.botInfo.username} либо нажмите /start`;
 
-  if (lastWelcomeMsgId) {
-    try {
-      await ctx.telegram.deleteMessage(ctx.chat.id, lastWelcomeMsgId);
-    } catch (e) {}
-  }
-
   try {
-    const msg = await ctx.reply(text);
-    lastWelcomeMsgId = msg.message_id;
-    
-    // Auto-delete the welcome message after 2 minutes to keep chat clean
-    setTimeout(async () => {
-      try {
-        await ctx.telegram.deleteMessage(ctx.chat.id, msg.message_id);
-        if (lastWelcomeMsgId === msg.message_id) lastWelcomeMsgId = null;
-      } catch (e) {}
-    }, 2 * 60 * 1000);
+    await ctx.reply(text);
   } catch (e) {}
 });
 
@@ -307,6 +292,44 @@ bot.on('left_chat_member', async (ctx) => {
   try {
     await ctx.deleteMessage(); // Delete the "user left" system message
   } catch (e) {}
+});
+
+// Automatic Spot Pinning & Timed Unpinning in Connected Discussion Group
+bot.on('pinned_message', async (ctx) => {
+  const pinned = ctx.message?.pinned_message;
+  if (!pinned) return;
+
+  // Clean up the Telegram service message "[User/Channel] pinned a message" to keep chat clean
+  try {
+    await ctx.deleteMessage();
+  } catch (e) {}
+
+  // Check if pinned message is a spot or forwarded from the activity channel
+  const isFromChannel = pinned.is_automatic_forward ||
+    (pinned.sender_chat && isChannelChat(pinned.sender_chat)) ||
+    (pinned.forward_from_chat && isChannelChat(pinned.forward_from_chat)) ||
+    (pinned.text && (pinned.text.includes('POTA Cluster Spot') || pinned.text.includes('НОВЫЙ СПОТ') || pinned.text.includes('Freq:')));
+
+  if (isFromChannel) {
+    pinManager.scheduleSpotUnpin(ctx.telegram, ctx.chat.id, pinned.message_id);
+  }
+});
+
+// Detect automatic forwards from activity channel into group and schedule 30-minute unpin
+bot.use(async (ctx, next) => {
+  if (ctx.chat?.type === 'group' || ctx.chat?.type === 'supergroup') {
+    const msg = ctx.message;
+    if (msg) {
+      const isChannelForward = msg.is_automatic_forward ||
+        (msg.sender_chat && isChannelChat(msg.sender_chat)) ||
+        (msg.forward_from_chat && isChannelChat(msg.forward_from_chat));
+
+      if (isChannelForward) {
+        pinManager.scheduleSpotUnpin(ctx.telegram, ctx.chat.id, msg.message_id);
+      }
+    }
+  }
+  return next();
 });
 
 bot.command('start', startHandler);
@@ -489,7 +512,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.11.4\x1b[0m 📡              \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.12.0\x1b[0m 📡              \x1b[32m║\x1b[0m
 
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
@@ -509,6 +532,9 @@ bot.launch({
 
 // Start the background cluster worker
 startClusterWorker(bot.telegram);
+
+// Start the spot auto-unpin worker (checks every 30s)
+pinManager.startPinWorker(bot.telegram);
 
 // Start the admin web panel
 startAdminServer(bot.telegram);

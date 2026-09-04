@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import db from '../../db/database.js';
 import { potaApi } from '../../api/potaApi.js';
 import { deleteUserMessage, replyWithAutoDelete, getMainMenu } from '../utils.js';
+import { pinManager } from '../../services/pinManager.js';
 import axios from 'axios';
 dotenv.config();
 
@@ -253,6 +254,12 @@ export const spotWizard = new Scenes.WizardScene(
       const msg = await ctx.telegram.sendMessage(channelId, formattedSpot, { parse_mode: 'HTML', disable_web_page_preview: true });
       await ctx.reply('✅ Спот успешно опубликован в канале активности!', { reply_markup: getMainMenu(ctx) });
       
+      // Pin spot silently in channel and schedule auto-unpin after 30 minutes
+      try {
+        await ctx.telegram.pinChatMessage(channelId, msg.message_id, { disable_notification: true });
+      } catch (pinErr) {}
+      pinManager.scheduleSpotUnpin(ctx.telegram, channelId, msg.message_id);
+
       // Save spot to DB for editing later
       s.baseComment = baseComment;
       s.comment = comment; // full comment

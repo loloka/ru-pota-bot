@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import db from '../db/database.js';
 import { potaApi } from '../api/potaApi.js';
 import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
+import { pinManager } from '../services/pinManager.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -71,7 +72,7 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.11.4 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.12.0 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
     let anyUpdated = false;
@@ -892,6 +893,12 @@ export function createTmaRouter(telegramClient) {
           });
           channelMsgId = sent.message_id;
 
+          // Pin spot silently in channel and schedule auto-unpin after 30 minutes
+          try {
+            await telegramClient.pinChatMessage(channelId, channelMsgId, { disable_notification: true });
+          } catch (pinErr) {}
+          pinManager.scheduleSpotUnpin(telegramClient, channelId, channelMsgId);
+
           // Update msg_id in spots table
           db.prepare('UPDATE spots SET msg_id = ? WHERE id = ?').run(channelMsgId, insertResult.lastInsertRowid);
         } catch (e) {
@@ -961,6 +968,15 @@ export function createTmaRouter(telegramClient) {
   router.post('/spots/qrt', requireTmaAuth, async (req, res) => {
     try {
       const tgUser = req.telegramUser;
+
+      const existingUser = db.prepare('SELECT last_spot_msg_id FROM users WHERE telegram_id = ?').get(tgUser.id);
+      if (existingUser && existingUser.last_spot_msg_id && ACTIVITY_CHANNEL_ID) {
+        let channelId = ACTIVITY_CHANNEL_ID;
+        if (channelId.includes('t.me/')) {
+          channelId = '@' + channelId.split('t.me/')[1].replace('/', '');
+        }
+        await pinManager.unpinSpotNow(telegramClient, channelId, existingUser.last_spot_msg_id);
+      }
 
       db.prepare(`
         UPDATE users 

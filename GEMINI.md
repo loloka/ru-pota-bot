@@ -52,26 +52,35 @@
 ## 📁 3. Структура проекта
 ```text
 potabot/
+├── assets/                   # Брендовые ассеты (splash-icon.svg, pota_hub_banner.jpg для BotFather)
 ├── src/
 │   ├── api/
 │   │   └── potaApi.js        # REST клиент к api.pota.app (getSpots, getStats, getPark, postSpot)
 │   ├── bot/
-│   │   ├── commands/         # Обработчики команд (/start, /spot, /stats, /park, /sub, /mod, /callsign)
+│   │   ├── commands/         # Обработчики команд (/start, /spot, /stats, /park, /sub, /mod, /callsign, /onair)
 │   │   ├── middlewares/      # Проверки чатов, rate limit, автоудаление системных сообщений
 │   │   ├── scenes/           # Telegraf Wizard-сцены (spotWizard, parkWizard, callsignWizard, subWizard, editSpotWizard)
 │   │   ├── utils.js          # Хелперы (deleteUserMessage, replyWithAutoDelete)
 │   │   └── index.js          # Инициализация Telegraf, регистрация сцен/кнопок, запуск воркеров
+│   ├── data/
+│   │   └── parks_fallback.json # Офлайн-датасет 668 парков POTA (RU, BY, KZ) для мгновенного старта карты
 │   ├── db/
 │   │   └── database.js       # SQLite инициализация, схема таблиц (users, spots, subscriptions) и миграции
 │   ├── services/
 │   │   └── clusterWorker.js  # Фоновый опрос кластера POTA, дедупликация, рассылка в канал и подписчикам
-│   └── web/
-│       └── admin.js          # HTTP-сервер локальной веб-панели модерации
-├── data/                     # Файлы БД (pota.db)
+│   ├── web/
+│   │   ├── admin.js          # HTTP-сервер Express, модерация, Web Admin 2.0
+│   │   ├── tmaApi.js         # REST API для Telegram Mini App (/me, /spots, /parks, /lookup, /subscriptions)
+│   │   └── tmaAuth.js        # HMAC-SHA256 криптографическая проверка initData + гостевой режим
+│   └── webapp/               # React 18 + Vite + Tailwind CSS + Leaflet SPA-приложение
+│       ├── src/              # Компоненты, табы (Dashboard, Cluster, Map, Subs, Profile)
+│       └── index.html        # HTML-шаблон TMA
+├── data/                     # Файлы локальной БД (pota.db — обязательно в .gitignore)
+├── dist/webapp/              # Скомпилированный продакшен-бандл Mini App (раздается по /app)
 ├── .env.example              # Переменные окружения
 ├── CHANGELOG.md              # История изменений
 ├── COMMANDS.md               # Документация команд для пользователей
-├── DEPLOY.md                 # Инструкции по деплою (PM2 / Ubuntu)
+├── DEPLOY.md                 # Инструкции по деплою (PM2 / Ubuntu / update-bot.sh)
 ├── ROADMAP.md                # Планы развития проекта
 ├── spec.md                   # Исходная техническая спецификация
 └── GEMINI.md                 # Этот файл правил для AI-ассистентов

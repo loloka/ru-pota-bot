@@ -19,6 +19,8 @@ The bot connects the Telegram community, the official POTA cluster API, personal
 | Resource | Link | Description |
 |---|---|---|
 | 🤖 **Telegram Bot** | [@ru_pota_bot](https://t.me/ru_pota_bot) | Main bot for spotting, subscriptions, and profile statistics |
+| 📱 **Telegram Mini App** | [t.me/ru_pota_bot/app](https://t.me/ru_pota_bot/app) | Fullscreen mobile hub: map, live cluster, directory & spotting |
+| 🌐 **Web Version** | [pota.r9o.ru/app/](https://pota.r9o.ru/app/) | Public guest access from any PC or mobile browser |
 | 📢 **Activity Channel** | [@pota_activity](https://t.me/pota_activity) | Live broadcast of cluster spots and activator field announcements |
 | 💬 **Community Chat** | [RU-POTA Chat](https://t.me/pota_activity) | Open discussion group (tap "Discuss" in the channel) |
 | 🌐 **Official POTA** | [pota.app](https://pota.app) / [next.pota.app](https://next.pota.app) | International award program portal |
@@ -64,7 +66,16 @@ Built-in authenticated web interface powered by Express 5 and Bootstrap 5 (`http
 - 💻 **Live Activity Console:** In-memory 200-event ring buffer capturing bot events in real time with circular JSON protection and ANSI color filtering.
 - 📢 **Broadcaster:** Send formatted announcements to the channel or group with optional automatic pin.
 
-### 🛡 7. Chat Cleanliness & Moderation
+### 📱 7. Telegram Mini App (RU-POTA Hub)
+Modern embedded web interface in dark theme aesthetic (`https://pota.r9o.ru/app/` or `t.me/ru_pota_bot/app`):
+- 🌐 **Guest Mode:** Open access for visitors outside Telegram to browse spots, interactive map, and callsign/park directory without login.
+- 🏠 **Dashboard:** Field operation status, auto-respot timer, **POTA directory search** (`/stats` & `/park`), on-air station slider, and quick statistics.
+- 📻 **Live Cluster:** Real-time spot feed with instant filters by band (40m, 20m...), mode (CW, SSB, FT8...), and region.
+- 🗺 **Interactive Map (Leaflet):** 668 parks (RU/BY/KZ) with offline dataset fallback, R1CF WMS overlays (RDA, RAZA, RAFA, QTH, SOTA, RLHA), and multi-app routing (Yandex, 2GIS, OsmAnd).
+- 🔔 **Subscription Management:** Segmented alerts (Callsigns / Parks) with direct DM notification toggle.
+- 👤 **Profile:** Operator scorecard, callsign modification request, and Haptic Feedback toggle.
+
+### 🛡 8. Chat Cleanliness & Moderation
 - **Gatekeeper:** Automatically purges Telegram service messages ("User joined/left the group") and sends a temporary welcome greeting that auto-deletes after 2 minutes.
 - **Command Auto-Deletion:** User command messages in public groups are automatically removed to keep chat history clean.
 - **Moderator Commands:** `/ban`, `/kick`, `/mute` executed via Reply to offending messages.

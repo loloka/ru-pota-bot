@@ -107,7 +107,7 @@ export const callsignWizard = new Scenes.WizardScene(
           const userLink = ctx.from.username ? `@${ctx.from.username}` : `<a href="tg://user?id=${userId}">${ctx.from.first_name || 'пользователь'}</a>`;
           await ctx.telegram.sendMessage(
             adminId, 
-            `🔔 <b>Новая заявка на модерацию!</b>\nПозывной: <b>${text}</b>\nОт: ${userLink}\nID: <code>${userId}</code>\n\n👉 Выберите действие ниже или зайдите в <a href="http://localhost:3000/">админ-панель</a>.`, 
+            `🔔 <b>Новая заявка на модерацию!</b>\nПозывной: <b>${text}</b>\nОт: ${userLink}\nID: <code>${userId}</code>\n\n👉 Выберите действие ниже или зайдите в <a href="https://pota.r9o.ru/">админ-панель</a>.`, 
             { 
               parse_mode: 'HTML',
               reply_markup: {

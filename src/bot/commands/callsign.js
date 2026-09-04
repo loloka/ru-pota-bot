@@ -79,8 +79,18 @@ export const callsignHandler = async (ctx) => {
         const userLink = ctx.from.username ? `@${ctx.from.username}` : `<a href="tg://user?id=${userId}">${ctx.from.first_name || 'пользователь'}</a>`;
         await ctx.telegram.sendMessage(
           adminId, 
-          `🔔 <b>Новая заявка на модерацию!</b>\nПозывной: <b>${callsign}</b>\nОт: ${userLink}\nID: <code>${userId}</code>\n\n👉 Зайдите в <a href="http://localhost:3000/">админ-панель</a> для проверки.`, 
-          { parse_mode: 'HTML' }
+          `🔔 <b>Новая заявка на модерацию!</b>\nПозывной: <b>${callsign}</b>\nОт: ${userLink}\nID: <code>${userId}</code>\n\n👉 Выберите действие ниже или зайдите в <a href="https://pota.r9o.ru/">админ-панель</a>.`, 
+          { 
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: '✅ Одобрить', callback_data: `admin_appr:${userId}` },
+                  { text: '❌ Отклонить', callback_data: `admin_rej:${userId}` }
+                ]
+              ]
+            }
+          }
         );
       } catch (e) {
         console.error('Failed to notify admin', e.message);

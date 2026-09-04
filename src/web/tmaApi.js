@@ -71,7 +71,7 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.11.3 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.11.4 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
     let anyUpdated = false;
@@ -1150,7 +1150,7 @@ export function createTmaRouter(telegramClient) {
   // ==========================================
   // 8. POST /api/tma/callsign/request
   // ==========================================
-  router.post('/callsign/request', requireTmaAuth, (req, res) => {
+  router.post('/callsign/request', requireTmaAuth, async (req, res) => {
     try {
       const tgUser = req.telegramUser;
       let { newCallsign } = req.body;
@@ -1164,14 +1164,39 @@ export function createTmaRouter(telegramClient) {
         return res.status(400).json({ error: 'Некорректный формат позывного. Пример: R9OGL' });
       }
 
-      // Upsert into users table with pending status
+      // Upsert into users table with pending status and reset reject_reason
       db.prepare(`
-        INSERT INTO users (telegram_id, callsign, status)
-        VALUES (?, ?, 'pending')
-        ON CONFLICT(telegram_id) DO UPDATE SET callsign = excluded.callsign, status = 'pending'
+        INSERT INTO users (telegram_id, callsign, status, reject_reason)
+        VALUES (?, ?, 'pending', NULL)
+        ON CONFLICT(telegram_id) DO UPDATE SET callsign = excluded.callsign, status = 'pending', reject_reason = NULL
       `).run(tgUser.id, newCallsign);
 
       console.log(`[TMA API] Callsign change request from user ${tgUser.id}: ${newCallsign}`);
+
+      // Notify Admin via Telegram with interactive approve/reject buttons
+      const adminId = process.env.ADMIN_ID;
+      if (adminId && telegramClient) {
+        try {
+          const userLink = tgUser.username ? `@${tgUser.username}` : `<a href="tg://user?id=${tgUser.id}">${tgUser.first_name || 'пользователь'}</a>`;
+          await telegramClient.sendMessage(
+            adminId,
+            `🔔 <b>Новая заявка на модерацию (из Mini App)!</b>\nПозывной: <b>${newCallsign}</b>\nОт: ${userLink}\nID: <code>${tgUser.id}</code>\n\n👉 Выберите действие ниже или зайдите в <a href="https://pota.r9o.ru/">админ-панель</a>.`,
+            {
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: '✅ Одобрить', callback_data: `admin_appr:${tgUser.id}` },
+                    { text: '❌ Отклонить', callback_data: `admin_rej:${tgUser.id}` }
+                  ]
+                ]
+              }
+            }
+          );
+        } catch (adminErr) {
+          console.error('[TMA API] Failed to notify admin about callsign request:', adminErr.message);
+        }
+      }
 
       res.json({
         success: true,

@@ -9,7 +9,7 @@ const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 25000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.11.3 (Telegram Bot; Node.js)'
+    'User-Agent': 'RU-POTA-Bot/1.11.4 (Telegram Bot; Node.js)'
   }
 });
 

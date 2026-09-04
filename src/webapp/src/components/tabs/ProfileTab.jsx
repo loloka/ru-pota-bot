@@ -10,7 +10,9 @@ import {
   AlertCircle,
   Send,
   Radio,
-  Bell
+  Bell,
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -187,6 +189,70 @@ export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAut
             </div>
           </div>
         </div>
+
+        {/* Pending Approval Notice Banner with live refresh */}
+        {user.status === 'pending' && (
+          <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start justify-between gap-3 animate-fade-in">
+            <div className="flex items-start gap-2.5">
+              <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5 animate-spin" style={{ animationDuration: '6s' }} />
+              <div>
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                  {language === 'RU' ? 'Заявка на проверке администратором' : 'Callsign Pending Review'}
+                </p>
+                <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 mt-0.5 leading-relaxed">
+                  {language === 'RU' 
+                    ? 'Ваш позывной проверяется модератором. Страница обновится автоматически сразу после одобрения.' 
+                    : 'Your callsign is being verified by a moderator. The page will update automatically once approved.'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                telegram.haptic.impact('light');
+                if (onRefreshProfile) await onRefreshProfile();
+              }}
+              className="px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-200 text-[11px] font-semibold transition shrink-0 flex items-center gap-1"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>{language === 'RU' ? 'Обновить' : 'Refresh'}</span>
+            </button>
+          </div>
+        )}
+
+        {/* Rejected Notice Banner */}
+        {user.status === 'rejected' && (
+          <div className="mt-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-start justify-between gap-3 animate-fade-in">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-rose-800 dark:text-rose-300">
+                  {language === 'RU' ? 'Заявка отклонена' : 'Application Rejected'}
+                </p>
+                {user.reject_reason && (
+                  <p className="text-[11px] text-rose-700 dark:text-rose-300 mt-0.5 italic font-medium">
+                    «{user.reject_reason}»
+                  </p>
+                )}
+                <p className="text-[11px] text-rose-700/80 dark:text-rose-400/80 mt-0.5 leading-relaxed">
+                  {language === 'RU'
+                    ? 'Вы можете подать заявку повторно, указав корректный позывной.'
+                    : 'You can re-apply with a valid callsign.'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                telegram.haptic.impact('light');
+                setChangeCallsignModal(true);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-800 dark:text-rose-200 text-[11px] font-semibold transition shrink-0"
+            >
+              {language === 'RU' ? 'Подать снова' : 'Re-apply'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 2. POTA Statistics Overview */}

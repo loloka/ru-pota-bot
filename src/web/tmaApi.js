@@ -72,7 +72,7 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.13.2 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.13.3 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
     let anyUpdated = false;
@@ -283,6 +283,7 @@ export function createTmaRouter(telegramClient) {
           photo_url: tgUser.photo_url || null,
           callsign: dbUser.callsign,
           status: dbUser.status,
+          reject_reason: dbUser.reject_reason || null,
           isMock: Boolean(tgUser.isMock),
         },
         activeSpot,

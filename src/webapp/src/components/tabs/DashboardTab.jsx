@@ -332,8 +332,9 @@ export default function DashboardTab({
             ) : user.status === 'pending' ? (
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   telegram.haptic.notification('warning');
+                  if (onRefreshProfile) await onRefreshProfile();
                   alert(
                     language === 'RU'
                       ? `⏳ Ваш позывной ${user.callsign} находится на проверке администратором. Публикация спотов станет доступна сразу после одобрения заявки!`

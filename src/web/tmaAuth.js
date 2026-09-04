@@ -126,7 +126,7 @@ export function tmaUserMiddleware(req, res, next) {
   req.telegramUser = verification.user;
 
   // 4. Resolve user profile in SQLite
-  let dbUser = db.prepare('SELECT telegram_id, callsign, status, last_spot_data, last_spot_msg_id FROM users WHERE telegram_id = ?').get(verification.user.id);
+  let dbUser = db.prepare('SELECT telegram_id, callsign, status, reject_reason, last_spot_data, last_spot_msg_id FROM users WHERE telegram_id = ?').get(verification.user.id);
   
   if (!dbUser) {
     // Registered in Telegram, but not yet applied for callsign in RU-POTA bot
@@ -134,6 +134,7 @@ export function tmaUserMiddleware(req, res, next) {
       telegram_id: verification.user.id,
       callsign: null,
       status: 'guest',
+      reject_reason: null,
       last_spot_data: null,
       last_spot_msg_id: null,
     };

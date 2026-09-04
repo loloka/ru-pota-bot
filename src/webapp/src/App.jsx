@@ -42,6 +42,36 @@ export default function App() {
     setAuthModal({ open: true, title, reason });
   };
 
+  const loadProfile = useCallback(async (silent = false) => {
+    try {
+      const data = await api.getMe();
+      if (data?.user) {
+        setUser(prev => {
+          // If status transitioned from pending to approved, celebrate with tactile haptic
+          if (prev?.status === 'pending' && data.user.status === 'approved') {
+            telegram.haptic.notification('success');
+          }
+          return {
+            ...(prev || {}),
+            ...data.user,
+          };
+        });
+      } else {
+        setUser(null);
+      }
+      setActiveSpot(data?.activeSpot || null);
+      setStats(data?.stats || null);
+      setSubscriptionsCount(data?.subscriptionsCount || 0);
+    } catch (err) {
+      if (!silent) {
+        console.warn('[App] Could not load operator profile from API:', err.message);
+        setUser(null);
+      }
+    } finally {
+      setLoadingProfile(false);
+    }
+  }, []);
+
   const handleNavigate = (tabId, params = {}) => {
     if (tabId === 'cluster' && (params.scope || params.search !== undefined || params.highlightCallsign !== undefined)) {
       setClusterFilter({
@@ -54,10 +84,12 @@ export default function App() {
       setMapTarget(params.focusParkRef);
     }
     setActiveTab(tabId);
+
+    // Refresh profile on navigation to dashboard or profile
+    if (tabId === 'dashboard' || tabId === 'profile') {
+      loadProfile(true);
+    }
   };
-
-
-
 
   // Sync theme with HTML document element and body
   useEffect(() => {
@@ -80,32 +112,50 @@ export default function App() {
     return getTranslation(language, key);
   }, [language]);
 
-  const loadProfile = useCallback(async () => {
-    try {
-      const data = await api.getMe();
-      if (data?.user) {
-        setUser(prev => ({
-          ...(prev || {}),
-          ...data.user,
-        }));
-      } else {
-        setUser(null);
-      }
-      setActiveSpot(data?.activeSpot || null);
-      setStats(data?.stats || null);
-      setSubscriptionsCount(data?.subscriptionsCount || 0);
-    } catch (err) {
-      console.warn('[App] Could not load operator profile from API:', err.message);
-      setUser(null);
-    } finally {
-      setLoadingProfile(false);
-    }
-  }, []);
-
+  // 1. Initial load
   useEffect(() => {
     telegram.init();
     loadProfile();
   }, [loadProfile]);
+
+  // 2. Refresh on app focus or visibility change (e.g. returning after checking Telegram chat)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadProfile(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
+  }, [loadProfile]);
+
+  // 3. Fast smart auto-poll (every 3 seconds) while status is 'pending' so approval applies immediately without re-opening app!
+  useEffect(() => {
+    if (user?.status !== 'pending') return;
+
+    const interval = setInterval(() => {
+      loadProfile(true);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [user?.status, loadProfile]);
+
+  // 4. Gentle periodic background sync (every 45 seconds) for on-air spots and status
+  useEffect(() => {
+    if (user?.status === 'pending') return;
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadProfile(true);
+      }
+    }, 45000);
+
+    return () => clearInterval(interval);
+  }, [user?.status, loadProfile]);
 
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));

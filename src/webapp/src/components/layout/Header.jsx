@@ -377,7 +377,7 @@ export default function Header({
             {/* Footer inside drawer */}
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 text-center space-y-1.5">
               <p className="text-xs font-mono font-semibold text-slate-400 dark:text-slate-500">
-                RU-POTA Bot &amp; TMA v1.12.0
+                RU-POTA Bot &amp; TMA v1.12.1
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
                 Автор: <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">R9OGL</span>

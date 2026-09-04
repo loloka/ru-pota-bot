@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
+import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -296,6 +297,7 @@ export const startAdminServer = (telegramClient) => {
                 <a class="list-group-item list-group-item-action active" id="list-users-list" data-bs-toggle="list" href="#list-users" role="tab" aria-controls="list-users"><i class="bi bi-people"></i> Пользователи</a>
                 <a class="list-group-item list-group-item-action" id="list-spots-list" data-bs-toggle="list" href="#list-spots" role="tab" aria-controls="list-spots"><i class="bi bi-broadcast"></i> Споты</a>
                 <a class="list-group-item list-group-item-action" id="list-broadcast-list" data-bs-toggle="list" href="#list-broadcast" role="tab" aria-controls="list-broadcast"><i class="bi bi-megaphone"></i> Рассылка</a>
+                <a class="list-group-item list-group-item-action" id="list-welcome-list" data-bs-toggle="list" href="#list-welcome" role="tab" aria-controls="list-welcome"><i class="bi bi-pin-angle"></i> Закрепленный пост</a>
                 <a class="list-group-item list-group-item-action" id="list-console-list" data-bs-toggle="list" href="#list-console" role="tab" aria-controls="list-console"><i class="bi bi-terminal"></i> Live Консоль</a>
               </div>
             </div>
@@ -369,6 +371,45 @@ export const startAdminServer = (telegramClient) => {
                           <label class="form-check-label" for="pinCheck">📌 Закрепить сообщение</label>
                         </div>
                         <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Отправить</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tab: Welcome / Pinned Post -->
+                <div class="tab-pane fade" id="list-welcome" role="tabpanel" aria-labelledby="list-welcome-list">
+                  <div class="card border-info shadow-sm mb-4">
+                    <div class="card-header bg-info text-dark d-flex justify-content-between align-items-center">
+                      <span class="fw-bold"><i class="bi bi-pin-angle-fill"></i> Редактор закрепленного сообщения</span>
+                      <span class="badge bg-dark text-white">Основная группа</span>
+                    </div>
+                    <div class="card-body">
+                      <p class="text-muted small">
+                        Здесь вы можете изменить текст главного приветственного или информационного сообщения, закрепленного ботом в основной группе.
+                      </p>
+                      <form id="edit-pinned-form">
+                        <div class="row g-3 mb-3">
+                          <div class="col-md-7">
+                            <label class="form-label fw-semibold">ID чата (или ссылка вида https://t.me/c/...):</label>
+                            <input type="text" class="form-control font-monospace" id="pinned-chat-id" value="${process.env.MAIN_CHAT_ID ? ('-100' + process.env.MAIN_CHAT_ID.toString().replace(/^-100/, '').replace(/^-/, '')) : '-1004485477242'}">
+                          </div>
+                          <div class="col-md-5">
+                            <label class="form-label fw-semibold">ID сообщения (Message ID):</label>
+                            <input type="number" class="form-control font-monospace" id="pinned-msg-id" value="474">
+                          </div>
+                        </div>
+                        <div class="mb-3">
+                          <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label fw-semibold mb-0">Текст сообщения (поддерживается HTML):</label>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-reset-template">
+                              <i class="bi bi-arrow-counterclockwise"></i> Сбросить к шаблону
+                            </button>
+                          </div>
+                          <textarea class="form-control font-monospace" id="pinned-text" rows="16" style="font-size: 13px;"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="btn-save-pinned">
+                          <i class="bi bi-cloud-check"></i> Сохранить и обновить в Telegram
+                        </button>
                       </form>
                     </div>
                   </div>
@@ -699,6 +740,63 @@ export const startAdminServer = (telegramClient) => {
           
           // Initial fetch
           fetchLogs();
+
+          // Pinned Message Editor Logic
+          const defaultPinnedTemplate = ${JSON.stringify(WELCOME_PINNED_POST)};
+          const pinnedTextArea = document.getElementById('pinned-text');
+          if (pinnedTextArea) {
+            pinnedTextArea.value = defaultPinnedTemplate;
+          }
+
+          document.getElementById('btn-reset-template')?.addEventListener('click', () => {
+            if (pinnedTextArea) {
+              pinnedTextArea.value = defaultPinnedTemplate;
+              Toast.fire({ icon: 'info', title: 'Шаблон восстановлен' });
+            }
+          });
+
+          document.getElementById('edit-pinned-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-pinned');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Обновление в Telegram...';
+
+            try {
+              const res = await fetch('/api/edit-pinned', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chatId: document.getElementById('pinned-chat-id').value,
+                  messageId: document.getElementById('pinned-msg-id').value,
+                  text: document.getElementById('pinned-text').value,
+                })
+              });
+              const data = await res.json();
+              if (res.ok && data.success) {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Успешно!',
+                  text: data.message || 'Закрепленное сообщение обновлено в Telegram!'
+                });
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Ошибка',
+                  text: data.error || 'Не удалось обновить сообщение в Telegram'
+                });
+              }
+            } catch (err) {
+              Swal.fire({
+                icon: 'error',
+                title: 'Сетевая ошибка',
+                text: err.message
+              });
+            } finally {
+              btn.disabled = false;
+              btn.innerHTML = originalHtml;
+            }
+          });
         </script>
       </body>
       </html>
@@ -812,6 +910,44 @@ export const startAdminServer = (telegramClient) => {
     } catch (err) {
       console.error('[Broadcast] Error sending message:', err);
       res.status(500).send(`Ошибка отправки сообщения: ${err.message}`);
+    }
+  });
+
+  // Edit pinned / welcome message in group or channel
+  app.post('/api/edit-pinned', requireAuth, async (req, res) => {
+    try {
+      let { chatId, messageId, text } = req.body;
+      if (!text || !text.trim()) {
+        return res.status(400).json({ error: 'Текст сообщения не может быть пустым' });
+      }
+
+      if (!chatId) {
+        chatId = process.env.MAIN_CHAT_ID;
+      }
+
+      let targetId = String(chatId).trim();
+      if (targetId.includes('t.me/c/')) {
+        const parts = targetId.split('t.me/c/')[1].split('/');
+        targetId = '-100' + parts[0];
+        if (parts[1] && !messageId) messageId = parseInt(parts[1], 10);
+      } else if (!targetId.startsWith('-100') && !targetId.startsWith('@') && /^[0-9-]+$/.test(targetId)) {
+        targetId = targetId.startsWith('-') ? '-100' + targetId.substring(1) : '-100' + targetId;
+      } else if (targetId.includes('t.me/')) {
+        targetId = '@' + targetId.split('t.me/')[1].replace('/', '');
+      }
+
+      const msgId = parseInt(messageId, 10) || 474;
+
+      await telegramClient.editMessageText(targetId, msgId, undefined, text, {
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      });
+
+      console.log(`[Admin] Successfully edited pinned message #${msgId} in ${targetId}`);
+      res.json({ success: true, message: `Сообщение #${msgId} успешно обновлено в чате!` });
+    } catch (err) {
+      console.error('[Admin] Error editing pinned message:', err.message);
+      res.status(500).json({ error: err.message });
     }
   });
 

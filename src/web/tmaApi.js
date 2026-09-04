@@ -69,7 +69,7 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.11.1 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.11.2 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
 
@@ -682,7 +682,7 @@ export function createTmaRouter(telegramClient) {
       }
 
       // Check subscription
-      const isSubscribed = Boolean(db.prepare(
+      const isSubscribed = Boolean(tgUser && db.prepare(
         'SELECT 1 FROM subscriptions WHERE telegram_id = ? AND type = ? AND target = ?'
       ).get(tgUser.id, 'callsign', cleanCall));
 
@@ -771,7 +771,7 @@ export function createTmaRouter(telegramClient) {
       }
 
       // Check subscription
-      const isSubscribed = Boolean(db.prepare(
+      const isSubscribed = Boolean(tgUser && db.prepare(
         'SELECT 1 FROM subscriptions WHERE telegram_id = ? AND type = ? AND target = ?'
       ).get(tgUser.id, 'park', ref));
 

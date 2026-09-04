@@ -9,7 +9,7 @@ const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 25000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.11.2 (Telegram Bot; Node.js)'
+    'User-Agent': 'RU-POTA-Bot/1.11.3 (Telegram Bot; Node.js)'
   }
 });
 
@@ -39,7 +39,9 @@ export const potaApi = {
       const response = await apiClient.get(`/profile/${encodeURIComponent(callsign)}`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching stats for ${callsign}:`, error.message);
+      if (error.response?.status !== 404) {
+        console.warn(`[POTA API] Error fetching stats for ${callsign}:`, error.message);
+      }
       throw error;
     }
   },
@@ -54,7 +56,9 @@ export const potaApi = {
       const response = await apiClient.get(`/park/${encodeURIComponent(reference)}`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching park ${reference}:`, error.message);
+      if (error.response?.status !== 404) {
+        console.warn(`[POTA API] Error fetching park ${reference}:`, error.message);
+      }
       throw error;
     }
   },
@@ -69,7 +73,9 @@ export const potaApi = {
       const response = await apiClient.get(`/park/leaderboard/${encodeURIComponent(reference)}`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching park leaderboard ${reference}:`, error.message);
+      if (error.response?.status !== 404) {
+        console.warn(`[POTA API] Error fetching park leaderboard ${reference}:`, error.message);
+      }
       return { activations: [], activator_qsos: [], hunter_qsos: [] };
     }
   },

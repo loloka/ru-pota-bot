@@ -57,10 +57,12 @@ try {
   console.warn('[TMA API] ⚠️ Could not load fallback parks:', err.message);
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let isRefreshingParks = false;
 
 /**
  * Periodically refresh POTA parks list for RU, BY, KZ from official API.
+ * Uses sequential requests with polite 2s pause to prevent Cloudflare stream aborts.
  * Keeps existing cached parks if any single country request fails or times out.
  */
 async function refreshParksFromApi() {
@@ -69,40 +71,41 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.11.2 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.11.3 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
-
-    const results = await Promise.allSettled(
-      programs.map(prog => axios.get(`https://api.pota.app/program/parks/${prog}`, { headers, timeout: 30000 }))
-    );
-
     let anyUpdated = false;
-    programs.forEach((prog, idx) => {
-      const res = results[idx];
-      if (res.status === 'fulfilled' && Array.isArray(res.value?.data) && res.value.data.length > 0) {
-        const mapped = res.value.data.map(p => ({
-          reference: p.reference,
-          name: p.name,
-          lat: parseFloat(p.latitude) || 0,
-          lon: parseFloat(p.longitude) || 0,
-          grid: p.grid || '',
-          region: p.locationDesc || '',
-          website: p.website || '',
-          activations: p.activations || 0,
-          qsos: p.qsos || 0,
-        })).filter(p => p.lat !== 0 && p.lon !== 0);
 
-        if (mapped.length > 0) {
-          parksByProgram[prog] = mapped;
-          anyUpdated = true;
-          console.log(`[TMA API] 🗺️ Refreshed ${prog} parks from API: ${mapped.length}`);
+    for (let i = 0; i < programs.length; i++) {
+      const prog = programs[i];
+      if (i > 0) await sleep(2000); // Polite 2s delay between requests to prevent Cloudflare throttling
+
+      try {
+        const res = await axios.get(`https://api.pota.app/program/parks/${prog}`, { headers, timeout: 30000 });
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          const mapped = res.data.map(p => ({
+            reference: p.reference,
+            name: p.name,
+            lat: parseFloat(p.latitude) || 0,
+            lon: parseFloat(p.longitude) || 0,
+            grid: p.grid || '',
+            region: p.locationDesc || '',
+            website: p.website || '',
+            activations: p.activations || 0,
+            qsos: p.qsos || 0,
+          })).filter(p => p.lat !== 0 && p.lon !== 0);
+
+          if (mapped.length > 0) {
+            parksByProgram[prog] = mapped;
+            anyUpdated = true;
+            console.log(`[TMA API] 🗺️ Refreshed ${prog} parks from API: ${mapped.length}`);
+          }
         }
-      } else {
-        const reason = res.status === 'rejected' ? res.reason?.message : 'empty data';
+      } catch (err) {
+        const reason = err.message || 'unknown error';
         console.warn(`[TMA API] ⚠️ Failed to refresh ${prog} parks (${reason}), preserving ${parksByProgram[prog]?.length || 0} existing parks`);
       }
-    });
+    }
 
     if (anyUpdated) {
       cachedParks = [
@@ -196,10 +199,10 @@ function formatTimeAgo(dateString) {
 export function createTmaRouter(telegramClient) {
   const router = Router();
 
-  // Background refresh of POTA parks list
+  // Background refresh of POTA parks list (delayed by 10 minutes to allow clean bot startup)
   setTimeout(() => {
     refreshParksFromApi().catch(() => {});
-  }, 5000);
+  }, 10 * 60 * 1000);
 
   // Extract TMA user identity (sets req.telegramUser or null for guests)
   router.use(tmaUserMiddleware);

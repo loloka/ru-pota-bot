@@ -1,10 +1,16 @@
 import { Router } from 'express';
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import db from '../db/database.js';
 import { potaApi } from '../api/potaApi.js';
 import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import dotenv from 'dotenv';
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const ACTIVITY_CHANNEL_ID = process.env.ACTIVITY_CHANNEL_ID;
 const ALLOWED_PREFIXES = (process.env.ALLOWED_PREFIXES || 'RU-,BY-,KZ-').split(',').map(p => p.trim());
@@ -20,8 +26,107 @@ let cachedSpots = [];
 let lastSpotsFetchTime = 0;
 const SPOTS_CACHE_TTL_MS = 15000; // 15 seconds cache to be respectful to api.pota.app
 
-let cachedParks = null;
+let cachedParks = [];
 let lastParksFetchTime = 0;
+const PARKS_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+// Program dictionary so failure in one country never wipes out others
+const parksByProgram = {
+  RU: [],
+  BY: [],
+  KZ: [],
+};
+
+// 1. Initial load from local fallback dataset so map NEVER starts empty or missing countries
+try {
+  const fallbackPath = path.resolve(__dirname, '../data/parks_fallback.json');
+  if (fs.existsSync(fallbackPath)) {
+    const rawFallback = JSON.parse(fs.readFileSync(fallbackPath, 'utf8'));
+    if (Array.isArray(rawFallback) && rawFallback.length > 0) {
+      cachedParks = rawFallback;
+      for (const p of rawFallback) {
+        const prefix = (p.reference || '').substring(0, 3).toUpperCase();
+        if (prefix === 'RU-') parksByProgram.RU.push(p);
+        else if (prefix === 'BY-') parksByProgram.BY.push(p);
+        else if (prefix === 'KZ-') parksByProgram.KZ.push(p);
+      }
+      console.log(`[TMA API] 🗺️ Initialized ${cachedParks.length} POTA parks from fallback (RU: ${parksByProgram.RU.length}, BY: ${parksByProgram.BY.length}, KZ: ${parksByProgram.KZ.length})`);
+    }
+  }
+} catch (err) {
+  console.warn('[TMA API] ⚠️ Could not load fallback parks:', err.message);
+}
+
+let isRefreshingParks = false;
+
+/**
+ * Periodically refresh POTA parks list for RU, BY, KZ from official API.
+ * Keeps existing cached parks if any single country request fails or times out.
+ */
+async function refreshParksFromApi() {
+  if (isRefreshingParks) return;
+  isRefreshingParks = true;
+
+  try {
+    const headers = {
+      'User-Agent': 'RU-POTA-Bot/1.11.1 (Telegram Bot; Node.js)',
+    };
+    const programs = ['RU', 'BY', 'KZ'];
+
+    const results = await Promise.allSettled(
+      programs.map(prog => axios.get(`https://api.pota.app/program/parks/${prog}`, { headers, timeout: 30000 }))
+    );
+
+    let anyUpdated = false;
+    programs.forEach((prog, idx) => {
+      const res = results[idx];
+      if (res.status === 'fulfilled' && Array.isArray(res.value?.data) && res.value.data.length > 0) {
+        const mapped = res.value.data.map(p => ({
+          reference: p.reference,
+          name: p.name,
+          lat: parseFloat(p.latitude) || 0,
+          lon: parseFloat(p.longitude) || 0,
+          grid: p.grid || '',
+          region: p.locationDesc || '',
+          website: p.website || '',
+          activations: p.activations || 0,
+          qsos: p.qsos || 0,
+        })).filter(p => p.lat !== 0 && p.lon !== 0);
+
+        if (mapped.length > 0) {
+          parksByProgram[prog] = mapped;
+          anyUpdated = true;
+          console.log(`[TMA API] 🗺️ Refreshed ${prog} parks from API: ${mapped.length}`);
+        }
+      } else {
+        const reason = res.status === 'rejected' ? res.reason?.message : 'empty data';
+        console.warn(`[TMA API] ⚠️ Failed to refresh ${prog} parks (${reason}), preserving ${parksByProgram[prog]?.length || 0} existing parks`);
+      }
+    });
+
+    if (anyUpdated) {
+      cachedParks = [
+        ...parksByProgram.RU,
+        ...parksByProgram.BY,
+        ...parksByProgram.KZ,
+      ];
+      lastParksFetchTime = Date.now();
+      console.log(`[TMA API] 🗺️ Total cached POTA parks: ${cachedParks.length}`);
+
+      // Try updating fallback file on disk asynchronously
+      try {
+        const fallbackPath = path.resolve(__dirname, '../data/parks_fallback.json');
+        fs.writeFileSync(fallbackPath, JSON.stringify(cachedParks, null, 2), 'utf8');
+      } catch (saveErr) {
+        // Non-critical if filesystem is read-only
+      }
+    }
+  } catch (err) {
+    console.warn('[TMA API] ⚠️ Error during refreshParksFromApi:', err.message);
+  } finally {
+    isRefreshingParks = false;
+  }
+}
 
 let cachedRaza = null;
 let lastRazaFetchTime = 0;
@@ -90,6 +195,11 @@ function formatTimeAgo(dateString) {
  */
 export function createTmaRouter(telegramClient) {
   const router = Router();
+
+  // Background refresh of POTA parks list
+  setTimeout(() => {
+    refreshParksFromApi().catch(() => {});
+  }, 5000);
 
   // Extract TMA user identity (sets req.telegramUser or null for guests)
   router.use(tmaUserMiddleware);
@@ -335,34 +445,12 @@ export function createTmaRouter(telegramClient) {
   router.get('/parks', async (req, res) => {
     try {
       const now = Date.now();
-      if (!cachedParks || now - lastParksFetchTime > 2 * 60 * 60 * 1000) {
-        try {
-          const [ruParksRes, byParksRes, kzParksRes] = await Promise.allSettled([
-            axios.get('https://api.pota.app/program/parks/RU', { timeout: 15000 }),
-            axios.get('https://api.pota.app/program/parks/BY', { timeout: 15000 }),
-            axios.get('https://api.pota.app/program/parks/KZ', { timeout: 15000 }),
-          ]);
-
-          const ruList = ruParksRes.status === 'fulfilled' && Array.isArray(ruParksRes.value.data) ? ruParksRes.value.data : [];
-          const byList = byParksRes.status === 'fulfilled' && Array.isArray(byParksRes.value.data) ? byParksRes.value.data : [];
-          const kzList = kzParksRes.status === 'fulfilled' && Array.isArray(kzParksRes.value.data) ? kzParksRes.value.data : [];
-
-          cachedParks = [...ruList, ...byList, ...kzList].map(p => ({
-            reference: p.reference,
-            name: p.name,
-            lat: parseFloat(p.latitude) || 0,
-            lon: parseFloat(p.longitude) || 0,
-            grid: p.grid || '',
-            region: p.locationDesc || '',
-            website: p.website || '',
-            activations: p.activations || 0,
-            qsos: p.qsos || 0,
-          })).filter(p => p.lat !== 0 && p.lon !== 0);
-
-          lastParksFetchTime = now;
-          console.log(`[TMA API] Cached ${cachedParks.length} POTA parks for RU, BY, KZ`);
-        } catch (e) {
-          console.warn('[TMA API] Failed to refresh POTA parks list:', e.message);
+      if (!cachedParks.length || now - lastParksFetchTime > PARKS_REFRESH_INTERVAL_MS) {
+        if (cachedParks.length > 0) {
+          // Asynchronous refresh in background - do not block user response
+          refreshParksFromApi().catch(() => {});
+        } else {
+          await refreshParksFromApi();
         }
       }
 

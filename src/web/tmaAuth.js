@@ -91,12 +91,13 @@ export function tmaUserMiddleware(req, res, next) {
   // 1. Explicit Local Dev Mock (strictly localhost in dev mode)
   if (isDevMock) {
     req.telegramUser = DEV_MOCK_USER;
-    let dbUser = db.prepare('SELECT telegram_id, callsign, status, last_spot_data, last_spot_msg_id FROM users WHERE telegram_id = ?').get(DEV_MOCK_USER.id);
+    let dbUser = db.prepare('SELECT telegram_id, callsign, status, notifications_enabled, last_spot_data, last_spot_msg_id FROM users WHERE telegram_id = ?').get(DEV_MOCK_USER.id);
     if (!dbUser) {
       dbUser = {
         telegram_id: DEV_MOCK_USER.id,
         callsign: 'R9OGL',
         status: 'approved',
+        notifications_enabled: 1,
         last_spot_data: null,
         last_spot_msg_id: null,
       };
@@ -126,7 +127,7 @@ export function tmaUserMiddleware(req, res, next) {
   req.telegramUser = verification.user;
 
   // 4. Resolve user profile in SQLite
-  let dbUser = db.prepare('SELECT telegram_id, callsign, status, reject_reason, last_spot_data, last_spot_msg_id FROM users WHERE telegram_id = ?').get(verification.user.id);
+  let dbUser = db.prepare('SELECT telegram_id, callsign, status, notifications_enabled, reject_reason, last_spot_data, last_spot_msg_id FROM users WHERE telegram_id = ?').get(verification.user.id);
   
   if (!dbUser) {
     // Registered in Telegram, but not yet applied for callsign in RU-POTA bot
@@ -135,6 +136,7 @@ export function tmaUserMiddleware(req, res, next) {
       callsign: null,
       status: 'guest',
       reject_reason: null,
+      notifications_enabled: 1,
       last_spot_data: null,
       last_spot_msg_id: null,
     };

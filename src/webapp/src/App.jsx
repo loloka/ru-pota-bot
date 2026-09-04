@@ -241,6 +241,7 @@ export default function App() {
               user={user}
               onCountChange={setSubscriptionsCount} 
               onRequireAuth={handleRequireAuth}
+              onRefreshProfile={loadProfile}
               language={language}
               t={t}
             />

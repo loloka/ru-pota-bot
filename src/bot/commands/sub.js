@@ -40,11 +40,11 @@ export const getSubsKeyboard = (userId) => {
 
   text += '\n' + (notificationsEnabled 
     ? '🔔 <b>Оповещения в ЛС:</b> Включены ✅' 
-    : '🔕 <b>Оповещения в ЛС:</b> Временно отключены ⏸') +
+    : '🔕 <b>Оповещения в ЛС:</b> Отключены ⏸') +
     '\n\nНажмите кнопку ниже, чтобы настроить оповещения или подписки:';
 
   const notifyBtn = notificationsEnabled
-    ? { text: '🔕 Временно отключить уведомления', callback_data: 'sub_toggle_alerts' }
+    ? { text: '🔕 Отключить уведомления в ЛС', callback_data: 'sub_toggle_alerts' }
     : { text: '🔔 Включить уведомления в ЛС', callback_data: 'sub_toggle_alerts' };
 
   const inline_keyboard = [

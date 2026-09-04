@@ -542,11 +542,9 @@ export default function DashboardTab({
               </div>
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('dash_dm_alerts')}</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">{t('dash_enabled')}</span>
-              </div>
-              <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                <span>{t('dash_status')}</span>
-                <span className="font-bold text-blue-600 dark:text-blue-400">{t('dash_active')}</span>
+                <span className={`font-bold ${user.notifications_enabled !== false ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {user.notifications_enabled !== false ? t('dash_enabled') : t('dash_disabled')}
+                </span>
               </div>
             </div>
           ) : (

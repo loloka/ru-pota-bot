@@ -63,6 +63,7 @@ export const translations = {
     dash_dm_alerts: 'Алерты в ЛС:',
     dash_status: 'Статус:',
     dash_enabled: 'Вкл',
+    dash_disabled: 'Выкл',
     dash_active: 'Активно',
 
     // Cluster
@@ -193,6 +194,7 @@ export const translations = {
     dash_dm_alerts: 'DM Alerts:',
     dash_status: 'Status:',
     dash_enabled: 'On',
+    dash_disabled: 'Off',
     dash_active: 'Active',
 
     // Cluster

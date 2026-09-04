@@ -185,7 +185,7 @@ bot.action('sub_toggle_alerts', async (ctx) => {
   const next = current ? 0 : 1;
   db.prepare('UPDATE users SET notifications_enabled = ? WHERE telegram_id = ?').run(next, userId);
 
-  await ctx.answerCbQuery(next === 1 ? '🔔 Оповещения в ЛС включены' : '🔕 Оповещения временно отключены');
+  await ctx.answerCbQuery(next === 1 ? '🔔 Оповещения в ЛС включены' : '🔕 Оповещения в ЛС отключены');
   const { text, reply_markup } = getSubsKeyboard(userId);
   await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup });
 });
@@ -580,7 +580,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.13.4\x1b[0m 📡              \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.13.5\x1b[0m 📡              \x1b[32m║\x1b[0m
 
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m

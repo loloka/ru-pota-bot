@@ -14,7 +14,7 @@ import {
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
 
-export default function SubscriptionsTab({ user, onCountChange, onRequireAuth, language = 'RU', t = (k) => k }) {
+export default function SubscriptionsTab({ user, onCountChange, onRequireAuth, onRefreshProfile, language = 'RU', t = (k) => k }) {
   const [segment, setSegment] = useState('callsigns'); // 'callsigns' | 'parks'
   const [newTarget, setNewTarget] = useState('');
   const [enableDmAlerts, setEnableDmAlerts] = useState(true);
@@ -56,6 +56,9 @@ export default function SubscriptionsTab({ user, onCountChange, onRequireAuth, l
     try {
       await api.toggleAlerts(nextState);
       telegram.haptic.notification('success');
+      if (onRefreshProfile) {
+        onRefreshProfile();
+      }
     } catch (err) {
       telegram.haptic.notification('error');
       setEnableDmAlerts(!nextState); // revert on error

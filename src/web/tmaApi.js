@@ -72,7 +72,7 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.13.4 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.13.5 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
     let anyUpdated = false;
@@ -284,6 +284,7 @@ export function createTmaRouter(telegramClient) {
           callsign: dbUser.callsign,
           status: dbUser.status,
           reject_reason: dbUser.reject_reason || null,
+          notifications_enabled: dbUser.notifications_enabled !== 0,
           isMock: Boolean(tgUser.isMock),
         },
         activeSpot,
@@ -1052,7 +1053,7 @@ export function createTmaRouter(telegramClient) {
         try {
           const alertMsg = val === 1
             ? '🔔 <b>Оповещения в ЛС включены!</b>\n\nБот снова будет присылать вам мгновенные сообщения о спотах ваших избранных позывных и парков POTA.\n\n<i>Настроить подписки можно в приложении или командой /sub.</i>'
-            : '🔕 <b>Оповещения в ЛС временно отключены</b>\n\nБот не будет беспокоить вас сообщениями в ЛС. Все ваши подписки сохранены.\n\n<i>Включить обратно можно в приложении или в меню /sub.</i>';
+            : '🔕 <b>Оповещения в ЛС отключены</b>\n\nБот не будет беспокоить вас сообщениями в ЛС. Ваши подписки сохранены.\n\n<i>Оповещения отключены до тех пор, пока вы снова не включите их в приложении или в меню /sub.</i>';
 
           await telegramClient.sendMessage(tgUser.id, alertMsg, { parse_mode: 'HTML' });
         } catch (tgErr) {

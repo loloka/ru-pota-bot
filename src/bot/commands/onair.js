@@ -480,6 +480,9 @@ export const onairActionHandler = async (ctx) => {
   const rest = ctx.match[2]; // payload
   const tokens = rest.split(':');
   
+  // Safe helper to answer callback query without unhandled timeout errors
+  const safeAnswer = (text, opts) => ctx.answerCbQuery(text, opts).catch(() => {});
+
   // Last token is always userId if present
   const targetUserId = parseInt(tokens[tokens.length - 1], 10) || ctx.from?.id;
   const clickerId = ctx.from?.id;
@@ -495,7 +498,8 @@ export const onairActionHandler = async (ctx) => {
     } catch (e) {}
 
     if (!isChatAdmin) {
-      return ctx.answerCbQuery('⛔ Управлять этим списком может только автор запроса или администратор.', { show_alert: true });
+      await safeAnswer('⛔ Управлять этим списком может только автор запроса или администратор.', { show_alert: true });
+      return;
     }
   }
 
@@ -514,7 +518,8 @@ export const onairActionHandler = async (ctx) => {
           reply_markup,
           disable_web_page_preview: true
         });
-        return ctx.answerCbQuery('⚙️ Настройка фильтров');
+        await safeAnswer('⚙️ Настройка фильтров');
+        return;
       }
 
       if (subAction === 'toggle') {
@@ -545,7 +550,8 @@ export const onairActionHandler = async (ctx) => {
           reply_markup,
           disable_web_page_preview: true
         });
-        return ctx.answerCbQuery(`${val} ${type === 'b' ? 'диапазон' : 'модуляция'}`);
+        await safeAnswer(`${val} ${type === 'b' ? 'диапазон' : 'модуляция'}`);
+        return;
       }
 
       if (subAction === 'preset') {
@@ -562,7 +568,8 @@ export const onairActionHandler = async (ctx) => {
           reply_markup,
           disable_web_page_preview: true
         });
-        return ctx.answerCbQuery('🎯 Выбран пресет: 40m, 30m, 20m CW');
+        await safeAnswer('🎯 Выбран пресет: 40m, 30m, 20m CW');
+        return;
       }
 
       if (subAction === 'reset') {
@@ -575,7 +582,8 @@ export const onairActionHandler = async (ctx) => {
           reply_markup,
           disable_web_page_preview: true
         });
-        return ctx.answerCbQuery('🧹 Фильтры сброшены');
+        await safeAnswer('🧹 Фильтры сброшены');
+        return;
       }
 
       if (subAction === 'reset_to_list') {
@@ -588,7 +596,8 @@ export const onairActionHandler = async (ctx) => {
           reply_markup,
           disable_web_page_preview: true
         });
-        return ctx.answerCbQuery('🧹 Фильтры сброшены');
+        await safeAnswer('🧹 Фильтры сброшены');
+        return;
       }
 
       if (subAction === 'apply') {
@@ -600,7 +609,8 @@ export const onairActionHandler = async (ctx) => {
           reply_markup,
           disable_web_page_preview: true
         });
-        return ctx.answerCbQuery('✅ Фильтры применены');
+        await safeAnswer('✅ Фильтры применены');
+        return;
       }
     }
 
@@ -616,16 +626,16 @@ export const onairActionHandler = async (ctx) => {
     });
 
     if (actionCategory === 'refresh') {
-      await ctx.answerCbQuery('🔄 Список обновлен');
+      await safeAnswer('🔄 Список обновлен');
     } else {
-      await ctx.answerCbQuery(mode === 'ru' ? '🇷🇺 Только RU/СНГ' : '🌐 RU/СНГ + МИР');
+      await safeAnswer(mode === 'ru' ? '🇷🇺 Только RU/СНГ' : '🌐 RU/СНГ + МИР');
     }
   } catch (err) {
     if (err.description?.includes('message is not modified')) {
-      await ctx.answerCbQuery('ℹ️ Список уже актуален');
+      await safeAnswer('ℹ️ Список уже актуален');
     } else {
-      console.error('Error in onairActionHandler:', err.message);
-      await ctx.answerCbQuery('⚠️ Не удалось выполнить действие');
+      console.warn('Warning in onairActionHandler:', err.message);
+      await safeAnswer('⚠️ Не удалось выполнить действие');
     }
   }
 };

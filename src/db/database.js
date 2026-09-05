@@ -160,11 +160,20 @@ try {
       reason TEXT NOT NULL,
       details TEXT,
       action TEXT NOT NULL,
+      is_read INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_blocked_users_tgid ON blocked_users (telegram_id);
     CREATE INDEX IF NOT EXISTS idx_blocked_users_created ON blocked_users (created_at DESC);
   `);
+
+  const blockedColumns = db.pragma('table_info(blocked_users)');
+  const hasIsRead = blockedColumns.some(col => col.name === 'is_read');
+  if (!hasIsRead) {
+    db.exec(`ALTER TABLE blocked_users ADD COLUMN is_read INTEGER DEFAULT 0`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_blocked_users_is_read ON blocked_users (is_read)`);
+    console.log('[DB] Migrated blocked_users table: added is_read column');
+  }
 } catch (e) {
   console.error('[DB] Migration error:', e.message);
 }

@@ -55,6 +55,20 @@ db.exec(`
     UNIQUE(chat_id, message_id)
   );
   CREATE INDEX IF NOT EXISTS idx_pinned_spots_status_unpin ON pinned_spots (status, unpin_at);
+
+  CREATE TABLE IF NOT EXISTS blocked_users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    telegram_id INTEGER NOT NULL,
+    first_name TEXT,
+    last_name TEXT,
+    username TEXT,
+    reason TEXT NOT NULL,
+    details TEXT,
+    action TEXT NOT NULL, -- 'banned', 'kicked', 'warned'
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_blocked_users_tgid ON blocked_users (telegram_id);
+  CREATE INDEX IF NOT EXISTS idx_blocked_users_created ON blocked_users (created_at DESC);
 `);
 
 // Migration for existing tables
@@ -133,6 +147,23 @@ try {
       UNIQUE(chat_id, message_id)
     );
     CREATE INDEX IF NOT EXISTS idx_pinned_spots_status_unpin ON pinned_spots (status, unpin_at);
+  `);
+
+  // Ensure blocked_users table exists for RU-POTA Shield
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS blocked_users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      telegram_id INTEGER NOT NULL,
+      first_name TEXT,
+      last_name TEXT,
+      username TEXT,
+      reason TEXT NOT NULL,
+      details TEXT,
+      action TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_blocked_users_tgid ON blocked_users (telegram_id);
+    CREATE INDEX IF NOT EXISTS idx_blocked_users_created ON blocked_users (created_at DESC);
   `);
 } catch (e) {
   console.error('[DB] Migration error:', e.message);

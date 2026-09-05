@@ -1,6 +1,6 @@
 # RU-POTA Telegram Bot 🌲📡
 
-[![Version](https://img.shields.io/badge/version-1.13.10-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.14.0-blue.svg)](package.json)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![Telegraf](https://img.shields.io/badge/telegraf-4.x-orange.svg)](https://telegraf.js.org/)
 [![Database](https://img.shields.io/badge/SQLite-better--sqlite3%20(WAL)-lightgrey.svg)](https://github.com/WiseLibs/better-sqlite3)
@@ -77,9 +77,13 @@ Modern embedded web interface in dark theme aesthetic (`https://pota.r9o.ru/app/
 - 🔔 **Subscription Management:** Segmented alerts (Callsigns / Parks) with direct DM notification toggle.
 - 👤 **Profile:** Operator scorecard, callsign modification request, and Haptic Feedback toggle.
 
-### 🛡 8. Chat Cleanliness & Moderation
-- **Gatekeeper:** Automatically purges Telegram service messages ("User joined/left the group") and sends a temporary welcome greeting that auto-deletes after 2 minutes.
-- **Command Auto-Deletion:** User command messages in public groups are automatically removed to keep chat history clean.
+### 🛡 8. RU-POTA Shield & Community Group Protection
+- **Echelon 1 (Profile Face-Control):** Instant silent detection and banning of spam bots by Arabic/Farsi scripts, Asian glyphs, links (`t.me/`, `http`), and commercial stop-words in names.
+- **Green Corridor (Whitelist):** Verified radio amateurs (`status === 'approved'`) and group admins bypass captcha and join directly.
+- **Echelon 2 (Interactive Smart Captcha):** Restricts unverified newcomers to read-only mode, displaying an inline button `[ 🌲 I am a radio amateur / Not a bot ]` with a 120-second timer and automatic soft-kick on timeout.
+- **Echelon 3 (Sandbox Links Quarantine):** Blocks external URLs, channel forwards, and mentions from newcomers without verified callsigns with an auto-deleting warning.
+- **Echelon 4 (Scam Stop-Words Filter):** Instant deletion of fraudulent job offers, crypto schemes, drugs, and 18+ content with automatic user banning.
+- **Web Admin 2.0 Integration:** Dedicated RU-POTA Shield tab displaying incident metrics, real-time audit log, and instant one-click unban button.
 - **Moderator Commands:** `/ban`, `/kick`, `/mute` executed via Reply to offending messages.
 
 ---

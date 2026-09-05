@@ -220,6 +220,19 @@ export const startAdminServer = (telegramClient) => {
     const spotsStmt = db.prepare("SELECT id, callsign, reference, frequency, mode, comment, source, created_at, msg_id FROM spots WHERE source != 'cluster_throttled' ORDER BY created_at DESC LIMIT 100");
     const latestSpots = spotsStmt.all();
 
+    // 3. RU-POTA Shield Blocked Users & Incidents
+    const blockedStmt = db.prepare("SELECT id, telegram_id, first_name, last_name, username, reason, details, action, created_at FROM blocked_users ORDER BY created_at DESC LIMIT 100");
+    const latestBlocked = blockedStmt.all();
+    const totalBlocked = db.prepare("SELECT count(*) as count FROM blocked_users").get().count;
+    const bannedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE action = 'banned'").get().count;
+    const kickedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE action = 'kicked'").get().count;
+    const warnedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE action = 'warned'").get().count;
+
+    const escapeHtmlServer = (str) => {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    };
+
     const generateUserRow = (u) => `
       <tr id="user-row-${u.telegram_id}">
         <td>
@@ -255,6 +268,45 @@ export const startAdminServer = (telegramClient) => {
         <td>${new Date(s.created_at).toLocaleString('ru-RU')}</td>
         <td>${deleteBtn}</td>
       </tr>
+      `;
+    };
+
+    const generateBlockedRow = (b) => {
+      const name = [b.first_name, b.last_name].filter(Boolean).join(' ') || 'Без имени';
+      const userDisplay = b.username ? `@${b.username}` : name;
+      const actionBadge = b.action === 'banned' 
+        ? '<span class="badge bg-danger">Забанен</span>' 
+        : b.action === 'kicked' 
+        ? '<span class="badge bg-warning text-dark">Кикнут</span>' 
+        : b.action === 'unbanned'
+        ? '<span class="badge bg-success">Разблокирован</span>'
+        : '<span class="badge bg-info text-dark">Предупрежден</span>';
+      
+      const reasonLabels = {
+        'profile_face_control': 'Face-контроль (Профиль)',
+        'captcha_timeout': 'Таймаут капчи (120с)',
+        'newbie_link': 'Карантин ссылок новичка',
+        'scam_words': 'Фильтр скам-текста'
+      };
+      const reasonText = reasonLabels[b.reason] || b.reason;
+
+      const unbanBtn = b.action === 'banned'
+        ? `<button type="button" class="btn btn-sm btn-outline-success unban-user-btn" data-id="${b.id}" data-tgid="${b.telegram_id}">Разблокировать</button>`
+        : '';
+
+      return `
+        <tr id="blocked-row-${b.id}">
+          <td>
+            <strong>${escapeHtmlServer(userDisplay)}</strong>
+            <div class="small text-muted">${escapeHtmlServer(name)}</div>
+          </td>
+          <td><code>${b.telegram_id}</code></td>
+          <td><span class="badge bg-secondary">${reasonText}</span></td>
+          <td><small class="text-break">${escapeHtmlServer(b.details || '')}</small></td>
+          <td>${actionBadge}</td>
+          <td>${new Date(b.created_at).toLocaleString('ru-RU')}</td>
+          <td>${unbanBtn}</td>
+        </tr>
       `;
     };
 
@@ -296,6 +348,7 @@ export const startAdminServer = (telegramClient) => {
               <div class="list-group" id="list-tab" role="tablist">
                 <a class="list-group-item list-group-item-action active" id="list-users-list" data-bs-toggle="list" href="#list-users" role="tab" aria-controls="list-users"><i class="bi bi-people"></i> Пользователи</a>
                 <a class="list-group-item list-group-item-action" id="list-spots-list" data-bs-toggle="list" href="#list-spots" role="tab" aria-controls="list-spots"><i class="bi bi-broadcast"></i> Споты</a>
+                <a class="list-group-item list-group-item-action" id="list-shield-list" data-bs-toggle="list" href="#list-shield" role="tab" aria-controls="list-shield"><i class="bi bi-shield-lock"></i> RU-POTA Shield ${totalBlocked > 0 ? `<span class="badge bg-danger rounded-pill ms-1">${totalBlocked}</span>` : ''}</a>
                 <a class="list-group-item list-group-item-action" id="list-broadcast-list" data-bs-toggle="list" href="#list-broadcast" role="tab" aria-controls="list-broadcast"><i class="bi bi-megaphone"></i> Рассылка</a>
                 <a class="list-group-item list-group-item-action" id="list-welcome-list" data-bs-toggle="list" href="#list-welcome" role="tab" aria-controls="list-welcome"><i class="bi bi-pin-angle"></i> Закрепленный пост</a>
                 <a class="list-group-item list-group-item-action" id="list-console-list" data-bs-toggle="list" href="#list-console" role="tab" aria-controls="list-console"><i class="bi bi-terminal"></i> Live Консоль</a>
@@ -344,6 +397,80 @@ export const startAdminServer = (telegramClient) => {
                       <thead class="table-light"><tr><th>Позывной</th><th>Парк</th><th>Частота/Модуляция</th><th>Источник</th><th>Дата</th><th>Действия</th></tr></thead>
                       <tbody id="spots-tbody">
                         ${latestSpots.length > 0 ? latestSpots.map(generateSpotRow).join('') : '<tr><td colspan="6" class="text-center">Спотов пока нет</td></tr>'}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Tab: RU-POTA Shield -->
+                <div class="tab-pane fade" id="list-shield" role="tabpanel" aria-labelledby="list-shield-list">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3>🛡️ RU-POTA Shield (Антиспам-мониторинг)</h3>
+                  </div>
+
+                  <div class="row g-3 mb-4">
+                    <div class="col-sm-6 col-xl-3">
+                      <div class="card shadow-sm border-0 bg-primary bg-opacity-10 text-primary p-3">
+                        <div class="d-flex align-items-center">
+                          <i class="bi bi-shield-shaded fs-1 me-3"></i>
+                          <div>
+                            <div class="fs-4 fw-bold">${totalBlocked}</div>
+                            <div class="small text-muted">Всего инцидентов</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                      <div class="card shadow-sm border-0 bg-danger bg-opacity-10 text-danger p-3">
+                        <div class="d-flex align-items-center">
+                          <i class="bi bi-slash-circle fs-1 me-3"></i>
+                          <div>
+                            <div class="fs-4 fw-bold">${bannedCount}</div>
+                            <div class="small text-muted">Заблокировано (Бан)</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                      <div class="card shadow-sm border-0 bg-warning bg-opacity-10 text-warning p-3">
+                        <div class="d-flex align-items-center">
+                          <i class="bi bi-clock-history fs-1 me-3"></i>
+                          <div>
+                            <div class="fs-4 fw-bold">${kickedCount}</div>
+                            <div class="small text-muted">Кик по капче (Таймаут)</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                      <div class="card shadow-sm border-0 bg-info bg-opacity-10 text-info p-3">
+                        <div class="d-flex align-items-center">
+                          <i class="bi bi-link-45deg fs-1 me-3"></i>
+                          <div>
+                            <div class="fs-4 fw-bold">${warnedCount}</div>
+                            <div class="small text-muted">Карантин ссылок</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <h4>Журнал инцидентов безопасности (${latestBlocked.length})</h4>
+                  <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Пользователь</th>
+                          <th>Telegram ID</th>
+                          <th>Причина</th>
+                          <th>Детали / Текст</th>
+                          <th>Действие</th>
+                          <th>Дата</th>
+                          <th>Управление</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${latestBlocked.length > 0 ? latestBlocked.map(generateBlockedRow).join('') : '<tr><td colspan="7" class="text-center text-muted">Спам-активности не зафиксировано. Все чисто! 🌲</td></tr>'}
                       </tbody>
                     </table>
                   </div>
@@ -657,7 +784,47 @@ export const startAdminServer = (telegramClient) => {
               approveUserBtn(approveBtn);
               return;
             }
+            const unbanBtn = e.target.closest('.unban-user-btn');
+            if (unbanBtn) {
+              e.preventDefault();
+              unbanUserBtn(unbanBtn);
+              return;
+            }
           });
+
+          async function unbanUserBtn(btn) {
+            const id = btn.getAttribute('data-id');
+            const tgid = btn.getAttribute('data-tgid');
+            let isConfirmed = false;
+            if (typeof Swal === 'undefined') {
+              isConfirmed = confirm('Разблокировать пользователя (TG ID: ' + tgid + ')?');
+            } else {
+              const result = await Swal.fire({
+                title: 'Разблокировать?',
+                text: 'Пользователь (TG ID: ' + tgid + ') будет разблокирован в Telegram-чате сообщества.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                confirmButtonText: 'Да, разблокировать',
+                cancelButtonText: 'Отмена'
+              });
+              isConfirmed = result.isConfirmed;
+            }
+
+            if (isConfirmed) {
+              try {
+                const res = await fetch('/api/shield/unban/' + id, { method: 'POST' });
+                if (res.ok) {
+                  if (Toast) Toast.fire({ icon: 'success', title: 'Пользователь разблокирован!' });
+                  setTimeout(() => window.location.reload(), 500);
+                } else {
+                  throw new Error('Server error');
+                }
+              } catch (e) {
+                if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка разблокировки' });
+              }
+            }
+          }
 
           // Load user infos
           async function loadUserInfos() {
@@ -959,6 +1126,43 @@ export const startAdminServer = (telegramClient) => {
       res.json({ success: true, message: `Сообщение #${msgId} успешно обновлено в чате!` });
     } catch (err) {
       console.error('[Admin] Error editing pinned message:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // RU-POTA Shield Unban Route
+  app.post('/api/shield/unban/:id', requireAuth, async (req, res) => {
+    const recordId = Number(req.params.id);
+    try {
+      const record = db.prepare('SELECT telegram_id FROM blocked_users WHERE id = ?').get(recordId);
+      if (!record) {
+        return res.status(404).json({ error: 'Запись не найдена' });
+      }
+
+      const mainChatId = process.env.MAIN_CHAT_ID;
+      if (mainChatId) {
+        try {
+          await telegramClient.unbanChatMember(mainChatId, record.telegram_id, { only_if_banned: true });
+          console.log(`[Shield Admin] Разблокирован пользователь ${record.telegram_id} в чате ${mainChatId}`);
+        } catch (tgErr) {
+          console.warn(`[Shield Admin] Ошибка unbanChatMember в Telegram: ${tgErr.message}`);
+        }
+      }
+
+      db.prepare("UPDATE blocked_users SET action = 'unbanned' WHERE id = ?").run(recordId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[Shield Admin] Ошибка при разблокировке пользователя:', err);
+      res.status(500).json({ error: 'Ошибка сервера' });
+    }
+  });
+
+  // RU-POTA Shield API for incidents
+  app.get('/api/shield/blocked', requireAuth, (req, res) => {
+    try {
+      const rows = db.prepare("SELECT id, telegram_id, first_name, last_name, username, reason, details, action, created_at FROM blocked_users ORDER BY created_at DESC LIMIT 100").all();
+      res.json(rows);
+    } catch (err) {
       res.status(500).json({ error: err.message });
     }
   });

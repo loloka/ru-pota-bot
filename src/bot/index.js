@@ -8,6 +8,12 @@ import db from '../db/database.js';
 // Import middlewares
 import { chatFilter, requireRegistration, deleteSystemMessages } from './middlewares/chatFilter.js';
 import { rateLimit } from './middlewares/rateLimit.js';
+import { 
+  shieldMessageGuard, 
+  handleNewChatMembers, 
+  handleShieldVerify, 
+  handleLeftChatMember 
+} from './middlewares/antiSpam.js';
 
 // Import command handlers
 import { callsignHandler } from './commands/callsign.js';
@@ -66,12 +72,16 @@ const bot = new Telegraf(BOT_TOKEN, telegrafOptions);
 // Global middlewares BEFORE scenes
 bot.use(chatFilter);
 bot.use(deleteSystemMessages);
+bot.use(shieldMessageGuard);
 bot.use(requireRegistration);
 
 // Configure scenes and sessions
 const stage = new Scenes.Stage([spotWizard, callsignWizard, parkWizard, editSpotWizard, subWizard, statsWizard]);
 bot.use(session());
 bot.use(rateLimit({ window: 5000, limit: 4 }));
+
+// RU-POTA Shield interactive captcha verification
+bot.action(/^shield_verify:(\d+)$/, handleShieldVerify);
 bot.action(/^admin_appr:(\d+)$/, async (ctx) => {
   if (ctx.from.id.toString() !== process.env.ADMIN_ID) return;
   const targetId = parseInt(ctx.match[1], 10);
@@ -285,28 +295,9 @@ bot.command('spot', async (ctx) => {
   } catch(e) {}
   return ctx.scene.enter('SPOT_WIZARD');
 });
-// Persistent Welcome Message for new members (never deleted, visible to everyone)
-bot.on('new_chat_members', async (ctx) => {
-  try {
-    await ctx.deleteMessage(); // Delete the "user joined" service message to avoid clutter
-  } catch (e) {}
-
-  const newMembers = ctx.message.new_chat_members.filter(m => !m.is_bot);
-  if (newMembers.length === 0) return;
-
-  const names = newMembers.map(m => m.first_name).join(', ');
-  const text = `👋 Добро пожаловать, ${names}! Рады видеть вас в сообществе RU-POTA 🌲\n\n🤖 Для отправки спотов и подписки на нужного корреспондента можете перейти в личные сообщения: @${ctx.botInfo.username} либо нажмите /start`;
-
-  try {
-    await ctx.reply(text);
-  } catch (e) {}
-});
-
-bot.on('left_chat_member', async (ctx) => {
-  try {
-    await ctx.deleteMessage(); // Delete the "user left" system message
-  } catch (e) {}
-});
+// RU-POTA Shield: Gatekeeper, Face-Control & Interactive Captcha
+bot.on('new_chat_members', handleNewChatMembers);
+bot.on('left_chat_member', handleLeftChatMember);
 
 // Automatic Spot Pinning & Timed Unpinning in Connected Discussion Group
 bot.on('pinned_message', async (ctx) => {
@@ -580,7 +571,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.13.10\x1b[0m 📡             \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.14.0\x1b[0m 📡              \x1b[32m║\x1b[0m
 
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m

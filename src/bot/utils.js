@@ -9,18 +9,32 @@ export const deleteUserMessage = async (ctx) => {
 };
 
 export const replyWithAutoDelete = async (ctx, text, options = {}, delayMs = 7000) => {
+  let opts = options;
+  let delay = delayMs;
+
+  if (typeof options === 'number') {
+    delay = options < 1000 ? options * 1000 : options;
+    opts = { parse_mode: 'HTML' };
+  } else if (typeof options === 'object' && options !== null) {
+    if (!opts.parse_mode) {
+      opts = { parse_mode: 'HTML', ...opts };
+    }
+  }
+
   try {
-    const msg = await ctx.reply(text, options);
+    const chatId = ctx.chat?.id;
+    if (!chatId) return;
+    const msg = await ctx.telegram.sendMessage(chatId, text, opts);
     if (ctx.chat?.type !== 'private') {
       setTimeout(async () => {
         try {
-          await ctx.telegram.deleteMessage(ctx.chat.id, msg.message_id);
+          await ctx.telegram.deleteMessage(chatId, msg.message_id);
         } catch (e) {} // Ignore errors
-      }, delayMs);
+      }, delay);
     }
     return msg;
   } catch (e) {
-    console.error('Failed to reply:', e);
+    console.error('Failed to reply with auto delete:', e.message || e);
   }
 };
 

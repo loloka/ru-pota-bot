@@ -280,12 +280,14 @@ export const handleNewChatMembers = async (ctx) => {
 
     if (isApproved) {
       console.log(`\x1b[32m[Shield]\x1b[0m 🌲 Вход радиолюбителя с позывным (Зелёный коридор): ${fromUser} (ID: ${member.id})`);
-      // Welcoming message with auto-delete after 15 seconds to keep chat clean
+      const ham = db.prepare('SELECT callsign FROM users WHERE telegram_id = ?').get(member.id);
+      const callsignBadge = ham?.callsign ? ` (<b>${escapeHtml(ham.callsign)}</b>)` : '';
+      // Welcoming message with auto-delete after 20 seconds to keep chat clean
       await replyWithAutoDelete(
         ctx,
-        `👋 С возвращением, <b>${escapeHtml(member.first_name)}</b>! Рады видеть вас в сообществе RU-POTA 🌲`,
+        `👋 Приветствуем, <b>${escapeHtml(member.first_name)}</b>${callsignBadge}! Рады видеть вас в сообществе RU-POTA 🌲\n\nПриятного общения и удачных активаций! 73/44!`,
         { parse_mode: 'HTML' },
-        15000
+        20000
       );
       continue;
     }
@@ -400,6 +402,27 @@ export const handleShieldVerify = async (ctx) => {
 
   const fromUser = ctx.from.username ? `@${ctx.from.username}` : ctx.from.first_name;
   console.log(`\x1b[32m[Shield]\x1b[0m ✅ Капча успешно пройдена: ${fromUser} (ID: ${targetUserId})`);
+
+  // Post welcoming and onboarding message in chat for the verified newcomer (auto-delete after 30s)
+  try {
+    const ham = db.prepare('SELECT callsign, status FROM users WHERE telegram_id = ?').get(targetUserId);
+    const welcomeName = escapeHtml(ctx.from.first_name || 'радиолюбитель');
+
+    let welcomeText = '';
+    if (ham?.callsign && ham.status === 'approved') {
+      welcomeText = `🌲 Добро пожаловать в RU-POTA, <b>${welcomeName}</b> (<b>${escapeHtml(ham.callsign)}</b>)!\n\nПриятного общения и удачных активаций! 73/44!`;
+    } else if (ham?.callsign && ham.status === 'pending') {
+      welcomeText = `🌲 Рады приветствовать, <b>${welcomeName}</b>!\n\nВаш позывной <b>${escapeHtml(ham.callsign)}</b> находится на проверке у координатора. Приятного общения в RU-POTA! 73/44!`;
+    } else {
+      welcomeText = `🌲 Рады приветствовать в сообществе RU-POTA, <b>${welcomeName}</b>!\n\n` +
+        `📻 Если у вас есть радиолюбительский позывной, зарегистрируйте его через бота @ru_pota_bot (в личных сообщениях боту) — это снимет ограничения на отправку ссылок и откроет все возможности бота.\n\n` +
+        `Приятного общения и 73/44!`;
+    }
+
+    await replyWithAutoDelete(ctx, welcomeText, { parse_mode: 'HTML' }, 30000);
+  } catch (wErr) {
+    console.error(`[Shield] Ошибка отправки приветственного сообщения (${targetUserId}):`, wErr.message);
+  }
 };
 
 /**

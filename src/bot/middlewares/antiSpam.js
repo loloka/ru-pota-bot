@@ -282,12 +282,30 @@ export const handleNewChatMembers = async (ctx) => {
       console.log(`\x1b[32m[Shield]\x1b[0m 🌲 Вход радиолюбителя с позывным (Зелёный коридор): ${fromUser} (ID: ${member.id})`);
       const ham = db.prepare('SELECT callsign FROM users WHERE telegram_id = ?').get(member.id);
       const callsignBadge = ham?.callsign ? ` (<b>${escapeHtml(ham.callsign)}</b>)` : '';
-      // Welcoming message with auto-delete after 20 seconds to keep chat clean
+      const name = escapeHtml(member.first_name || 'радиолюбитель');
+
+      const approvedWelcome = 
+        `👋 Приветствуем, <b>${name}</b>${callsignBadge}! Рады видеть вас в сообществе RU-POTA 🌲\n\n` +
+        `📱 Вам доступно наше мини-приложение: <a href="https://t.me/ru_pota_bot/app"><b>t.me/ru_pota_bot/app</b></a>\n\n` +
+        `🤖 <b>Доступные команды в группе:</b>\n` +
+        `🔸 <code>/stats ПОЗЫВНОЙ</code> — узнать статистику об охотнике / активаторе\n` +
+        `🔸 <code>/park РЕФЕРЕНЦИЯ</code> — узнать информацию о парке\n` +
+        `🔸 <code>/onair</code> — кто сейчас на связи\n\n` +
+        `Приятного общения и удачных активаций! 73/44!`;
+
       await replyWithAutoDelete(
         ctx,
-        `👋 Приветствуем, <b>${escapeHtml(member.first_name)}</b>${callsignBadge}! Рады видеть вас в сообществе RU-POTA 🌲\n\nПриятного общения и удачных активаций! 73/44!`,
-        { parse_mode: 'HTML' },
-        20000
+        approvedWelcome,
+        {
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🌲 Открыть RU-POTA Hub', url: 'https://t.me/ru_pota_bot/app' }]
+            ]
+          }
+        },
+        45000
       );
       continue;
     }
@@ -410,16 +428,53 @@ export const handleShieldVerify = async (ctx) => {
 
     let welcomeText = '';
     if (ham?.callsign && ham.status === 'approved') {
-      welcomeText = `🌲 Добро пожаловать в RU-POTA, <b>${welcomeName}</b> (<b>${escapeHtml(ham.callsign)}</b>)!\n\nПриятного общения и удачных активаций! 73/44!`;
+      welcomeText = 
+        `🌲 Добро пожаловать в RU-POTA, <b>${welcomeName}</b> (<b>${escapeHtml(ham.callsign)}</b>)!\n\n` +
+        `📱 Вам доступно наше мини-приложение: <a href="https://t.me/ru_pota_bot/app"><b>t.me/ru_pota_bot/app</b></a>\n\n` +
+        `🤖 <b>Доступные вам команды в группе:</b>\n` +
+        `🔸 <code>/stats ПОЗЫВНОЙ</code> — узнать статистику об охотнике / активаторе\n` +
+        `🔸 <code>/park РЕФЕРЕНЦИЯ</code> — узнать информацию о парке\n` +
+        `🔸 <code>/onair</code> — кто сейчас на связи\n\n` +
+        `Приятного общения и удачных активаций! 73/44!`;
     } else if (ham?.callsign && ham.status === 'pending') {
-      welcomeText = `🌲 Рады приветствовать, <b>${welcomeName}</b>!\n\nВаш позывной <b>${escapeHtml(ham.callsign)}</b> находится на проверке у координатора. Приятного общения в RU-POTA! 73/44!`;
-    } else {
-      welcomeText = `🌲 Рады приветствовать в сообществе RU-POTA, <b>${welcomeName}</b>!\n\n` +
-        `📻 Если у вас есть радиолюбительский позывной, зарегистрируйте его через бота @ru_pota_bot (в личных сообщениях боту) — это снимет ограничения на отправку ссылок и откроет все возможности бота.\n\n` +
+      welcomeText = 
+        `🌲 Рады приветствовать в сообществе RU-POTA, <b>${welcomeName}</b>!\n` +
+        `<i>Ваш позывной <b>${escapeHtml(ham.callsign)}</b> находится на проверке у координатора.</i>\n\n` +
+        `📱 Вам доступно наше мини-приложение: <a href="https://t.me/ru_pota_bot/app"><b>t.me/ru_pota_bot/app</b></a>\n\n` +
+        `🤖 <b>Доступные вам команды в группе:</b>\n` +
+        `🔸 <code>/stats ПОЗЫВНОЙ</code> — узнать статистику об охотнике / активаторе\n` +
+        `🔸 <code>/park РЕФЕРЕНЦИЯ</code> — узнать информацию о парке\n` +
+        `🔸 <code>/onair</code> — кто сейчас на связи\n\n` +
         `Приятного общения и 73/44!`;
+    } else {
+      welcomeText = 
+        `🌲 Рады приветствовать в сообществе RU-POTA, <b>${welcomeName}</b>!\n\n` +
+        `📱 Вам доступно наше мини-приложение: <a href="https://t.me/ru_pota_bot/app"><b>t.me/ru_pota_bot/app</b></a>\n\n` +
+        `🤖 <b>Доступные вам команды в группе:</b>\n` +
+        `🔸 <code>/stats ПОЗЫВНОЙ</code> — узнать статистику об охотнике / активаторе\n` +
+        `🔸 <code>/park РЕФЕРЕНЦИЯ</code> — узнать информацию о парке\n` +
+        `🔸 <code>/onair</code> — кто сейчас на связи\n\n` +
+        `📻 <i>Если вы радиолюбитель, зарегистрируйте свой позывной в личных сообщениях боту @ru_pota_bot — это снимет ограничения новичка на отправку ссылок и откроет отправку спотов!</i>\n\n` +
+        `Желаем приятного общения и 73/44!`;
     }
 
-    await replyWithAutoDelete(ctx, welcomeText, { parse_mode: 'HTML' }, 30000);
+    await replyWithAutoDelete(
+      ctx,
+      welcomeText,
+      {
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '🌲 Открыть RU-POTA Hub', url: 'https://t.me/ru_pota_bot/app' },
+              { text: '🤖 Личка бота', url: 'https://t.me/ru_pota_bot' }
+            ]
+          ]
+        }
+      },
+      60000
+    );
   } catch (wErr) {
     console.error(`[Shield] Ошибка отправки приветственного сообщения (${targetUserId}):`, wErr.message);
   }

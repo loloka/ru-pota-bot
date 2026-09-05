@@ -8,12 +8,70 @@ dotenv.config();
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '60000', 10);
 const ACTIVITY_CHANNEL_ID = process.env.ACTIVITY_CHANNEL_ID;
 const ALLOWED_PREFIXES = (process.env.ALLOWED_PREFIXES || 'RU-,BY-,KZ-').split(',').map(p => p.trim());
-const CLUSTER_SPOT_COOLDOWN_MINUTES = parseInt(process.env.CLUSTER_SPOT_COOLDOWN_MINUTES || '20', 10);
+const CLUSTER_SPOT_COOLDOWN_MINUTES = parseInt(process.env.CLUSTER_SPOT_COOLDOWN_MINUTES || '30', 10);
 const SPOT_COOLDOWN_MS = CLUSTER_SPOT_COOLDOWN_MINUTES * 60 * 1000;
 
 // In-memory cache of recent broadcasts to throttle repetitive RBN skimmers
-// Key format: `${cleanCall}@${ref}:${band}:${mode}` -> timestamp in ms
+// Keys stored:
+// - `${callKey}@${ref}:${band}:${mode}` -> timestamp in ms
+// - `${callKey}@${ref}:${roundedFreq}`   -> timestamp in ms
+// - `${callKey}@${ref}:${band}:ANY`     -> timestamp in ms (for automated RBN skimmers)
 const recentBroadcasts = new Map();
+
+/**
+ * Normalizes frequency string to float with 1 decimal place
+ */
+export const normalizeFreq = (freq) => {
+  if (!freq) return 0;
+  const num = parseFloat(String(freq).replace(',', '.'));
+  return isNaN(num) ? 0 : Math.round(num * 10) / 10;
+};
+
+/**
+ * Intelligent mode detector for spots with missing, generic or comment-specified modes
+ */
+export const detectMode = (rawMode, comments = '', freqKHz = 0) => {
+  let mode = (rawMode || '').toUpperCase().trim();
+  const comm = (comments || '').toLowerCase();
+
+  // 1. Detect from comments if mode is empty, generic or contradicts
+  if (!mode || mode === 'DIGI' || mode === 'OTHER') {
+    if (/\bft[-_]?8\b/i.test(comm)) return 'FT8';
+    if (/\bft[-_]?4\b/i.test(comm)) return 'FT4';
+    if (/\b(cw|телеграф)\b/i.test(comm)) return 'CW';
+    if (/\b(ssb|usb|lsb|телефон)\b/i.test(comm)) return 'SSB';
+    if (/\b(fm|чм)\b/i.test(comm)) return 'FM';
+    if (/\b(am|ам)\b/i.test(comm)) return 'AM';
+    if (/\b(rtty|psk|jt65|js8)\b/i.test(comm)) return 'DIGI';
+  }
+
+  // 2. Detect from standard dial frequency if mode is still missing
+  if (!mode) {
+    const roundedFreq = Math.round(Number(freqKHz));
+    // Standard FT8 frequencies (kHz)
+    const ft8Freqs = [1840, 3573, 5357, 7074, 10136, 14074, 18100, 21074, 24915, 28074, 50313, 70154, 144174];
+    if (ft8Freqs.includes(roundedFreq)) return 'FT8';
+
+    // Standard FT4 frequencies (kHz)
+    const ft4Freqs = [3575, 7047, 10140, 14080, 18104, 21140, 24919, 28180, 50318];
+    if (ft4Freqs.includes(roundedFreq)) return 'FT4';
+
+    // CW segments vs SSB segments
+    if (roundedFreq >= 7000 && roundedFreq <= 7040) return 'CW';
+    if (roundedFreq >= 14000 && roundedFreq <= 14070) return 'CW';
+    if (roundedFreq >= 10100 && roundedFreq <= 10130) return 'CW';
+    if (roundedFreq >= 21000 && roundedFreq <= 21070) return 'CW';
+    if (roundedFreq >= 28000 && roundedFreq <= 28070) return 'CW';
+
+    return 'SSB';
+  }
+
+  // Normalize formatting
+  if (mode === 'FT-8') return 'FT8';
+  if (mode === 'FT-4') return 'FT4';
+
+  return mode;
+};
 
 export const startClusterWorker = (telegramClient) => {
   const intervalSec = Math.round(POLL_INTERVAL_MS / 1000);
@@ -54,13 +112,23 @@ export const startClusterWorker = (telegramClient) => {
         const callKey = baseActivator || rawActivator;
 
         const freq = spot.frequency || '';
+        const numFreq = normalizeFreq(freq);
+        const roundedFreq = Math.round(numFreq);
         const band = getBandFromKHz(freq);
-        const mode = (spot.mode || '').toUpperCase().trim() || 'SSB';
+        const mode = detectMode(spot.mode, spot.comments, numFreq);
         const isQrt = /\bQRT\b/i.test(spot.comments || '');
+        const isRbn = /RBN|skimmer/i.test(spot.comments || '') || /RBN/i.test(spot.spotter || '');
+
         const throttleKey = `${callKey}@${ref}:${band}:${mode}`;
+        const freqKey = roundedFreq > 0 ? `${callKey}@${ref}:${roundedFreq}` : null;
+        const anyBandKey = `${callKey}@${ref}:${band}:ANY`;
 
         const now = Date.now();
-        let lastBroadcastTime = recentBroadcasts.get(throttleKey) || 0;
+        let lastBroadcastTime = Math.max(
+          recentBroadcasts.get(throttleKey) || 0,
+          freqKey ? (recentBroadcasts.get(freqKey) || 0) : 0,
+          isRbn ? (recentBroadcasts.get(anyBandKey) || 0) : 0
+        );
 
         // If not found in-memory (e.g. after bot restart), check recent spots in SQLite
         if (!lastBroadcastTime) {
@@ -70,7 +138,7 @@ export const startClusterWorker = (telegramClient) => {
               FROM spots 
               WHERE (callsign = ? OR callsign = ? OR callsign LIKE ?)
                 AND reference = ? 
-                AND source IN ('cluster', 'bot')
+                AND source IN ('cluster', 'bot', 'local')
                 AND msg_id IS NOT NULL
               ORDER BY id DESC 
               LIMIT 10
@@ -78,8 +146,15 @@ export const startClusterWorker = (telegramClient) => {
 
             for (const row of recentRows) {
               const rowBand = getBandFromKHz(row.frequency);
-              const rowMode = (row.mode || '').toUpperCase().trim() || 'SSB';
-              if (rowBand === band && rowMode === mode) {
+              const rowFreqNum = normalizeFreq(row.frequency);
+              const rowRoundedFreq = Math.round(rowFreqNum);
+              const rowMode = detectMode(row.mode, '', rowFreqNum);
+
+              const isSameMode = (rowBand === band && rowMode === mode);
+              const isSameFreq = (roundedFreq > 0 && rowRoundedFreq === roundedFreq);
+              const isSameBandRbn = (isRbn && rowBand === band);
+
+              if (isSameMode || isSameFreq || isSameBandRbn) {
                 const rowTime = new Date(row.created_at + 'Z').getTime();
                 if (!isNaN(rowTime) && rowTime > lastBroadcastTime) {
                   lastBroadcastTime = rowTime;
@@ -93,9 +168,9 @@ export const startClusterWorker = (telegramClient) => {
 
         const elapsedMs = now - lastBroadcastTime;
         if (!isQrt && lastBroadcastTime > 0 && elapsedMs < SPOT_COOLDOWN_MS) {
-          // Throttled! Repetitive skimmer spot on same band & mode within cooldown window
+          // Throttled! Repetitive skimmer spot on same band & mode or same frequency within cooldown window
           const minsAgo = Math.max(1, Math.round(elapsedMs / 60000));
-          console.log(`\x1b[33m[Cluster Spot]\x1b[0m ⏳ Пропуск повторного RBN-спота для \x1b[1m${rawActivator}\x1b[0m @ \x1b[33m${ref}\x1b[0m (${band} ${mode}, респот через ${minsAgo}м при кулдауне ${CLUSTER_SPOT_COOLDOWN_MINUTES}м)`);
+          console.log(`\x1b[33m[Cluster Spot]\x1b[0m ⏳ Пропуск повторного RBN-спота для \x1b[1m${rawActivator}\x1b[0m @ \x1b[33m${ref}\x1b[0m (${band} ${mode}, ${roundedFreq} kHz, респот через ${minsAgo}м при кулдауне ${CLUSTER_SPOT_COOLDOWN_MINUTES}м)`);
 
           // Record into SQLite as cluster_throttled so we never reprocess this spotId
           try {
@@ -116,7 +191,7 @@ export const startClusterWorker = (telegramClient) => {
         const refLink = `<a href="https://next.pota.app/park/${ref}">${ref}</a>`;
         const msg = `🌐 <b>POTA Cluster Spot</b>\n` +
                     `📻 <b>${actLink}</b> @ 🏞️ <b>${refLink}</b>\n` +
-                    `⚙️ Freq: ${spot.frequency} kHz | ${spot.mode}\n` +
+                    `⚙️ Freq: ${spot.frequency} kHz | ${mode}\n` +
                     (spot.comments ? `📝 ${spot.comments}` : '');
                     
         let channelId = ACTIVITY_CHANNEL_ID;
@@ -166,10 +241,15 @@ export const startClusterWorker = (telegramClient) => {
           INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source, msg_id)
           VALUES (?, ?, ?, ?, ?, ?, 'cluster', ?)
         `);
-        insertStmt.run(spot.spotId, rawActivator, ref, spot.frequency || '', spot.mode || '', spot.comments || '', msgId);
+        insertStmt.run(spot.spotId, rawActivator, ref, spot.frequency || '', mode, spot.comments || '', msgId);
         
-        // Update last broadcast timestamp for this band & mode
-        recentBroadcasts.set(throttleKey, Date.now());
+        // Update last broadcast timestamps (by band+mode, exact frequency, and any-band for RBN)
+        const broadcastTime = Date.now();
+        recentBroadcasts.set(throttleKey, broadcastTime);
+        if (freqKey) {
+          recentBroadcasts.set(freqKey, broadcastTime);
+        }
+        recentBroadcasts.set(anyBandKey, broadcastTime);
 
         // 6. Notify Subscribed Users (Callsigns and Parks, matching base callsign too)
         const callsignSubscribers = db.prepare(`

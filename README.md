@@ -1,6 +1,6 @@
 # RU-POTA Telegram Bot 🌲📡
 
-[![Version](https://img.shields.io/badge/version-1.14.0-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.14.1-blue.svg)](package.json)
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![Telegraf](https://img.shields.io/badge/telegraf-4.x-orange.svg)](https://telegraf.js.org/)

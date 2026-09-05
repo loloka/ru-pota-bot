@@ -1,5 +1,6 @@
 import db from '../../db/database.js';
 import { replyWithAutoDelete } from '../utils.js';
+import { normalizeChatId } from './chatFilter.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -59,12 +60,19 @@ export const isTargetChat = (ctx) => {
   if (ctx.chat.type === 'private' || ctx.chat.type === 'channel') return false;
 
   const cfg = getShieldConfig();
-  if (cfg.activityChannelId && ctx.chat.id.toString() === cfg.activityChannelId.toString()) {
+  const currentChatId = normalizeChatId(ctx.chat.id);
+  const mainChatId = normalizeChatId(cfg.mainChatId);
+  const activityChannelId = normalizeChatId(cfg.activityChannelId);
+
+  // Exclude activity channel
+  if (activityChannelId && currentChatId === activityChannelId) {
     return false;
   }
-  if (cfg.mainChatId) {
-    return ctx.chat.id.toString() === cfg.mainChatId.toString();
+  // Match main chat if configured
+  if (mainChatId) {
+    return currentChatId === mainChatId;
   }
+  // Fallback to any group/supergroup if MAIN_CHAT_ID is not configured
   return ctx.chat.type === 'group' || ctx.chat.type === 'supergroup';
 };
 
@@ -219,6 +227,8 @@ export const handleNewChatMembers = async (ctx) => {
     const fullName = [member.first_name, member.last_name].filter(Boolean).join(' ');
     const fromUser = member.username ? `@${member.username}` : fullName;
 
+    console.log(`\x1b[35m[Shield]\x1b[0m 👤 Вход участника: ${fromUser} (ID: ${member.id}) в чат "${ctx.chat?.title || ctx.chat?.id}"`);
+
     // Fast check: Is user already marked as banned in our database?
     if (isUserBlockedInDb(member.id)) {
       try {
@@ -263,8 +273,13 @@ export const handleNewChatMembers = async (ctx) => {
     const isApproved = isUserApproved(member.id);
     const isAdmin = await isUserAdmin(ctx, member.id);
 
-    if (isApproved || isAdmin) {
-      console.log(`\x1b[32m[Shield]\x1b[0m 🌲 Вход радиолюбителя (Зелёный коридор): ${fromUser} (ID: ${member.id})`);
+    if (isAdmin) {
+      console.log(`\x1b[32m[Shield]\x1b[0m 👑 Участник ${fromUser} (ID: ${member.id}) является администратором группы (Зелёный коридор)`);
+      continue;
+    }
+
+    if (isApproved) {
+      console.log(`\x1b[32m[Shield]\x1b[0m 🌲 Вход радиолюбителя с позывным (Зелёный коридор): ${fromUser} (ID: ${member.id})`);
       // Welcoming message with auto-delete after 15 seconds to keep chat clean
       await replyWithAutoDelete(
         ctx,
@@ -276,13 +291,19 @@ export const handleNewChatMembers = async (ctx) => {
     }
 
     // Echelon 2: Interactive Smart Captcha for newcomers
+    console.log(`\x1b[33m[Shield]\x1b[0m ⏳ Новичок без позывного: ${fromUser} (ID: ${member.id}) -> Наложение mute и отправка капчи...`);
+
     try {
       // 1. Restrict new member (read-only mode)
-      await ctx.restrictChatMember(member.id, {
-        permissions: {
-          can_send_messages: false
-        }
-      });
+      try {
+        await ctx.restrictChatMember(member.id, {
+          permissions: {
+            can_send_messages: false
+          }
+        });
+      } catch (restErr) {
+        console.error(`\x1b[31m[Shield]\x1b[0m ❌ Ошибка restrictChatMember (${member.id}): ${restErr.message}. Проверьте, что бот назначен администратором группы с правом блокировки пользователей!`);
+      }
 
       // 2. Send captcha message with inline button
       const timeoutSec = cfg.captchaTimeoutSec;

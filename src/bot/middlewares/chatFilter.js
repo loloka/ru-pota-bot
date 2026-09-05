@@ -8,18 +8,35 @@ const ACTIVITY_CHANNEL_ID = process.env.ACTIVITY_CHANNEL_ID;
 const MAIN_CHAT_ID = process.env.MAIN_CHAT_ID;
 
 /**
+ * Normalizes numeric Telegram chat IDs to ensure matching with or without -100 prefix
+ */
+export const normalizeChatId = (id) => {
+  if (!id) return '';
+  let str = String(id).trim();
+  if (/^-?\d+$/.test(str)) {
+    if (str.startsWith('-100')) return str;
+    if (str.startsWith('-')) return `-100${str.substring(1)}`;
+    return `-100${str}`;
+  }
+  return str;
+};
+
+/**
  * Middleware to filter and route messages based on chat ID
  */
 export const chatFilter = (ctx, next) => {
   const chatId = ctx.chat?.id?.toString();
+  const normalizedChatId = normalizeChatId(chatId);
+  const normalizedActivityId = normalizeChatId(ACTIVITY_CHANNEL_ID);
+  const normalizedMainChatId = normalizeChatId(MAIN_CHAT_ID);
 
   // Ignore all messages from the activity channel
-  if (chatId === ACTIVITY_CHANNEL_ID) {
+  if (normalizedActivityId && normalizedChatId === normalizedActivityId) {
     return;
   }
 
   // Attach context flags
-  ctx.state.isMainChat = chatId === MAIN_CHAT_ID;
+  ctx.state.isMainChat = !!(normalizedMainChatId && normalizedChatId === normalizedMainChatId);
   ctx.state.isPrivate = ctx.chat?.type === 'private';
   
   return next();

@@ -7,6 +7,8 @@ import {
   pendingCaptchas,
   escapeHtml
 } from './src/bot/middlewares/antiSpam.js';
+import { normalizeChatId } from './src/bot/middlewares/chatFilter.js';
+import { detectMode, normalizeFreq } from './src/services/clusterWorker.js';
 import db from './src/db/database.js';
 
 let passed = 0;
@@ -145,6 +147,33 @@ assert(isUserBlockedInDb(testTgId) === false, 'User cleaned up from blocked_user
 
 // Test escapeHtml
 assert(escapeHtml('<script>alert("xss")</script>') === '&lt;script&gt;alert("xss")&lt;/script&gt;', 'HTML properly escaped');
+
+// 6. Chat ID Normalization Tests
+console.log('\n[6] Testing Chat ID Normalization (normalizeChatId)...');
+assert(normalizeChatId('-3462574175') === '-1003462574175', 'Normalizes -3462574175 to -1003462574175');
+assert(normalizeChatId('-1003462574175') === '-1003462574175', 'Preserves already normalized -100 ID');
+assert(normalizeChatId('3462574175') === '-1003462574175', 'Prepends -100 to positive chat ID string');
+assert(normalizeChatId('@rupota_chat') === '@rupota_chat', 'Leaves @usernames intact');
+
+// 7. Cluster Worker Smart Mode & Frequency Normalization Tests
+console.log('\n[7] Testing Cluster Spot Mode & Frequency Detection...');
+assert(normalizeFreq('14074.0') === 14074, 'Normalizes 14074.0 kHz to 14074');
+assert(normalizeFreq('14074,0') === 14074, 'Normalizes comma frequency 14074,0 to 14074');
+assert(normalizeFreq('7120') === 7120, 'Preserves integer frequency');
+
+// Mode detection from comments
+assert(detectMode('', 'ft-8', 14074) === 'FT8', 'Detects FT8 from "ft-8" in comments when mode is empty');
+assert(detectMode('DIGI', 'FT8 via WSJT-X', 14074) === 'FT8', 'Overwrites generic DIGI mode with FT8 from comments');
+assert(detectMode('', 'QSO 7020 cw', 7020) === 'CW', 'Detects CW from comments');
+assert(detectMode('', 'ssb 59', 7120) === 'SSB', 'Detects SSB from comments');
+
+// Mode detection from dial frequencies
+assert(detectMode('', '', 14074) === 'FT8', 'Detects FT8 from standard 14074 kHz dial frequency');
+assert(detectMode('', '', 7074) === 'FT8', 'Detects FT8 from standard 7074 kHz dial frequency');
+assert(detectMode('', '', 14080) === 'FT4', 'Detects FT4 from standard 14080 kHz dial frequency');
+assert(detectMode('', '', 7025) === 'CW', 'Detects CW from 7025 kHz band segment');
+assert(detectMode('', '', 14200) === 'SSB', 'Detects SSB from 14200 kHz band segment');
+assert(detectMode('FT-8', '', 14074) === 'FT8', 'Normalizes FT-8 to FT8');
 
 console.log(`\n--- TEST RESULTS: ${passed} PASSED, ${failed} FAILED ---`);
 process.exit(failed > 0 ? 1 : 0);

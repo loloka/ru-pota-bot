@@ -1139,8 +1139,11 @@ export const startAdminServer = (telegramClient) => {
         return res.status(404).json({ error: 'Запись не найдена' });
       }
 
-      const mainChatId = process.env.MAIN_CHAT_ID;
+      let mainChatId = process.env.MAIN_CHAT_ID;
       if (mainChatId) {
+        if (!mainChatId.toString().startsWith('-100') && !mainChatId.toString().startsWith('@') && /^[0-9-]+$/.test(mainChatId)) {
+          mainChatId = mainChatId.toString().startsWith('-') ? '-100' + mainChatId.toString().substring(1) : '-100' + mainChatId;
+        }
         try {
           await telegramClient.unbanChatMember(mainChatId, record.telegram_id, { only_if_banned: true });
           console.log(`[Shield Admin] Разблокирован пользователь ${record.telegram_id} в чате ${mainChatId}`);

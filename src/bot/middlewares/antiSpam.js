@@ -625,8 +625,8 @@ export const shieldMessageGuard = async (ctx, next) => {
 
         console.log(`\x1b[33m[Shield]\x1b[0m ⚠️ Ссылка/пересылка от новичка без позывного заблокирована: ${fromUser} (ID: ${userId})`);
 
-        const warnText = `⚠️ В целях защиты от спама отправка внешних ссылок и пересылка постов новичками ограничена. Зарегистрируйте ваш позывной через бота @${botUsername}.`;
-        await replyWithAutoDelete(ctx, warnText, {}, 15000);
+        const warnText = `⚠️ <b>${escapeHtml(fromUser)}</b>, в целях защиты от спама отправка внешних ссылок и пересылка постов новичками ограничена. Зарегистрируйте ваш позывной через бота @${botUsername}.`;
+        await replyWithAutoDelete(ctx, warnText, { parse_mode: 'HTML' }, 15000);
       } catch (err) {
         console.error(`[Shield] Ошибка карантина ссылок (${userId}):`, err.message);
       }

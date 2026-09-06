@@ -413,7 +413,7 @@ export default function DashboardTab({
           </button>
         </div>
 
-        <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar">
+        <div className="flex gap-2.5 overflow-x-auto pb-3.5 pt-1 px-1">
           {liveStations.length === 0 ? (
             <div className="w-full p-4 rounded-xl glass-card text-center text-xs text-slate-500 dark:text-slate-400">
               {t('dash_quiet_notice')}

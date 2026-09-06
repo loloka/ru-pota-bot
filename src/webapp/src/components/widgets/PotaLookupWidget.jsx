@@ -13,7 +13,11 @@ import {
   Award, 
   Flame, 
   Layers,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Car,
+  Calendar
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -34,6 +38,13 @@ export default function PotaLookupWidget({
   // Results
   const [callsignData, setCallsignData] = useState(null);
   const [parkData, setParkData] = useState(null);
+
+  // Detailed view states
+  const [callsignDetailTab, setCallsignDetailTab] = useState('activations'); // 'activations' | 'hunts'
+  const [activationsFilter, setActivationsFilter] = useState('');
+  const [showAllActivations, setShowAllActivations] = useState(false);
+  const [showAllHunts, setShowAllHunts] = useState(false);
+  const [showAllParkActivations, setShowAllParkActivations] = useState(false);
   
   // Route modal for park
   const [showRouteModal, setShowRouteModal] = useState(false);
@@ -148,15 +159,19 @@ export default function PotaLookupWidget({
     setCallsignData(null);
     setParkData(null);
     setParkSuggestions([]);
+    setActivationsFilter('');
+    setShowAllActivations(false);
+    setShowAllHunts(false);
+    setShowAllParkActivations(false);
   };
 
   return (
     <div className="p-4 rounded-2xl glass-card space-y-3.5 border border-slate-300 dark:border-slate-800 shadow-xl select-none">
       
       {/* Header & Segmented Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-200 dark:border-slate-800/80">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800/80">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
             <Search className="w-4 h-4" />
           </div>
           <div>
@@ -169,8 +184,8 @@ export default function PotaLookupWidget({
           </div>
         </div>
 
-        {/* Mode Switch: Callsign / Park */}
-        <div className="flex p-1 rounded-xl bg-slate-200/80 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 shrink-0">
+        {/* Mode Switch: Callsign / Park - responsive balanced segmented control */}
+        <div className="grid grid-cols-2 sm:flex p-1 rounded-xl bg-slate-200/80 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 w-full sm:w-auto shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -178,7 +193,7 @@ export default function PotaLookupWidget({
               setMode('callsign');
               handleClear();
             }}
-            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition active:scale-95 ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition active:scale-95 ${
               mode === 'callsign'
                 ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-glow-pill font-bold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -195,7 +210,7 @@ export default function PotaLookupWidget({
               setMode('park');
               handleClear();
             }}
-            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition active:scale-95 ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition active:scale-95 ${
               mode === 'park'
                 ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-glow-pill font-bold'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -437,6 +452,251 @@ export default function PotaLookupWidget({
             </div>
           </div>
 
+          {/* Detailed Activity Section (Recent Activations & Hunter QSOs) */}
+          {((callsignData.recentActivations && callsignData.recentActivations.length > 0) || 
+            (callsignData.recentHunts && callsignData.recentHunts.length > 0)) && (
+            <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              {/* Activity Sub-Tabs */}
+              <div className="flex items-center justify-between gap-1 p-0.5 rounded-xl bg-slate-200/70 dark:bg-slate-800/70 text-[11px]">
+                {callsignData.recentActivations && callsignData.recentActivations.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      telegram.haptic.selection();
+                      setCallsignDetailTab('activations');
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg font-semibold transition ${
+                      callsignDetailTab === 'activations'
+                        ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-sm font-bold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Car className="w-3.5 h-3.5" />
+                    <span>{language === 'RU' ? 'Поездки' : 'Activations'}</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-mono">
+                      {callsignData.recentActivations.length}
+                    </span>
+                  </button>
+                )}
+
+                {callsignData.recentHunts && callsignData.recentHunts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      telegram.haptic.selection();
+                      setCallsignDetailTab('hunts');
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg font-semibold transition ${
+                      callsignDetailTab === 'hunts'
+                        ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 shadow-sm font-bold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Radio className="w-3.5 h-3.5" />
+                    <span>{language === 'RU' ? 'Охотник' : 'Hunter'}</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-400 font-mono">
+                      {callsignData.recentHunts.length}
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {/* TAB 1: Activations list */}
+              {callsignDetailTab === 'activations' && callsignData.recentActivations && (
+                <div className="space-y-1.5">
+                  {/* Quick filter input if > 3 items */}
+                  {callsignData.recentActivations.length > 3 && (
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2 w-3 h-3 text-slate-400" />
+                      <input
+                        type="text"
+                        value={activationsFilter}
+                        onChange={(e) => setActivationsFilter(e.target.value)}
+                        placeholder={language === 'RU' ? 'Фильтр по парку (JP-1169, 1169...) или дате' : 'Filter by park or date...'}
+                        className="w-full bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg pl-7 pr-6 py-1 text-[11px] text-slate-900 dark:text-white placeholder-slate-400 outline-none uppercase font-mono"
+                      />
+                      {activationsFilter && (
+                        <button
+                          type="button"
+                          onClick={() => setActivationsFilter('')}
+                          className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Render filtered or sliced activations */}
+                  {(() => {
+                    const q = activationsFilter.trim().toUpperCase();
+                    const filtered = callsignData.recentActivations.filter(act => {
+                      if (!q) return true;
+                      return (
+                        act.reference.toUpperCase().includes(q) ||
+                        act.park.toUpperCase().includes(q) ||
+                        act.date.includes(q) ||
+                        act.location.toUpperCase().includes(q)
+                      );
+                    });
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="p-3 text-center text-xs text-slate-500 dark:text-slate-400 rounded-xl bg-white/50 dark:bg-slate-800/50">
+                          {language === 'RU' ? 'Ничего не найдено по фильтру' : 'No matching activations'}
+                        </div>
+                      );
+                    }
+
+                    const displayed = showAllActivations || q ? filtered : filtered.slice(0, 3);
+
+                    return (
+                      <>
+                        <div className="space-y-1 max-h-64 overflow-y-auto pr-0.5">
+                          {displayed.map((act, idx) => (
+                            <div
+                              key={`${act.reference}_${act.date}_${idx}`}
+                              className="p-2 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-500/40 transition"
+                            >
+                              <div className="flex items-center justify-between gap-1.5">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">
+                                    {act.date}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      telegram.haptic.impact('light');
+                                      setMode('park');
+                                      setQuery(act.reference);
+                                      handleSearch(act.reference);
+                                    }}
+                                    className="font-mono font-extrabold text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition active:scale-95"
+                                    title={language === 'RU' ? 'Открыть карточку парка' : 'Open park info'}
+                                  >
+                                    {act.reference}
+                                  </button>
+                                  {act.location && (
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                      ({act.location})
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                                    {act.total} QSO
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 mt-0.5">
+                                <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate" title={act.park}>
+                                  {act.park}
+                                </p>
+                                <div className="flex items-center gap-1 text-[9px] font-mono text-slate-500 shrink-0">
+                                  {act.cw > 0 && <span className="bg-slate-100 dark:bg-slate-700/60 px-1 py-0.2 rounded">CW:{act.cw}</span>}
+                                  {act.data > 0 && <span className="bg-slate-100 dark:bg-slate-700/60 px-1 py-0.2 rounded">FT8:{act.data}</span>}
+                                  {act.phone > 0 && <span className="bg-slate-100 dark:bg-slate-700/60 px-1 py-0.2 rounded">SSB:{act.phone}</span>}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {!q && filtered.length > 3 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              telegram.haptic.selection();
+                              setShowAllActivations(!showAllActivations);
+                            }}
+                            className="w-full flex items-center justify-center gap-1 py-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                          >
+                            <span>
+                              {showAllActivations
+                                ? (language === 'RU' ? 'Свернуть' : 'Show less')
+                                : (language === 'RU' ? `Показать все (${filtered.length})` : `Show all (${filtered.length})`)}
+                            </span>
+                            {showAllActivations ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* TAB 2: Hunter QSOs */}
+              {callsignDetailTab === 'hunts' && callsignData.recentHunts && (
+                <div className="space-y-1.5">
+                  {callsignData.recentHunts.length === 0 ? (
+                    <div className="p-3 text-center text-xs text-slate-500 dark:text-slate-400 rounded-xl bg-white/50 dark:bg-slate-800/50">
+                      {language === 'RU' ? 'Нет недавних связей охотника' : 'No recent hunter contacts'}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-1 max-h-64 overflow-y-auto pr-0.5">
+                        {(showAllHunts ? callsignData.recentHunts : callsignData.recentHunts.slice(0, 4)).map((hunt, idx) => (
+                          <div
+                            key={`${hunt.callsign}_${hunt.reference}_${idx}`}
+                            className="p-2 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 text-xs"
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                                  {hunt.callsign}
+                                </span>
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono font-bold">
+                                  {hunt.band} {hunt.mode}
+                                </span>
+                              </div>
+                              <span className="font-mono text-[10px] text-slate-500">
+                                {hunt.date}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 mt-0.5 truncate text-[11px] text-slate-600 dark:text-slate-400">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  telegram.haptic.impact('light');
+                                  setMode('park');
+                                  setQuery(hunt.reference);
+                                  handleSearch(hunt.reference);
+                                }}
+                                className="font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline shrink-0"
+                              >
+                                {hunt.reference}
+                              </button>
+                              <span className="truncate">• {hunt.park}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {callsignData.recentHunts.length > 4 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            telegram.haptic.selection();
+                            setShowAllHunts(!showAllHunts);
+                          }}
+                          className="w-full flex items-center justify-center gap-1 py-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          <span>
+                            {showAllHunts
+                              ? (language === 'RU' ? 'Свернуть' : 'Show less')
+                              : (language === 'RU' ? `Показать все (${callsignData.recentHunts.length})` : `Show all (${callsignData.recentHunts.length})`)}
+                          </span>
+                          {showAllHunts ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex items-center gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
             {/* Toggle Subscribe */}
@@ -551,6 +811,80 @@ export default function PotaLookupWidget({
             <p className="text-[11px] text-slate-600 dark:text-slate-400">
               🏆 Лидер по активациям: <b className="font-mono text-emerald-600 dark:text-emerald-400">{parkData.topActivator}</b>
             </p>
+          )}
+
+          {/* Recent Activations of this Park */}
+          {parkData.recentActivations && parkData.recentActivations.length > 0 && (
+            <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
+                <span className="flex items-center gap-1.5">
+                  <Car className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>{language === 'RU' ? 'История активаций парка' : 'Park Activations History'}</span>
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">
+                  {parkData.recentActivations.length} {language === 'RU' ? 'крайних' : 'recent'}
+                </span>
+              </div>
+
+              <div className="space-y-1 max-h-56 overflow-y-auto pr-0.5">
+                {(showAllParkActivations ? parkData.recentActivations : parkData.recentActivations.slice(0, 3)).map((act, idx) => (
+                  <div
+                    key={`${act.callsign}_${act.date}_${idx}`}
+                    className="p-2 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between text-xs"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            telegram.haptic.impact('light');
+                            setMode('callsign');
+                            setQuery(act.callsign);
+                            handleSearch(act.callsign);
+                          }}
+                          className="font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                          title={language === 'RU' ? 'Смотреть профиль оператора' : 'View operator profile'}
+                        >
+                          👤 {act.callsign}
+                        </button>
+                        <span className="font-mono text-[10px] text-slate-500">
+                          {act.date}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[9px] font-mono text-slate-400 mt-0.5">
+                        {act.cw > 0 && <span>CW:{act.cw}</span>}
+                        {act.data > 0 && <span>FT8:{act.data}</span>}
+                        {act.phone > 0 && <span>SSB:{act.phone}</span>}
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">
+                        {act.totalQSOs} QSO
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {parkData.recentActivations.length > 3 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    telegram.haptic.selection();
+                    setShowAllParkActivations(!showAllParkActivations);
+                  }}
+                  className="w-full flex items-center justify-center gap-1 py-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                >
+                  <span>
+                    {showAllParkActivations
+                      ? (language === 'RU' ? 'Свернуть' : 'Show less')
+                      : (language === 'RU' ? `Показать все (${parkData.recentActivations.length})` : `Show all (${parkData.recentActivations.length})`)}
+                  </span>
+                  {showAllParkActivations ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+              )}
+            </div>
           )}
 
           {/* Action Buttons */}

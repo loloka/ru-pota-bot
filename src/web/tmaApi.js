@@ -72,7 +72,7 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.14.2 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.15.0 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
     let anyUpdated = false;
@@ -669,6 +669,29 @@ export function createTmaRouter(telegramClient) {
               qsos: raw.stats?.hunter?.qsos || 0,
             },
             awards: raw.stats?.awards || 0,
+            recentActivations: Array.isArray(raw.recent_activity?.activations) 
+              ? raw.recent_activity.activations.map(act => ({
+                  date: act.date || '',
+                  reference: act.reference || '',
+                  park: act.park || '',
+                  location: act.location || '',
+                  cw: act.cw || 0,
+                  data: act.data || 0,
+                  phone: act.phone || 0,
+                  total: act.total || 0,
+                }))
+              : [],
+            recentHunts: Array.isArray(raw.recent_activity?.hunter_qsos)
+              ? raw.recent_activity.hunter_qsos.map(h => ({
+                  date: h.date ? h.date.split('T')[0] : '',
+                  callsign: h.callsign || '',
+                  band: h.band || '',
+                  mode: h.mode || '',
+                  reference: h.reference || '',
+                  park: h.park || '',
+                  location: h.location || '',
+                }))
+              : [],
           };
           statsCache.set(cleanCall, { 
             data: {
@@ -714,17 +737,19 @@ export function createTmaRouter(telegramClient) {
 
       const tgUser = req.telegramUser;
 
-      // Fetch park info from POTA
+      // Fetch park info and activations from POTA
       let parkData = null;
       try {
-        const [park, leaderboard] = await Promise.allSettled([
+        const [park, leaderboard, activations] = await Promise.allSettled([
           potaApi.getPark(ref),
-          potaApi.getParkLeaderboard(ref)
+          potaApi.getParkLeaderboard(ref),
+          potaApi.getParkActivations(ref)
         ]);
 
         if (park.status === 'fulfilled' && park.value && (park.value.name || park.value.reference)) {
           const p = park.value;
           const lb = leaderboard.status === 'fulfilled' ? leaderboard.value : {};
+          const actList = activations.status === 'fulfilled' && Array.isArray(activations.value) ? activations.value : [];
           const topAct = lb?.activations?.[0];
 
           parkData = {
@@ -738,6 +763,15 @@ export function createTmaRouter(telegramClient) {
             qsos: p.qsos || 0,
             attempts: p.attempts || 0,
             topActivator: topAct ? `${topAct.callsign} (${topAct.count})` : null,
+            recentActivations: actList.slice(0, 20).map(a => ({
+              callsign: a.activeCallsign,
+              date: a.qso_date ? `${a.qso_date.substring(0,4)}-${a.qso_date.substring(4,6)}-${a.qso_date.substring(6,8)}` : '',
+              totalQSOs: a.totalQSOs || 0,
+              cw: a.qsosCW || 0,
+              data: a.qsosDATA || 0,
+              phone: a.qsosPHONE || 0,
+              location: a.locationDesc || ''
+            }))
           };
         }
       } catch (e) {}
@@ -746,12 +780,16 @@ export function createTmaRouter(telegramClient) {
       if (!parkData && cachedParks) {
         const found = cachedParks.find(p => p.reference.toUpperCase() === ref);
         if (found) {
-          parkData = { ...found };
+          parkData = { ...found, recentActivations: [] };
         }
       }
 
       if (!parkData) {
         return res.status(404).json({ error: `Парк с кодом ${ref} не найден.` });
+      }
+
+      if (!parkData.recentActivations) {
+        parkData.recentActivations = [];
       }
 
       // Check if currently active in spots (within last 45 minutes)

@@ -85,9 +85,17 @@ export default function PotaLookupWidget({
     }
   };
 
-  const handleSearch = async (forcedQuery = null) => {
+  const handleSearch = async (forcedQuery = null, forcedMode = null) => {
     const target = (forcedQuery || query).trim().toUpperCase();
     if (!target) return;
+
+    // Smart auto-detection: if target matches park format (e.g. RU-0192, JP-1169), automatically route to park
+    const isParkRefFormat = /^[A-Z0-9]{1,4}-\d{4,5}$/i.test(target);
+    const activeMode = forcedMode || (isParkRefFormat ? 'park' : mode);
+
+    if (activeMode !== mode) {
+      setMode(activeMode);
+    }
 
     telegram.haptic.impact('medium');
     setLoading(true);
@@ -95,17 +103,19 @@ export default function PotaLookupWidget({
     setParkSuggestions([]);
 
     try {
-      if (mode === 'callsign') {
+      if (activeMode === 'callsign') {
         const data = await api.lookupCallsign(target);
         setCallsignData(data);
+        setParkData(null);
       } else {
         const data = await api.lookupPark(target);
         setParkData(data);
+        setCallsignData(null);
       }
     } catch (err) {
       telegram.haptic.notification('error');
-      setError(err.message || 'Объект не найден в базе POTA');
-      if (mode === 'callsign') setCallsignData(null);
+      setError(err.message || (activeMode === 'callsign' ? 'Позывной не найден в базе POTA' : 'Парк не найден в базе POTA'));
+      if (activeMode === 'callsign') setCallsignData(null);
       else setParkData(null);
     } finally {
       setLoading(false);
@@ -569,7 +579,7 @@ export default function PotaLookupWidget({
                                       telegram.haptic.impact('light');
                                       setMode('park');
                                       setQuery(act.reference);
-                                      handleSearch(act.reference);
+                                      handleSearch(act.reference, 'park');
                                     }}
                                     className="font-mono font-extrabold text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition active:scale-95"
                                     title={language === 'RU' ? 'Открыть карточку парка' : 'Open park info'}
@@ -661,7 +671,7 @@ export default function PotaLookupWidget({
                                   telegram.haptic.impact('light');
                                   setMode('park');
                                   setQuery(hunt.reference);
-                                  handleSearch(hunt.reference);
+                                  handleSearch(hunt.reference, 'park');
                                 }}
                                 className="font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline shrink-0"
                               >
@@ -840,7 +850,7 @@ export default function PotaLookupWidget({
                             telegram.haptic.impact('light');
                             setMode('callsign');
                             setQuery(act.callsign);
-                            handleSearch(act.callsign);
+                            handleSearch(act.callsign, 'callsign');
                           }}
                           className="font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
                           title={language === 'RU' ? 'Смотреть профиль оператора' : 'View operator profile'}

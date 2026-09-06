@@ -57,8 +57,19 @@ export const startAdminServer = (telegramClient) => {
 
   // Telegram Mini App static distribution (SPA)
   const webappDist = path.resolve(__dirname, '../../dist/webapp');
-  app.use('/app', express.static(webappDist));
+  app.use('/app', express.static(webappDist, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    }
+  }));
   app.get(/^\/app(\/.*)?$/, (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(webappDist, 'index.html'));
   });
 

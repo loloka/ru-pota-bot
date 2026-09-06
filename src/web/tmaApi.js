@@ -644,6 +644,12 @@ export function createTmaRouter(telegramClient) {
       const tgUser = req.telegramUser;
       const cleanCall = callsign.split('/')[0];
 
+      // Auto-route: if the requested callsign is actually a park reference (e.g. RU-0192, JP-1169), redirect to park lookup
+      if (parkRegex.test(callsign) || parkRegex.test(cleanCall)) {
+        const parkRef = parkRegex.test(callsign) ? callsign : cleanCall;
+        return res.redirect(307, `/api/tma/lookup/park/${encodeURIComponent(parkRef)}`);
+      }
+
       // Check cache first
       let profileData = null;
       const cached = statsCache.get(cleanCall);
@@ -733,6 +739,11 @@ export function createTmaRouter(telegramClient) {
       const ref = (req.params.ref || '').trim().toUpperCase();
       if (!ref) {
         return res.status(400).json({ error: 'Park reference is required' });
+      }
+
+      // Auto-route: if the requested ref is actually a callsign (e.g. R9OGL, UA9OTW), redirect to callsign lookup
+      if (!parkRegex.test(ref) && baseCallsignRegex.test(ref)) {
+        return res.redirect(307, `/api/tma/lookup/callsign/${encodeURIComponent(ref)}`);
       }
 
       const tgUser = req.telegramUser;

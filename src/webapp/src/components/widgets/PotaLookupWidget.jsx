@@ -105,12 +105,24 @@ export default function PotaLookupWidget({
     try {
       if (activeMode === 'callsign') {
         const data = await api.lookupCallsign(target);
-        setCallsignData(data);
-        setParkData(null);
+        if (data && data.reference && !data.callsign) {
+          setParkData(data);
+          setCallsignData(null);
+          setMode('park');
+        } else {
+          setCallsignData(data);
+          setParkData(null);
+        }
       } else {
         const data = await api.lookupPark(target);
-        setParkData(data);
-        setCallsignData(null);
+        if (data && data.callsign && !data.reference) {
+          setCallsignData(data);
+          setParkData(null);
+          setMode('callsign');
+        } else {
+          setParkData(data);
+          setCallsignData(null);
+        }
       }
     } catch (err) {
       telegram.haptic.notification('error');

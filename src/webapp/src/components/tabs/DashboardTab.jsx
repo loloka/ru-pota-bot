@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Radio, 
@@ -9,6 +9,8 @@ import {
   Edit3, 
   Square, 
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
   MapPin,
   AlertCircle,
   Lock,
@@ -38,6 +40,62 @@ export default function DashboardTab({
   // Live stations preview
   const [liveStations, setLiveStations] = useState([]);
   const [isWorldFallback, setIsWorldFallback] = useState(false);
+
+  // Horizontal stations slider: mouse drag & wheel scrolling
+  const sliderRef = useRef(null);
+  const isDown = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
+  const hasMoved = useRef(false);
+  const [isGrabbing, setIsGrabbing] = useState(false);
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return;
+    const slider = sliderRef.current;
+    if (!slider) return;
+
+    isDown.current = true;
+    hasMoved.current = false;
+    startX.current = e.pageX - slider.offsetLeft;
+    scrollLeft.current = slider.scrollLeft;
+    setIsGrabbing(true);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDown.current) return;
+    const slider = sliderRef.current;
+    if (!slider) return;
+
+    const x = e.pageX - slider.offsetLeft;
+    const walk = (x - startX.current) * 1.25;
+
+    if (Math.abs(walk) > 4) {
+      hasMoved.current = true;
+    }
+
+    if (hasMoved.current) {
+      e.preventDefault();
+      slider.scrollLeft = scrollLeft.current - walk;
+    }
+  };
+
+  const handleMouseUpOrLeave = () => {
+    isDown.current = false;
+    setIsGrabbing(false);
+    setTimeout(() => {
+      hasMoved.current = false;
+    }, 60);
+  };
+
+  const handleWheel = (e) => {
+    const slider = sliderRef.current;
+    if (!slider) return;
+    if (slider.scrollWidth <= slider.clientWidth) return;
+
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      slider.scrollLeft += e.deltaY * 0.9;
+    }
+  };
 
   // Modal form fields
   const [parkRef, setParkRef] = useState('RU-0073');
@@ -400,20 +458,59 @@ export default function DashboardTab({
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              telegram.haptic.impact('light');
-              onNavigate('cluster', { scope: isWorldFallback ? 'world' : 'ru', search: '', highlightCallsign: null });
-            }}
-            className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
-          >
-            <span>{t('dash_see_all')}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Desktop scroll navigation arrows */}
+            {liveStations.length > 2 && (
+              <div className="hidden sm:flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sliderRef.current?.scrollBy({ left: -220, behavior: 'smooth' });
+                  }}
+                  className="p-1 rounded-lg bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition active:scale-95"
+                  title="Назад"
+                  aria-label="Назад"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sliderRef.current?.scrollBy({ left: 220, behavior: 'smooth' });
+                  }}
+                  className="p-1 rounded-lg bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition active:scale-95"
+                  title="Вперёд"
+                  aria-label="Вперёд"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                telegram.haptic.impact('light');
+                onNavigate('cluster', { scope: isWorldFallback ? 'world' : 'ru', search: '', highlightCallsign: null });
+              }}
+              className="flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+            >
+              <span>{t('dash_see_all')}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex gap-2.5 overflow-x-auto pb-3.5 pt-1 px-1">
+        <div 
+          ref={sliderRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUpOrLeave}
+          onMouseLeave={handleMouseUpOrLeave}
+          onWheel={handleWheel}
+          className={`flex gap-2.5 overflow-x-auto pb-3.5 pt-1 px-1 slider-scrollbar ${
+            isGrabbing ? 'cursor-grabbing select-none' : 'cursor-grab'
+          }`}
+        >
           {liveStations.length === 0 ? (
             <div className="w-full p-4 rounded-xl glass-card text-center text-xs text-slate-500 dark:text-slate-400">
               {t('dash_quiet_notice')}
@@ -422,7 +519,10 @@ export default function DashboardTab({
             liveStations.map((st) => (
               <div 
                 key={st.id}
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
                 onClick={() => {
+                  if (hasMoved.current) return;
                   telegram.haptic.impact('light');
                   onNavigate('cluster', { 
                     scope: st.isRu ? 'ru' : 'world', 
@@ -430,7 +530,7 @@ export default function DashboardTab({
                     highlightCallsign: st.callsign 
                   });
                 }}
-                className="min-w-[185px] p-3 rounded-xl glass-card hover:border-emerald-500/50 cursor-pointer transition active:scale-95"
+                className="min-w-[185px] p-3 rounded-xl glass-card hover:border-emerald-500/50 cursor-pointer transition active:scale-95 select-none shrink-0"
               >
 
 

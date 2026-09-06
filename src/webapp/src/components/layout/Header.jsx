@@ -144,7 +144,11 @@ export default function Header({
 
       {/* Notifications Popover Dropdown */}
       {showNotifications && (
-        <div className="fixed inset-0 z-50 flex items-start justify-end px-4 pt-16" onClick={() => setShowNotifications(false)}>
+        <div 
+          className="fixed inset-0 z-50 flex items-start justify-end px-4" 
+          style={{ paddingTop: 'calc(var(--app-safe-top, 0px) + 4.5rem)' }}
+          onClick={() => setShowNotifications(false)}
+        >
           <div 
             className="w-80 rounded-2xl glass-card p-4 shadow-2xl animate-fade-in text-sm"
             onClick={(e) => e.stopPropagation()}
@@ -204,7 +208,10 @@ export default function Header({
             onClick={() => setMenuOpen(false)} 
           />
           {/* Drawer Content */}
-          <div className="relative ml-auto w-4/5 max-w-sm h-full bg-white dark:bg-[#0d1424] border-l border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between shadow-2xl animate-slide-up">
+          <div 
+            className="relative ml-auto w-4/5 max-w-sm h-full bg-white dark:bg-[#0d1424] border-l border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between shadow-2xl animate-slide-up"
+            style={{ paddingTop: 'calc(var(--app-safe-top, 0px) + 1.5rem)' }}
+          >
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-2">
@@ -223,7 +230,7 @@ export default function Header({
               </div>
 
               {/* Navigation links inside drawer */}
-              <div className="mt-4 space-y-3 overflow-y-auto max-h-[calc(100vh-160px)] pr-1">
+              <div className="mt-4 space-y-3 overflow-y-auto max-h-[calc(100dvh-var(--app-safe-top,0px)-180px)] pr-1">
                 
                 {/* Карты */}
                 <div className="space-y-1.5">

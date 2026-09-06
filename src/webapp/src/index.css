@@ -6,6 +6,24 @@
   :root {
     --sat: env(safe-area-inset-top, 0px);
     --sab: env(safe-area-inset-bottom, 0px);
+    --tg-content-safe-area-inset-top: 0px;
+    --tg-content-safe-area-inset-bottom: 0px;
+    --tg-safe-area-inset-top: 0px;
+    --tg-safe-area-inset-bottom: 0px;
+
+    /* Dynamic top safe inset combining WebKit env and Telegram insets */
+    --app-safe-top: max(
+      var(--tg-content-safe-area-inset-top, 0px),
+      var(--tg-safe-area-inset-top, 0px),
+      var(--sat, 0px)
+    );
+
+    /* Dynamic bottom safe inset combining WebKit env and Telegram insets */
+    --app-safe-bottom: max(
+      var(--tg-content-safe-area-inset-bottom, 0px),
+      var(--tg-safe-area-inset-bottom, 0px),
+      var(--sab, 0px)
+    );
   }
 
   body {
@@ -128,16 +146,16 @@
 
 /* Safe area padding utilities */
 .pt-safe {
-  padding-top: max(var(--sat), 0.75rem);
+  padding-top: max(var(--app-safe-top), 0.75rem);
 }
 
 .pb-safe {
-  padding-bottom: max(var(--sab), 0.75rem);
+  padding-bottom: max(var(--app-safe-bottom), 0.75rem);
 }
 
 /* Generous bottom clearance for scrollable tabs above fixed BottomNav */
 .pb-tab-bottom {
-  padding-bottom: calc(7.5rem + max(var(--sab), 0.75rem)) !important;
+  padding-bottom: calc(7.5rem + max(var(--app-safe-bottom), 0.75rem)) !important;
 }
 
 /* Leaflet map container rules for TMA */

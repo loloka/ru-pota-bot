@@ -100,6 +100,7 @@ export default function App() {
       document.documentElement.classList.remove('dark');
       document.body.classList.remove('dark');
     }
+    telegram.setThemeColors(theme);
     localStorage.setItem('rupota_theme', theme);
   }, [theme]);
 

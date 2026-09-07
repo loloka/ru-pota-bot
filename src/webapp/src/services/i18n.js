@@ -125,13 +125,19 @@ export const translations = {
 
     // Spot Modal
     modal_spot_title: '📡 Выход в эфир (Спот)',
+    modal_edit_spot_title: '✏️ Сменить частоту / спот',
     modal_park_label: 'Номер парка (POTA Reference)',
     modal_freq_label: 'Частота (кГц / МГц)',
     modal_mode_label: 'Модуляция',
+    modal_rda_label: 'Район RDA (опционально)',
+    modal_pwr_label: 'Мощность (опционально)',
+    modal_pwr_ph: '90W / 100W / 5W',
     modal_comment_label: 'Комментарий (необязательно)',
-    modal_comment_ph: 'CQ POTA, антенна Inv V, 50W',
+    modal_comment_ph: 'до 14:00, антенна диполь...',
     modal_publish_btn: 'Опубликовать спот',
+    modal_update_btn: 'Обновить спот в эфире',
     modal_publishing: 'Публикация спота...',
+    dash_edit_spot: 'Частота',
   },
 
   EN: {
@@ -256,13 +262,19 @@ export const translations = {
 
     // Spot Modal
     modal_spot_title: '📡 Spot Activation (On Air)',
+    modal_edit_spot_title: '✏️ Update Spot / Frequency',
     modal_park_label: 'Park Number (POTA Reference)',
     modal_freq_label: 'Frequency (kHz / MHz)',
     modal_mode_label: 'Operating Mode',
+    modal_rda_label: 'RDA District (optional)',
+    modal_pwr_label: 'Power (optional)',
+    modal_pwr_ph: '90W / 100W / 5W',
     modal_comment_label: 'Comment (optional)',
     modal_comment_ph: 'CQ POTA, Inv V antenna, 50W',
     modal_publish_btn: 'Broadcast Spot',
+    modal_update_btn: 'Update On-Air Spot',
     modal_publishing: 'Publishing spot...',
+    dash_edit_spot: 'Freq',
   }
 };
 

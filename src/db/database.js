@@ -149,6 +149,14 @@ try {
     CREATE INDEX IF NOT EXISTS idx_pinned_spots_status_unpin ON pinned_spots (status, unpin_at);
   `);
 
+  const pinnedColumns = db.pragma('table_info(pinned_spots)');
+  const hasChannelMsgId = pinnedColumns.some(col => col.name === 'channel_msg_id');
+  if (!hasChannelMsgId) {
+    db.exec(`ALTER TABLE pinned_spots ADD COLUMN channel_msg_id INTEGER`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_pinned_spots_channel_msg ON pinned_spots (channel_msg_id)`);
+    console.log('[DB] Migrated pinned_spots table: added channel_msg_id column');
+  }
+
   // Ensure blocked_users table exists for RU-POTA Shield
   db.exec(`
     CREATE TABLE IF NOT EXISTS blocked_users (

@@ -72,7 +72,7 @@ async function refreshParksFromApi() {
 
   try {
     const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.15.2 (Telegram Bot; Node.js)',
+      'User-Agent': 'RU-POTA-Bot/1.15.3 (Telegram Bot; Node.js)',
     };
     const programs = ['RU', 'BY', 'KZ'];
     let anyUpdated = false;
@@ -231,6 +231,21 @@ export function createTmaRouter(telegramClient) {
       if (dbUser.last_spot_data) {
         try {
           activeSpot = JSON.parse(dbUser.last_spot_data);
+          if (activeSpot) {
+            const rawFreq = activeSpot.frequency || activeSpot.freq || '';
+            let freqVal = parseFloat(String(rawFreq).replace(',', '.'));
+            if (!isNaN(freqVal) && freqVal > 0) {
+              if (freqVal < 1000) {
+                activeSpot.freqMHz = freqVal.toFixed(3);
+                activeSpot.frequency = String(Math.round(freqVal * 1000));
+                activeSpot.freq = activeSpot.frequency;
+              } else {
+                activeSpot.freqMHz = (freqVal / 1000).toFixed(3);
+                activeSpot.frequency = String(Math.round(freqVal));
+                activeSpot.freq = activeSpot.frequency;
+              }
+            }
+          }
         } catch (e) {
           activeSpot = null;
         }
@@ -866,7 +881,7 @@ export function createTmaRouter(telegramClient) {
         });
       }
 
-      let { reference, frequency, mode, comment } = req.body;
+      let { reference, frequency, mode, comment, rda, pwr, timeStr } = req.body;
 
       if (!reference || !frequency || !mode) {
         return res.status(400).json({ error: 'Укажите парк, частоту и модуляцию.' });
@@ -893,6 +908,9 @@ export function createTmaRouter(telegramClient) {
 
       const freqMHz = (freqNum / 1000).toFixed(3);
       comment = (comment || '').trim();
+      rda = (rda || '').trim().toUpperCase();
+      pwr = (pwr || '').trim();
+      timeStr = (timeStr || '').trim();
 
       // Resolve Park Name
       let parkName = reference;
@@ -905,14 +923,28 @@ export function createTmaRouter(telegramClient) {
         // Safe fallback
       }
 
+      // Assemble full comment with RDA & Power (identical to bot formatting)
+      let commentParts = [];
+      if (timeStr) commentParts.push(`QRT ~${timeStr.replace(/^до\s*/i, '')}`);
+      if (comment) commentParts.push(comment);
+      if (pwr && pwr !== '-') commentParts.push(pwr);
+      if (rda && rda !== '-') commentParts.push(`RDA: ${rda}`);
+      let fullComment = commentParts.length > 0 ? commentParts.join(' | ') : comment;
+
       const spotData = {
         callsign: dbUser.callsign,
         reference,
         parkName,
+        freq: String(freqNum),
         frequency: String(freqNum),
         freqMHz,
         mode,
-        comment,
+        pwr: pwr || '',
+        rda: rda || '',
+        comment: fullComment,
+        baseComment: comment || '',
+        timeStr: timeStr || '',
+        status: 'СЕЙЧАС НА СВЯЗИ',
         source: 'local',
         startedAt: new Date().toISOString(),
       };
@@ -921,24 +953,38 @@ export function createTmaRouter(telegramClient) {
       const insertResult = db.prepare(`
         INSERT INTO spots (callsign, reference, frequency, mode, comment, source)
         VALUES (?, ?, ?, ?, ?, 'local')
-      `).run(dbUser.callsign, reference, String(freqNum), mode, comment);
+      `).run(dbUser.callsign, reference, String(freqNum), mode, fullComment);
 
       // 2. Broadcast to Telegram Activity Channel if available
       let channelMsgId = null;
       if (telegramClient && ACTIVITY_CHANNEL_ID) {
         try {
-          const actLink = `<a href="https://next.pota.app/profile/${dbUser.callsign.split('/')[0]}">${dbUser.callsign}</a>`;
-          const refLink = `<a href="https://next.pota.app/park/${reference}">${reference} (${parkName})</a>`;
-          const msg = `🌲 <b>НОВЫЙ СПОТ ИЗ MINI APP</b>\n` +
-                      `📻 <b>${actLink}</b> @ 🏞️ <b>${refLink}</b>\n` +
-                      `⚙️ Частота: <b>${freqMHz} MHz</b> | <b>${mode}</b>\n` +
-                      (comment ? `📝 <i>${comment}</i>\n` : '') +
-                      `\n📱 <i>Отправлено через RU-POTA Hub</i>`;
-
           let channelId = ACTIVITY_CHANNEL_ID;
           if (channelId.includes('t.me/')) {
             channelId = '@' + channelId.split('t.me/')[1].replace('/', '');
           }
+
+          // If user had a previous spot, unpin it in channel and delete from discussion group!
+          const prevUser = db.prepare('SELECT last_spot_msg_id FROM users WHERE telegram_id = ?').get(tgUser.id);
+          if (prevUser && prevUser.last_spot_msg_id) {
+            try {
+              await pinManager.unpinSpotNow(telegramClient, channelId, prevUser.last_spot_msg_id);
+            } catch (unpinErr) {}
+          }
+
+          const rdaStr = rda && rda !== '-' ? ` (RDA: ${rda})` : '';
+          const pwrStr = pwr && pwr !== '-' ? ` | ${pwr}` : '';
+          const timeQrtStr = timeStr ? ` (до ${timeStr.replace(/^до\s*/i, '')})` : '';
+          const dateStr = new Date().toLocaleDateString('ru-RU');
+
+          const actLink = `<a href="https://next.pota.app/profile/${dbUser.callsign.split('/')[0]}">${dbUser.callsign}</a>`;
+          const refLink = `<a href="https://next.pota.app/park/${reference}">${reference}</a>`;
+          const msg = `📅 <b>${dateStr} [СЕЙЧАС НА СВЯЗИ]${timeQrtStr}</b>\n` +
+                      `📻 <b>${actLink}</b>\n` +
+                      `🏞️ <b>${refLink}</b> ${parkName}${rdaStr}\n` +
+                      `⚙️ Freq: <b>${freqMHz} MHz</b> | <b>${mode}</b>${pwrStr}\n` +
+                      (fullComment ? `📝 <i>${fullComment}</i>\n` : '') +
+                      `\n📱 <i>Отправлено через RU-POTA Hub</i>`;
 
           const sent = await telegramClient.sendMessage(channelId, msg, {
             parse_mode: 'HTML',
@@ -950,7 +996,7 @@ export function createTmaRouter(telegramClient) {
           try {
             await telegramClient.pinChatMessage(channelId, channelMsgId, { disable_notification: true });
           } catch (pinErr) {}
-          pinManager.scheduleSpotUnpin(telegramClient, channelId, channelMsgId);
+          pinManager.scheduleSpotUnpin(telegramClient, channelId, channelMsgId, undefined, channelMsgId);
 
           // Update msg_id in spots table
           db.prepare('UPDATE spots SET msg_id = ? WHERE id = ?').run(channelMsgId, insertResult.lastInsertRowid);
@@ -1022,19 +1068,73 @@ export function createTmaRouter(telegramClient) {
     try {
       const tgUser = req.telegramUser;
 
-      const existingUser = db.prepare('SELECT last_spot_msg_id, status, callsign FROM users WHERE telegram_id = ?').get(tgUser.id);
+      const existingUser = db.prepare('SELECT last_spot_msg_id, last_spot_data, status, callsign FROM users WHERE telegram_id = ?').get(tgUser.id);
       if (!existingUser || existingUser.status !== 'approved') {
         return res.status(403).json({
           error: 'Действие недоступно для неподтвержденных пользователей.',
           code: 'FORBIDDEN'
         });
       }
-      if (existingUser && existingUser.last_spot_msg_id && ACTIVITY_CHANNEL_ID) {
-        let channelId = ACTIVITY_CHANNEL_ID;
-        if (channelId.includes('t.me/')) {
+
+      let channelId = ACTIVITY_CHANNEL_ID;
+      if (channelId) {
+        if (!channelId.startsWith('-100') && !channelId.startsWith('@') && /^[0-9-]+$/.test(channelId)) {
+          channelId = channelId.startsWith('-') ? `-100${channelId.substring(1)}` : `-100${channelId}`;
+        } else if (channelId.includes('t.me/')) {
           channelId = '@' + channelId.split('t.me/')[1].replace('/', '');
         }
-        await pinManager.unpinSpotNow(telegramClient, channelId, existingUser.last_spot_msg_id);
+      }
+
+      // 1. Unpin active spot in channel and delete from discussion group
+      if (existingUser && existingUser.last_spot_msg_id && channelId) {
+        try {
+          await pinManager.unpinSpotNow(telegramClient, channelId, existingUser.last_spot_msg_id);
+        } catch (unpinErr) {
+          console.warn('[TMA API QRT] Unpin error:', unpinErr.message);
+        }
+      }
+
+      let spotData = null;
+      if (existingUser && existingUser.last_spot_data) {
+        try {
+          spotData = JSON.parse(existingUser.last_spot_data);
+        } catch (e) {}
+      }
+
+      // 2. Send official QRT spot to POTA API cluster
+      if (spotData && spotData.reference) {
+        try {
+          await potaApi.postSpot({
+            activator: existingUser.callsign || spotData.callsign,
+            spotter: existingUser.callsign || spotData.callsign,
+            reference: spotData.reference,
+            frequency: String(spotData.frequency || spotData.freq || '14000'),
+            mode: spotData.mode || 'SSB',
+            comments: 'QRT 73!',
+          });
+          console.log(`[TMA API QRT] Posted QRT spot to POTA cluster for ${spotData.reference}`);
+        } catch (e) {
+          console.warn('[TMA API QRT] Post to POTA cluster warning:', e.message);
+        }
+      }
+
+      // 3. Broadcast unpinned QRT completion notice in channel
+      if (telegramClient && channelId && spotData && spotData.reference) {
+        try {
+          const parkInfo = spotData.parkName ? ` (${spotData.parkName})` : '';
+          const actCall = existingUser.callsign || spotData.callsign;
+          const qrtMsg = `🛑 <b>СЕССИЯ В ЭФИРЕ ЗАВЕРШЕНА (QRT)</b>\n\n` +
+                         `📻 Оператор: <b>${actCall}</b>\n` +
+                         `🏞️ Парк: <b>${spotData.reference}</b>${parkInfo}\n` +
+                         `🌲 <i>Спасибо за активацию! Всем 73 & 44!</i>\n\n` +
+                         `📱 <i>Отправлено через RU-POTA Hub</i>`;
+          await telegramClient.sendMessage(channelId, qrtMsg, {
+            parse_mode: 'HTML',
+            disable_web_page_preview: true
+          });
+        } catch (e) {
+          console.warn('[TMA API QRT] Channel broadcast error:', e.message);
+        }
       }
 
       db.prepare(`
@@ -1043,11 +1143,11 @@ export function createTmaRouter(telegramClient) {
         WHERE telegram_id = ?
       `).run(tgUser.id);
 
-      console.log(`[TMA API] Operator ${tgUser.id} went QRT`);
+      console.log(`[TMA API] Operator ${tgUser.id} (${existingUser.callsign}) went QRT`);
 
       res.json({
         success: true,
-        message: 'Сессия в эфире завершена (QRT). Спасибо за активацию! 73 & 44',
+        message: 'Сессия в эфире завершена (QRT). Спот отправлен на POTA, закрепы сняты. Спасибо за активацию! 73 & 44',
       });
     } catch (err) {
       console.error('[TMA API] Error in QRT:', err.message);

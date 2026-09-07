@@ -266,6 +266,14 @@ export const spotWizard = new Scenes.WizardScene(
     }
 
     try {
+      // If user had previous spot message, unpin it from channel and delete from discussion group
+      const prevUser = db.prepare('SELECT last_spot_msg_id FROM users WHERE telegram_id = ?').get(ctx.from.id);
+      if (prevUser && prevUser.last_spot_msg_id) {
+        try {
+          await pinManager.unpinSpotNow(ctx.telegram, channelId, prevUser.last_spot_msg_id);
+        } catch (unpinErr) {}
+      }
+
       const msg = await ctx.telegram.sendMessage(channelId, formattedSpot, { parse_mode: 'HTML', disable_web_page_preview: true });
       await ctx.reply('✅ Спот успешно опубликован в канале активности!', { reply_markup: getMainMenu(ctx) });
       
@@ -273,7 +281,20 @@ export const spotWizard = new Scenes.WizardScene(
       try {
         await ctx.telegram.pinChatMessage(channelId, msg.message_id, { disable_notification: true });
       } catch (pinErr) {}
-      pinManager.scheduleSpotUnpin(ctx.telegram, channelId, msg.message_id);
+      pinManager.scheduleSpotUnpin(ctx.telegram, channelId, msg.message_id, undefined, msg.message_id);
+
+      // Normalize frequency data for full bot & TMA compatibility
+      const freqNumber = String(s.freq).replace(/[^0-9.]/g, '');
+      let numVal = parseFloat(freqNumber.replace(',', '.'));
+      if (!isNaN(numVal) && numVal > 0) {
+        if (numVal < 1000) {
+          s.freqMHz = numVal.toFixed(3);
+          s.frequency = String(Math.round(numVal * 1000));
+        } else {
+          s.freqMHz = (numVal / 1000).toFixed(3);
+          s.frequency = String(Math.round(numVal));
+        }
+      }
 
       // Save spot to DB for editing later
       s.baseComment = baseComment;
@@ -282,7 +303,6 @@ export const spotWizard = new Scenes.WizardScene(
       
       // Post to POTA API
       const spotter = ctx.state.user?.callsign || 'UNKNOWN';
-      const freqNumber = String(s.freq).replace(/[^0-9.]/g, '');
       const spotId = await potaApi.postSpot({
         activator: s.callsign,
         frequency: freqNumber,

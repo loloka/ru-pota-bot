@@ -363,7 +363,7 @@ bot.command('spot', async (ctx) => {
         reply_markup: {
           inline_keyboard: [
             [{ text: '✏️ Изменить пункт', callback_data: 'spot_action_edit' }],
-            [{ text: '🗑 Удалить из канала', callback_data: 'spot_action_delete' }],
+            [{ text: '🛑 Завершить сессию (QRT)', callback_data: 'spot_action_delete' }],
             [{ text: '➕ Создать новый', callback_data: 'spot_action_new' }]
           ]
         }
@@ -393,7 +393,8 @@ bot.on('pinned_message', async (ctx) => {
     (pinned.text && (pinned.text.includes('POTA Cluster Spot') || pinned.text.includes('НОВЫЙ СПОТ') || pinned.text.includes('Freq:')));
 
   if (isFromChannel) {
-    pinManager.scheduleSpotUnpin(ctx.telegram, ctx.chat.id, pinned.message_id);
+    const origChannelMsgId = pinned.forward_from_message_id || null;
+    pinManager.scheduleSpotUnpin(ctx.telegram, ctx.chat.id, pinned.message_id, undefined, origChannelMsgId);
   }
 });
 
@@ -407,7 +408,8 @@ bot.use(async (ctx, next) => {
         (msg.forward_from_chat && isChannelChat(msg.forward_from_chat));
 
       if (isChannelForward) {
-        pinManager.scheduleSpotUnpin(ctx.telegram, ctx.chat.id, msg.message_id);
+        const origChannelMsgId = msg.forward_from_message_id || null;
+        pinManager.scheduleSpotUnpin(ctx.telegram, ctx.chat.id, msg.message_id, undefined, origChannelMsgId);
       }
     }
   }
@@ -492,26 +494,68 @@ bot.action('spot_action_stop_respot', async (ctx) => {
 bot.action('spot_action_delete', async (ctx) => {
   await ctx.answerCbQuery();
   const db = (await import('../db/database.js')).default;
-  const user = db.prepare('SELECT last_spot_msg_id FROM users WHERE telegram_id = ?').get(ctx.from.id);
+  const user = db.prepare('SELECT last_spot_msg_id, last_spot_data, callsign FROM users WHERE telegram_id = ?').get(ctx.from.id);
   
-  if (user && user.last_spot_msg_id) {
-    let channelId = process.env.ACTIVITY_CHANNEL_ID;
-    if (channelId && !channelId.startsWith('-100') && !channelId.startsWith('@') && /^[0-9-]+$/.test(channelId)) {
-      channelId = channelId.startsWith('-') ? `-100${channelId.substring(1)}` : `-100${channelId}`;
-    } else if (channelId && channelId.includes('t.me/')) {
-      channelId = `@${channelId.split('t.me/')[1].replace('/', '')}`;
-    }
-    
-    try {
-      await ctx.telegram.deleteMessage(channelId, user.last_spot_msg_id);
-      await ctx.editMessageText('✅ Спот успешно удален из канала.');
-    } catch(e) {
-      await ctx.editMessageText('❌ Не удалось удалить спот (возможно он уже удален или слишком старый).');
-    }
-    db.prepare('UPDATE users SET last_spot_msg_id = NULL, last_spot_data = NULL WHERE telegram_id = ?').run(ctx.from.id);
-  } else {
-    await ctx.editMessageText('❌ Спот не найден.');
+  let channelId = process.env.ACTIVITY_CHANNEL_ID;
+  if (channelId && !channelId.startsWith('-100') && !channelId.startsWith('@') && /^[0-9-]+$/.test(channelId)) {
+    channelId = channelId.startsWith('-') ? `-100${channelId.substring(1)}` : `-100${channelId}`;
+  } else if (channelId && channelId.includes('t.me/')) {
+    channelId = `@${channelId.split('t.me/')[1].replace('/', '')}`;
   }
+
+  let spotData = null;
+  if (user && user.last_spot_data) {
+    try {
+      spotData = JSON.parse(user.last_spot_data);
+    } catch(e) {}
+  }
+
+  // 1. Unpin active spot in channel and delete from discussion groups
+  if (user && user.last_spot_msg_id && channelId) {
+    try {
+      const { pinManager } = await import('../services/pinManager.js');
+      await pinManager.unpinSpotNow(ctx.telegram, channelId, user.last_spot_msg_id);
+    } catch(e) {
+      console.warn('[Spot QRT] Unpin error:', e.message);
+    }
+  }
+
+  // 2. Post official QRT spot to POTA API cluster if we have spot data
+  if (spotData && spotData.reference) {
+    try {
+      const { potaApi } = await import('../api/potaApi.js');
+      await potaApi.postSpot({
+        activator: user.callsign || spotData.callsign,
+        spotter: user.callsign || spotData.callsign,
+        reference: spotData.reference,
+        frequency: String(spotData.frequency || spotData.freq || '14000'),
+        mode: spotData.mode || 'SSB',
+        comments: 'QRT 73!',
+      });
+      console.log(`[Spot QRT] Posted QRT spot to POTA API for ${spotData.reference}`);
+    } catch(e) {
+      console.warn('[Spot QRT] POTA postSpot error:', e.message);
+    }
+  }
+
+  // 3. Broadcast unpinned QRT completion announcement to channel
+  if (channelId && spotData && spotData.reference) {
+    try {
+      const parkInfo = spotData.parkName ? ` (${spotData.parkName})` : '';
+      const actCall = user.callsign || spotData.callsign;
+      const qrtMsg = `🛑 <b>СЕССИЯ В ЭФИРЕ ЗАВЕРШЕНА (QRT)</b>\n\n` +
+                     `📻 Оператор: <b>${actCall}</b>\n` +
+                     `🏞️ Парк: <b>${spotData.reference}</b>${parkInfo}\n` +
+                     `🌲 <i>Спасибо за активацию! Всем 73 & 44!</i>\n\n` +
+                     `📱 <i>RU-POTA Bot</i>`;
+      await ctx.telegram.sendMessage(channelId, qrtMsg, { parse_mode: 'HTML', disable_web_page_preview: true });
+    } catch(e) {
+      console.warn('[Spot QRT] Channel QRT broadcast error:', e.message);
+    }
+  }
+
+  db.prepare('UPDATE users SET last_spot_msg_id = NULL, last_spot_data = NULL WHERE telegram_id = ?').run(ctx.from.id);
+  await ctx.editMessageText('🛑 <b>Сессия в эфире завершена (QRT).</b>\n\n✅ Официальный QRT спот отправлен на pota.app\n✅ Закреп в канале снят\n🌲 Спасибо за активацию! 73 & 44', { parse_mode: 'HTML' });
 });
 
 bot.action('spot_action_edit', async (ctx) => {
@@ -562,7 +606,7 @@ bot.hears('📡 Управление спотами', async (ctx) => {
 
       let keyboard = [
         [{ text: '✏️ Изменить пункт', callback_data: 'spot_action_edit' }],
-        [{ text: '🗑 Удалить из канала', callback_data: 'spot_action_delete' }]
+        [{ text: '🛑 Завершить сессию (QRT)', callback_data: 'spot_action_delete' }]
       ];
       if (isAutoRespot) {
         keyboard.push([{ text: '🛑 Стоп авто-респот', callback_data: 'spot_action_stop_respot' }]);
@@ -666,7 +710,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.15.2\x1b[0m 📡              \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.15.3\x1b[0m 📡              \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

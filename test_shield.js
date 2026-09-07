@@ -175,5 +175,52 @@ assert(detectMode('', '', 7025) === 'CW', 'Detects CW from 7025 kHz band segment
 assert(detectMode('', '', 14200) === 'SSB', 'Detects SSB from 14200 kHz band segment');
 assert(detectMode('FT-8', '', 14074) === 'FT8', 'Normalizes FT-8 to FT8');
 
+// 8. Spot Pinning & Group Auto-Deletion (pinManager)
+console.log('\n[8] Testing Spot Pinning & Group Auto-Deletion (pinManager)...');
+const { isChannelChat, pinManager } = await import('./src/services/pinManager.js');
+
+const originalChannelId = process.env.ACTIVITY_CHANNEL_ID;
+process.env.ACTIVITY_CHANNEL_ID = '-1003954691719';
+
+assert(isChannelChat('-1003954691719') === true, 'isChannelChat identifies channel by exact -100 ID');
+assert(isChannelChat('3954691719') === true, 'isChannelChat identifies channel without -100 prefix');
+assert(isChannelChat('-1004485477242') === false, 'isChannelChat identifies discussion/main group as non-channel');
+
+const unpinnedCalls = [];
+const deletedCalls = [];
+const mockTelegramClient = {
+  unpinChatMessage: async (chatId, messageId) => {
+    unpinnedCalls.push({ chatId: String(chatId), messageId: Number(messageId) });
+  },
+  deleteMessage: async (chatId, messageId) => {
+    deletedCalls.push({ chatId: String(chatId), messageId: Number(messageId) });
+  }
+};
+
+// Test unpin in channel: must UNPIN, but NEVER DELETE
+await pinManager.unpinSpotNow(mockTelegramClient, '-1003954691719', 101);
+assert(unpinnedCalls.some(c => c.chatId === '-1003954691719' && c.messageId === 101), 'Unpins spot in activity channel');
+assert(!deletedCalls.some(c => c.chatId === '-1003954691719'), 'Does NOT delete spot in activity channel (preserved in channel history)');
+
+// Test unpin in discussion/main group: must UNPIN AND DELETE
+await pinManager.unpinSpotNow(mockTelegramClient, '-1004485477242', 202);
+assert(unpinnedCalls.some(c => c.chatId === '-1004485477242' && c.messageId === 202), 'Unpins spot in group');
+assert(deletedCalls.some(c => c.chatId === '-1004485477242' && c.messageId === 202), 'Deletes spot message in group to keep chat clean');
+
+// Test linked forwarded spot cleanup in discussion group when channel spot is unpinned
+pinManager.scheduleSpotUnpin(mockTelegramClient, '-1003954691719', 301, 60000, 301); // Channel spot
+pinManager.scheduleSpotUnpin(mockTelegramClient, '-1004485477242', 302, 60000, 301); // Linked group forward
+await pinManager.unpinSpotNow(mockTelegramClient, '-1003954691719', 301);
+
+assert(unpinnedCalls.some(c => c.chatId === '-1004485477242' && c.messageId === 302), 'Unpins linked forwarded spot in group when channel spot unpins');
+assert(deletedCalls.some(c => c.chatId === '-1004485477242' && c.messageId === 302), 'Deletes linked forwarded spot in group when channel spot unpins');
+
+// Restore env
+if (originalChannelId) {
+  process.env.ACTIVITY_CHANNEL_ID = originalChannelId;
+} else {
+  delete process.env.ACTIVITY_CHANNEL_ID;
+}
+
 console.log(`\n--- TEST RESULTS: ${passed} PASSED, ${failed} FAILED ---`);
 process.exit(failed > 0 ? 1 : 0);

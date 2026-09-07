@@ -1,6 +1,8 @@
 import { Scenes } from 'telegraf';
 import db from '../../db/database.js';
 import { potaApi } from '../../api/potaApi.js';
+import { pinManager } from '../../services/pinManager.js';
+import { getMainMenu } from '../utils.js';
 import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -118,15 +120,44 @@ export const editSpotWizard = new Scenes.WizardScene(
     }
 
     try {
-      await ctx.telegram.editMessageText(channelId, u.last_spot_msg_id, undefined, formattedSpot, { parse_mode: 'HTML', disable_web_page_preview: true });
-      db.prepare('UPDATE users SET last_spot_data = ? WHERE telegram_id = ?').run(JSON.stringify(s), ctx.from.id);
-      
-      // Post updated spot to POTA API
-      const spotter = ctx.state.user?.callsign || 'UNKNOWN';
+      // 1. Unpin old spot from channel & delete from discussion group
+      if (u.last_spot_msg_id) {
+        try {
+          await pinManager.unpinSpotNow(ctx.telegram, channelId, u.last_spot_msg_id);
+        } catch (unpinErr) {}
+      }
+
+      // 2. Broadcast fresh spot as a NEW message so everyone in channel & group gets alerted
+      const sentMsg = await ctx.telegram.sendMessage(channelId, formattedSpot, { parse_mode: 'HTML', disable_web_page_preview: true });
+      const newMsgId = sentMsg.message_id;
+
+      // 3. Pin new spot silently and schedule auto-unpin
+      try {
+        await ctx.telegram.pinChatMessage(channelId, newMsgId, { disable_notification: true });
+      } catch (pinErr) {}
+      pinManager.scheduleSpotUnpin(ctx.telegram, channelId, newMsgId, undefined, newMsgId);
+
+      // 4. Normalize frequency data in s for 100% TMA & POTA compatibility
       const freqNumber = String(s.freq).replace(/[^0-9.]/g, '');
+      let numVal = parseFloat(freqNumber.replace(',', '.'));
+      if (!isNaN(numVal) && numVal > 0) {
+        if (numVal < 1000) {
+          s.freqMHz = numVal.toFixed(3);
+          s.frequency = String(Math.round(numVal * 1000));
+        } else {
+          s.freqMHz = (numVal / 1000).toFixed(3);
+          s.frequency = String(Math.round(numVal));
+        }
+      }
+
+      // 5. Update user in DB with new message ID and complete spot data
+      db.prepare('UPDATE users SET last_spot_msg_id = ?, last_spot_data = ? WHERE telegram_id = ?').run(newMsgId, JSON.stringify(s), ctx.from.id);
+      
+      // 6. Post updated spot to POTA API
+      const spotter = ctx.state.user?.callsign || 'UNKNOWN';
       const spotId = await potaApi.postSpot({
         activator: s.callsign,
-        frequency: freqNumber,
+        frequency: s.frequency || freqNumber,
         mode: s.mode,
         reference: s.reference,
         spotter: spotter,
@@ -138,18 +169,19 @@ export const editSpotWizard = new Scenes.WizardScene(
           db.prepare(`
             INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source, msg_id)
             VALUES (?, ?, ?, ?, ?, ?, 'bot_edit', ?)
-          `).run(spotId, s.callsign, s.reference, freqNumber, s.mode, s.comment || '', u.last_spot_msg_id);
-        } catch(e) {} // ignore unique constraint if it somehow matches
+          `).run(spotId, s.callsign, s.reference, s.frequency || freqNumber, s.mode, s.comment || '', newMsgId);
+        } catch(e) {}
       }
 
-      await ctx.reply('✅ Спот успешно обновлен в канале и на сайте POTA!');
+      await ctx.reply(`✅ Спот успешно обновлен и опубликован новым сообщением!\n📻 <b>${s.callsign}</b> @ <b>${s.reference}</b>\n⚙️ Freq: <b>${s.freq}</b> | <b>${s.mode}</b>`, {
+        parse_mode: 'HTML',
+        reply_markup: getMainMenu(ctx)
+      });
     } catch (err) {
-      console.error('Error editing message', err);
-      if (err.description && err.description.includes('are exactly the same')) {
-         await ctx.reply('✅ Спот обновлен (изменений не было).');
-      } else {
-         await ctx.reply(`❌ Ошибка обновления сообщения в канале: ${err.message}`);
-      }
+      console.error('Error posting updated spot', err);
+      await ctx.reply(`❌ Ошибка публикации обновленного спота: ${err.message}`, {
+        reply_markup: getMainMenu(ctx)
+      });
     }
     
     return ctx.scene.leave();

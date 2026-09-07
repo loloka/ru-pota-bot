@@ -230,7 +230,7 @@ export const startClusterWorker = (telegramClient) => {
             try {
               await telegramClient.pinChatMessage(channelId, msgId, { disable_notification: true });
             } catch (pinErr) {}
-            pinManager.scheduleSpotUnpin(telegramClient, channelId, msgId);
+            pinManager.scheduleSpotUnpin(telegramClient, channelId, msgId, undefined, msgId);
           }
         } catch (e) {
           console.error(`\x1b[31m[Broadcast Error]\x1b[0m Не удалось отправить спот в канал:`, e.message);

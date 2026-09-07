@@ -21,6 +21,16 @@ import { api } from '../../services/api.js';
 import { formatTimeAgoLocale } from '../../services/i18n.js';
 import PotaLookupWidget from '../widgets/PotaLookupWidget.jsx';
 
+export function getDisplayFreq(spot) {
+  if (!spot) return '—';
+  if (spot.freqMHz && !isNaN(parseFloat(spot.freqMHz))) return spot.freqMHz;
+  const raw = spot.frequency || spot.freq;
+  if (!raw) return '—';
+  let num = parseFloat(String(raw).replace(',', '.'));
+  if (isNaN(num) || num <= 0) return '—';
+  if (num > 1000) num = num / 1000;
+  return num.toFixed(3);
+}
 
 export default function DashboardTab({ 
   user, 
@@ -102,6 +112,9 @@ export default function DashboardTab({
   const [freq, setFreq] = useState('14144');
   const [mode, setMode] = useState('SSB');
   const [comment, setComment] = useState('');
+  const [rda, setRda] = useState('');
+  const [pwr, setPwr] = useState('');
+  const [isEditingActiveSpot, setIsEditingActiveSpot] = useState(false);
 
   // Load preview of active stations (with smart fallback to world stations if RU is quiet)
   useEffect(() => {
@@ -128,6 +141,29 @@ export default function DashboardTab({
     return () => { isMounted = false; };
   }, []);
 
+  const handleOpenEditSpot = () => {
+    telegram.haptic.impact('light');
+    if (activeSpot) {
+      setParkRef(activeSpot.reference || 'RU-0073');
+      const curFreq = activeSpot.freqMHz || (activeSpot.frequency ? (parseFloat(activeSpot.frequency) > 1000 ? (parseFloat(activeSpot.frequency) / 1000).toFixed(3) : activeSpot.frequency) : activeSpot.freq) || '14144';
+      setFreq(curFreq);
+      setMode(activeSpot.mode || 'SSB');
+      setComment(activeSpot.baseComment || '');
+      setRda(activeSpot.rda || '');
+      setPwr(activeSpot.pwr || '');
+      setIsEditingActiveSpot(true);
+    }
+    setErrorMessage('');
+    setSpotModalOpen(true);
+  };
+
+  const handleOpenNewSpot = () => {
+    telegram.haptic.impact('medium');
+    setIsEditingActiveSpot(false);
+    setErrorMessage('');
+    setSpotModalOpen(true);
+  };
+
   const handleSpotSubmit = async (e) => {
     e.preventDefault();
     if (!user || user.status !== 'approved' || !user.callsign) {
@@ -150,10 +186,17 @@ export default function DashboardTab({
         frequency: freq,
         mode,
         comment,
+        rda,
+        pwr
       });
 
       telegram.haptic.notification('success');
       setSpotModalOpen(false);
+      alert(
+        isEditingActiveSpot
+          ? (language === 'RU' ? 'Спот успешно обновлен и опубликован!' : 'Spot successfully updated!')
+          : (language === 'RU' ? 'Спот успешно опубликован в эфире!' : 'Spot successfully posted!')
+      );
       if (onRefreshProfile) await onRefreshProfile();
     } catch (err) {
       telegram.haptic.notification('error');
@@ -192,12 +235,16 @@ export default function DashboardTab({
       return;
     }
 
+    const freqToSend = activeSpot.freqMHz || activeSpot.frequency || activeSpot.freq || '14144';
+
     try {
       await api.postSpot({
         reference: activeSpot.reference,
-        frequency: activeSpot.frequency,
+        frequency: freqToSend,
         mode: activeSpot.mode,
-        comment: activeSpot.comment || '',
+        comment: activeSpot.baseComment || '',
+        rda: activeSpot.rda || '',
+        pwr: activeSpot.pwr || '',
       });
 
       telegram.haptic.notification('success');
@@ -317,11 +364,12 @@ export default function DashboardTab({
               <div className="flex items-center justify-between">
                 <span className="font-mono font-bold text-lg text-slate-900 dark:text-white">{activeSpot.reference}</span>
                 <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                  {activeSpot.freqMHz || (parseFloat(activeSpot.frequency) / 1000).toFixed(3)} MHz {activeSpot.mode}
+                  {getDisplayFreq(activeSpot)} MHz {activeSpot.mode}
                 </span>
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300 truncate">
                 {activeSpot.parkName || (language === 'RU' ? 'Национальный парк' : 'National Park')}
+                {activeSpot.rda ? ` (RDA: ${activeSpot.rda})` : ''}
               </p>
               {activeSpot.comment && (
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 italic truncate">
@@ -331,23 +379,35 @@ export default function DashboardTab({
             </div>
 
             {/* Actions */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="grid grid-cols-3 gap-2 pt-1">
               <button
                 type="button"
                 onClick={handleRespot}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-glow-emerald transition active:scale-95"
+                className="flex items-center justify-center gap-1 py-2.5 px-2 rounded-xl text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-glow-emerald transition active:scale-95"
+                title={t('dash_respot')}
               >
-                <Radio className="w-3.5 h-3.5" />
-                <span>{t('dash_respot')}</span>
+                <Radio className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t('dash_respot')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenEditSpot}
+                className="flex items-center justify-center gap-1 py-2.5 px-2 rounded-xl text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 transition active:scale-95"
+                title={t('modal_edit_spot_title')}
+              >
+                <Edit3 className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t('dash_edit_spot')}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleQRT}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition active:scale-95"
+                className="flex items-center justify-center gap-1 py-2.5 px-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition active:scale-95"
+                title={t('dash_qrt')}
               >
-                <Square className="w-3.5 h-3.5" />
-                <span>{t('dash_qrt')}</span>
+                <Square className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t('dash_qrt')}</span>
               </button>
             </div>
           </div>
@@ -420,10 +480,7 @@ export default function DashboardTab({
             ) : (
               <button
                 type="button"
-                onClick={() => {
-                  telegram.haptic.impact('medium');
-                  setSpotModalOpen(true);
-                }}
+                onClick={handleOpenNewSpot}
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-slate-950 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 shadow-glow-emerald transition-all active:scale-95"
               >
                 <Send className="w-4 h-4" />
@@ -662,7 +719,9 @@ export default function DashboardTab({
           <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => !submitting && setSpotModalOpen(false)} />
           <div className="relative w-full max-w-sm glass-card rounded-2xl p-5 shadow-2xl space-y-4 animate-slide-up">
             <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="font-bold text-slate-900 dark:text-white text-base">{t('modal_spot_title')}</h3>
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                {isEditingActiveSpot ? t('modal_edit_spot_title') : t('modal_spot_title')}
+              </h3>
               <button 
                 type="button" 
                 onClick={() => !submitting && setSpotModalOpen(false)} 
@@ -721,6 +780,29 @@ export default function DashboardTab({
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-medium">{t('modal_rda_label')}</label>
+                  <input 
+                    type="text" 
+                    value={rda}
+                    onChange={(e) => setRda(e.target.value.toUpperCase())}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:border-emerald-500 outline-none"
+                    placeholder="NS-03 / MA-01"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-medium">{t('modal_pwr_label')}</label>
+                  <input 
+                    type="text" 
+                    value={pwr}
+                    onChange={(e) => setPwr(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:border-emerald-500 outline-none"
+                    placeholder={t('modal_pwr_ph')}
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-slate-600 dark:text-slate-400 mb-1 font-medium">{t('modal_comment_label')}</label>
                 <input 
@@ -737,7 +819,7 @@ export default function DashboardTab({
                 disabled={submitting}
                 className="w-full py-2.5 rounded-xl font-bold text-sm text-slate-950 bg-emerald-400 hover:bg-emerald-300 disabled:opacity-50 shadow-glow-emerald transition active:scale-95"
               >
-                {submitting ? t('modal_publishing') : t('modal_publish_btn')}
+                {submitting ? t('modal_publishing') : (isEditingActiveSpot ? t('modal_update_btn') : t('modal_publish_btn'))}
               </button>
             </form>
           </div>

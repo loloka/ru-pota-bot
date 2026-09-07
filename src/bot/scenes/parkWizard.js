@@ -1,6 +1,6 @@
 import { Scenes } from 'telegraf';
 import { potaApi } from '../../api/potaApi.js';
-import { deleteUserMessage, replyWithAutoDelete } from '../utils.js';
+import { deleteUserMessage, replyWithAutoDelete, getMainMenu } from '../utils.js';
 
 export const parkWizard = new Scenes.WizardScene(
   'PARK_WIZARD',
@@ -31,8 +31,8 @@ export const parkWizard = new Scenes.WizardScene(
     };
 
     if (ref === '/CANCEL') {
-      await ctx.reply('🚫 Действие отменено.');
-      return ctx.scene.leave();
+      await ctx.scene.leave();
+      return ctx.reply('🚫 Поиск парка отменен.', { reply_markup: getMainMenu(ctx) });
     }
     
     if (ref.startsWith('/') || ctx.message.text.includes('Регистрация') || ctx.message.text.includes('Подписки') || ctx.message.text.includes('Инфо')) {
@@ -146,6 +146,11 @@ export const parkWizard = new Scenes.WizardScene(
 );
 
 parkWizard.command('cancel', async (ctx) => {
-  await ctx.reply('🚫 Поиск парка отменен.');
-  return ctx.scene.leave();
+  await ctx.scene.leave();
+  return ctx.reply('🚫 Поиск парка отменен.', { reply_markup: getMainMenu(ctx) });
+});
+
+parkWizard.hears(/^(отмена|отменить|cancel|\/cancel)$/i, async (ctx) => {
+  await ctx.scene.leave();
+  return ctx.reply('🚫 Поиск парка отменен.', { reply_markup: getMainMenu(ctx) });
 });

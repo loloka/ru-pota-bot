@@ -97,11 +97,13 @@ export const spotWizard = new Scenes.WizardScene(
       const exDate = String(today.getUTCDate()).padStart(2, '0') + '.' + String(today.getUTCMonth() + 1).padStart(2, '0');
       const exTime = String((today.getUTCHours() + 2) % 24).padStart(2, '0') + ':00';
       await ctx.reply(`📅 Введите дату и примерное время в UTC\n\n<i>(Например: ${exDate} ~${exTime} или точно 12:00-14:00)\n\nили /cancel для отмены</i>:`, {
-        parse_mode: 'HTML'
+        parse_mode: 'HTML',
+        reply_markup: { remove_keyboard: true }
       });
     } else {
       await ctx.reply('⏳ До какого времени вы планируете работать в UTC?\n\n<i>(Можно просто написать 17:00, бот сам добавит "до". Либо отправьте "-", чтобы пропустить этот шаг)\n\nили /cancel для отмены</i>', {
-        parse_mode: 'HTML'
+        parse_mode: 'HTML',
+        reply_markup: { remove_keyboard: true }
       });
     }
     return ctx.wizard.next();
@@ -174,7 +176,10 @@ export const spotWizard = new Scenes.WizardScene(
   async (ctx) => {
     if (!ctx.message?.text) return;
     ctx.wizard.state.spot.mode = ctx.message.text.toUpperCase();
-    await ctx.reply('⚡ Введите мощность (например, 100W или 5W QRP):\n\n<i>или /cancel для отмены</i>', { parse_mode: 'HTML' });
+    await ctx.reply('⚡ Введите мощность (например, 100W или 5W QRP):\n\n<i>или /cancel для отмены</i>', { 
+      parse_mode: 'HTML',
+      reply_markup: { remove_keyboard: true }
+    });
     return ctx.wizard.next();
   },
   // Step 8: Comment
@@ -355,6 +360,11 @@ export const spotWizard = new Scenes.WizardScene(
 );
 
 spotWizard.command('cancel', async (ctx) => {
-  await ctx.reply('🚫 Оформление спота отменено.', { reply_markup: getMainMenu(ctx) });
-  return ctx.scene.leave();
+  await ctx.scene.leave();
+  return ctx.reply('🚫 Оформление спота отменено.', { reply_markup: getMainMenu(ctx) });
+});
+
+spotWizard.hears(/^(отмена|отменить|cancel|\/cancel)$/i, async (ctx) => {
+  await ctx.scene.leave();
+  return ctx.reply('🚫 Оформление спота отменено.', { reply_markup: getMainMenu(ctx) });
 });

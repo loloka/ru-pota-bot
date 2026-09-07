@@ -1,5 +1,6 @@
 import { Scenes } from 'telegraf';
 import db from '../../db/database.js';
+import { getMainMenu } from '../utils.js';
 
 const baseCallsignRegex = /^([A-Z0-9]{1,4}\/)?([A-Z0-9]{1,3}[0-9][A-Z0-9]{1,5})(\/[A-Z0-9]{1,4})?$/;
 const hasLetterRegex = /[A-Z]/;
@@ -66,9 +67,9 @@ export const callsignWizard = new Scenes.WizardScene(
     if (text.startsWith('/')) {
       await ctx.scene.leave();
       if (text === '/CANCEL') {
-        await ctx.reply('🚫 Регистрация отменена. Для начала работы нажмите /start');
+        await ctx.reply('🚫 Регистрация отменена. Для начала работы нажмите /start', { reply_markup: getMainMenu(ctx) });
       } else {
-        await ctx.reply('🚫 Регистрация отменена. Пожалуйста, повторите вашу команду.');
+        await ctx.reply('🚫 Регистрация отменена. Пожалуйста, повторите вашу команду.', { reply_markup: getMainMenu(ctx) });
       }
       return;
     }
@@ -143,6 +144,11 @@ export const callsignWizard = new Scenes.WizardScene(
 );
 
 callsignWizard.command('cancel', async (ctx) => {
-  await ctx.reply('🚫 Регистрация отменена. Для начала работы нажмите /start');
-  return ctx.scene.leave();
+  await ctx.scene.leave();
+  return ctx.reply('🚫 Регистрация отменена. Для начала работы нажмите /start', { reply_markup: getMainMenu(ctx) });
+});
+
+callsignWizard.hears(/^(отмена|отменить|cancel|\/cancel)$/i, async (ctx) => {
+  await ctx.scene.leave();
+  return ctx.reply('🚫 Регистрация отменена. Для начала работы нажмите /start', { reply_markup: getMainMenu(ctx) });
 });

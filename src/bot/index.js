@@ -37,6 +37,7 @@ import { pinManager, isChannelChat } from '../services/pinManager.js';
 // Import admin server
 import { startAdminServer } from '../web/admin.js';
 import { WELCOME_PINNED_POST } from './texts/welcomePost.js';
+import { getMainMenu } from './utils.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -119,11 +120,33 @@ bot.use(requireRegistration);
 // Configure scenes and sessions
 const stage = new Scenes.Stage([spotWizard, callsignWizard, parkWizard, editSpotWizard, subWizard, statsWizard]);
 
+const MAIN_MENU_BUTTONS = [
+  '📡 Управление спотами',
+  '📊 Моя статистика',
+  '🏞 Инфо по парку',
+  '🔍 Поиск позывного',
+  '🔔 Мои подписки',
+  '📻 Кто в эфире',
+  '❓ Справка',
+  '📝 Регистрация'
+];
+
 // Global scene escape handlers:
-// If a user in ANY scene enters /start or /cancel, safely exit the scene
+// If a user in ANY scene enters /cancel or "отмена", safely exit the scene and restore main menu
 stage.command('cancel', async (ctx) => {
-  await ctx.reply('🚫 Действие отменено.');
-  return ctx.scene.leave();
+  await ctx.scene.leave();
+  return ctx.reply('🚫 Действие отменено.', { reply_markup: getMainMenu(ctx) });
+});
+
+stage.hears(/^(отмена|отменить|cancel|\/cancel)$/i, async (ctx) => {
+  await ctx.scene.leave();
+  return ctx.reply('🚫 Действие отменено.', { reply_markup: getMainMenu(ctx) });
+});
+
+// If user clicks a main menu button while inside ANY scene, safely exit the scene and execute button handler
+stage.hears(MAIN_MENU_BUTTONS, async (ctx, next) => {
+  await ctx.scene.leave();
+  return next();
 });
 
 stage.command('start', async (ctx, next) => {
@@ -602,7 +625,25 @@ bot.hears('❓ Справка', helpHandler);
 
 // Handle keyboard buttons if pressed out of context
 bot.hears(['СЕЙЧАС НА СВЯЗИ', 'ПЛАНИРУЮ'], (ctx) => {
-  return ctx.reply('⚠️ Пожалуйста, начните создание спота заново с помощью команды /spot');
+  return ctx.reply('⚠️ Пожалуйста, начните создание спота заново с помощью команды /spot', {
+    reply_markup: getMainMenu(ctx)
+  });
+});
+
+bot.hears(['CW', 'SSB', 'FT8', 'FT4', 'FM', 'CW/SSB', 'DIGI', '✅ Да (3 раза каждые 10 мин)', '❌ Нет'], (ctx) => {
+  return ctx.reply('⚠️ Кнопка нажата вне контекста. Открываю главное меню 👇', {
+    reply_markup: getMainMenu(ctx)
+  });
+});
+
+bot.command('cancel', (ctx) => {
+  return ctx.reply('ℹ️ Нет активных действий для отмены.', { reply_markup: getMainMenu(ctx) });
+});
+
+bot.hears(/^(отмена|отменить|cancel)$/i, (ctx) => {
+  if (ctx.chat?.type === 'private') {
+    return ctx.reply('ℹ️ Нет активных действий для отмены.', { reply_markup: getMainMenu(ctx) });
+  }
 });
 
 bot.action('cancel_edit_field', async (ctx) => {
@@ -625,7 +666,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.15.1\x1b[0m 📡              \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.15.2\x1b[0m 📡              \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

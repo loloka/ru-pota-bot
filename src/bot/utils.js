@@ -38,8 +38,17 @@ export const replyWithAutoDelete = async (ctx, text, options = {}, delayMs = 700
   }
 };
 
+import db from '../db/database.js';
+
 export const getMainMenu = (ctx) => {
-  if (ctx.state.user && ctx.state.user.status === 'approved') {
+  let user = ctx.state?.user;
+  if (!user && ctx.from?.id) {
+    try {
+      user = db.prepare('SELECT callsign, status FROM users WHERE telegram_id = ?').get(ctx.from.id);
+    } catch (e) {}
+  }
+
+  if (user && user.status === 'approved') {
     return {
       keyboard: [
         [{ text: '📡 Управление спотами' }, { text: '📊 Моя статистика' }],

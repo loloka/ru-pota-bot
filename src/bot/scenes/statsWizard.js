@@ -1,6 +1,6 @@
 import { Scenes } from 'telegraf';
 import { statsHandler } from '../commands/stats.js';
-import { deleteUserMessage, replyWithAutoDelete } from '../utils.js';
+import { deleteUserMessage, replyWithAutoDelete, getMainMenu } from '../utils.js';
 
 export const statsWizard = new Scenes.WizardScene(
   'STATS_WIZARD',
@@ -20,13 +20,13 @@ export const statsWizard = new Scenes.WizardScene(
     const callsign = ctx.message.text.toUpperCase().trim();
 
     if (callsign === '/CANCEL') {
-      await ctx.reply('🚫 Поиск отменен.');
-      return ctx.scene.leave();
+      await ctx.scene.leave();
+      return ctx.reply('🚫 Поиск статистики отменен.', { reply_markup: getMainMenu(ctx) });
     }
     
     if (callsign.startsWith('/') || ctx.message.text.includes('Регистрация') || ctx.message.text.includes('Подписки') || ctx.message.text.includes('Инфо') || ctx.message.text.includes('статистика')) {
       await ctx.scene.leave();
-      await ctx.reply('🚫 Ввод отменен. Пожалуйста, повторите вашу команду.');
+      await ctx.reply('🚫 Ввод отменен. Пожалуйста, повторите вашу команду.', { reply_markup: getMainMenu(ctx) });
       return;
     }
 
@@ -39,6 +39,11 @@ export const statsWizard = new Scenes.WizardScene(
 );
 
 statsWizard.command('cancel', async (ctx) => {
-  await ctx.reply('🚫 Поиск позывного отменен.');
-  return ctx.scene.leave();
+  await ctx.scene.leave();
+  return ctx.reply('🚫 Поиск позывного отменен.', { reply_markup: getMainMenu(ctx) });
+});
+
+statsWizard.hears(/^(отмена|отменить|cancel|\/cancel)$/i, async (ctx) => {
+  await ctx.scene.leave();
+  return ctx.reply('🚫 Поиск позывного отменен.', { reply_markup: getMainMenu(ctx) });
 });

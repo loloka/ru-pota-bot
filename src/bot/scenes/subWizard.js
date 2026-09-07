@@ -133,10 +133,17 @@ export const subWizard = new Scenes.WizardScene(
 );
 
 subWizard.command('cancel', async (ctx) => {
+  await ctx.scene.leave();
   await ctx.reply('🚫 Добавление подписки отменено.');
   const { text, reply_markup } = getSubsKeyboard(ctx.from.id);
-  await ctx.reply(text, { parse_mode: 'HTML', reply_markup });
-  return ctx.scene.leave();
+  return ctx.reply(text, { parse_mode: 'HTML', reply_markup });
+});
+
+subWizard.hears(/^(отмена|отменить|cancel|\/cancel)$/i, async (ctx) => {
+  await ctx.scene.leave();
+  await ctx.reply('🚫 Добавление подписки отменено.');
+  const { text, reply_markup } = getSubsKeyboard(ctx.from.id);
+  return ctx.reply(text, { parse_mode: 'HTML', reply_markup });
 });
 
 subWizard.action('sub_action_back', async (ctx) => {

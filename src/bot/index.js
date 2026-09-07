@@ -69,6 +69,42 @@ else if (process.env.TG_PROXY) {
 
 const bot = new Telegraf(BOT_TOKEN, telegrafOptions);
 
+// Intercept Telegram callApi for resilience:
+// 1. Force getUpdates timeout to 20s (preventing reverse proxy / Cloudflare 30s connection kills)
+// 2. Mark network/socket errors as 'FetchError' so Telegraf's polling loop retries instead of crashing
+const originalCallApi = bot.telegram.callApi.bind(bot.telegram);
+bot.telegram.callApi = async function (method, payload = {}, options) {
+  if (method === 'getUpdates' && payload && typeof payload === 'object') {
+    if (!payload.timeout || payload.timeout > 25) {
+      payload.timeout = 20;
+    }
+  }
+
+  try {
+    return await originalCallApi(method, payload, options);
+  } catch (error) {
+    if (method === 'getUpdates' && error) {
+      const isNetworkError = 
+        error.name === 'TypeError' ||
+        error.code === 'ECONNRESET' ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ECONNREFUSED' ||
+        error.code === 'EAI_AGAIN' ||
+        error.code === 'ENOTFOUND' ||
+        (error.message && (
+          error.message.includes('fetch failed') ||
+          error.message.includes('socket hang up') ||
+          error.message.includes('client network socket disconnected')
+        ));
+
+      if (isNetworkError) {
+        error.name = 'FetchError'; // Let Telegraf internal polling loop retry gracefully!
+      }
+    }
+    throw error;
+  }
+};
+
 // Global middlewares BEFORE scenes
 bot.use(chatFilter);
 bot.use(deleteSystemMessages);
@@ -77,6 +113,19 @@ bot.use(requireRegistration);
 
 // Configure scenes and sessions
 const stage = new Scenes.Stage([spotWizard, callsignWizard, parkWizard, editSpotWizard, subWizard, statsWizard]);
+
+// Global scene escape handlers:
+// If a user in ANY scene enters /start or /cancel, safely exit the scene
+stage.command('cancel', async (ctx) => {
+  await ctx.reply('🚫 Действие отменено.');
+  return ctx.scene.leave();
+});
+
+stage.command('start', async (ctx, next) => {
+  await ctx.scene.leave();
+  return next();
+});
+
 bot.use(session());
 bot.use(rateLimit({ window: 5000, limit: 4 }));
 
@@ -201,8 +250,8 @@ bot.action('sub_toggle_alerts', async (ctx) => {
 });
 
 
-bot.action(/^delete_msg:(\d+)$/, async (ctx) => {
-  const allowedUserId = parseInt(ctx.match[1], 10);
+bot.action(/^delete_msg(?::(\d+))?$/, async (ctx) => {
+  const allowedUserId = ctx.match[1] ? parseInt(ctx.match[1], 10) : null;
   const clickerId = ctx.from?.id;
   const adminId = parseInt(process.env.ADMIN_ID, 10);
   
@@ -214,7 +263,7 @@ bot.action(/^delete_msg:(\d+)$/, async (ctx) => {
     } catch (e) {}
   }
 
-  if (clickerId === allowedUserId || clickerId === adminId || isChatAdmin) {
+  if (!allowedUserId || clickerId === allowedUserId || clickerId === adminId || isChatAdmin) {
     try {
       await ctx.deleteMessage();
     } catch (e) {}
@@ -571,23 +620,50 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.15.0\x1b[0m 📡              \x1b[32m║\x1b[0m
-
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.15.1\x1b[0m 📡              \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);
 
-// Launch bot
-bot.launch({
-  drop_pending_updates: true,
-  polling: {
-    timeout: 20 // Set to 20 seconds to prevent Cloudflare Worker 30s limit kills
+let isShuttingDown = false;
+
+// Resilient polling launcher with supervisor
+async function startBotWithSupervisor() {
+  let retryDelay = 2000;
+  while (!isShuttingDown) {
+    try {
+      console.log('\x1b[36m[Telegram Bot]\x1b[0m 🔄 Подключение к Telegram API (Long Polling)...');
+      await bot.launch(
+        { dropPendingUpdates: true },
+        () => {
+          console.log('\x1b[32m[Telegram Bot]\x1b[0m ✅ Бот успешно подключен к Telegram и принимает команды!');
+          retryDelay = 2000;
+        }
+      );
+
+      if (isShuttingDown) break;
+      console.warn('\x1b[33m[Telegram Bot]\x1b[0m ⚠️ Цикл Long Polling завершился. Перезапуск через 3 сек...');
+      await new Promise(r => setTimeout(r, 3000));
+    } catch (err) {
+      if (isShuttingDown) break;
+
+      console.error('\x1b[31m[Telegram Bot]\x1b[0m ❌ Ошибка Long Polling:', err.message);
+
+      // If token is invalid (401), exit process so PM2 or admin can fix .env
+      if (err.response?.error_code === 401 || err.message?.includes('401')) {
+        console.error('\x1b[31m[Telegram Bot]\x1b[0m 🛑 Фатальная ошибка авторизации (401 Unauthorized). Проверьте BOT_TOKEN!');
+        process.exit(1);
+      }
+
+      console.log(`\x1b[33m[Telegram Bot]\x1b[0m ⏳ Переподключение через ${retryDelay / 1000} сек...`);
+      await new Promise(r => setTimeout(r, retryDelay));
+      retryDelay = Math.min(retryDelay * 1.5, 30000);
+    }
   }
-}).then(() => {
-  console.log('\x1b[32m[Telegram Bot]\x1b[0m ✅ Бот успешно подключен к Telegram и принимает команды!');
-}).catch(err => {
-  console.error('\x1b[31m[Telegram Bot]\x1b[0m ❌ Ошибка запуска бота:', err.message);
-});
+}
+
+// Start bot polling
+startBotWithSupervisor();
 
 // Start the background cluster worker
 startClusterWorker(bot.telegram);
@@ -600,10 +676,12 @@ startAdminServer(bot.telegram);
 
 // Enable graceful stop
 process.once('SIGINT', () => {
+  isShuttingDown = true;
   console.log('\n\x1b[33m[Shutdown]\x1b[0m Остановка бота по сигналу SIGINT...');
-  bot.stop('SIGINT');
+  try { bot.stop('SIGINT'); } catch(e) {}
 });
 process.once('SIGTERM', () => {
+  isShuttingDown = true;
   console.log('\n\x1b[33m[Shutdown]\x1b[0m Остановка бота по сигналу SIGTERM...');
-  bot.stop('SIGTERM');
+  try { bot.stop('SIGTERM'); } catch(e) {}
 });

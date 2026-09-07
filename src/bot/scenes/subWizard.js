@@ -47,11 +47,16 @@ export const subWizard = new Scenes.WizardScene(
     const input = ctx.message?.text?.toUpperCase()?.trim();
     if (!input) return;
 
-    if (input === '/CANCEL') {
-      await ctx.reply('🚫 Добавление подписки отменено.');
+    if (input.startsWith('/')) {
+      await ctx.scene.leave();
+      if (input === '/CANCEL') {
+        await ctx.reply('🚫 Добавление подписки отменено.');
+      } else {
+        await ctx.reply('🚫 Добавление подписки отменено. Пожалуйста, повторите вашу команду.');
+      }
       const { text, reply_markup } = getSubsKeyboard(ctx.from.id);
       await ctx.reply(text, { parse_mode: 'HTML', reply_markup });
-      return ctx.scene.leave();
+      return;
     }
 
     const subType = ctx.scene.state.subType || 'callsign';

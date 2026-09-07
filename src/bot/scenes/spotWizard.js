@@ -53,6 +53,16 @@ export const spotWizard = new Scenes.WizardScene(
     if (!ctx.message?.text) return;
     const raw = ctx.message.text.trim().toUpperCase();
 
+    if (raw.startsWith('/')) {
+      await ctx.scene.leave();
+      if (raw === '/CANCEL') {
+        await ctx.reply('🚫 Оформление спота отменено.', { reply_markup: getMainMenu(ctx) });
+      } else {
+        await ctx.reply('🚫 Оформление спота отменено. Пожалуйста, повторите вашу команду.', { reply_markup: getMainMenu(ctx) });
+      }
+      return;
+    }
+
     let status = null;
     if (['СЕЙЧАС НА СВЯЗИ', 'СЕЙЧАС', 'В ЭФИРЕ', 'ОНЛАЙН', 'ONLINE', 'NOW', '1'].includes(raw) || /^(СЕЙЧАС|ЭФИР|ОНЛАЙН|ONLINE|NOW)/i.test(raw)) {
       status = 'СЕЙЧАС НА СВЯЗИ';

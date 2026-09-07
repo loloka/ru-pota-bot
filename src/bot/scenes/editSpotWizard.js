@@ -45,10 +45,15 @@ export const editSpotWizard = new Scenes.WizardScene(
   },
   async (ctx) => {
     if (!ctx.message?.text) return;
-    const text = ctx.message.text;
-    if (text.toUpperCase() === '/CANCEL') {
-      await ctx.reply('🚫 Редактирование отменено.');
-      return ctx.scene.leave();
+    const text = ctx.message.text.trim();
+    if (text.startsWith('/')) {
+      await ctx.scene.leave();
+      if (text.toUpperCase() === '/CANCEL') {
+        await ctx.reply('🚫 Редактирование отменено.');
+      } else {
+        await ctx.reply('🚫 Редактирование отменено. Пожалуйста, повторите вашу команду.');
+      }
+      return;
     }
 
     const field = ctx.scene.state.field;

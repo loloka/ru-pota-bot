@@ -62,11 +62,21 @@ export const callsignWizard = new Scenes.WizardScene(
   async (ctx) => {
     const text = ctx.message?.text?.toUpperCase();
     if (!text) return;
+
+    if (text.startsWith('/')) {
+      await ctx.scene.leave();
+      if (text === '/CANCEL') {
+        await ctx.reply('🚫 Регистрация отменена. Для начала работы нажмите /start');
+      } else {
+        await ctx.reply('🚫 Регистрация отменена. Пожалуйста, повторите вашу команду.');
+      }
+      return;
+    }
     
     if (!baseCallsignRegex.test(text) || !hasLetterRegex.test(text)) {
       await ctx.reply(
         '❌ <b>Недопустимый формат позывного.</b>\n\n' +
-        'Пожалуйста, введите корректный позывной (например: R9OGL, R9OGL/P).',
+        'Пожалуйста, введите корректный позывной (например: R9OGL, R9OGL/P) или /cancel для отмены.',
         { parse_mode: 'HTML' }
       );
       return; // stay on this step to try again

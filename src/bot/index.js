@@ -64,18 +64,23 @@ if (process.env.TG_API_ROOT) {
 } 
 // 2. SOCKS5 Proxy (VLESS / Tor)
 else if (process.env.TG_PROXY) {
-  telegrafOptions.telegram = { agent: new SocksProxyAgent(process.env.TG_PROXY) };
+  telegrafOptions.telegram = { 
+    agent: new SocksProxyAgent(process.env.TG_PROXY, {
+      keepAlive: true,
+      keepAliveMsecs: 10000
+    }) 
+  };
 }
 
 const bot = new Telegraf(BOT_TOKEN, telegrafOptions);
 
 // Intercept Telegram callApi for resilience:
-// 1. Force getUpdates timeout to 20s (preventing reverse proxy / Cloudflare 30s connection kills)
+// 1. Cap getUpdates timeout to 20s ONLY if using Cloudflare Worker (TG_API_ROOT) to avoid 30s connection kills
 // 2. Mark network/socket errors as 'FetchError' so Telegraf's polling loop retries instead of crashing
 const originalCallApi = bot.telegram.callApi.bind(bot.telegram);
 bot.telegram.callApi = async function (method, payload = {}, options) {
   if (method === 'getUpdates' && payload && typeof payload === 'object') {
-    if (!payload.timeout || payload.timeout > 25) {
+    if (process.env.TG_API_ROOT && (!payload.timeout || payload.timeout > 25)) {
       payload.timeout = 20;
     }
   }

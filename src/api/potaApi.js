@@ -1,17 +1,26 @@
 import axios from 'axios';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const BASE_URL = process.env.POTA_API_BASE_URL || 'https://api.pota.app';
 
-const apiClient = axios.create({
+const axiosConfig = {
   baseURL: BASE_URL,
   timeout: 25000,
   headers: {
     'User-Agent': 'RU-POTA-Bot/1.15.1 (Telegram Bot; Node.js)'
   }
-});
+};
+
+if (process.env.TG_PROXY) {
+  const agent = new SocksProxyAgent(process.env.TG_PROXY, { keepAlive: true, keepAliveMsecs: 10000 });
+  axiosConfig.httpAgent = agent;
+  axiosConfig.httpsAgent = agent;
+}
+
+const apiClient = axios.create(axiosConfig);
 
 export const potaApi = {
   /**

@@ -228,13 +228,8 @@ export const startClusterWorker = (telegramClient) => {
           } catch (pinErr) {}
 
           if (!isQrt) {
-            // Pin spot silently in channel and schedule auto-unpin after configured minutes
-            try {
-              await telegramClient.pinChatMessage(channelId, msgId, { disable_notification: true });
-              // Delete Telegram's "pinned a message" service message immediately
-              try { await telegramClient.deleteMessage(channelId, msgId + 1); } catch (delServiceErr) {}
-            } catch (pinErr) {}
-            pinManager.scheduleSpotUnpin(telegramClient, channelId, msgId, undefined, msgId);
+            // Pin spot silently in channel, schedule auto-unpin, and clean up Telegram's pin service message
+            await pinManager.pinSpotInChannel(telegramClient, channelId, msgId);
           }
         } catch (e) {
           console.error(`\x1b[31m[Broadcast Error]\x1b[0m Не удалось отправить спот в канал:`, e.message);

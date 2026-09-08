@@ -132,12 +132,8 @@ export const editSpotWizard = new Scenes.WizardScene(
       const sentMsg = await ctx.telegram.sendMessage(channelId, formattedSpot, { parse_mode: 'HTML', disable_web_page_preview: true });
       const newMsgId = sentMsg.message_id;
 
-      // 3. Pin new spot silently and schedule auto-unpin
-      try {
-        await ctx.telegram.pinChatMessage(channelId, newMsgId, { disable_notification: true });
-        try { await ctx.telegram.deleteMessage(channelId, newMsgId + 1); } catch (delErr) {}
-      } catch (pinErr) {}
-      pinManager.scheduleSpotUnpin(ctx.telegram, channelId, newMsgId, undefined, newMsgId);
+      // 3. Pin new spot silently, schedule auto-unpin, and clean up Telegram's pin service message
+      await pinManager.pinSpotInChannel(ctx.telegram, channelId, newMsgId);
 
       // 4. Normalize frequency data in s for 100% TMA & POTA compatibility
       const freqNumber = String(s.freq).replace(/[^0-9.]/g, '');

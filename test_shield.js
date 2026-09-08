@@ -215,6 +215,24 @@ await pinManager.unpinSpotNow(mockTelegramClient, '-1003954691719', 301);
 assert(unpinnedCalls.some(c => c.chatId === '-1004485477242' && c.messageId === 302), 'Unpins linked forwarded spot in group when channel spot unpins');
 assert(deletedCalls.some(c => c.chatId === '-1004485477242' && c.messageId === 302), 'Deletes linked forwarded spot in group when channel spot unpins');
 
+// Test cleanupChannelServiceMessages: NEVER send dummy messages to channel
+let sentMessagesCount = 0;
+const mockChannelClient = {
+  sendMessage: async (chatId, text) => {
+    sentMessagesCount++;
+    return { message_id: 999 };
+  },
+  getChat: async () => ({ pinned_message: { message_id: 301 } }),
+  deleteMessage: async (chatId, messageId) => {
+    deletedCalls.push({ chatId: String(chatId), messageId: Number(messageId) });
+  },
+  unpinChatMessage: async () => {},
+  unpinAllChatMessages: async () => {}
+};
+
+await pinManager.cleanupChannelServiceMessages(mockChannelClient);
+assert(sentMessagesCount === 0, 'cleanupChannelServiceMessages NEVER sends dummy probe messages (no broom emoji in channel)');
+
 // Restore env
 if (originalChannelId) {
   process.env.ACTIVITY_CHANNEL_ID = originalChannelId;

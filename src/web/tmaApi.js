@@ -991,12 +991,8 @@ export function createTmaRouter(telegramClient) {
           });
           channelMsgId = sent.message_id;
 
-          // Pin spot silently in channel and schedule auto-unpin after 30 minutes
-          try {
-            await telegramClient.pinChatMessage(channelId, channelMsgId, { disable_notification: true });
-            try { await telegramClient.deleteMessage(channelId, channelMsgId + 1); } catch (delErr) {}
-          } catch (pinErr) {}
-          pinManager.scheduleSpotUnpin(telegramClient, channelId, channelMsgId, undefined, channelMsgId);
+          // Pin spot silently in channel, schedule auto-unpin, and clean up Telegram's pin service message
+          await pinManager.pinSpotInChannel(telegramClient, channelId, channelMsgId);
 
           // Update msg_id in spots table
           db.prepare('UPDATE spots SET msg_id = ? WHERE id = ?').run(channelMsgId, insertResult.lastInsertRowid);

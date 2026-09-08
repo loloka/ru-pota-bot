@@ -233,6 +233,22 @@ const mockChannelClient = {
 await pinManager.cleanupChannelServiceMessages(mockChannelClient);
 assert(sentMessagesCount === 0, 'cleanupChannelServiceMessages NEVER sends dummy probe messages (no broom emoji in channel)');
 
+// Test permanent pin (msg 25) protection and restore
+const { getPermanentChannelPinId } = await import('./src/services/pinManager.js');
+assert(getPermanentChannelPinId() === 25, 'getPermanentChannelPinId resolves permanent post 25 for activity channel');
+
+const pinnedCalls = [];
+const mockRestoreClient = {
+  getChat: async () => ({ pinned_message: null }), // nothing pinned currently!
+  pinChatMessage: async (chatId, messageId) => {
+    pinnedCalls.push({ chatId: String(chatId), messageId: Number(messageId) });
+  },
+  deleteMessage: async () => {}
+};
+
+await pinManager.ensurePermanentChannelPin(mockRestoreClient);
+assert(pinnedCalls.some(c => c.chatId === '-1003954691719' && c.messageId === 25), 'ensurePermanentChannelPin automatically restores permanent post 25 when unpinned');
+
 // Restore env
 if (originalChannelId) {
   process.env.ACTIVITY_CHANNEL_ID = originalChannelId;

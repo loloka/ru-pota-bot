@@ -38,6 +38,22 @@ export function isChannelChat(chatOrId) {
   return idClean === channelClean || String(chatOrId) === String(rawChannel);
 }
 
+/**
+ * Get configured or default permanent pinned message ID for the activity channel (e.g. msg 25)
+ * @returns {number|null}
+ */
+export function getPermanentChannelPinId() {
+  if (process.env.ACTIVITY_CHANNEL_PINNED_MSG_ID) {
+    const val = parseInt(process.env.ACTIVITY_CHANNEL_PINNED_MSG_ID, 10);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  const rawChannel = String(process.env.ACTIVITY_CHANNEL_ID || '').toLowerCase();
+  if (rawChannel.includes('pota_activity') || rawChannel.includes('3954691719')) {
+    return 25;
+  }
+  return 25; // Default fallback to message 25 for activity channel
+}
+
 export const pinManager = {
   /**
    * Schedule a spot message to be unpinned after delayMs
@@ -199,29 +215,8 @@ export const pinManager = {
           }
         }
 
-        // Check if activity channel has no active spots remaining, and clear pin header if any old pins linger
-        const rawChannel = process.env.ACTIVITY_CHANNEL_ID;
-        if (rawChannel) {
-          let chId = rawChannel;
-          if (chId && !chId.startsWith('-100') && !chId.startsWith('@') && /^[0-9-]+$/.test(chId)) {
-            chId = chId.startsWith('-') ? `-100${chId.substring(1)}` : `-100${chId}`;
-          }
-          const activeChannelPins = db.prepare(`
-            SELECT COUNT(*) as count 
-            FROM pinned_spots 
-            WHERE (chat_id = ? OR chat_id = ?) AND status = 'pinned'
-          `).get(String(chId), String(rawChannel))?.count || 0;
-
-          if (activeChannelPins === 0) {
-            try {
-              const chat = await telegramClient.getChat(chId);
-              if (chat.pinned_message) {
-                await telegramClient.unpinAllChatMessages(chId);
-                console.log(`\x1b[35m[Pin Manager]\x1b[0m 📍 Сняты все истекшие закрепы в шапке канала ${chId}`);
-              }
-            } catch (e) {}
-          }
-        }
+        // Ensure permanent welcome/navigation message (e.g. msg 25) remains pinned in activity channel
+        await pinManager.ensurePermanentChannelPin(telegramClient);
       } catch (err) {
         console.error('[Pin Manager] ❌ Ошибка в цикле проверки:', err.message);
       }
@@ -269,9 +264,49 @@ export const pinManager = {
   },
 
   /**
+   * Ensure permanent welcome/navigation message (e.g. msg 25) remains pinned in the activity channel
+   * @param {Object} telegramClient 
+   */
+  async ensurePermanentChannelPin(telegramClient) {
+    const rawChannel = process.env.ACTIVITY_CHANNEL_ID;
+    if (!rawChannel || !telegramClient) return;
+
+    let channelId = rawChannel;
+    if (channelId && !channelId.startsWith('-100') && !channelId.startsWith('@') && /^[0-9-]+$/.test(channelId)) {
+      channelId = channelId.startsWith('-') ? `-100${channelId.substring(1)}` : `-100${channelId}`;
+    } else if (channelId && channelId.includes('t.me/')) {
+      channelId = `@${channelId.split('t.me/')[1].replace('/', '')}`;
+    }
+
+    const permanentPinId = getPermanentChannelPinId();
+    if (!permanentPinId) return;
+
+    try {
+      const chat = await telegramClient.getChat(channelId);
+      // Check if permanentPinId is currently pinned
+      const activePinsCount = db.prepare(`
+        SELECT COUNT(*) as count 
+        FROM pinned_spots 
+        WHERE (chat_id = ? OR chat_id = ?) AND status = 'pinned'
+      `).get(String(channelId), String(rawChannel))?.count || 0;
+
+      // If nothing is pinned, or if no spots are active and current pinned message is not permanentPinId:
+      if (!chat?.pinned_message || (activePinsCount === 0 && chat.pinned_message.message_id !== permanentPinId)) {
+        await telegramClient.pinChatMessage(channelId, permanentPinId, { disable_notification: true });
+        console.log(`\x1b[35m[Pin Manager]\x1b[0m 📌 Закреплен постоянный пост канала: msg ${permanentPinId}`);
+        setTimeout(async () => {
+          try { await telegramClient.deleteMessage(channelId, permanentPinId + 1); } catch (e) {}
+        }, 600);
+      }
+    } catch (e) {
+      // Ignored if bot lacks permission or post not found
+    }
+  },
+
+  /**
    * Clean up all Telegram service messages ("pinned a message", "pinned a deleted message")
    * and stale pins from the activity channel.
-   * Guarantees all valid spot posts remain untouched.
+   * Guarantees all valid spot posts and permanent pinned post remain untouched.
    * NEVER sends visible probe messages to the channel.
    * @param {Object} telegramClient 
    * @returns {Promise<{ deletedCount: number, unpinnedCount: number }>}
@@ -308,11 +343,14 @@ export const pinManager = {
         }
       } catch (e) {}
 
+      const permanentPinId = getPermanentChannelPinId();
+
       const maxKnownId = Math.max(
         Number(maxSpotRow?.max_id || 0),
         Number(maxPinRow?.max_id || 0),
         Number(maxChanPinRow?.max_id || 0),
-        currentPinnedId || 0
+        currentPinnedId || 0,
+        permanentPinId || 0
       );
 
       if (maxKnownId > 0) {
@@ -326,6 +364,8 @@ export const pinManager = {
         for (let id = startId; id <= endId; id++) {
           // NEVER touch valid spots!
           if (realSpotIds.has(id)) continue;
+          // NEVER touch permanent channel post (e.g. msg 25)!
+          if (permanentPinId && id === permanentPinId) continue;
           // NEVER touch active pinned welcome post if set
           if (currentPinnedId && id === currentPinnedId) continue;
 
@@ -365,19 +405,8 @@ export const pinManager = {
         db.prepare("UPDATE pinned_spots SET status = 'unpinned' WHERE id = ?").run(pin.id);
       }
 
-      // If no active spots remain in pinned_spots for channel, clear all lingering pins in channel header
-      const activePinsCount = db.prepare(`
-        SELECT COUNT(*) as count 
-        FROM pinned_spots 
-        WHERE (chat_id = ? OR chat_id = ?) AND status = 'pinned'
-      `).get(String(channelId), String(rawChannel))?.count || 0;
-
-      if (activePinsCount === 0) {
-        try {
-          await telegramClient.unpinAllChatMessages(channelId);
-          console.log(`\x1b[35m[Pin Manager]\x1b[0m 📍 Все старые закрепы в канале ${channelId} полностью сняты`);
-        } catch (e) {}
-      }
+      // 4. Ensure permanent channel post remains pinned in the channel header
+      await this.ensurePermanentChannelPin(telegramClient);
 
     } catch (err) {
       console.warn('[Pin Manager] ⚠️ Ошибка при очистке канала:', err.message);

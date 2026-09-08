@@ -490,6 +490,44 @@ bot.command('cleanchannel', async (ctx) => {
   }
 });
 
+// Admin-only command to pin or re-pin a permanent message in the activity channel
+bot.command('pinchannel', async (ctx) => {
+  const adminId = process.env.ADMIN_ID;
+  if (!ctx.from || ctx.from.id.toString() !== adminId) {
+    return ctx.reply('⛔ Команда доступна только администратору бота.');
+  }
+
+  const rawChannel = process.env.ACTIVITY_CHANNEL_ID;
+  if (!rawChannel) {
+    return ctx.reply('❌ ACTIVITY_CHANNEL_ID не настроен в конфигурации.');
+  }
+
+  let channelId = rawChannel;
+  if (channelId && !channelId.startsWith('-100') && !channelId.startsWith('@') && /^[0-9-]+$/.test(channelId)) {
+    channelId = channelId.startsWith('-') ? `-100${channelId.substring(1)}` : `-100${channelId}`;
+  } else if (channelId && channelId.includes('t.me/')) {
+    channelId = `@${channelId.split('t.me/')[1].replace('/', '')}`;
+  }
+
+  const args = ctx.message.text.split(' ').filter(Boolean);
+  let targetMsgId = 25;
+  if (args.length >= 2) {
+    const parsed = parseInt(args[1].replace(/.*\/([0-9]+)$/, '$1'), 10);
+    if (!isNaN(parsed) && parsed > 0) targetMsgId = parsed;
+  }
+
+  try {
+    await ctx.telegram.pinChatMessage(channelId, targetMsgId, { disable_notification: true });
+    // Remove service message
+    setTimeout(async () => {
+      try { await ctx.telegram.deleteMessage(channelId, targetMsgId + 1); } catch (e) {}
+    }, 600);
+    await ctx.reply(`📌 Сообщение <b>#${targetMsgId}</b> успешно закреплено в канале <code>${channelId}</code>!`, { parse_mode: 'HTML' });
+  } catch (err) {
+    await ctx.reply(`❌ Ошибка закрепления в канале: ${err.message}`);
+  }
+});
+
 bot.command('park', (ctx) => {
   const args = ctx.message.text.split(' ');
   if (args.length > 1) {
@@ -744,7 +782,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.15.6\x1b[0m 📡              \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.15.7\x1b[0m 📡              \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

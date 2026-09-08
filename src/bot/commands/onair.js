@@ -367,7 +367,7 @@ export async function fetchAndFormatOnAir(requestedMode = 'mix', userId = '') {
     const inline_keyboard = [
       filterBtn,
       ...(filterSummary && processedRu.length === 0 ? [[{ text: '🧹 Сбросить фильтр', callback_data: `onair_flt:reset_to_list:${activeMode}:${userId}` }]] : []),
-      [{ text: '🌐 Наш регион + МИР', callback_data: `onair_view:mix:${userId}` }],
+      [{ text: '🌍 Весь мир', callback_data: `onair_view:mix:${userId}` }],
       refreshBtn,
       deleteBtn
     ];
@@ -613,7 +613,7 @@ export const onairActionHandler = async (ctx) => {
     if (actionCategory === 'refresh') {
       await safeAnswer('🔄 Список обновлен');
     } else {
-      await safeAnswer(mode === 'ru' ? '🌲 Наш регион и соседи' : '🌐 Наш регион + МИР');
+      await safeAnswer(mode === 'ru' ? '🌲 Только наш регион и соседи' : '🌍 Весь мир');
     }
   } catch (err) {
     if (err.description?.includes('message is not modified')) {

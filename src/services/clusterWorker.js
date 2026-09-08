@@ -213,24 +213,26 @@ export const startClusterWorker = (telegramClient) => {
           msgId = sentMsg.message_id;
           console.log(`\x1b[34m[Broadcast]\x1b[0m 📢 Спот ${spot.activator} опубликован в канал`);
 
-          if (isQrt) {
-            // Activator went QRT: do NOT pin, unpin earlier pinned spot for this station
-            try {
-              const prevPinned = db.prepare(`
-                SELECT p.message_id 
-                FROM pinned_spots p
-                JOIN spots s ON s.msg_id = p.message_id
-                WHERE p.chat_id = ? AND p.status = 'pinned' AND (s.callsign = ? OR s.callsign = ? OR s.callsign LIKE ?)
-              `).all(String(channelId), rawActivator, callKey, `${callKey}/%`);
+          // Unpin earlier pinned spots for this station in channel so pins don't stack up
+          try {
+            const prevPinned = db.prepare(`
+              SELECT p.message_id 
+              FROM pinned_spots p
+              JOIN spots s ON s.msg_id = p.message_id
+              WHERE p.chat_id = ? AND p.status = 'pinned' AND (s.callsign = ? OR s.callsign = ? OR s.callsign LIKE ?)
+            `).all(String(channelId), rawActivator, callKey, `${callKey}/%`);
 
-              for (const row of prevPinned) {
-                await pinManager.unpinSpotNow(telegramClient, channelId, row.message_id);
-              }
-            } catch (pinErr) {}
-          } else {
+            for (const row of prevPinned) {
+              await pinManager.unpinSpotNow(telegramClient, channelId, row.message_id);
+            }
+          } catch (pinErr) {}
+
+          if (!isQrt) {
             // Pin spot silently in channel and schedule auto-unpin after configured minutes
             try {
               await telegramClient.pinChatMessage(channelId, msgId, { disable_notification: true });
+              // Delete Telegram's "pinned a message" service message immediately
+              try { await telegramClient.deleteMessage(channelId, msgId + 1); } catch (delServiceErr) {}
             } catch (pinErr) {}
             pinManager.scheduleSpotUnpin(telegramClient, channelId, msgId, undefined, msgId);
           }

@@ -135,6 +135,7 @@ export const editSpotWizard = new Scenes.WizardScene(
       // 3. Pin new spot silently and schedule auto-unpin
       try {
         await ctx.telegram.pinChatMessage(channelId, newMsgId, { disable_notification: true });
+        try { await ctx.telegram.deleteMessage(channelId, newMsgId + 1); } catch (delErr) {}
       } catch (pinErr) {}
       pinManager.scheduleSpotUnpin(ctx.telegram, channelId, newMsgId, undefined, newMsgId);
 

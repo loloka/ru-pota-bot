@@ -198,6 +198,30 @@ export const pinManager = {
             } catch (linkedErr) {}
           }
         }
+
+        // Check if activity channel has no active spots remaining, and clear pin header if any old pins linger
+        const rawChannel = process.env.ACTIVITY_CHANNEL_ID;
+        if (rawChannel) {
+          let chId = rawChannel;
+          if (chId && !chId.startsWith('-100') && !chId.startsWith('@') && /^[0-9-]+$/.test(chId)) {
+            chId = chId.startsWith('-') ? `-100${chId.substring(1)}` : `-100${chId}`;
+          }
+          const activeChannelPins = db.prepare(`
+            SELECT COUNT(*) as count 
+            FROM pinned_spots 
+            WHERE (chat_id = ? OR chat_id = ?) AND status = 'pinned'
+          `).get(String(chId), String(rawChannel))?.count || 0;
+
+          if (activeChannelPins === 0) {
+            try {
+              const chat = await telegramClient.getChat(chId);
+              if (chat.pinned_message) {
+                await telegramClient.unpinAllChatMessages(chId);
+                console.log(`\x1b[35m[Pin Manager]\x1b[0m 📍 Сняты все истекшие закрепы в шапке канала ${chId}`);
+              }
+            } catch (e) {}
+          }
+        }
       } catch (err) {
         console.error('[Pin Manager] ❌ Ошибка в цикле проверки:', err.message);
       }
@@ -206,5 +230,112 @@ export const pinManager = {
     // Run first check right away, then interval
     checkAndUnpin().catch(() => {});
     return setInterval(checkAndUnpin, checkIntervalMs);
+  },
+
+  /**
+   * Clean up all Telegram service messages ("pinned a message", "pinned a deleted message")
+   * and stale pins from the activity channel.
+   * Guarantees all valid spot posts remain untouched.
+   * @param {Object} telegramClient 
+   * @returns {Promise<{ deletedCount: number, unpinnedCount: number }>}
+   */
+  async cleanupChannelServiceMessages(telegramClient) {
+    const rawChannel = process.env.ACTIVITY_CHANNEL_ID;
+    if (!rawChannel || !telegramClient) return { deletedCount: 0, unpinnedCount: 0 };
+
+    let channelId = rawChannel;
+    if (channelId && !channelId.startsWith('-100') && !channelId.startsWith('@') && /^[0-9-]+$/.test(channelId)) {
+      channelId = channelId.startsWith('-') ? `-100${channelId.substring(1)}` : `-100${channelId}`;
+    } else if (channelId && channelId.includes('t.me/')) {
+      channelId = `@${channelId.split('t.me/')[1].replace('/', '')}`;
+    }
+
+    let deletedCount = 0;
+    let unpinnedCount = 0;
+
+    try {
+      // 1. Get all known valid spot msg_ids from SQLite to guarantee we NEVER touch real spots
+      const realSpotRows = db.prepare("SELECT msg_id FROM spots WHERE msg_id IS NOT NULL").all();
+      const realSpotIds = new Set(realSpotRows.map(r => Number(r.msg_id)));
+
+      // Also get currently pinned message from Telegram chat to protect welcome posts if any
+      let currentPinnedId = null;
+      try {
+        const chat = await telegramClient.getChat(channelId);
+        if (chat.pinned_message?.message_id) {
+          currentPinnedId = Number(chat.pinned_message.message_id);
+        }
+      } catch (e) {}
+
+      // 2. Find max message_id by sending a temporary message and deleting it
+      let maxId = 0;
+      try {
+        const pingMsg = await telegramClient.sendMessage(channelId, '🧹', { disable_notification: true });
+        maxId = Number(pingMsg.message_id);
+        await telegramClient.deleteMessage(channelId, maxId);
+      } catch (e) {
+        const maxKnown = Math.max(0, ...realSpotIds);
+        maxId = maxKnown > 0 ? maxKnown + 15 : 0;
+      }
+
+      if (maxId > 0) {
+        // Scan backwards up to 300 messages or down to ID 1
+        const startId = Math.max(1, maxId - 300);
+        console.log(`\x1b[35m[Pin Manager]\x1b[0m 🧹 Запущена очистка сервисных сообщений в канале ${channelId} (диапазон msg ${startId}..${maxId})...`);
+
+        for (let id = startId; id < maxId; id++) {
+          // NEVER touch valid spots!
+          if (realSpotIds.has(id)) continue;
+          // NEVER touch active pinned welcome post if set
+          if (currentPinnedId && id === currentPinnedId) continue;
+
+          try {
+            await telegramClient.deleteMessage(channelId, id);
+            deletedCount++;
+            console.log(`\x1b[35m[Pin Manager]\x1b[0m 🗑️ Удалено сервисное сообщение в канале: msg ${id}`);
+            // Polite pause to stay well below Telegram rate limits
+            await new Promise(r => setTimeout(r, 40));
+          } catch (delErr) {
+            // Message does not exist or already deleted
+          }
+        }
+        console.log(`\x1b[35m[Pin Manager]\x1b[0m ✅ Очистка канала завершена: удалено ${deletedCount} сервисных сообщений`);
+      }
+
+      // 3. Unpin expired spots in channel (> 30 min)
+      const now = Date.now();
+      const expiredPins = db.prepare(`
+        SELECT id, message_id 
+        FROM pinned_spots 
+        WHERE (chat_id = ? OR chat_id = ?) AND status = 'pinned' AND unpin_at <= ?
+      `).all(String(channelId), String(rawChannel), now);
+
+      for (const pin of expiredPins) {
+        try {
+          await telegramClient.unpinChatMessage(channelId, pin.message_id);
+          unpinnedCount++;
+        } catch (e) {}
+        db.prepare("UPDATE pinned_spots SET status = 'unpinned' WHERE id = ?").run(pin.id);
+      }
+
+      // If no active spots remain in pinned_spots for channel, clear all lingering pins in channel header
+      const activePinsCount = db.prepare(`
+        SELECT COUNT(*) as count 
+        FROM pinned_spots 
+        WHERE (chat_id = ? OR chat_id = ?) AND status = 'pinned'
+      `).get(String(channelId), String(rawChannel))?.count || 0;
+
+      if (activePinsCount === 0) {
+        try {
+          await telegramClient.unpinAllChatMessages(channelId);
+          console.log(`\x1b[35m[Pin Manager]\x1b[0m 📍 Все старые закрепы в канале ${channelId} полностью сняты`);
+        } catch (e) {}
+      }
+
+    } catch (err) {
+      console.warn('[Pin Manager] ⚠️ Ошибка при очистке канала:', err.message);
+    }
+
+    return { deletedCount, unpinnedCount };
   }
 };

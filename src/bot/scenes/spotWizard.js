@@ -281,6 +281,7 @@ export const spotWizard = new Scenes.WizardScene(
       // Pin spot silently in channel and schedule auto-unpin after 30 minutes
       try {
         await ctx.telegram.pinChatMessage(channelId, msg.message_id, { disable_notification: true });
+        try { await ctx.telegram.deleteMessage(channelId, msg.message_id + 1); } catch (delErr) {}
       } catch (pinErr) {}
       pinManager.scheduleSpotUnpin(ctx.telegram, channelId, msg.message_id, undefined, msg.message_id);
 

@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
+import { pinManager } from '../services/pinManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1193,7 +1194,17 @@ export const startAdminServer = (telegramClient) => {
             channelId = `@${channelId.split('t.me/')[1].replace('/', '')}`;
           }
           try {
+            // Unpin first before deleting so Telegram doesn't leave "pinned a deleted message"
+            try {
+              await pinManager.unpinSpotNow(telegramClient, channelId, spot.msg_id);
+            } catch (unpinErr) {}
+
             await telegramClient.deleteMessage(channelId, spot.msg_id);
+            // Also delete Telegram's pin service message if lingering
+            try {
+              await telegramClient.deleteMessage(channelId, spot.msg_id + 1);
+            } catch (delServErr) {}
+
             console.log(`[Admin] Удалено сообщение ${spot.msg_id} из канала ${channelId}`);
           } catch (e) {
             console.warn(`[Admin] Не удалось удалить сообщение ${spot.msg_id} из канала: ${e.message}`);

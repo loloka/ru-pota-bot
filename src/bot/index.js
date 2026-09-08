@@ -376,15 +376,25 @@ bot.command('spot', async (ctx) => {
 bot.on('new_chat_members', handleNewChatMembers);
 bot.on('left_chat_member', handleLeftChatMember);
 
+// Clean up Telegram service messages "[User/Channel] pinned a message" in both groups AND channels
+bot.use(async (ctx, next) => {
+  const serviceMsg = ctx.message?.pinned_message 
+    ? ctx.message 
+    : (ctx.channelPost?.pinned_message ? ctx.channelPost : null);
+
+  if (serviceMsg) {
+    try {
+      await ctx.deleteMessage();
+      console.log(`\x1b[35m[Pin Manager]\x1b[0m 🧹 Удалено сервисное сообщение о закрепе (чат ${ctx.chat?.id}, msg ${serviceMsg.message_id})`);
+    } catch (e) {}
+  }
+  return next();
+});
+
 // Automatic Spot Pinning & Timed Unpinning in Connected Discussion Group
 bot.on('pinned_message', async (ctx) => {
   const pinned = ctx.message?.pinned_message;
   if (!pinned) return;
-
-  // Clean up the Telegram service message "[User/Channel] pinned a message" to keep chat clean
-  try {
-    await ctx.deleteMessage();
-  } catch (e) {}
 
   // Check if pinned message is a spot or forwarded from the activity channel
   const isFromChannel = pinned.is_automatic_forward ||
@@ -453,6 +463,30 @@ bot.command('editwelcome', async (ctx) => {
   } catch (err) {
     console.error('Failed to edit welcome post via bot command:', err);
     await ctx.reply(`❌ Ошибка обновления: ${err.message}`);
+  }
+});
+
+// Admin-only command to clean channel service messages and expired pins
+bot.command('cleanchannel', async (ctx) => {
+  const adminId = process.env.ADMIN_ID;
+  if (!ctx.from || ctx.from.id.toString() !== adminId) {
+    return ctx.reply('⛔ Команда доступна только администратору бота.');
+  }
+
+  const statusMsg = await ctx.reply('🧹 Запущена очистка сервисных сообщений и старых закрепов в канале активности...');
+  try {
+    const res = await pinManager.cleanupChannelServiceMessages(ctx.telegram);
+    await ctx.telegram.editMessageText(
+      ctx.chat.id, 
+      statusMsg.message_id, 
+      undefined, 
+      `✅ <b>Очистка канала активности завершена!</b>\n\n` +
+      `🗑️ Удалено сервисных сообщений: <b>${res.deletedCount}</b>\n` +
+      `📍 Снято устаревших закрепов: <b>${res.unpinnedCount}</b>`,
+      { parse_mode: 'HTML' }
+    );
+  } catch (err) {
+    await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, `❌ Ошибка очистки: ${err.message}`);
   }
 });
 
@@ -710,7 +744,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.15.4\x1b[0m 📡              \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.15.5\x1b[0m 📡              \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);
@@ -760,6 +794,11 @@ startClusterWorker(bot.telegram);
 
 // Start the spot auto-unpin worker (checks every 30s)
 pinManager.startPinWorker(bot.telegram);
+
+// Automatically clean up any lingering service messages or stale pins in channel on startup
+pinManager.cleanupChannelServiceMessages(bot.telegram).catch(err => {
+  console.warn('[Pin Manager] Ошибка фоновой очистки канала при старте:', err.message);
+});
 
 // Start the admin web panel
 startAdminServer(bot.telegram);

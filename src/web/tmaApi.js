@@ -994,6 +994,7 @@ export function createTmaRouter(telegramClient) {
           // Pin spot silently in channel and schedule auto-unpin after 30 minutes
           try {
             await telegramClient.pinChatMessage(channelId, channelMsgId, { disable_notification: true });
+            try { await telegramClient.deleteMessage(channelId, channelMsgId + 1); } catch (delErr) {}
           } catch (pinErr) {}
           pinManager.scheduleSpotUnpin(telegramClient, channelId, channelMsgId, undefined, channelMsgId);
 

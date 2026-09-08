@@ -852,10 +852,8 @@ startClusterWorker(bot.telegram);
 // Start the spot auto-unpin worker (checks every 30s)
 pinManager.startPinWorker(bot.telegram);
 
-// Automatically clean up any lingering service messages or stale pins in channel on startup
-pinManager.cleanupChannelServiceMessages(bot.telegram).catch(err => {
-  console.warn('[Pin Manager] Ошибка фоновой очистки канала при старте:', err.message);
-});
+// Ensure permanent welcome/navigation message (msg 25) is pinned in channel on startup
+pinManager.ensurePermanentChannelPin(bot.telegram).catch(() => {});
 
 // Start the admin web panel
 startAdminServer(bot.telegram);

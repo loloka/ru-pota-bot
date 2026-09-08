@@ -214,9 +214,6 @@ export const pinManager = {
             } catch (linkedErr) {}
           }
         }
-
-        // Ensure permanent welcome/navigation message (e.g. msg 25) remains pinned in activity channel
-        await pinManager.ensurePermanentChannelPin(telegramClient);
       } catch (err) {
         console.error('[Pin Manager] ❌ Ошибка в цикле проверки:', err.message);
       }

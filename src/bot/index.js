@@ -473,9 +473,16 @@ bot.command('cleanchannel', async (ctx) => {
     return ctx.reply('⛔ Команда доступна только администратору бота.');
   }
 
+  const args = ctx.message.text.split(' ').filter(Boolean);
+  let maxOverride = 0;
+  if (args.length >= 2) {
+    const parsed = parseInt(args[1], 10);
+    if (!isNaN(parsed) && parsed > 0) maxOverride = parsed;
+  }
+
   const statusMsg = await ctx.reply('🧹 Запущена очистка сервисных сообщений и старых закрепов в канале активности...');
   try {
-    const res = await pinManager.cleanupChannelServiceMessages(ctx.telegram);
+    const res = await pinManager.cleanupChannelServiceMessages(ctx.telegram, maxOverride);
     await ctx.telegram.editMessageText(
       ctx.chat.id, 
       statusMsg.message_id, 

@@ -314,7 +314,7 @@ export const pinManager = {
    * @param {Object} telegramClient 
    * @returns {Promise<{ deletedCount: number, unpinnedCount: number }>}
    */
-  async cleanupChannelServiceMessages(telegramClient) {
+  async cleanupChannelServiceMessages(telegramClient, maxOverride = 0) {
     const rawChannel = process.env.ACTIVITY_CHANNEL_ID;
     if (!rawChannel || !telegramClient) return { deletedCount: 0, unpinnedCount: 0 };
 
@@ -333,7 +333,7 @@ export const pinManager = {
       const realSpotRows = db.prepare("SELECT msg_id FROM spots WHERE msg_id IS NOT NULL").all();
       const realSpotIds = new Set(realSpotRows.map(r => Number(r.msg_id)));
 
-      // 2. Determine highest known message ID from DB and chat metadata (WITHOUT sending any dummy probe messages!)
+      // 2. Determine highest known message ID from DB, web preview, and chat metadata
       const maxSpotRow = db.prepare("SELECT MAX(msg_id) as max_id FROM spots WHERE msg_id IS NOT NULL").get();
       const maxPinRow = db.prepare("SELECT MAX(message_id) as max_id FROM pinned_spots").get();
       const maxChanPinRow = db.prepare("SELECT MAX(channel_msg_id) as max_id FROM pinned_spots").get();
@@ -349,20 +349,46 @@ export const pinManager = {
 
       const permanentPinId = getPermanentChannelPinId();
 
+      // Read public web preview of the channel to obtain real current message ID without sending any messages
+      let webMaxId = 0;
+      try {
+        const cleanUser = String(rawChannel)
+          .replace(/^@/, '')
+          .replace(/.*t\.me\//, '')
+          .replace(/^-100/, '')
+          .trim();
+        if (/^[a-zA-Z][a-zA-Z0-9_]{3,}$/.test(cleanUser)) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 3000);
+          const res = await fetch(`https://t.me/s/${cleanUser}`, { signal: controller.signal });
+          clearTimeout(timer);
+          if (res.ok) {
+            const html = await res.text();
+            const match = html.match(/before=(\d+)/);
+            if (match) {
+              webMaxId = parseInt(match[1], 10);
+            }
+          }
+        }
+      } catch (e) {}
+
       const maxKnownId = Math.max(
+        Number(maxOverride || 0),
         Number(maxSpotRow?.max_id || 0),
         Number(maxPinRow?.max_id || 0),
         Number(maxChanPinRow?.max_id || 0),
         Number(maxUserSpotRow?.max_id || 0),
         currentPinnedId || 0,
-        permanentPinId || 0
+        permanentPinId || 0,
+        webMaxId,
+        200 // Always scan at least up to message 200 so channel service messages are never missed!
       );
 
       if (maxKnownId > 0) {
-        // Scan backwards up to 300 messages, AND forward up to 50 messages past maxKnownId
+        // Scan backwards up to 300 messages, AND forward up to 30 messages past maxKnownId
         // (to clean any lingering service messages like "POTA activity закрепил(а)...")
         const startId = Math.max(1, maxKnownId - 300);
-        const endId = maxKnownId + 50;
+        const endId = maxKnownId + 30;
         console.log(`\x1b[35m[Pin Manager]\x1b[0m 🧹 Запущена очистка сервисных сообщений в канале ${channelId} (диапазон msg ${startId}..${endId})...`);
 
         let consecutiveNotFoundPastMax = 0;

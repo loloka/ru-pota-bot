@@ -294,8 +294,11 @@ export const pinManager = {
       if (!chat?.pinned_message || (activePinsCount === 0 && chat.pinned_message.message_id !== permanentPinId)) {
         await telegramClient.pinChatMessage(channelId, permanentPinId, { disable_notification: true });
         console.log(`\x1b[35m[Pin Manager]\x1b[0m 📌 Закреплен постоянный пост канала: msg ${permanentPinId}`);
+        // Give Telegram 600ms to insert the service message at the tail, then clean it up
         setTimeout(async () => {
-          try { await telegramClient.deleteMessage(channelId, permanentPinId + 1); } catch (e) {}
+          try {
+            await this.cleanupChannelServiceMessages(telegramClient);
+          } catch (e) {}
         }, 600);
       }
     } catch (e) {
@@ -334,6 +337,7 @@ export const pinManager = {
       const maxSpotRow = db.prepare("SELECT MAX(msg_id) as max_id FROM spots WHERE msg_id IS NOT NULL").get();
       const maxPinRow = db.prepare("SELECT MAX(message_id) as max_id FROM pinned_spots").get();
       const maxChanPinRow = db.prepare("SELECT MAX(channel_msg_id) as max_id FROM pinned_spots").get();
+      const maxUserSpotRow = db.prepare("SELECT MAX(last_spot_msg_id) as max_id FROM users WHERE last_spot_msg_id IS NOT NULL").get();
 
       let currentPinnedId = null;
       try {
@@ -349,15 +353,16 @@ export const pinManager = {
         Number(maxSpotRow?.max_id || 0),
         Number(maxPinRow?.max_id || 0),
         Number(maxChanPinRow?.max_id || 0),
+        Number(maxUserSpotRow?.max_id || 0),
         currentPinnedId || 0,
         permanentPinId || 0
       );
 
       if (maxKnownId > 0) {
-        // Scan backwards up to 300 messages, AND forward up to 30 messages past maxKnownId
-        // (to clean any lingering service messages or probe messages like the broom emoji)
+        // Scan backwards up to 300 messages, AND forward up to 50 messages past maxKnownId
+        // (to clean any lingering service messages like "POTA activity закрепил(а)...")
         const startId = Math.max(1, maxKnownId - 300);
-        const endId = maxKnownId + 30;
+        const endId = maxKnownId + 50;
         console.log(`\x1b[35m[Pin Manager]\x1b[0m 🧹 Запущена очистка сервисных сообщений в канале ${channelId} (диапазон msg ${startId}..${endId})...`);
 
         let consecutiveNotFoundPastMax = 0;

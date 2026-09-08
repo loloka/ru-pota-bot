@@ -30,8 +30,14 @@ export const chatFilter = (ctx, next) => {
   const normalizedActivityId = normalizeChatId(ACTIVITY_CHANNEL_ID);
   const normalizedMainChatId = normalizeChatId(MAIN_CHAT_ID);
 
-  // Ignore all messages from the activity channel
+  // Ignore messages from the activity channel, but always intercept and delete pin service messages!
   if (normalizedActivityId && normalizedChatId === normalizedActivityId) {
+    if (ctx.channelPost?.pinned_message || ctx.message?.pinned_message) {
+      try {
+        ctx.deleteMessage().catch(() => {});
+        console.log(`\x1b[35m[Pin Manager]\x1b[0m 🧹 Перехвачено и удалено сервисное сообщение о закрепе в канале (msg ${ctx.channelPost?.message_id || ctx.message?.message_id})`);
+      } catch (e) {}
+    }
     return;
   }
 

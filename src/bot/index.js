@@ -516,15 +516,27 @@ bot.command('pinchannel', async (ctx) => {
     if (!isNaN(parsed) && parsed > 0) targetMsgId = parsed;
   }
 
+  const statusMsg = await ctx.reply(`📌 Закрепляю сообщение #${targetMsgId} в канале активности и удаляю сервисную плашку...`);
+
   try {
     await ctx.telegram.pinChatMessage(channelId, targetMsgId, { disable_notification: true });
-    // Remove service message
-    setTimeout(async () => {
-      try { await ctx.telegram.deleteMessage(channelId, targetMsgId + 1); } catch (e) {}
-    }, 600);
-    await ctx.reply(`📌 Сообщение <b>#${targetMsgId}</b> успешно закреплено в канале <code>${channelId}</code>!`, { parse_mode: 'HTML' });
+
+    // Give Telegram 600ms to insert the service message into channel history
+    await new Promise(r => setTimeout(r, 600));
+
+    // Run channel cleanup to sweep and remove the newly generated service message
+    const res = await pinManager.cleanupChannelServiceMessages(ctx.telegram);
+
+    await ctx.telegram.editMessageText(
+      ctx.chat.id,
+      statusMsg.message_id,
+      undefined,
+      `✅ Сообщение <b>#${targetMsgId}</b> успешно закреплено в канале <code>${channelId}</code>!\n` +
+      `🧹 Служебное сообщение «закрепил(а)» успешно удалено (всего очищено: <b>${res.deletedCount}</b>).`,
+      { parse_mode: 'HTML' }
+    );
   } catch (err) {
-    await ctx.reply(`❌ Ошибка закрепления в канале: ${err.message}`);
+    await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, undefined, `❌ Ошибка закрепления в канале: ${err.message}`);
   }
 });
 

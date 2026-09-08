@@ -69,3 +69,21 @@ export const getMainMenu = (ctx) => {
     resize_keyboard: true
   };
 };
+
+/**
+ * Extracts base callsign from slashed callsigns (e.g., UN7ECA/P -> UN7ECA, R1/UN7ECA/P -> UN7ECA, RA/OH2XYZ -> OH2XYZ)
+ * so profile links lead to the correct user page on next.pota.app.
+ * @param {string} callsign 
+ * @returns {string} Base callsign
+ */
+export const getBaseCallsign = (callsign = '') => {
+  if (!callsign) return '';
+  const clean = String(callsign).trim().toUpperCase();
+  if (!clean.includes('/')) return clean;
+  const parts = clean.split('/');
+  const validParts = parts.filter(p => /[A-Z]/.test(p) && /[0-9]/.test(p));
+  if (validParts.length > 0) {
+    return validParts.reduce((a, b) => a.length >= b.length ? a : b);
+  }
+  return parts.reduce((a, b) => a.length >= b.length ? a : b);
+};

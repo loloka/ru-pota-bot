@@ -1,5 +1,5 @@
 import { potaApi } from '../../api/potaApi.js';
-import { deleteUserMessage } from '../utils.js';
+import { deleteUserMessage, getBaseCallsign } from '../utils.js';
 
 export const statsHandler = async (ctx) => {
   await deleteUserMessage(ctx); // Убираем сообщение пользователя
@@ -85,7 +85,7 @@ export const statsHandler = async (ctx) => {
       const recentHunts = profile.recent_activity.hunter_qsos.slice(0, 3);
       recentHunts.forEach(hunt => {
         const dateStr = hunt.date.split('T')[0];
-        const huntCallLink = `<a href="https://next.pota.app/profile/${hunt.callsign}">${hunt.callsign}</a>`;
+        const huntCallLink = `<a href="https://next.pota.app/profile/${encodeURIComponent(getBaseCallsign(hunt.callsign))}">${hunt.callsign}</a>`;
         const huntParkLink = `<a href="https://next.pota.app/park/${hunt.reference}">${hunt.reference}</a>`;
         msg += `- <b>${huntCallLink}</b> в ${huntParkLink} (${dateStr})\n`;
       });
@@ -93,7 +93,7 @@ export const statsHandler = async (ctx) => {
                 
     const successMarkup = {
       inline_keyboard: [
-        [{ text: '🌐 Профиль на сайте POTA', url: `https://next.pota.app/profile/${profile.callsign}` }],
+        [{ text: '🌐 Профиль на сайте POTA', url: `https://next.pota.app/profile/${encodeURIComponent(getBaseCallsign(profile.callsign))}` }],
         [{ text: '❌ Удалить сообщение', callback_data: `delete_msg:${userId}` }]
       ]
     };

@@ -7,6 +7,7 @@ import db from '../db/database.js';
 import { potaApi } from '../api/potaApi.js';
 import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import { pinManager } from '../services/pinManager.js';
+import { getBaseCallsign } from '../bot/utils.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -71,9 +72,6 @@ async function refreshParksFromApi() {
   isRefreshingParks = true;
 
   try {
-    const headers = {
-      'User-Agent': 'RU-POTA-Bot/1.15.3 (Telegram Bot; Node.js)',
-    };
     const programs = ['RU', 'BY', 'KZ'];
     let anyUpdated = false;
 
@@ -82,9 +80,9 @@ async function refreshParksFromApi() {
       if (i > 0) await sleep(2000); // Polite 2s delay between requests to prevent Cloudflare throttling
 
       try {
-        const res = await axios.get(`https://api.pota.app/program/parks/${prog}`, { headers, timeout: 30000 });
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          const mapped = res.data.map(p => ({
+        const parksData = await potaApi.getProgramParks(prog);
+        if (Array.isArray(parksData) && parksData.length > 0) {
+          const mapped = parksData.map(p => ({
             reference: p.reference,
             name: p.name,
             lat: parseFloat(p.latitude) || 0,
@@ -103,7 +101,7 @@ async function refreshParksFromApi() {
           }
         }
       } catch (err) {
-        const reason = err.message || 'unknown error';
+        const reason = err.code || err.message || 'unknown error';
         console.warn(`[TMA API] ⚠️ Failed to refresh ${prog} parks (${reason}), preserving ${parksByProgram[prog]?.length || 0} existing parks`);
       }
     }
@@ -262,7 +260,7 @@ export function createTmaRouter(telegramClient) {
       };
 
       if (dbUser.callsign && dbUser.status === 'approved') {
-        const cleanCall = dbUser.callsign.split('/')[0].toUpperCase();
+        const cleanCall = getBaseCallsign(dbUser.callsign);
         const cached = statsCache.get(cleanCall);
         const now = Date.now();
 
@@ -977,7 +975,8 @@ export function createTmaRouter(telegramClient) {
           const timeQrtStr = timeStr ? ` (до ${timeStr.replace(/^до\s*/i, '')})` : '';
           const dateStr = new Date().toLocaleDateString('ru-RU');
 
-          const actLink = `<a href="https://next.pota.app/profile/${dbUser.callsign.split('/')[0]}">${dbUser.callsign}</a>`;
+          const baseCall = getBaseCallsign(dbUser.callsign);
+          const actLink = `<a href="https://next.pota.app/profile/${encodeURIComponent(baseCall)}">${dbUser.callsign}</a>`;
           const refLink = `<a href="https://next.pota.app/park/${reference}">${reference}</a>`;
           const msg = `📅 <b>${dateStr} [СЕЙЧАС НА СВЯЗИ]${timeQrtStr}</b>\n` +
                       `📻 <b>${actLink}</b>\n` +

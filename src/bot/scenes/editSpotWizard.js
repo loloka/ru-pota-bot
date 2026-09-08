@@ -2,7 +2,7 @@ import { Scenes } from 'telegraf';
 import db from '../../db/database.js';
 import { potaApi } from '../../api/potaApi.js';
 import { pinManager } from '../../services/pinManager.js';
-import { getMainMenu } from '../utils.js';
+import { getMainMenu, getBaseCallsign } from '../utils.js';
 import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -103,7 +103,8 @@ export const editSpotWizard = new Scenes.WizardScene(
     
     const fullParkName = s.parkType ? `${s.parkName} (${s.parkType})` : s.parkName;
     
-    const actLink = `<a href="https://next.pota.app/profile/${s.callsign}">${s.callsign}</a>`;
+    const baseCall = getBaseCallsign(s.callsign);
+    const actLink = `<a href="https://next.pota.app/profile/${encodeURIComponent(baseCall)}">${s.callsign}</a>`;
     const refLink = `<a href="https://next.pota.app/park/${s.reference}">${s.reference}</a>`;
 
     const formattedSpot = `${statusLine}\n` +

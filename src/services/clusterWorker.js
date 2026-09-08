@@ -2,6 +2,7 @@ import { potaApi } from '../api/potaApi.js';
 import db from '../db/database.js';
 import { pinManager } from './pinManager.js';
 import { getBandFromKHz } from '../bot/commands/onair.js';
+import { getBaseCallsign } from '../bot/utils.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -187,7 +188,8 @@ export const startClusterWorker = (telegramClient) => {
         console.log(`\x1b[32m[Cluster Spot]\x1b[0m 📻 Новый спот: \x1b[1m${spot.activator}\x1b[0m @ \x1b[33m${ref}\x1b[0m (${band} ${mode}, ${spot.frequency} kHz)`);
 
         // 4. Format and Broadcast to Activity Channel
-        const actLink = `<a href="https://next.pota.app/profile/${spot.activator}">${spot.activator}</a>`;
+        const baseCall = getBaseCallsign(spot.activator);
+        const actLink = `<a href="https://next.pota.app/profile/${encodeURIComponent(baseCall)}">${spot.activator}</a>`;
         const refLink = `<a href="https://next.pota.app/park/${ref}">${ref}</a>`;
         const msg = `🌐 <b>POTA Cluster Spot</b>\n` +
                     `📻 <b>${actLink}</b> @ 🏞️ <b>${refLink}</b>\n` +

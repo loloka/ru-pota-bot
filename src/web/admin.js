@@ -137,7 +137,8 @@ export const startAdminServer = (telegramClient) => {
     }
 
     const adminPassword = process.env.ADMIN_PASSWORD || 'qwerty12345';
-    if (req.body.password === adminPassword) {
+    const submittedPassword = (req.body && req.body.password) ? String(req.body.password) : '';
+    if (submittedPassword && submittedPassword === adminPassword) {
       failedAttempts.delete(ip);
       req.session.authed = true;
       return res.redirect('/');
@@ -1132,7 +1133,7 @@ export const startAdminServer = (telegramClient) => {
 
   app.post('/reject/:id', requireAuth, async (req, res) => {
     const telegramId = Number(req.params.id);
-    const reason = req.body.reason || 'Причина не указана';
+    const reason = (req.body && req.body.reason) || 'Причина не указана';
     try {
       db.prepare("UPDATE users SET status = 'rejected', reject_reason = ? WHERE telegram_id = ?").run(reason, telegramId);
       try {
@@ -1207,7 +1208,7 @@ export const startAdminServer = (telegramClient) => {
   });
 
   app.post('/broadcast', requireAuth, async (req, res) => {
-    const { target, message, pin } = req.body;
+    const { target, message, pin } = req.body || {};
     
     let targetId = target === 'group' ? process.env.MAIN_CHAT_ID : process.env.ACTIVITY_CHANNEL_ID;
 
@@ -1239,7 +1240,7 @@ export const startAdminServer = (telegramClient) => {
   // Edit pinned / welcome message in group or channel
   app.post('/api/edit-pinned', requireAuth, async (req, res) => {
     try {
-      let { chatId, messageId, text } = req.body;
+      let { chatId, messageId, text } = req.body || {};
       if (!text || !text.trim()) {
         return res.status(400).json({ error: 'Текст сообщения не может быть пустым' });
       }

@@ -1,5 +1,5 @@
 import { potaApi } from '../../api/potaApi.js';
-import { deleteUserMessage } from '../utils.js';
+import { deleteUserMessage, getBaseCallsign } from '../utils.js';
 import db from '../../db/database.js';
 
 // Supported filter options
@@ -137,22 +137,7 @@ export function spotMatchesFilter(spot, filters) {
   return true;
 }
 
-/**
- * Extracts base callsign from slashed callsigns (e.g., R9OGL/P -> R9OGL, UA9/R9OGL -> R9OGL)
- * so profile links lead to the correct user page on next.pota.app.
- * @param {string} callsign 
- * @returns {string} Base callsign
- */
-export function getBaseCallsign(callsign = '') {
-  const clean = callsign.trim().toUpperCase();
-  if (!clean.includes('/')) return clean;
-  const parts = clean.split('/');
-  const validParts = parts.filter(p => /[A-Z]/.test(p) && /[0-9]/.test(p));
-  if (validParts.length > 0) {
-    return validParts.reduce((a, b) => a.length >= b.length ? a : b);
-  }
-  return parts.reduce((a, b) => a.length >= b.length ? a : b);
-}
+export { getBaseCallsign };
 
 /**
  * Formats frequency into MHz with 3 decimal places (e.g., 7140 -> 7.140 MHz, 14044 -> 14.044 MHz).
@@ -358,23 +343,23 @@ export async function fetchAndFormatOnAir(requestedMode = 'mix', userId = '') {
   const deleteBtn = [{ text: '❌ Удалить сообщение', callback_data: `delete_msg:${userId}` }];
 
   if (activeMode === 'ru') {
-    // Pure RU mode
+    // Pure RU & Neighbors mode
     let text = '';
     const filterHeader = filterSummary ? `🎯 <i>Фильтр: ${escapeHtml(filterSummary)}</i>\n\n` : '\n\n';
 
     if (processedRu.length === 0) {
       if (filterSummary) {
-        text = `📻 <b>Сейчас в эфире: RU / СНГ</b>\n` +
+        text = `📻 <b>Сейчас в эфире: Наш регион и соседи</b>\n` +
                filterHeader +
-               `По выбранным диапазонам/модам активных станций из нашего региона за 40 минут не найдено.\n` +
+               `По выбранным диапазонам/модам активных станций из нашего региона и у соседей за 40 минут не найдено.\n` +
                `Нажмите кнопку фильтра ниже, чтобы изменить условия, или сбросьте фильтр.`;
       } else {
-        text = `📻 <b>Сейчас в эфире: RU / СНГ</b>\n\n` +
-               `На данный момент в кластере POTA нет активных станций из нашего региона (за последние 40 минут).\n` +
+        text = `📻 <b>Сейчас в эфире: Наш регион и соседи</b>\n\n` +
+               `На данный момент в кластере POTA нет активных станций из нашего региона и у соседей (за последние 40 минут).\n` +
                `Вы можете стать первым — отправьте спот через /spot!`;
       }
     } else {
-      text = `📻 <b>СЕЙЧАС В ЭФИРЕ: RU / СНГ (${processedRu.length})</b>\n` +
+      text = `📻 <b>СЕЙЧАС В ЭФИРЕ: НАШ РЕГИОН И СОСЕДИ (${processedRu.length})</b>\n` +
              filterHeader +
              processedRu.map(renderSpotItem).join('\n\n');
     }
@@ -382,7 +367,7 @@ export async function fetchAndFormatOnAir(requestedMode = 'mix', userId = '') {
     const inline_keyboard = [
       filterBtn,
       ...(filterSummary && processedRu.length === 0 ? [[{ text: '🧹 Сбросить фильтр', callback_data: `onair_flt:reset_to_list:${activeMode}:${userId}` }]] : []),
-      [{ text: '🌐 RU/СНГ + МИР', callback_data: `onair_view:mix:${userId}` }],
+      [{ text: '🌐 Наш регион + МИР', callback_data: `onair_view:mix:${userId}` }],
       refreshBtn,
       deleteBtn
     ];
@@ -396,7 +381,7 @@ export async function fetchAndFormatOnAir(requestedMode = 'mix', userId = '') {
     if (processedRu.length > 0) {
       text = `📻 <b>СЕЙЧАС В ЭФИРЕ</b>\n` +
              filterHeader +
-             `🌲 <b>НАШ РЕГИОН — RU / СНГ (${processedRu.length}):</b>\n` +
+             `🌲 <b>НАШ РЕГИОН И СОСЕДИ (${processedRu.length}):</b>\n` +
              processedRu.map(renderSpotItem).join('\n\n');
 
       const worldSlice = processedWorld.slice(0, 10);
@@ -407,14 +392,14 @@ export async function fetchAndFormatOnAir(requestedMode = 'mix', userId = '') {
 
       const inline_keyboard = [
         filterBtn,
-        [{ text: '🇷🇺 Только RU/СНГ', callback_data: `onair_view:ru:${userId}` }],
+        [{ text: '🌲 Только наш регион и соседи', callback_data: `onair_view:ru:${userId}` }],
         refreshBtn,
         deleteBtn
       ];
 
       return { text, reply_markup: { inline_keyboard } };
     } else {
-      // No RU stations matching filter
+      // No RU/neighbor stations matching filter
       const worldSlice = processedWorld.slice(0, 15);
       if (worldSlice.length === 0) {
         if (filterSummary) {
@@ -429,14 +414,14 @@ export async function fetchAndFormatOnAir(requestedMode = 'mix', userId = '') {
       } else {
         text = `📻 <b>СЕЙЧАС В ЭФИРЕ: ВЕСЬ МИР (Топ-${worldSlice.length})</b>\n` +
                filterHeader +
-               `ℹ️ В регионе RU/СНГ за 40 мин активности нет. Свежие станции за последние 15 минут:\n\n` +
+               `ℹ️ В нашем регионе и у соседей за 40 мин активности нет. Свежие станции за последние 15 минут:\n\n` +
                worldSlice.map(renderSpotItem).join('\n\n');
       }
 
       const inline_keyboard = [
         filterBtn,
         ...(filterSummary && worldSlice.length === 0 ? [[{ text: '🧹 Сбросить фильтр', callback_data: `onair_flt:reset_to_list:${activeMode}:${userId}` }]] : []),
-        [{ text: '🇷🇺 Проверить RU/СНГ', callback_data: `onair_view:ru:${userId}` }],
+        [{ text: '🌲 Проверить наш регион и соседей', callback_data: `onair_view:ru:${userId}` }],
         refreshBtn,
         deleteBtn
       ];
@@ -628,7 +613,7 @@ export const onairActionHandler = async (ctx) => {
     if (actionCategory === 'refresh') {
       await safeAnswer('🔄 Список обновлен');
     } else {
-      await safeAnswer(mode === 'ru' ? '🇷🇺 Только RU/СНГ' : '🌐 RU/СНГ + МИР');
+      await safeAnswer(mode === 'ru' ? '🌲 Наш регион и соседи' : '🌐 Наш регион + МИР');
     }
   } catch (err) {
     if (err.description?.includes('message is not modified')) {

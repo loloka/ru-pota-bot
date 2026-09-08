@@ -8,9 +8,9 @@ const BASE_URL = process.env.POTA_API_BASE_URL || 'https://api.pota.app';
 
 const axiosConfig = {
   baseURL: BASE_URL,
-  timeout: 25000,
+  timeout: 35000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.15.3 (Telegram Bot; Node.js)'
+    'User-Agent': 'RU-POTA-Bot/1.15.4 (Telegram Bot; Node.js)'
   }
 };
 
@@ -137,5 +137,34 @@ export const potaApi = {
       console.error(`Error posting spot to POTA:`, error.response?.data || error.message);
       return null;
     }
+  },
+
+  /**
+   * Fetch parks list for a specific program (e.g. 'RU', 'BY', 'KZ')
+   * Includes 1 automatic retry on transient network issues / timeouts.
+   * @param {string} program 
+   * @returns {Promise<Array>}
+   */
+  async getProgramParks(program) {
+    const prog = encodeURIComponent((program || '').toUpperCase().trim());
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await apiClient.get(`/program/parks/${prog}`);
+        if (Array.isArray(response.data)) {
+          return response.data;
+        }
+        return [];
+      } catch (error) {
+        const code = error.code || (error.response ? `HTTP ${error.response.status}` : error.message);
+        if (attempt === 1) {
+          console.warn(`[POTA API] ⚠️ Временный сбой загрузки парков ${program} (${code}), повтор через 3с...`);
+          await new Promise(r => setTimeout(r, 3000));
+          continue;
+        }
+        console.warn(`[POTA API] ⚠️ Не удалось загрузить парки ${program} (${code}) после 2 попыток`);
+        throw error;
+      }
+    }
+    return [];
   }
 };

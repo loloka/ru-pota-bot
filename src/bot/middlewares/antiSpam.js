@@ -8,13 +8,28 @@ dotenv.config();
 // Configuration & Environment Variables with safe defaults
 const getShieldConfig = () => ({
   enabled: process.env.SHIELD_ENABLED !== 'false',
-  captchaTimeoutSec: parseInt(process.env.SHIELD_CAPTCHA_TIMEOUT, 10) || 120,
+  captchaTimeoutSec: parseInt(process.env.SHIELD_CAPTCHA_TIMEOUT, 10) || 180,
   strictNameCheck: process.env.SHIELD_STRICT_NAME_CHECK !== 'false',
   blockNewbieLinks: process.env.SHIELD_BLOCK_NEWBIE_LINKS !== 'false',
   mainChatId: process.env.MAIN_CHAT_ID,
   activityChannelId: process.env.ACTIVITY_CHANNEL_ID,
   adminId: process.env.ADMIN_ID
 });
+
+/**
+ * Format duration in seconds to natural Russian text (e.g. "3 минут")
+ * @param {number} seconds 
+ * @returns {string}
+ */
+export function formatDurationRu(seconds) {
+  if (seconds >= 60 && seconds % 60 === 0) {
+    const mins = seconds / 60;
+    if (mins === 1) return '1 минуты';
+    if (mins >= 2 && mins <= 4) return `${mins} минут`;
+    return `${mins} минут`;
+  }
+  return `${seconds} сек.`;
+}
 
 // Regular expressions for Echelon 1: Profile Face-Control
 export const ARABIC_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
@@ -325,14 +340,24 @@ export const handleNewChatMembers = async (ctx) => {
         console.error(`\x1b[31m[Shield]\x1b[0m ❌ Ошибка restrictChatMember (${member.id}): ${restErr.message}. Проверьте, что бот назначен администратором группы с правом блокировки пользователей!`);
       }
 
-      // 2. Send captcha message with inline button
+      // 2. Send captcha message with prominent user mention and clear call-to-action button
       const timeoutSec = cfg.captchaTimeoutSec;
-      const text = `👋 Привет, <b>${escapeHtml(member.first_name)}</b>! Добро пожаловать в сообщество RU-POTA 🌲\n\nЧтобы подтвердить, что вы радиолюбитель, а не бот, нажмите кнопку ниже в течение ${timeoutSec} секунд:`;
+      const timeoutText = formatDurationRu(timeoutSec);
+      const userMention = member.username 
+        ? `@${member.username} (<a href="tg://user?id=${member.id}">${escapeHtml(member.first_name)}</a>)`
+        : `<a href="tg://user?id=${member.id}">${escapeHtml(member.first_name)}</a>`;
+
+      const text = 
+        `👋 Приветствуем, ${userMention}! Добро пожаловать в RU-POTA 🌲\n\n` +
+        `🛡️ <b>ВНИМАНИЕ: Проверка от спам-ботов!</b>\n` +
+        `Отправка сообщений в чат временно ограничена.\n\n` +
+        `👉 <b>Чтобы войти в группу, НАЖМИТЕ КНОПКУ НИЖЕ</b> в течение ${timeoutText}:`;
+
       const captchaMsg = await ctx.reply(text, {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🌲 Я радиолюбитель / Я не бот', callback_data: `shield_verify:${member.id}` }]
+            [{ text: '🟢 НАЖМИТЕ СЮДА ДЛЯ ВХОДА В ГРУППУ 🟢', callback_data: `shield_verify:${member.id}` }]
           ]
         }
       });

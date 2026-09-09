@@ -5,7 +5,8 @@ import {
   logBlockedUser, 
   isUserBlockedInDb,
   pendingCaptchas,
-  escapeHtml
+  escapeHtml,
+  formatDurationRu
 } from './src/bot/middlewares/antiSpam.js';
 import { normalizeChatId } from './src/bot/middlewares/chatFilter.js';
 import { detectMode, normalizeFreq } from './src/services/clusterWorker.js';
@@ -80,6 +81,11 @@ assert(pendingCaptchas.has(mockUserId), 'Captcha timer registered in Map');
 clearTimeout(mockTimer);
 pendingCaptchas.delete(mockUserId);
 assert(!pendingCaptchas.has(mockUserId), 'Captcha timer cleared from Map');
+
+assert(formatDurationRu(180) === '3 минут', 'Formats 180 seconds to "3 минут"');
+assert(formatDurationRu(60) === '1 минуты', 'Formats 60 seconds to "1 минуты"');
+assert(formatDurationRu(120) === '2 минут', 'Formats 120 seconds to "2 минут"');
+assert(formatDurationRu(45) === '45 сек.', 'Formats 45 seconds to "45 сек."');
 
 // 3. Echelon 3: Sandbox Links Guard Tests
 console.log('\n[3] Testing Sandbox Links Quarantine Logic...');

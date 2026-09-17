@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
+import { getOoptList, getOoptStats, syncOoptRegistry } from '../services/ooptService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -371,6 +372,7 @@ export const startAdminServer = (telegramClient) => {
                 <a class="list-group-item list-group-item-action" id="list-shield-list" data-bs-toggle="list" href="#list-shield" role="tab" aria-controls="list-shield"><i class="bi bi-shield-lock"></i> RU-POTA Shield <span class="badge bg-danger rounded-pill ms-1 ${unreadBlockedCount > 0 ? '' : 'd-none'}" id="shield-unread-badge">${unreadBlockedCount}</span></a>
                 <a class="list-group-item list-group-item-action" id="list-broadcast-list" data-bs-toggle="list" href="#list-broadcast" role="tab" aria-controls="list-broadcast"><i class="bi bi-megaphone"></i> Рассылка</a>
                 <a class="list-group-item list-group-item-action" id="list-welcome-list" data-bs-toggle="list" href="#list-welcome" role="tab" aria-controls="list-welcome"><i class="bi bi-pin-angle"></i> Закрепленный пост</a>
+                <a class="list-group-item list-group-item-action" id="list-oopt-list" data-bs-toggle="list" href="#list-oopt" role="tab" aria-controls="list-oopt"><i class="bi bi-tree"></i> Реестр ООПТ РФ</a>
                 <a class="list-group-item list-group-item-action" id="list-console-list" data-bs-toggle="list" href="#list-console" role="tab" aria-controls="list-console"><i class="bi bi-terminal"></i> Live Консоль</a>
               </div>
             </div>
@@ -568,6 +570,98 @@ export const startAdminServer = (telegramClient) => {
                   </div>
                 </div>
 
+                <!-- Tab: OOPT Registry -->
+                <div class="tab-pane fade" id="list-oopt" role="tabpanel" aria-labelledby="list-oopt-list">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                      <h3 class="mb-1"><i class="bi bi-tree text-success"></i> Реестр ООПТ России</h3>
+                      <p class="text-muted small mb-0">Официальная база данных охраняемых природных территорий (11 341 объект) с генерацией заявок для координатора POTA (R2BBX)</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <a href="/app" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-phone"></i> Открыть в Mini App</a>
+                      <button type="button" class="btn btn-sm btn-primary" id="btn-sync-oopt"><i class="bi bi-arrow-repeat"></i> Синхронизировать с карта.оцзк.рф</button>
+                    </div>
+                  </div>
+
+                  <!-- OOPT Statistics Summary Cards -->
+                  <div class="row g-2 mb-3">
+                    <div class="col-md-2 col-6">
+                      <div class="card bg-light border-0 shadow-sm h-100 p-2 text-center">
+                        <div class="text-muted small">Всего в реестре</div>
+                        <div class="fs-5 fw-bold text-dark" id="stat-oopt-total">11 342</div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                      <div class="card border-0 shadow-sm h-100 p-2 text-center" style="background:#f3e8ff;">
+                        <div class="small fw-semibold" style="color:#6f42c1;">🏛️ Федерального значения</div>
+                        <div class="fs-5 fw-bold" style="color:#5a2d9c;" id="stat-oopt-fed">361</div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                      <div class="card bg-success-subtle border-0 shadow-sm h-100 p-2 text-center">
+                        <div class="small fw-semibold text-success">🌲 Регионального значения</div>
+                        <div class="fs-5 fw-bold text-success" id="stat-oopt-reg">10 432</div>
+                      </div>
+                    </div>
+                    <div class="col-md-2 col-6">
+                      <div class="card bg-warning-subtle border-0 shadow-sm h-100 p-2 text-center">
+                        <div class="small fw-semibold text-warning-emphasis">🏡 Местного значения</div>
+                        <div class="fs-5 fw-bold text-dark" id="stat-oopt-loc">549</div>
+                      </div>
+                    </div>
+                    <div class="col-md-2 col-12">
+                      <div class="card bg-success border-0 shadow-sm h-100 p-2 text-center text-white" id="card-filter-pota" style="cursor: pointer;" title="Нажмите для фильтрации: только объекты в базе POTA">
+                        <div class="small fw-semibold text-white-50"><i class="bi bi-funnel"></i> В базе POTA</div>
+                        <div class="fs-5 fw-bold text-white"><span id="stat-oopt-pota">304</span> <small class="fw-normal fs-6" id="pota-filter-label">(все)</small></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- OOPT Search and Filters -->
+                  <div class="row g-2 mb-3">
+                    <div class="col-md-4">
+                      <input type="text" class="form-control" id="oopt-search-input" placeholder="🔍 Поиск по названию или ключевым словам...">
+                    </div>
+                    <div class="col-md-3">
+                      <select class="form-select" id="oopt-region-select">
+                        <option value="">Все регионы России (89)</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2">
+                      <select class="form-select" id="oopt-sig-select">
+                        <option value="">Все уровни</option>
+                        <option value="federal">🏛️ Федеральные</option>
+                        <option value="regional">🌲 Региональные</option>
+                        <option value="local">🏡 Местные</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3 d-flex justify-content-end align-items-center gap-2">
+                      <span class="small text-muted" id="oopt-pagination-info">Загрузка...</span>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" id="oopt-prev-page" disabled>&laquo; Назад</button>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" id="oopt-next-page" disabled>Вперед &raquo;</button>
+                    </div>
+                  </div>
+
+                  <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th>ID</th>
+                          <th>Название</th>
+                          <th>Уровень</th>
+                          <th>Категория</th>
+                          <th>Регион</th>
+                          <th>Площадь</th>
+                          <th>Действия</th>
+                        </tr>
+                      </thead>
+                      <tbody id="oopt-table-body">
+                        <tr><td colspan="7" class="text-center text-muted">Загрузка реестра ООПТ...</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
                 <!-- Tab: Console -->
                 <div class="tab-pane fade" id="list-console" role="tabpanel" aria-labelledby="list-console-list">
                   <div class="d-flex justify-content-between align-items-center mb-2">
@@ -577,6 +671,100 @@ export const startAdminServer = (telegramClient) => {
                   <div id="log-container">Ожидание логов...</div>
                 </div>
 
+              </div>
+        </div>
+
+        <!-- Modal: POTA Park Submitter -->
+        <div class="modal fade" id="modal-pota-submitter" tabindex="-1" aria-labelledby="modalSubmitterLabel" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+              <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalSubmitterLabel"><i class="bi bi-tree-fill"></i> 🌲 POTA Park Submitter — Подготовка заявки на новый парк</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body p-3">
+                <div class="alert alert-info py-2 px-3 small mb-3">
+                  <i class="bi bi-info-circle-fill"></i> <strong>Правила подачи координатору POTA (Manu R2BBX):</strong> Название парка указывается чистым (без слов «Заказник», «Памятник природы»), а статус — в поле статуса. Если территория расположена на границе нескольких регионов — указываются все регионы через запятую.
+                </div>
+                <div id="subm-pota-badge-container"></div>
+                <form id="form-pota-submitter">
+                  <input type="hidden" id="subm-nid">
+                  <div class="row g-2 mb-2">
+                    <div class="col-md-7">
+                      <label class="form-label small fw-bold mb-1">1. Название парка/ООПТ (RU):</label>
+                      <input type="text" class="form-control form-control-sm font-monospace fw-bold" id="subm-name" required>
+                      <div class="form-text small text-muted">Собственное имя без бюрократических приставок и кавычек</div>
+                    </div>
+                    <div class="col-md-5">
+                      <label class="form-label small fw-bold mb-1">2. Название для POTA (EN):</label>
+                      <input type="text" class="form-control form-control-sm font-monospace text-success fw-bold" id="subm-name-en" required>
+                      <div class="form-text small text-muted">Авто-перевод для международной базы POTA</div>
+                    </div>
+                  </div>
+
+                  <div class="mb-2">
+                    <label class="form-label small fw-bold mb-1">3. Статус (парк/ООПТ и т.п.):</label>
+                    <input type="text" class="form-control form-control-sm" id="subm-status" required>
+                  </div>
+
+                  <div class="row g-2 mb-2">
+                    <div class="col-md-4">
+                      <label class="form-label small fw-bold mb-1">4. Координата первая (Широта / Lat):</label>
+                      <input type="text" class="form-control form-control-sm font-monospace" id="subm-lat" placeholder="55.882100">
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small fw-bold mb-1">5. Координата вторая (Долгота / Lon):</label>
+                      <input type="text" class="form-control form-control-sm font-monospace" id="subm-lon" placeholder="37.781200">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                      <a href="#" id="subm-yandex-link" target="_blank" class="btn btn-sm btn-outline-warning w-100">
+                        <i class="bi bi-geo-alt"></i> <span id="subm-yandex-text">Проверить в Яндекс.Картах</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  <div class="mb-2">
+                    <label class="form-label small fw-bold mb-1">6. Регион России:</label>
+                    <input type="text" class="form-control form-control-sm" id="subm-region" required>
+                    <div class="form-text small text-muted">Для межрегиональных объектов указываются все субъекты через запятую (например: <i>Москва, Московская область</i>)</div>
+                  </div>
+
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <label class="form-label small fw-bold mb-0">7. Сайт объекта, ссылка:</label>
+                      <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-1.5" style="font-size:11px;" id="btn-set-link-aari" title="Установить ссылку oopt.aari.ru">oopt.aari.ru</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:11px;" id="btn-set-link-nextgis" title="Установить ссылку NextGIS зеркала">NextGIS</button>
+                      </div>
+                    </div>
+                    <input type="text" class="form-control form-control-sm" id="subm-site" required>
+                    <div class="form-text small text-muted">Приоритет: официальный портал oopt.aari.ru или зеркало NextGIS. Википедия, VK и коммерческие ресурсы не принимаются.</div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label small fw-bold mb-1">8. Уточнение (не обязательно):</label>
+                    <input type="text" class="form-control form-control-sm" id="subm-clarify" placeholder="Например: границы на разных картах различаются, несколько кластерных участков...">
+                  </div>
+
+                  <div class="card bg-light border-success">
+                    <div class="card-header bg-success-subtle py-1.5 px-3 small fw-bold d-flex justify-content-between align-items-center">
+                      <span>📋 Готовый текст заявки для отправки R2BBX:</span>
+                      <button type="button" class="btn btn-sm btn-success" id="btn-copy-submitter">
+                        <i class="bi bi-clipboard-check"></i> Скопировать в буфер
+                      </button>
+                    </div>
+                    <div class="card-body p-2">
+                      <pre class="mb-0 font-monospace small bg-white p-2.5 border rounded" id="subm-preview" style="white-space: pre-wrap; user-select: all; font-size: 12px;"></pre>
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer py-2 px-3 bg-light d-flex justify-content-between">
+                <span class="text-muted small" id="subm-coords-status"></span>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрыть</button>
+                  <button type="button" class="btn btn-success btn-sm" id="btn-copy-submitter-bottom"><i class="bi bi-clipboard-check"></i> Скопировать готовую заявку</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1110,6 +1298,557 @@ export const startAdminServer = (telegramClient) => {
               btn.innerHTML = originalHtml;
             }
           });
+
+          // OOPT Registry Admin Client
+          let ooptCurrentPage = 1;
+          const ooptLimit = 20;
+          let ooptPotaOnly = false;
+          let ooptStatsLoaded = false;
+
+          function escapeHtmlClient(str) {
+            if (!str) return '';
+            return String(str)
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#39;');
+          }
+
+          async function loadAdminOoptStats() {
+            try {
+              const res = await fetch('/api/admin/oopt/stats');
+              const stats = await res.json();
+              if (stats) {
+                const totalEl = document.getElementById('stat-oopt-total');
+                const fedEl = document.getElementById('stat-oopt-fed');
+                const regEl = document.getElementById('stat-oopt-reg');
+                const locEl = document.getElementById('stat-oopt-loc');
+                const potaEl = document.getElementById('stat-oopt-pota');
+
+                if (totalEl && stats.total) totalEl.textContent = Number(stats.total).toLocaleString('ru-RU');
+                if (fedEl && stats.federal) fedEl.textContent = Number(stats.federal).toLocaleString('ru-RU');
+                if (regEl && stats.regional) regEl.textContent = Number(stats.regional).toLocaleString('ru-RU');
+                if (locEl && stats.local) locEl.textContent = Number(stats.local).toLocaleString('ru-RU');
+                if (potaEl && stats.inPota) potaEl.textContent = Number(stats.inPota).toLocaleString('ru-RU');
+
+                const regionEl = document.getElementById('oopt-region-select');
+                if (regionEl && regionEl.options.length <= 1 && stats.regions) {
+                  stats.regions.forEach(function(r) {
+                    const opt = document.createElement('option');
+                    opt.value = r;
+                    opt.textContent = r;
+                    regionEl.appendChild(opt);
+                  });
+                }
+                ooptStatsLoaded = true;
+              }
+            } catch (e) {
+              console.warn('[Admin] Failed to load OOPT stats:', e.message);
+            }
+          }
+
+          async function loadAdminOopt(page) {
+            if (!page) page = 1;
+            ooptCurrentPage = page;
+            if (!ooptStatsLoaded) loadAdminOoptStats();
+
+            const searchEl = document.getElementById('oopt-search-input');
+            const sigEl = document.getElementById('oopt-sig-select');
+            const regionEl = document.getElementById('oopt-region-select');
+
+            const search = searchEl ? searchEl.value : '';
+            const sig = sigEl ? sigEl.value : '';
+            const region = regionEl ? regionEl.value : '';
+
+            const tbody = document.getElementById('oopt-table-body');
+            const info = document.getElementById('oopt-pagination-info');
+            const prevBtn = document.getElementById('oopt-prev-page');
+            const nextBtn = document.getElementById('oopt-next-page');
+
+            if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted"><span class="spinner-border spinner-border-sm"></span> Загрузка...</td></tr>';
+
+            try {
+              const query = new URLSearchParams({ 
+                page: String(page), 
+                limit: String(ooptLimit), 
+                search: search, 
+                sig: sig,
+                region: region 
+              });
+              if (ooptPotaOnly) {
+                query.set('pota', 'in_pota');
+              }
+              const res = await fetch('/api/admin/oopt?' + query.toString());
+              const data = await res.json();
+
+              if (!data.rows || data.rows.length === 0) {
+                if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Ничего не найдено</td></tr>';
+                if (info) info.textContent = '0 записей';
+                if (prevBtn) prevBtn.disabled = true;
+                if (nextBtn) nextBtn.disabled = true;
+                return;
+              }
+
+              if (info) info.textContent = 'Стр. ' + data.page + ' из ' + data.totalPages + ' (всего ' + Number(data.total).toLocaleString('ru-RU') + ')';
+              if (prevBtn) prevBtn.disabled = data.page <= 1;
+              if (nextBtn) nextBtn.disabled = data.page >= data.totalPages;
+
+              const rowsHtml = data.rows.map(function(r) {
+                var sigBadge = r.sig === 'federal'
+                  ? '<span class="badge text-white" style="background:#6f42c1 !important">🏛️ Федеральное</span>'
+                  : r.sig === 'regional'
+                  ? '<span class="badge bg-success">🌲 Региональное</span>'
+                  : '<span class="badge bg-warning text-dark">🏡 Местное</span>';
+
+                var potaBadge = r.pota_ref
+                  ? ' <a href="https://next.pota.app/park/' + r.pota_ref + '" target="_blank" class="badge bg-success text-decoration-none ms-1" title="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check-circle-fill"></i> В POTA: ' + r.pota_ref + '</a>'
+                  : '';
+
+                var submitterBtn = r.pota_ref
+                  ? '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>'
+                  : '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-pota-ref="" data-pota-name=""><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
+
+                return '<tr>' +
+                  '<td><code>' + r.nid + '</code></td>' +
+                  '<td><strong>' + escapeHtmlClient(r.title) + '</strong>' + potaBadge + '</td>' +
+                  '<td>' + sigBadge + '</td>' +
+                  '<td><small>' + escapeHtmlClient(r.category || '') + '</small></td>' +
+                  '<td><small class="text-muted">' + escapeHtmlClient(r.ate || '') + '</small></td>' +
+                  '<td>' + (r.area ? Number(r.area).toLocaleString('ru-RU') + ' га' : '—') + '</td>' +
+                  '<td>' + submitterBtn + '</td>' +
+                '</tr>';
+              }).join('');
+
+              if (tbody) tbody.innerHTML = rowsHtml;
+            } catch (err) {
+              if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Ошибка: ' + err.message + '</td></tr>';
+            }
+          }
+
+          var ooptTabEl = document.getElementById('list-oopt-list');
+          if (ooptTabEl) {
+            ooptTabEl.addEventListener('shown.bs.tab', function() {
+              loadAdminOopt(1);
+            });
+          }
+
+          // Tab persistence across page reloads (F5) via URL hash
+          var initialHash = window.location.hash;
+          if (initialHash) {
+            var targetNav = document.querySelector('#list-tab a[href="' + initialHash + '"]');
+            if (targetNav) {
+              var bsTabInstance = bootstrap.Tab.getOrCreateInstance(targetNav);
+              bsTabInstance.show();
+            }
+          }
+
+          document.querySelectorAll('#list-tab a').forEach(function(navLink) {
+            navLink.addEventListener('shown.bs.tab', function(evt) {
+              var href = evt.target.getAttribute('href');
+              if (href) history.replaceState(null, null, href);
+            });
+          });
+
+          // If OOPT tab is active on initial load, fetch immediately
+          if (window.location.hash === '#list-oopt' || (document.getElementById('list-oopt') && document.getElementById('list-oopt').classList.contains('active'))) {
+            loadAdminOopt(1);
+          }
+
+          var ooptSearchTimer;
+          var ooptSearchEl = document.getElementById('oopt-search-input');
+          if (ooptSearchEl) {
+            ooptSearchEl.addEventListener('input', function() {
+              clearTimeout(ooptSearchTimer);
+              ooptSearchTimer = setTimeout(function() { loadAdminOopt(1); }, 350);
+            });
+          }
+
+          var ooptSigEl = document.getElementById('oopt-sig-select');
+          if (ooptSigEl) {
+            ooptSigEl.addEventListener('change', function() {
+              loadAdminOopt(1);
+            });
+          }
+
+          var ooptRegionEl = document.getElementById('oopt-region-select');
+          if (ooptRegionEl) {
+            ooptRegionEl.addEventListener('change', function() {
+              loadAdminOopt(1);
+            });
+          }
+
+          var cardFilterPota = document.getElementById('card-filter-pota');
+          if (cardFilterPota) {
+            cardFilterPota.addEventListener('click', function() {
+              ooptPotaOnly = !ooptPotaOnly;
+              var label = document.getElementById('pota-filter-label');
+              if (ooptPotaOnly) {
+                cardFilterPota.classList.add('border', 'border-3', 'border-warning', 'shadow');
+                if (label) label.textContent = '(вкл)';
+              } else {
+                cardFilterPota.classList.remove('border', 'border-3', 'border-warning', 'shadow');
+                if (label) label.textContent = '(все)';
+              }
+              loadAdminOopt(1);
+            });
+          }
+
+          var ooptPrevEl = document.getElementById('oopt-prev-page');
+          if (ooptPrevEl) {
+            ooptPrevEl.addEventListener('click', function() {
+              if (ooptCurrentPage > 1) loadAdminOopt(ooptCurrentPage - 1);
+            });
+          }
+
+          var ooptNextEl = document.getElementById('oopt-next-page');
+          if (ooptNextEl) {
+            ooptNextEl.addEventListener('click', function() {
+              loadAdminOopt(ooptCurrentPage + 1);
+            });
+          }
+
+          var btnSyncOopt = document.getElementById('btn-sync-oopt');
+          if (btnSyncOopt) {
+            btnSyncOopt.addEventListener('click', async function() {
+              btnSyncOopt.disabled = true;
+              btnSyncOopt.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Синхронизация...';
+              try {
+                var res = await fetch('/api/admin/oopt/sync', { method: 'POST' });
+                var data = await res.json();
+                if (res.ok && data.success) {
+                  Swal.fire({ icon: 'success', title: 'Успешно!', text: 'Синхронизировано ' + data.count + ' объектов ООПТ РФ!' });
+                  loadAdminOoptStats();
+                  loadAdminOopt(1);
+                } else {
+                  Swal.fire({ icon: 'error', title: 'Ошибка', text: data.error || 'Ошибка синхронизации' });
+                }
+              } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Ошибка', text: e.message });
+              } finally {
+                btnSyncOopt.disabled = false;
+                btnSyncOopt.innerHTML = '<i class="bi bi-arrow-repeat"></i> Синхронизировать с карта.оцзк.рф';
+              }
+            });
+          }
+
+          // Smart Parser per Manu R2BBX's instruction
+          var ruToEnMap = {
+            'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+            'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+            'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+            'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+            'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+          };
+
+          function transliterateClient(str) {
+            return (str || '').split('').map(function(c) {
+              var lower = c.toLowerCase();
+              var mapped = ruToEnMap[lower];
+              if (mapped === undefined) return c;
+              return c === c.toUpperCase() ? (mapped.charAt(0).toUpperCase() + mapped.slice(1)) : mapped;
+            }).join('');
+          }
+
+          var BUREAUCRATIC_PATTERNS = [
+            /федерального государственного бюджетного образовательного учреждения высшего образования/gi,
+            /федерального государственного бюджетного образовательного учреждения высшего профессионального образования/gi,
+            /федерального государственного бюджетного образовательного учреждения/gi,
+            /федерального государственного бюджетного учреждения науки/gi,
+            /федерального государственного бюджетного учреждения/gi,
+            /государственного бюджетного образовательного учреждения высшего образования/gi,
+            /государственного бюджетного образовательного учреждения/gi,
+            /государственного образовательного учреждения высшего профессионального образования/gi,
+            /государственного образовательного учреждения/gi,
+            /высшего профессионального образования/gi,
+            /высшего образования/gi,
+            /образовательного учреждения/gi,
+            /бюджетного учреждения/gi,
+            /Сибирского отделения Российской академии наук/gi,
+            /Дальневосточного отделения Российской академии наук/gi,
+            /Уральского отделения Российской академии наук/gi,
+            /Российской академии наук/gi,
+            /Российской академии медицинских наук/gi,
+            /Российской академии сельскохозяйственных наук/gi
+          ];
+
+          function deduceOoptCategoryClient(rawTitle, category) {
+            if (category && category.trim()) return category.trim();
+            var t = (rawTitle || '').toLowerCase();
+            if (t.indexOf('ботанический сад') !== -1 || t.indexOf('дендрологический') !== -1) return 'дендрологический парк и ботанический сад';
+            if (t.indexOf('национальный парк') !== -1) return 'национальный парк';
+            if (t.indexOf('биосферный заповедник') !== -1) return 'государственный природный биосферный заповедник';
+            if (t.indexOf('заповедник') !== -1) return 'государственный природный заповедник';
+            if (t.indexOf('заказник') !== -1) return 'государственный природный заказник';
+            if (t.indexOf('памятник природы') !== -1) return 'памятник природы';
+            if (t.indexOf('природный парк') !== -1) return 'природный парк';
+            return 'ООПТ';
+          }
+
+          function getEnglishSuffixClient(category) {
+            var c = (category || '').toLowerCase();
+            if (c.indexOf('национальный парк') !== -1) return 'National Park';
+            if (c.indexOf('биосферный заповедник') !== -1) return 'State Biosphere Nature Reserve';
+            if (c.indexOf('заповедник') !== -1) return 'Nature Reserve';
+            if (c.indexOf('заказник') !== -1) return 'Nature Sanctuary';
+            if (c.indexOf('памятник природы') !== -1) return 'Nature Monument';
+            if (c.indexOf('природный парк') !== -1) return 'Nature Park';
+            if (c.indexOf('ботанический сад') !== -1) return 'Botanical Garden';
+            if (c.indexOf('дендрологический') !== -1) return 'Dendrological Park';
+            return 'Protected Area';
+          }
+
+          function cleanOoptNameClient(rawTitle, category) {
+            var name = (rawTitle || '').trim();
+            var quoteMatch = name.match(/["«]([^"»]+)["»]/);
+            if (quoteMatch && quoteMatch[1].length > 3) {
+              var prefix = name.substring(0, quoteMatch.index).trim();
+              if (prefix.length < 50) name = quoteMatch[1].trim();
+            }
+
+            for (var i = 0; i < BUREAUCRATIC_PATTERNS.length; i++) {
+              name = name.replace(BUREAUCRATIC_PATTERNS[i], ' ');
+            }
+
+            name = name.replace(/["«]/g, '').replace(/["»]/g, '')
+              .replace(/Московского государственного университета/gi, 'МГУ')
+              .replace(/Московский государственный университет/gi, 'МГУ')
+              .replace(/имени М\\.?В\\.?\\s*Ломоносова/gi, 'им. М.В. Ломоносова')
+              .replace(/имени\\s+/gi, 'им. ')
+              .replace(/\\s+/g, ' ')
+              .trim();
+
+            var prefixes = [
+              'Государственный природный биосферный заповедник',
+              'Государственный природный заповедник',
+              'Государственный природный заказник',
+              'Государственный ландшафтный заказник',
+              'Национальный природный парк',
+              'Национальный парк',
+              'Природный парк',
+              'Памятник природы',
+              'Охраняемый природный ландшафт',
+              'Дендрологический парк и ботанический сад',
+              'Дендрологический парк',
+              'Ботанический сад'
+            ];
+
+            for (var j = 0; j < prefixes.length; j++) {
+              var p = prefixes[j];
+              if (name.toLowerCase().indexOf(p.toLowerCase()) === 0) {
+                var rem = name.substring(p.length).trim().replace(/^[-–—,: ]+/, '').trim();
+                if (rem.length > 2) {
+                  name = rem;
+                  break;
+                }
+              }
+            }
+            return name.replace(/^[-–—,: ]+/, '').trim();
+          }
+
+          function translateOoptNameToEnglishClient(cleanName, category) {
+            var s = cleanName;
+            s = s.replace(/Биологического факультета МГУ им\\.? М\\.?В\\.?\\s*Ломоносова/gi, 'MSU Faculty of Biology')
+                 .replace(/МГУ им\\.? М\\.?В\\.?\\s*Ломоносова/gi, 'MSU')
+                 .replace(/МГУ/g, 'MSU')
+                 .replace(/БИН РАН/g, 'BIN RAS')
+                 .replace(/РАН/g, 'RAS')
+                 .replace(/СО РАН/g, 'SB RAS')
+                 .replace(/Петра Великого/gi, 'Peter the Great');
+
+            var en = transliterateClient(s);
+            en = en.replace(/skogo\\b/gi, 'sky')
+                   .replace(/skogo gosudarstvennogo\\b/gi, 'State')
+                   .replace(/gosudarstvennogo\\b/gi, 'State')
+                   .replace(/pedagogicheskogo\\b/gi, 'Pedagogical')
+                   .replace(/universiteta\\b/gi, 'University')
+                   .replace(/instituta\\b/gi, 'Institute');
+
+            en = en.split(' ').map(function(w) {
+              return w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '';
+            }).join(' ').trim();
+
+            var suffix = getEnglishSuffixClient(category);
+            if (en.toLowerCase().indexOf(suffix.toLowerCase()) === -1) {
+              en = en + ' ' + suffix;
+            }
+            return en.replace(/\\s+/g, ' ').trim();
+          }
+
+          function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid) {
+            var detectedCategory = deduceOoptCategoryClient(rawTitle, category);
+            var cleanName = cleanOoptNameClient(rawTitle, detectedCategory);
+            var nameEn = translateOoptNameToEnglishClient(cleanName, detectedCategory);
+            var catDisplay = detectedCategory.charAt(0).toUpperCase() + detectedCategory.slice(1);
+
+            var fullStatus = sigDisplay ? (catDisplay + ' (' + sigDisplay + ' значение)') : catDisplay;
+            var region = ate || '';
+            if (region.indexOf('(') !== -1) region = region.split('(')[0].trim();
+
+            var siteUrl = nid ? ('http://oopt.aari.ru/oopt/' + nid) : 'http://oopt.aari.ru/';
+
+            return {
+              name: cleanName,
+              nameEn: nameEn,
+              status: fullStatus,
+              region: region,
+              lat: lat || '',
+              lon: lon || '',
+              site: siteUrl,
+              clarification: ''
+            };
+          }
+
+          function updateSubmitterPreview() {
+            var name = document.getElementById('subm-name').value;
+            var nameEn = document.getElementById('subm-name-en').value;
+            var status = document.getElementById('subm-status').value;
+            var lat = document.getElementById('subm-lat').value;
+            var lon = document.getElementById('subm-lon').value;
+            var region = document.getElementById('subm-region').value;
+            var site = document.getElementById('subm-site').value;
+            var clarify = document.getElementById('subm-clarify').value;
+
+            var lines = [
+              'Название парка/ООПТ: ' + name,
+              'Название для POTA (EN): ' + nameEn,
+              'Статус (парк/ООПТ и т.п.): ' + status,
+              'Координата первая с яндекс-карт: ' + lat,
+              'Координата вторая: ' + lon,
+              'Регион России: ' + region,
+              'Сайт объекта, ссылка: ' + site,
+              'Уточнение (не обязательно): ' + clarify
+            ];
+            var text = lines.join(String.fromCharCode(10));
+            document.getElementById('subm-preview').textContent = text;
+
+            var yandexLink = document.getElementById('subm-yandex-link');
+            var yandexText = document.getElementById('subm-yandex-text');
+            if (lat && lon && !isNaN(Number(lat)) && !isNaN(Number(lon))) {
+              yandexLink.href = 'https://yandex.ru/maps/?pt=' + lon.trim() + ',' + lat.trim() + '&z=14&l=map';
+              if (yandexText) yandexText.textContent = 'Проверить в Яндекс.Картах';
+            } else {
+              var q = (name + ' ' + region).trim();
+              yandexLink.href = 'https://yandex.ru/maps/?text=' + encodeURIComponent(q);
+              if (yandexText) yandexText.textContent = '🔍 Найти в Яндекс.Картах';
+            }
+            return text;
+          }
+
+          // Bind preview updates on input changes
+          ['subm-name', 'subm-name-en', 'subm-status', 'subm-lat', 'subm-lon', 'subm-region', 'subm-site', 'subm-clarify'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('input', updateSubmitterPreview);
+          });
+
+          // Quick switch buttons for site links
+          document.getElementById('btn-set-link-aari')?.addEventListener('click', function() {
+            var nid = document.getElementById('subm-nid').value;
+            if (nid) {
+              document.getElementById('subm-site').value = 'http://oopt.aari.ru/oopt/' + nid;
+              updateSubmitterPreview();
+            }
+          });
+
+          document.getElementById('btn-set-link-nextgis')?.addEventListener('click', function() {
+            var nid = document.getElementById('subm-nid').value;
+            if (nid) {
+              document.getElementById('subm-site').value = 'https://ooptaari.nextgis.ru/oopt/' + nid;
+              updateSubmitterPreview();
+            }
+          });
+
+          // Open Submitter Modal
+          document.addEventListener('click', async function(e) {
+            var btn = e.target.closest('.open-submitter-btn');
+            if (btn) {
+              var title = btn.getAttribute('data-title') || '';
+              var category = btn.getAttribute('data-category') || '';
+              var sig = btn.getAttribute('data-sig') || '';
+              var ate = btn.getAttribute('data-ate') || '';
+              var lat = btn.getAttribute('data-lat') || '';
+              var lon = btn.getAttribute('data-lon') || '';
+              var nid = btn.getAttribute('data-nid') || '';
+
+              var parsed = parseOoptForSubmitter(title, category, sig, ate, lat, lon, nid);
+
+              document.getElementById('subm-nid').value = nid;
+              document.getElementById('subm-name').value = parsed.name;
+              document.getElementById('subm-name-en').value = parsed.nameEn;
+              document.getElementById('subm-status').value = parsed.status;
+              document.getElementById('subm-lat').value = parsed.lat;
+              document.getElementById('subm-lon').value = parsed.lon;
+              document.getElementById('subm-region').value = parsed.region;
+              document.getElementById('subm-site').value = parsed.site;
+              document.getElementById('subm-clarify').value = '';
+              var potaRef = btn.getAttribute('data-pota-ref') || '';
+              var potaName = btn.getAttribute('data-pota-name') || '';
+              var potaBox = document.getElementById('subm-pota-badge-container');
+              if (potaBox) {
+                if (potaRef) {
+                  potaBox.innerHTML = '<div class="alert alert-success d-flex align-items-center justify-content-between p-2 mb-3 shadow-sm">' +
+                    '<div><i class="bi bi-check-circle-fill text-success fs-5 me-2"></i><strong>Объект уже в базе POTA!</strong> Референс: <span class="badge bg-success">' + potaRef + '</span> <small class="text-muted">(' + escapeHtmlClient(potaName) + ')</small><div class="small text-success mt-1">Повторная подача заявки координатору не требуется. Можно сразу выезжать и активировать!</div></div>' +
+                    '<a href="https://next.pota.app/park/' + potaRef + '" target="_blank" class="btn btn-sm btn-success text-nowrap ms-2"><i class="bi bi-box-arrow-up-right"></i> pota.app</a>' +
+                    '</div>';
+                } else {
+                  potaBox.innerHTML = '';
+                }
+              }
+
+              updateSubmitterPreview();
+
+              var modalEl = document.getElementById('modal-pota-submitter');
+              var modal = new bootstrap.Modal(modalEl);
+              modal.show();
+
+              // If coordinates are empty, fetch live from API asynchronously
+              if (!parsed.lat || !parsed.lon) {
+                document.getElementById('subm-coords-status').innerHTML = '<span class="spinner-border spinner-border-sm text-success"></span> Запрос координат...';
+                try {
+                  var res = await fetch('/api/tma/oopt/' + nid);
+                  var details = await res.json();
+                  if (details.lat && details.lon) {
+                    document.getElementById('subm-lat').value = Number(details.lat).toFixed(6);
+                    document.getElementById('subm-lon').value = Number(details.lon).toFixed(6);
+                    if (details.rf_subjects) {
+                      document.getElementById('subm-region').value = details.rf_subjects;
+                    }
+                    if (details.status && !document.getElementById('subm-clarify').value) {
+                      var extra = ['Статус: ' + details.status];
+                      if (details.area) extra.push('Площадь: ' + Number(details.area).toLocaleString('ru-RU') + ' га');
+                      document.getElementById('subm-clarify').value = extra.join('. ');
+                    }
+                    updateSubmitterPreview();
+                    document.getElementById('subm-coords-status').innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Координаты получены</span>';
+                  } else {
+                    document.getElementById('subm-coords-status').innerHTML = '<span class="text-muted">Координаты в реестре отсутствуют</span>';
+                  }
+                } catch(e) {
+                  document.getElementById('subm-coords-status').innerHTML = '';
+                }
+              }
+            }
+          });
+
+          // Copy Submitter Template Buttons
+          function copySubmitterAction() {
+            var text = updateSubmitterPreview();
+            navigator.clipboard.writeText(text).then(function() {
+              if (Toast) {
+                Toast.fire({ icon: 'success', title: '✅ Заявка для R2BBX скопирована в буфер обмена!' });
+              } else {
+                alert('Скопировано в буфер обмена!');
+              }
+            });
+          }
+
+          document.getElementById('btn-copy-submitter')?.addEventListener('click', copySubmitterAction);
+          document.getElementById('btn-copy-submitter-bottom')?.addEventListener('click', copySubmitterAction);
+
+          // Instant load on page reload (F5) if tab is oopt
+          if (window.location.hash === '#list-oopt') {
+            loadAdminOopt(1);
+          }
         </script>
       </body>
       </html>
@@ -1378,6 +2117,40 @@ export const startAdminServer = (telegramClient) => {
     try {
       const rows = db.prepare("SELECT id, telegram_id, first_name, last_name, username, reason, details, action, is_read, created_at FROM blocked_users ORDER BY created_at DESC LIMIT 100").all();
       res.json(rows);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // OOPT Direct Route and Admin API
+  app.get('/oopt', (req, res) => {
+    res.redirect('/app');
+  });
+
+  app.post('/api/admin/oopt/sync', requireAuth, async (req, res) => {
+    try {
+      const result = await syncOoptRegistry();
+      res.json(result);
+    } catch (err) {
+      console.error('[Admin] OOPT sync error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/admin/oopt', requireAuth, (req, res) => {
+    try {
+      const { page, limit, search, sig, category, region, pota } = req.query;
+      const data = getOoptList({ page, limit, search, sig, category, region, pota });
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/admin/oopt/stats', requireAuth, (req, res) => {
+    try {
+      const stats = getOoptStats();
+      res.json(stats);
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

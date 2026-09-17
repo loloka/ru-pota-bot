@@ -1,9 +1,13 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-// Ensure data directory exists
-const dbDir = path.resolve('data');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '../../');
+const dbDir = path.join(projectRoot, 'data');
+
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
@@ -182,6 +186,53 @@ try {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_blocked_users_is_read ON blocked_users (is_read)`);
     console.log('[DB] Migrated blocked_users table: added is_read column');
   }
+
+  // Ensure oopt_registry table exists for Russian Protected Areas
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS oopt_registry (
+      nid INTEGER PRIMARY KEY,
+      title TEXT NOT NULL,
+      sig TEXT,
+      sig_display TEXT,
+      status TEXT,
+      category TEXT,
+      agency TEXT,
+      ate TEXT,
+      start_date TEXT,
+      area REAL,
+      area_aquatory REAL,
+      area_protection_zone REAL,
+      lat REAL,
+      lon REAL,
+      bbox TEXT,
+      profile TEXT,
+      rf_subjects TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_oopt_title ON oopt_registry (title);
+    CREATE INDEX IF NOT EXISTS idx_oopt_category ON oopt_registry (category);
+    CREATE INDEX IF NOT EXISTS idx_oopt_sig ON oopt_registry (sig);
+    CREATE INDEX IF NOT EXISTS idx_oopt_ate ON oopt_registry (ate);
+  `);
+
+  const ooptColumns = db.pragma('table_info(oopt_registry)');
+  const hasPotaRef = ooptColumns.some(col => col.name === 'pota_ref');
+  if (!hasPotaRef) {
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN pota_ref TEXT`);
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN pota_name TEXT`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_oopt_pota_ref ON oopt_registry (pota_ref)`);
+    console.log('[DB] Migrated oopt_registry table: added pota_ref and pota_name columns');
+  }
+
+  // Ensure missing categories are populated
+  try {
+    db.exec(`
+      UPDATE oopt_registry SET category = 'дендрологический парк и ботанический сад' WHERE nid = 66245 AND (category IS NULL OR category = '');
+      UPDATE oopt_registry SET category = 'государственный природный заказник' WHERE nid = 58456 AND (category IS NULL OR category = '');
+      UPDATE oopt_registry SET category = 'памятник природы' WHERE nid = 56585 AND (category IS NULL OR category = '');
+    `);
+  } catch (_) {}
 } catch (e) {
   console.error('[DB] Migration error:', e.message);
 }

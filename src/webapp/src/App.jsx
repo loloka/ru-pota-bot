@@ -6,6 +6,7 @@ import ClusterTab from './components/tabs/ClusterTab.jsx';
 import MapTab from './components/tabs/MapTab.jsx';
 import SubscriptionsTab from './components/tabs/SubscriptionsTab.jsx';
 import ProfileTab from './components/tabs/ProfileTab.jsx';
+import OoptTab from './components/tabs/OoptTab.jsx';
 import OsmAndModal from './components/modals/OsmAndModal.jsx';
 import TelegramAuthModal from './components/modals/TelegramAuthModal.jsx';
 import { telegram } from './services/telegram.js';
@@ -233,6 +234,16 @@ export default function App() {
               t={t}
               mapTarget={mapTarget}
               onClearMapTarget={() => setMapTarget(null)}
+            />
+          )}
+
+          {activeTab === 'oopt' && (
+            <OoptTab 
+              language={language}
+              t={t}
+              onNavigateToMap={(oopt) => {
+                handleNavigate('map');
+              }}
             />
           )}
 

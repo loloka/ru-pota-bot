@@ -196,4 +196,34 @@ export const api = {
       body: JSON.stringify({ newCallsign }),
     });
   },
+
+  /**
+   * Get Russian Protected Areas (ООПТ) list with pagination and filters
+   */
+  async getOoptList(params = {}) {
+    const query = new URLSearchParams();
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+    if (params.search) query.set('search', params.search);
+    if (params.sig) query.set('sig', params.sig);
+    if (params.category) query.set('category', params.category);
+    if (params.status) query.set('status', params.status);
+    if (params.region) query.set('region', params.region);
+    if (params.pota) query.set('pota', params.pota);
+    return request(`/oopt?${query.toString()}`);
+  },
+
+  /**
+   * Get Russian Protected Areas (ООПТ) summary statistics
+   */
+  async getOoptStats() {
+    return request('/oopt/stats');
+  },
+
+  /**
+   * Get full detail card for an individual ООПТ
+   */
+  async getOoptDetails(nid) {
+    return request(`/oopt/${nid}`);
+  },
 };

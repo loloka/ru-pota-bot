@@ -3,6 +3,7 @@ import {
   Home, 
   Radio, 
   Compass, 
+  Trees,
   Bell, 
   User 
 } from 'lucide-react';
@@ -12,6 +13,7 @@ export const TABS = [
   { id: 'dashboard', key: 'nav_dashboard', icon: Home },
   { id: 'cluster', key: 'nav_cluster', icon: Radio, badge: 'LIVE' },
   { id: 'map', key: 'nav_map', icon: Compass },
+  { id: 'oopt', key: 'nav_oopt', icon: Trees },
   { id: 'subscriptions', key: 'nav_subscriptions', icon: Bell },
   { id: 'profile', key: 'nav_profile', icon: User },
 ];

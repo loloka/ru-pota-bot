@@ -1,6 +1,6 @@
 {
   "name": "ru-pota",
-  "version": "1.15.8",
+  "version": "1.16.0",
   "description": "Telegram bot and Mini App for RU-POTA (Parks on the Air)",
 
   "main": "src/bot/index.js",
@@ -9,6 +9,7 @@
     "dev": "node --watch src/bot/index.js",
     "start": "node src/bot/index.js",
     "test": "node test_shield.js",
+    "update:oopt": "node src/scripts/downloadOopt.js",
     "webapp:dev": "vite src/webapp",
     "webapp:build": "vite build src/webapp",
     "build": "npm run webapp:build"

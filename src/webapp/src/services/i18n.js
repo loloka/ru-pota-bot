@@ -8,6 +8,7 @@ export const translations = {
     nav_dashboard: 'Главная',
     nav_cluster: 'В эфире',
     nav_map: 'Карта',
+    nav_oopt: 'ООПТ',
     nav_subscriptions: 'Подписки',
     nav_profile: 'Профиль',
 
@@ -145,6 +146,7 @@ export const translations = {
     nav_dashboard: 'Dashboard',
     nav_cluster: 'On Air',
     nav_map: 'Map',
+    nav_oopt: 'OOPT',
     nav_subscriptions: 'Alerts',
     nav_profile: 'Profile',
 

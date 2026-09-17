@@ -238,8 +238,8 @@
     "grid": "KO85vu",
     "region": "RU-MC,RU-MS",
     "website": "https://losinyiostrov.ru/",
-    "activations": 41,
-    "qsos": 2608
+    "activations": 42,
+    "qsos": 2697
   },
   {
     "reference": "RU-0023",
@@ -480,8 +480,8 @@
     "grid": "NO52ru",
     "region": "RU-KX",
     "website": "https://sayanzapoved.ru/",
-    "activations": 0,
-    "qsos": 0
+    "activations": 6,
+    "qsos": 846
   },
   {
     "reference": "RU-0045",
@@ -585,11 +585,11 @@
   {
     "reference": "RU-0054",
     "name": "Vodlozersky National Park",
-    "lat": 62.2297,
-    "lon": 36.8769,
-    "grid": "KP82kf",
-    "region": "RU-AR",
-    "website": "https://en.wikipedia.org/wiki/Vodlozersky_National_Park",
+    "lat": 62.6605,
+    "lon": 37.0374,
+    "grid": "KP82mp",
+    "region": "RU-AR,RU-KI",
+    "website": "https://vodlozero.ru/",
     "activations": 0,
     "qsos": 0
   },
@@ -662,9 +662,9 @@
   {
     "reference": "RU-0061",
     "name": "Russian Arctic National Park",
-    "lat": 80.6057,
-    "lon": 57.9351,
-    "grid": "LR80xo",
+    "lat": 80.5039,
+    "lon": 49.4473,
+    "grid": "LR40rm",
     "region": "RU-FJ",
     "website": "https://www.rus-arc.ru/",
     "activations": 0,
@@ -711,8 +711,8 @@
     "grid": "NO15kb",
     "region": "RU-NS",
     "website": "https://welcome-novosibirsk.ru/place-to-visit/parks-gardens/park-kultury-i-otdykha-zaeltsovskiy/",
-    "activations": 16,
-    "qsos": 402
+    "activations": 19,
+    "qsos": 521
   },
   {
     "reference": "RU-0066",
@@ -799,8 +799,8 @@
     "grid": "KO85ut",
     "region": "RU-MC",
     "website": "https://parksokolniki.mos.ru/",
-    "activations": 6,
-    "qsos": 439
+    "activations": 7,
+    "qsos": 553
   },
   {
     "reference": "RU-0074",
@@ -898,8 +898,8 @@
     "grid": "KO85vp",
     "region": "RU-MC",
     "website": "http://moscowalk.ru/uao/brateevo/parki/brateevskaya-poima.html",
-    "activations": 0,
-    "qsos": 0
+    "activations": 1,
+    "qsos": 10
   },
   {
     "reference": "RU-0083",
@@ -909,8 +909,8 @@
     "grid": "KO85up",
     "region": "RU-MC",
     "website": "https://optimisty.com/brateevo",
-    "activations": 0,
-    "qsos": 0
+    "activations": 1,
+    "qsos": 11
   },
   {
     "reference": "RU-0084",
@@ -1107,8 +1107,8 @@
     "grid": "KP50ea",
     "region": "RU-SP",
     "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D0%A1%D0%BE%D1%81%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%B8%D1%81%D1%82%D0%BE%D0%BA%D0%B8-%D0%9C%D1%83%D1%80%D0%B8%D0%BD%D1%81%D0%BA%D0%BE%D0%B3%D0%BE-%D1%80%D1%83%D1%87%D1%8C%D1%8F-%D0%9F%D0%B0%D1%80%",
-    "activations": 1,
-    "qsos": 20
+    "activations": 3,
+    "qsos": 49
   },
   {
     "reference": "RU-0102",
@@ -1679,8 +1679,8 @@
     "grid": "KO85tt",
     "region": "RU-MC",
     "website": "https://www.mos.ru/news/item/96035073/",
-    "activations": 4,
-    "qsos": 169
+    "activations": 6,
+    "qsos": 193
   },
   {
     "reference": "RU-0154",
@@ -2075,8 +2075,8 @@
     "grid": "LN46bj",
     "region": "RU-AS",
     "website": "https://mamado.su/astrakhan/topolinaia-roshha-park-kultury-i-otdyxa-id249027",
-    "activations": 2,
-    "qsos": 25
+    "activations": 6,
+    "qsos": 147
   },
   {
     "reference": "RU-0190",
@@ -2108,8 +2108,8 @@
     "grid": "NO14lw",
     "region": "RU-NS",
     "website": "https://www.nso.ru/news/56205 ",
-    "activations": 15,
-    "qsos": 393
+    "activations": 27,
+    "qsos": 735
   },
   {
     "reference": "RU-0193",
@@ -2317,8 +2317,8 @@
     "grid": "KP50ac",
     "region": "RU-SP",
     "website": "https://oopt.spb.ru/protected_area/sestroretzkoye-boloto/",
-    "activations": 0,
-    "qsos": 0
+    "activations": 1,
+    "qsos": 12
   },
   {
     "reference": "RU-0212",
@@ -2416,8 +2416,8 @@
     "grid": "KP40lg",
     "region": "RU-LN",
     "website": "https://ooptlo.ru/buxta-zhyoltaya.html",
-    "activations": 0,
-    "qsos": 0
+    "activations": 4,
+    "qsos": 1326
   },
   {
     "reference": "RU-0221",
@@ -2988,8 +2988,8 @@
     "grid": "KO59eu",
     "region": "RU-SP",
     "website": "https://78.mchs.gov.ru/glavnoe-upravlenie/sovet-veteranov/deyatelnost/park-geroev-pozharnyh",
-    "activations": 0,
-    "qsos": 0
+    "activations": 1,
+    "qsos": 24
   },
   {
     "reference": "RU-0273",
@@ -3483,8 +3483,8 @@
     "grid": "NO15lb",
     "region": "RU-NS",
     "website": "https://mors-novosibirsk.sibnet.ru/obj/4480/",
-    "activations": 0,
-    "qsos": 0
+    "activations": 1,
+    "qsos": 11
   },
   {
     "reference": "RU-0318",
@@ -3978,8 +3978,8 @@
     "grid": "NO53qr",
     "region": "RU-KK",
     "website": "https://19rus.ru/more.php?UID=99187",
-    "activations": 0,
-    "qsos": 0
+    "activations": 1,
+    "qsos": 38
   },
   {
     "reference": "RU-0363",
@@ -4044,8 +4044,8 @@
     "grid": "KO59eu",
     "region": "RU-SP",
     "website": "https://spbcult.ru/street/skver_voinov_osvoboditeley_0116840e/",
-    "activations": 0,
-    "qsos": 0
+    "activations": 2,
+    "qsos": 29
   },
   {
     "reference": "RU-0369",
@@ -5496,6 +5496,567 @@
     "grid": "LO36od",
     "region": "RU-CV",
     "website": "https://parkamazonia.ru/about_park",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0501",
+    "name": "City Park",
+    "lat": 54.638,
+    "lon": 22.5683,
+    "grid": "KO14gp",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%D1%81%D0%BA%D0%BE%D0%B9-%D0%BF%D0%B0%D1%80%D0%BA-6",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0502",
+    "name": "Kutuzov's Oak Flora Reserve",
+    "lat": 54.6923,
+    "lon": 22.6419,
+    "grid": "KO14hq",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%94%D1%83%D0%B1-%D1%87%D0%B5%D1%80%D0%B5%D1%88%D1%87%D0%B0%D1%82%D1%8B%D0%B9-3",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0503",
+    "name": "Ilyinskoye Arboretum Park",
+    "lat": 54.5035,
+    "lon": 22.5122,
+    "grid": "KO14gm",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D0%98%D0%BB%D1%8C%D0%B8%D0%BD%D1%81%D0%BA%D0%BE%D0%B5",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0504",
+    "name": "Michurinsky Park Nature Monument",
+    "lat": 55.0442,
+    "lon": 22.0077,
+    "grid": "KO15ab",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D0%9C%D0%B8%D1%87%D1%83%D1%80%D0%B8%D0%BD%D1%81%D0%BA%D0%B8%D0%B9",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0505",
+    "name": "Yasnaya Polyana Park Natural Monument",
+    "lat": 54.5666,
+    "lon": 22.4433,
+    "grid": "KO14fn",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D0%AF%D1%81%D0%BD%D0%B0%D1%8F-%D0%BF%D0%BE%D0%BB%D1%8F%D0%BD%D0%B0",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0506",
+    "name": "Krasnaya River Natural Monument",
+    "lat": 54.4216,
+    "lon": 22.3886,
+    "grid": "KO14ek",
+    "region": "RU-KN",
+    "website": "https://istok39.ru/reka-krasnaya",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0507",
+    "name": "Ozersk City Park",
+    "lat": 54.414,
+    "lon": 22.0187,
+    "grid": "KO14aj",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%D1%81%D0%BA%D0%BE%D0%B9-%D0%BF%D0%B0%D1%80%D0%BA-%D0%B3-%D0%9E%D0%B7%D0%B5%D1%80%D1%81%D0%BA%D0%B0",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0508",
+    "name": "Zarechny Park Specially protected Natural Area",
+    "lat": 54.4067,
+    "lon": 22.0168,
+    "grid": "KO14aj",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D0%97%D0%B0%D1%80%D0%B5%D1%87%D0%BD%D1%8B%D0%B9",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0509",
+    "name": "Sosnovy Bor City Park",
+    "lat": 54.955,
+    "lon": 20.2365,
+    "grid": "KO04cw",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%D1%81%D0%BA%D0%BE%D0%B9-%D0%BF%D0%B0%D1%80%D0%BA-%D0%A1%D0%BE%D1%81%D0%BD%D0%BE%D0%B2%D1%8B%D0%B9-%D0%B1%D0%BE%D1%80",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0510",
+    "name": "Karasya Park",
+    "lat": 54.9517,
+    "lon": 20.2268,
+    "grid": "KO04cw",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D0%9A%D0%B0%D1%80%D0%B0%D1%81%D1%8F",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0511",
+    "name": "\"Birch Grove, Slavyanskoye Settlement\" Park",
+    "lat": 54.8375,
+    "lon": 20.9708,
+    "grid": "KO04lu",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%91%D0%B5%D1%80%D0%B5%D0%B7%D0%BE%D0%B2%D0%B0%D1%8F-%D1%80%D0%BE%D1%89%D0%B0-%D0%BF%D0%BE%D1%81-%D0%A1%D0%BB%D0%B0%D0%B2%D1%8F%D0%BD%D1%81%D0%BA%D0%BE%D0%B5",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0512",
+    "name": "Polessk City Park",
+    "lat": 54.8562,
+    "lon": 21.1037,
+    "grid": "KO04nu",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%D1%81%D0%BA%D0%BE%D0%B9-%D0%BF%D0%B0%D1%80%D0%BA-%D0%B3-%D0%9F%D0%BE%D0%BB%D0%B5%D1%81%D1%81%D0%BA%D0%B0",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0513",
+    "name": "Siebold's walnut Natural Monument",
+    "lat": 54.7537,
+    "lon": 21.2691,
+    "grid": "KO04ps",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9E%D1%80%D0%B5%D1%85-%D0%97%D0%B8%D0%B1%D0%BE%D0%BB%D1%8C%D0%B4%D0%B0",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0514",
+    "name": "Zhuravlevka Park Nature Monument",
+    "lat": 54.8296,
+    "lon": 20.942,
+    "grid": "KO04lt",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D0%96%D1%83%D1%80%D0%B0%D0%B2%D0%BB%D0%B5%D0%B2%D0%BA%D0%B0",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0515",
+    "name": "Mayskoye Park Natural Monument",
+    "lat": 54.8214,
+    "lon": 20.9688,
+    "grid": "KO04lt",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D0%9C%D0%B0%D0%B9%D1%81%D0%BA%D0%BE%D0%B5",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0516",
+    "name": "Pravdinsk City Park",
+    "lat": 54.4478,
+    "lon": 21.0143,
+    "grid": "KO04mk",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%D1%81%D0%BA%D0%BE%D0%B9-%D0%BF%D0%B0%D1%80%D0%BA-%D0%B3-%D0%9F%D1%80%D0%B0%D0%B2%D0%B4%D0%B8%D0%BD%D1%81%D0%BA%D0%B0",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0517",
+    "name": "Zheleznodorozhny Park Nature Monument",
+    "lat": 54.3617,
+    "lon": 21.3125,
+    "grid": "KO04pi",
+    "region": "RU-KN",
+    "website": "https://istok39.ru/jeleznodorojnuy",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0518",
+    "name": "Sosnovy Bor Park",
+    "lat": 54.4397,
+    "lon": 21.0079,
+    "grid": "KO04mk",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D0%A1%D0%BE%D1%81%D0%BD%D0%BE%D0%B2%D1%8B%D0%B9-%D0%B1%D0%BE%D1%80",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0519",
+    "name": "Svetly City of Culture and Recreation Park",
+    "lat": 54.6702,
+    "lon": 20.135,
+    "grid": "KO04bq",
+    "region": "RU-KN",
+    "website": "https://istok39.ru/park_svetliy",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0520",
+    "name": "Pedunculate oak avenue Natural Monument",
+    "lat": 54.9412,
+    "lon": 20.0814,
+    "grid": "KO04aw",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%90%D0%BB%D0%BB%D0%B5%D1%8F-%D0%B4%D1%83%D0%B1%D0%B0-%D1%87%D0%B5%D1%80%D0%B5%D1%88%D1%87%D0%B0%D1%82%D0%BE%D0%B3%D0%BE-0",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0521",
+    "name": "The Seasons Park",
+    "lat": 54.9458,
+    "lon": 20.1626,
+    "grid": "KO04bw",
+    "region": "RU-KN",
+    "website": "https://kolesoistorii.ru/story/tpost/enys9s494x-pro-park-kulturi-i-otdiha-svetlogorska",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0522",
+    "name": "\"Listvennichny\" of Culture and Recreation Park",
+    "lat": 54.9427,
+    "lon": 20.1561,
+    "grid": "KO04bw",
+    "region": "RU-KN",
+    "website": "https://www.svetlogorsk-tourism.ru/activities/attractions/listvennichnyy-park/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0523",
+    "name": "Alexandrovsky Park",
+    "lat": 52.5022,
+    "lon": 85.1225,
+    "grid": "NO22nm",
+    "region": "RU-AL",
+    "website": "https://biysk22.ru/city/turizm/d/?ELEMENT_ID=33528",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0524",
+    "name": "Moritz Becker Park Natural Monument",
+    "lat": 54.8682,
+    "lon": 19.9354,
+    "grid": "JO94xu",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D0%AF%D0%BD%D1%82%D0%B0%D1%80%D0%BD%D1%8B%D0%B9-%D0%BD%D0%B0-%D0%B1%D0%B5%D1%80%D0%B5%D0%B3%D1%83-%D0%91%D0%B0%D0%BB%D1%82%D0%B8%D0%B9%D1%81%D0%BA%D0%BE%D0%B3%D0%BE-%D0%BC%D0%BE%D1%80%D1%8F",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0525",
+    "name": "Filino State Natural Site",
+    "lat": 54.9474,
+    "lon": 20.0225,
+    "grid": "KO04aw",
+    "region": "RU-KN",
+    "website": "https://istok39.ru/filino",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0526",
+    "name": "Ginkgo biloba Flora Reserve",
+    "lat": 54.8755,
+    "lon": 21.6509,
+    "grid": "KO04tv",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%93%D0%B8%D0%BD%D0%BA%D0%B3%D0%BE-%D0%B4%D0%B2%D1%83%D0%BB%D0%BE%D0%BF%D0%B0%D1%81%D1%82%D0%BD%D1%8B%D0%B9-3",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0527",
+    "name": "Yuri Gagarin City Park",
+    "lat": 55.0486,
+    "lon": 21.6914,
+    "grid": "KO05ub",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%D1%81%D0%BA%D0%BE%D0%B9-%D0%BF%D0%B0%D1%80%D0%BA-%D0%B8%D0%BC-%D0%AE-%D0%93%D0%B0%D0%B3%D0%B0%D1%80%D0%B8%D0%BD%D0%B0",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0528",
+    "name": "Gromovsky State Natural Reserve",
+    "lat": 54.9201,
+    "lon": 21.4606,
+    "grid": "KO04rw",
+    "region": "RU-KN",
+    "website": "https://istok39.ru/gromovskiy",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0529",
+    "name": "\"Dyunny\" State Natural Reserve",
+    "lat": 55.2328,
+    "lon": 21.3466,
+    "grid": "KO05qf",
+    "region": "RU-KN",
+    "website": "https://istok39.ru/dunnyi",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0530",
+    "name": "Park in the city of Sovetsk (culture and recreation park) Nature Monument",
+    "lat": 55.0744,
+    "lon": 21.8779,
+    "grid": "KO05wb",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D0%B2-%D0%B3-%D0%A1%D0%BE%D0%B2%D0%B5%D1%82%D1%81%D0%BA%D0%B5-%D0%BF%D0%B0%D1%80%D0%BA-%D0%BA%D1%83%D0%BB%D1%8C%D1%82%D1%83%D1%80%D1%8B-%D0%B8-%D0%BE%D1%82%D0%B4%D1%8B%D1%85%D0%B0",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0531",
+    "name": "Sovetsk City Park, at the Memorial to Russian Soldiers Natural Monument",
+    "lat": 55.0877,
+    "lon": 21.8411,
+    "grid": "KO05wc",
+    "region": "RU-KN",
+    "website": "https://istok39.ru/park_u_memoriala",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0532",
+    "name": "City Valley Park",
+    "lat": 54.6325,
+    "lon": 21.8052,
+    "grid": "KO04vp",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%93%D0%BE%D1%80%D0%BE%D0%B4%D1%81%D0%BA%D0%BE%D0%B9-%D0%BF%D0%B0%D1%80%D0%BA-%D0%B3-%D0%A7%D0%B5%D1%80%D0%BD%D1%8F%D1%85%D0%BE%D0%B2%D1%81%D0%BA%D0%B0",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0533",
+    "name": "Monument to the Lithuanian poet K. Donelaitis Park",
+    "lat": 54.588,
+    "lon": 22.1971,
+    "grid": "KO14co",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D0%BC%D1%8F%D1%82%D0%BD%D0%B8%D0%BA-%D0%BB%D0%B8%D1%82%D0%BE%D0%B2%D1%81%D0%BA%D0%BE%D0%BC%D1%83-%D0%BF%D0%BE%D1%8D%D1%82%D1%83-%D0%9A-%D0%94%D0%BE%D0%BD%D0%B5%D0%BB%D0%B0%D0%B9%D1%82%D0%B8%D1%81%D1%83",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0534",
+    "name": "Pokrovskoye State Natural Reserve",
+    "lat": 54.8483,
+    "lon": 19.9531,
+    "grid": "JO94xu",
+    "region": "RU-KN",
+    "website": "https://istok39.ru/pokrovskoe",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0535",
+    "name": "Beech Grove Square Park",
+    "lat": 54.8633,
+    "lon": 19.9377,
+    "grid": "JO94xu",
+    "region": "RU-KN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%A1%D0%BA%D0%B2%D0%B5%D1%80-%D0%91%D1%83%D0%BA%D0%BE%D0%B2%D0%B0%D1%8F-%D1%80%D0%BE%D1%89%D0%B0",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0536",
+    "name": "Solovetsky Historical and Architectural Museum-Reserve Botanical Gardens",
+    "lat": 65.0523,
+    "lon": 35.6615,
+    "grid": "KP75tb",
+    "region": "RU-AR",
+    "website": "https://eco29.ru/news/detail/botanicheskiy-sad-solovetskogo-muzeya-zapovednika/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0537",
+    "name": "I.M. Stratonovich Arboretum of the Northern (Arctic) Federal University named after M.V. Lomonosov Botanical Gardens",
+    "lat": 64.5284,
+    "lon": 40.5504,
+    "grid": "LP04gm",
+    "region": "RU-AR",
+    "website": "https://travel.eco29.ru/attraction/201/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0538",
+    "name": "SevNIILKh Arboretum Botanical Gardens",
+    "lat": 64.4955,
+    "lon": 40.7748,
+    "grid": "LP04jl",
+    "region": "RU-AR",
+    "website": "https://sevniilh-arh.ru/dendrology/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0539",
+    "name": "Pinezhsky State Natural Reserve",
+    "lat": 64.6015,
+    "lon": 43.0011,
+    "grid": "LP14mo",
+    "region": "RU-AR",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B8%D0%BD%D0%B5%D0%B6%D1%81%D0%BA%D0%B8%D0%B9",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0540",
+    "name": "Andom-Gora, Andoma geological section (Andoma Mountain) Natural Monument",
+    "lat": 61.2839,
+    "lon": 36.3575,
+    "grid": "KP81eg",
+    "region": "RU-VO",
+    "website": "http://www.vrorgo.ru/2018/01/17/oopt-andomskaya-gora/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0541",
+    "name": "Arboretum of the N.V. Vereshchagin Vologda State Dairy Farming Academy Botanical Gardens",
+    "lat": 59.2735,
+    "lon": 39.6724,
+    "grid": "KO99ug",
+    "region": "RU-VO",
+    "website": "https://molochnoe.ru/sveden/struct/faculties/fac-alh1/dendrosad/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0542",
+    "name": "Glebovskoye Bog Hydrological State Natural Reserve",
+    "lat": 59.1486,
+    "lon": 30.637,
+    "grid": "KO59hd",
+    "region": "RU-LN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%93%D0%BB%D0%B5%D0%B1%D0%BE%D0%B2%D1%81%D0%BA%D0%BE%D0%B5-%D0%B1%D0%BE%D0%BB%D0%BE%D1%82%D0%BE",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0543",
+    "name": "Mshinskoye Bog Biological of Federal Significance State Natural Reserve",
+    "lat": 58.9807,
+    "lon": 30.2473,
+    "grid": "KO58cx",
+    "region": "RU-LN",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9C%D1%88%D0%B8%D0%BD%D1%81%D0%BA%D0%BE%D0%B5-%D0%B1%D0%BE%D0%BB%D0%BE%D1%82%D0%BE",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0544",
+    "name": "Devonian outcrops on the Oredezh River near the settlement of Belogorka. Geological State Natural Reserve",
+    "lat": 59.3504,
+    "lon": 30.1451,
+    "grid": "KO59bi",
+    "region": "RU-LN",
+    "website": "https://ooptlo.ru/obnazheniya-devona-na-reke-oredezh-u-poselka-belogorka.html",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0545",
+    "name": "Rakitinsky Comprehensive State Nature Preserve",
+    "lat": 59.2321,
+    "lon": 30.2113,
+    "grid": "KO59cf",
+    "region": "RU-LN",
+    "website": "https://ooptlo.ru/rakitinskij.html",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0546",
+    "name": "Devonian geological outcrops and adits on the Oredezh River near the village of Borshchovo (Lake Antonovo) Natural Monument",
+    "lat": 58.8495,
+    "lon": 30.3806,
+    "grid": "KO58eu",
+    "region": "RU-LN",
+    "website": "https://ooptlo.ru/obnazheniya-devona-i-shtolni-na-reke-oredezh-u-derevni-borshhovo.html",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0547",
+    "name": "Devonian geological outcrops on the Oredezh River near the settlement of Yam-Tesovo. Natural Monument",
+    "lat": 58.8888,
+    "lon": 30.5439,
+    "grid": "KO58gv",
+    "region": "RU-LN",
+    "website": "https://ooptlo.ru/obnazheniya-devona-na-reke-oredezh-u-poselka-yam-tesovo.html",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0548",
+    "name": "Geological outcrops of Devonian and Ordovician rocks on the Saba River. Natural Monument",
+    "lat": 58.9806,
+    "lon": 29.0868,
+    "grid": "KO48nx",
+    "region": "RU-LN",
+    "website": "https://ooptlo.ru/obnazheniya-devonskix-i-ordovikskix-porod-na-reke-sabe.html",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0549",
+    "name": "Syabersky State Natural Reserve",
+    "lat": 58.7877,
+    "lon": 29.1469,
+    "grid": "KO48ns",
+    "region": "RU-LN",
+    "website": "https://ooptlo.ru/syaberskij.html",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0550",
+    "name": "Northern Forest Park Natural Monument",
+    "lat": 56.0236,
+    "lon": 37.8336,
+    "grid": "KO86wa",
+    "region": "RU-MS",
+    "website": "https://pushkino.tv/news/politika-vlast-gosudarstvo/176126/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0551",
+    "name": "Koverninsky National Park",
+    "lat": 57.4086,
+    "lon": 44.0771,
+    "grid": "LO27aj",
+    "region": "RU-NZ",
+    "website": "https://eco.nobl.ru/upload/uf/327/uhiiw37c8tlxl3gt7vpmyhwibnd2bbik/%D0%BF%D0%BE%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%20%D0%B8%20%D1%81%D1%85%D0%B5%D0%BC%D0%B0.pdf",
     "activations": 0,
     "qsos": 0
   },
@@ -7018,17 +7579,6 @@
     "qsos": 0
   },
   {
-    "reference": "BY-0139",
-    "name": "Гарадзішча в. Малая Вядрэнь Historic Site",
-    "lat": 54.9137,
-    "lon": 29.2943,
-    "grid": "KO44pv",
-    "region": "BY-VI",
-    "website": "https://heritage.gov.by/catalog/garadzishcha-peryiadu-ranniaga-zhaleznaga-veku-821",
-    "activations": 0,
-    "qsos": 0
-  },
-  {
     "reference": "BY-0140",
     "name": "Чыстая дуброва \"Язненская\" Nature Reserve",
     "lat": 55.3984,
@@ -7102,8 +7652,8 @@
     "grid": "MO52cw",
     "region": "KZ-AM",
     "website": "https://burabaypark.qr-pib.kz/",
-    "activations": 0,
-    "qsos": 0
+    "activations": 8,
+    "qsos": 394
   },
   {
     "reference": "KZ-0004",

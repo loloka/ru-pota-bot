@@ -8,6 +8,7 @@ import { potaApi } from '../api/potaApi.js';
 import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import { pinManager } from '../services/pinManager.js';
 import { getBaseCallsign } from '../bot/utils.js';
+import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry } from '../services/ooptService.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -1398,6 +1399,40 @@ export function createTmaRouter(telegramClient) {
     } catch (err) {
       console.error('[TMA API] Error in callsign request:', err.message);
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ==========================================
+  // ООПТ (Russian Protected Areas) Directory
+  // ==========================================
+  router.get('/oopt', (req, res) => {
+    try {
+      const { page, limit, search, sig, category, status, region, pota } = req.query;
+      const result = getOoptList({ page, limit, search, sig, category, status, region, pota });
+      res.json(result);
+    } catch (err) {
+      console.error('[TMA API] Error fetching OOPT list:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/oopt/stats', (req, res) => {
+    try {
+      const stats = getOoptStats();
+      res.json(stats);
+    } catch (err) {
+      console.error('[TMA API] Error fetching OOPT stats:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/oopt/:nid', async (req, res) => {
+    try {
+      const details = await getOoptDetails(req.params.nid);
+      res.json(details);
+    } catch (err) {
+      console.error('[TMA API] Error fetching OOPT details:', err.message);
+      res.status(err.message.includes('не найдено') ? 404 : 500).json({ error: err.message });
     }
   });
 

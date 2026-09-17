@@ -230,9 +230,16 @@ export const startAdminServer = (telegramClient) => {
     const approved = allUsers.filter(u => u.status === 'approved');
     const rejected = allUsers.filter(u => u.status === 'rejected');
 
-    // 2. Spots
+    // 2. Spots & Muted Broadcast Callsigns
     const spotsStmt = db.prepare("SELECT id, callsign, reference, frequency, mode, comment, source, created_at, msg_id FROM spots WHERE source != 'cluster_throttled' ORDER BY created_at DESC LIMIT 100");
     const latestSpots = spotsStmt.all();
+
+    let dbMuted = [];
+    try {
+      dbMuted = db.prepare('SELECT id, callsign, reason, created_at FROM muted_broadcast_callsigns ORDER BY id DESC').all();
+    } catch (e) {}
+    const envMuted = (process.env.IGNORED_BROADCAST_CALLSIGNS !== undefined ? process.env.IGNORED_BROADCAST_CALLSIGNS : 'RI1FJZ')
+      .split(',').map(c => c.trim().toUpperCase()).filter(Boolean);
 
     // 3. RU-POTA Shield Blocked Users & Incidents
     const blockedStmt = db.prepare("SELECT id, telegram_id, first_name, last_name, username, reason, details, action, is_read, created_at FROM blocked_users ORDER BY created_at DESC LIMIT 100");
@@ -274,12 +281,15 @@ export const startAdminServer = (telegramClient) => {
 
     const generateSpotRow = (s) => {
       const deleteBtn = `<button type="button" class="btn btn-sm btn-outline-danger delete-spot-btn" data-id="${s.id}" data-source="${s.source || ''}" data-msg="${s.msg_id || ''}">Удалить</button>`;
+      const sourceBadge = s.source === 'cluster_muted'
+        ? '<span class="badge bg-secondary text-light">🔇 cluster (muted)</span>'
+        : escapeHtmlServer(s.source);
       return `
       <tr id="spot-row-${s.id}">
-        <td><strong>${s.callsign}</strong></td>
-        <td><a href="https://next.pota.app/park/${s.reference}" target="_blank">${s.reference}</a></td>
-        <td>${s.frequency || ''} ${s.mode || ''}</td>
-        <td>${s.source}</td>
+        <td><strong>${escapeHtmlServer(s.callsign)}</strong></td>
+        <td><a href="https://next.pota.app/park/${escapeHtmlServer(s.reference)}" target="_blank">${escapeHtmlServer(s.reference)}</a></td>
+        <td>${escapeHtmlServer(s.frequency || '')} ${escapeHtmlServer(s.mode || '')}</td>
+        <td>${sourceBadge}</td>
         <td>${new Date(s.created_at).toLocaleString('ru-RU')}</td>
         <td>${deleteBtn}</td>
       </tr>
@@ -413,6 +423,64 @@ export const startAdminServer = (telegramClient) => {
 
                 <!-- Tab: Spots -->
                 <div class="tab-pane fade" id="list-spots" role="tabpanel" aria-labelledby="list-spots-list">
+                  <div class="card shadow-sm border-0 mb-4 bg-light">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h4 class="card-title mb-0">🔇 Исключения из трансляции (подавление спама экспедиций)</h4>
+                        <span class="badge bg-secondary">Канал & Группа</span>
+                      </div>
+                      <p class="text-muted small mb-3">
+                        Споты указанных позывных <b>не публикуются</b> в Telegram-канал и группу обсуждения (защита от спама экспедиций, работающих одновременно на множестве диапазонов). При этом споты остаются доступны в <b>Mini App</b>, в команде <b>«Кто в эфире» (/onair)</b> и отправляются персональным подписчикам через <b>/sub</b>.
+                      </p>
+
+                      <!-- Форма добавления позывного в базу данных -->
+                      <form method="POST" action="/admin/muted-callsigns/add" class="row g-2 align-items-center mb-3">
+                        <div class="col-sm-4">
+                          <input type="text" name="callsign" class="form-control form-control-sm text-uppercase fw-bold font-monospace" placeholder="Позывной (напр. RI1FJZ)" required>
+                        </div>
+                        <div class="col-sm-5">
+                          <input type="text" name="reason" class="form-control form-control-sm" placeholder="Примечание (напр. Экспедиция ЗФИ, FT8 спам)">
+                        </div>
+                        <div class="col-sm-3">
+                          <button type="submit" class="btn btn-sm btn-dark w-100"><i class="bi bi-plus-circle"></i> Добавить позывной</button>
+                        </div>
+                      </form>
+
+                      <!-- Таблица активных исключений -->
+                      <div class="table-responsive">
+                        <table class="table table-sm table-bordered bg-white mb-0 align-middle">
+                          <thead class="table-light"><tr><th>Позывной</th><th>Источник</th><th>Примечание</th><th>Дата добавления</th><th style="width: 100px;">Действие</th></tr></thead>
+                          <tbody>
+                            ${envMuted.map(call => `
+                              <tr>
+                                <td><strong class="font-monospace text-primary">${escapeHtmlServer(call)}</strong></td>
+                                <td><span class="badge bg-info text-dark">⚙️ Конфиг .env</span></td>
+                                <td class="text-muted small">Указано в переменной IGNORED_BROADCAST_CALLSIGNS</td>
+                                <td class="text-muted small">—</td>
+                                <td><span class="text-muted small fst-italic">Через .env</span></td>
+                              </tr>
+                            `).join('')}
+                            ${dbMuted.map(m => `
+                              <tr>
+                                <td><strong class="font-monospace text-danger">${escapeHtmlServer(m.callsign)}</strong></td>
+                                <td><span class="badge bg-success">💾 База данных</span></td>
+                                <td class="small">${escapeHtmlServer(m.reason || 'Без описания')}</td>
+                                <td class="text-muted small">${new Date(m.created_at).toLocaleString('ru-RU')}</td>
+                                <td>
+                                  <form method="POST" action="/admin/muted-callsigns/delete" onsubmit="return confirm('Удалить ${escapeHtmlServer(m.callsign)} из списка исключений?');" style="margin: 0;">
+                                    <input type="hidden" name="id" value="${m.id}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">Удалить</button>
+                                  </form>
+                                </td>
+                              </tr>
+                            `).join('')}
+                            ${(envMuted.length === 0 && dbMuted.length === 0) ? '<tr><td colspan="5" class="text-center text-muted">Список пуст (все станции транслируются в канал)</td></tr>' : ''}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+
                   <h3>Последние 100 спотов в БД</h3>
                   <div class="table-responsive">
                     <table class="table table-striped table-hover align-middle" style="overflow: hidden;">
@@ -1952,6 +2020,42 @@ export const startAdminServer = (telegramClient) => {
       console.error('Error deleting spot:', err);
       res.status(500).json({ error: err.message });
     }
+  });
+
+  // Add muted broadcast callsign (Expedition spam suppression)
+  app.post('/admin/muted-callsigns/add', requireAuth, (req, res) => {
+    const callsign = (req.body?.callsign || '').trim().toUpperCase();
+    const reason = (req.body?.reason || '').trim();
+    if (callsign) {
+      try {
+        db.prepare(`
+          INSERT INTO muted_broadcast_callsigns (callsign, reason) 
+          VALUES (?, ?) 
+          ON CONFLICT(callsign) DO UPDATE SET reason = excluded.reason
+        `).run(callsign, reason);
+        console.log(`[Web Admin] 🔇 Добавлен позывной в список исключений вещания: ${callsign} (${reason || 'без описания'})`);
+      } catch (e) {
+        console.error('[Web Admin] Ошибка добавления исключения:', e.message);
+      }
+    }
+    res.redirect('/#list-spots');
+  });
+
+  // Delete muted broadcast callsign
+  app.post('/admin/muted-callsigns/delete', requireAuth, (req, res) => {
+    const id = parseInt(req.body?.id, 10);
+    if (id) {
+      try {
+        const row = db.prepare('SELECT callsign FROM muted_broadcast_callsigns WHERE id = ?').get(id);
+        db.prepare('DELETE FROM muted_broadcast_callsigns WHERE id = ?').run(id);
+        if (row) {
+          console.log(`[Web Admin] 🔊 Удален позывной из списка исключений вещания: ${row.callsign}`);
+        }
+      } catch (e) {
+        console.error('[Web Admin] Ошибка удаления исключения:', e.message);
+      }
+    }
+    res.redirect('/#list-spots');
   });
 
   app.post('/broadcast', requireAuth, async (req, res) => {

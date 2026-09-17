@@ -73,6 +73,14 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_blocked_users_tgid ON blocked_users (telegram_id);
   CREATE INDEX IF NOT EXISTS idx_blocked_users_created ON blocked_users (created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS muted_broadcast_callsigns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    callsign TEXT UNIQUE NOT NULL,
+    reason TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_muted_broadcast_callsigns_call ON muted_broadcast_callsigns (callsign);
 `);
 
 // Migration for existing tables

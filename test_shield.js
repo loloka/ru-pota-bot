@@ -283,9 +283,24 @@ assert(isBroadcastMutedCallsign('DP0GVN/MM') === true, 'Mutes custom configured 
 assert(isBroadcastMutedCallsign('RI1FJZ') === true, 'Still mutes RI1FJZ in custom list');
 assert(isBroadcastMutedCallsign('R2BBX') === false, 'Still allows unmuted R2BBX');
 
-// Empty env explicitly disables mute
+// Empty env explicitly disables env mute (tests DB persistence)
 process.env.IGNORED_BROADCAST_CALLSIGNS = '';
-assert(isBroadcastMutedCallsign('RI1FJZ') === false, 'Empty IGNORED_BROADCAST_CALLSIGNS disables mute');
+assert(isBroadcastMutedCallsign('RI1FJZ') === false, 'Empty IGNORED_BROADCAST_CALLSIGNS disables env mute');
+
+// 8. Database-backed Muted Callsigns (Web Admin integration)
+console.log('\n[8] Testing Database-backed Muted Callsigns (SQLite)...');
+try {
+  db.prepare('DELETE FROM muted_broadcast_callsigns WHERE callsign = ?').run('R0TEST');
+  db.prepare('INSERT INTO muted_broadcast_callsigns (callsign, reason) VALUES (?, ?)').run('R0TEST', 'Web Admin Test');
+  assert(isBroadcastMutedCallsign('R0TEST') === true, 'Mutes callsign added to SQLite table');
+  assert(isBroadcastMutedCallsign('R0TEST/P') === true, 'Mutes slashed variation of SQLite callsign');
+  assert(isBroadcastMutedCallsign('r0test') === true, 'Case-insensitive match for SQLite callsign');
+  
+  db.prepare('DELETE FROM muted_broadcast_callsigns WHERE callsign = ?').run('R0TEST');
+  assert(isBroadcastMutedCallsign('R0TEST') === false, 'Unmutes after deletion from SQLite table');
+} catch (e) {
+  assert(false, `SQLite muted test error: ${e.message}`);
+}
 
 // Restore env
 if (originalChannelId) {

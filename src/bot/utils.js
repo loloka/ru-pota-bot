@@ -89,23 +89,39 @@ export const getBaseCallsign = (callsign = '') => {
 };
 
 /**
+ * Returns all muted broadcast callsigns combining .env and SQLite database entries.
+ * @returns {string[]}
+ */
+export const getMutedBroadcastCallsigns = () => {
+  const rawList = process.env.IGNORED_BROADCAST_CALLSIGNS !== undefined 
+    ? process.env.IGNORED_BROADCAST_CALLSIGNS 
+    : 'RI1FJZ';
+  const envList = rawList
+    .split(',')
+    .map(c => c.trim().toUpperCase())
+    .filter(Boolean);
+
+  let dbList = [];
+  try {
+    const rows = db.prepare('SELECT callsign FROM muted_broadcast_callsigns').all();
+    dbList = rows.map(r => (r.callsign || '').trim().toUpperCase()).filter(Boolean);
+  } catch (e) {}
+
+  return Array.from(new Set([...envList, ...dbList]));
+};
+
+/**
  * Checks if a callsign is muted from public channel and group broadcasting
  * (e.g. high-frequency multi-band Arctic expeditions like RI1FJZ on Franz Josef Land).
- * Configured via process.env.IGNORED_BROADCAST_CALLSIGNS (comma-separated).
- * Defaults to 'RI1FJZ'.
+ * Configured via process.env.IGNORED_BROADCAST_CALLSIGNS (comma-separated)
+ * AND/OR dynamically via the Web Admin panel stored in SQLite table muted_broadcast_callsigns.
+ * Defaults to including 'RI1FJZ'.
  * @param {string} callsign 
  * @returns {boolean}
  */
 export const isBroadcastMutedCallsign = (callsign) => {
   if (!callsign) return false;
-  const rawList = process.env.IGNORED_BROADCAST_CALLSIGNS !== undefined 
-    ? process.env.IGNORED_BROADCAST_CALLSIGNS 
-    : 'RI1FJZ';
-  const mutedList = rawList
-    .split(',')
-    .map(c => c.trim().toUpperCase())
-    .filter(Boolean);
-
+  const mutedList = getMutedBroadcastCallsigns();
   if (mutedList.length === 0) return false;
 
   const clean = String(callsign).trim().toUpperCase();
@@ -114,3 +130,4 @@ export const isBroadcastMutedCallsign = (callsign) => {
 
   return mutedList.some(m => m === clean || m === base || m === withoutSlash);
 };
+

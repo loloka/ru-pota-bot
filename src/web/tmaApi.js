@@ -7,7 +7,7 @@ import db from '../db/database.js';
 import { potaApi } from '../api/potaApi.js';
 import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import { pinManager } from '../services/pinManager.js';
-import { getBaseCallsign } from '../bot/utils.js';
+import { getBaseCallsign, isBroadcastMutedCallsign } from '../bot/utils.js';
 import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry } from '../services/ooptService.js';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -956,7 +956,7 @@ export function createTmaRouter(telegramClient) {
 
       // 2. Broadcast to Telegram Activity Channel if available
       let channelMsgId = null;
-      if (telegramClient && ACTIVITY_CHANNEL_ID) {
+      if (telegramClient && ACTIVITY_CHANNEL_ID && !isBroadcastMutedCallsign(dbUser.callsign)) {
         try {
           let channelId = ACTIVITY_CHANNEL_ID;
           if (channelId.includes('t.me/')) {

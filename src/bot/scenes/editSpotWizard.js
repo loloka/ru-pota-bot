@@ -2,7 +2,7 @@ import { Scenes } from 'telegraf';
 import db from '../../db/database.js';
 import { potaApi } from '../../api/potaApi.js';
 import { pinManager } from '../../services/pinManager.js';
-import { getMainMenu, getBaseCallsign } from '../utils.js';
+import { getMainMenu, getBaseCallsign, isBroadcastMutedCallsign } from '../utils.js';
 import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -128,12 +128,17 @@ export const editSpotWizard = new Scenes.WizardScene(
         } catch (unpinErr) {}
       }
 
-      // 2. Broadcast fresh spot as a NEW message so everyone in channel & group gets alerted
-      const sentMsg = await ctx.telegram.sendMessage(channelId, formattedSpot, { parse_mode: 'HTML', disable_web_page_preview: true });
-      const newMsgId = sentMsg.message_id;
+      let newMsgId = null;
+      if (isBroadcastMutedCallsign(s.callsign)) {
+        console.log(`\x1b[33m[Edit Spot]\x1b[0m 🔇 Пропуск трансляции в канал для ${s.callsign} (в списке исключений)`);
+      } else {
+        // 2. Broadcast fresh spot as a NEW message so everyone in channel & group gets alerted
+        const sentMsg = await ctx.telegram.sendMessage(channelId, formattedSpot, { parse_mode: 'HTML', disable_web_page_preview: true });
+        newMsgId = sentMsg.message_id;
 
-      // 3. Pin new spot silently, schedule auto-unpin, and clean up Telegram's pin service message
-      await pinManager.pinSpotInChannel(ctx.telegram, channelId, newMsgId);
+        // 3. Pin new spot silently, schedule auto-unpin, and clean up Telegram's pin service message
+        await pinManager.pinSpotInChannel(ctx.telegram, channelId, newMsgId);
+      }
 
       // 4. Normalize frequency data in s for 100% TMA & POTA compatibility
       const freqNumber = String(s.freq).replace(/[^0-9.]/g, '');

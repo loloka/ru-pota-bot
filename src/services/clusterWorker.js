@@ -2,7 +2,7 @@ import { potaApi } from '../api/potaApi.js';
 import db from '../db/database.js';
 import { pinManager } from './pinManager.js';
 import { getBandFromKHz } from '../bot/commands/onair.js';
-import { getBaseCallsign } from '../bot/utils.js';
+import { getBaseCallsign, isBroadcastMutedCallsign } from '../bot/utils.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -77,6 +77,12 @@ export const detectMode = (rawMode, comments = '', freqKHz = 0) => {
 export const startClusterWorker = (telegramClient) => {
   const intervalSec = Math.round(POLL_INTERVAL_MS / 1000);
   console.log(`\x1b[36m[Cluster Worker]\x1b[0m 🚀 Запущен воркер кластера (опрос каждые ${intervalSec}с, кулдаун RBN: ${CLUSTER_SPOT_COOLDOWN_MINUTES}м, фильтр: \x1b[33m${ALLOWED_PREFIXES.join(', ')}\x1b[0m)`);
+
+  const rawMuted = process.env.IGNORED_BROADCAST_CALLSIGNS !== undefined ? process.env.IGNORED_BROADCAST_CALLSIGNS : 'RI1FJZ';
+  const mutedList = rawMuted.split(',').map(c => c.trim().toUpperCase()).filter(Boolean);
+  if (mutedList.length > 0) {
+    console.log(`\x1b[36m[Cluster Worker]\x1b[0m 🔇 Исключены из трансляции в канал/группу: \x1b[35m${mutedList.join(', ')}\x1b[0m`);
+  }
 
   const pollCluster = async () => {
     try {
@@ -195,44 +201,50 @@ export const startClusterWorker = (telegramClient) => {
                     `📻 <b>${actLink}</b> @ 🏞️ <b>${refLink}</b>\n` +
                     `⚙️ Freq: ${spot.frequency} kHz | ${mode}\n` +
                     (spot.comments ? `📝 ${spot.comments}` : '');
-                    
-        let channelId = ACTIVITY_CHANNEL_ID;
-        if (channelId && !channelId.startsWith('-100') && !channelId.startsWith('@') && /^[0-9-]+$/.test(channelId)) {
-          if (channelId.startsWith('-')) {
-            channelId = '-100' + channelId.substring(1);
-          } else {
-            channelId = '-100' + channelId;
-          }
-        } else if (channelId && channelId.includes('t.me/')) {
-          channelId = '@' + channelId.split('t.me/')[1].replace('/', '');
-        }
-        
-        let msgId = null;            
-        try {
-          const sentMsg = await telegramClient.sendMessage(channelId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
-          msgId = sentMsg.message_id;
-          console.log(`\x1b[34m[Broadcast]\x1b[0m 📢 Спот ${spot.activator} опубликован в канал`);
 
-          // Unpin earlier pinned spots for this station in channel so pins don't stack up
-          try {
-            const prevPinned = db.prepare(`
-              SELECT p.message_id 
-              FROM pinned_spots p
-              JOIN spots s ON s.msg_id = p.message_id
-              WHERE p.chat_id = ? AND p.status = 'pinned' AND (s.callsign = ? OR s.callsign = ? OR s.callsign LIKE ?)
-            `).all(String(channelId), rawActivator, callKey, `${callKey}/%`);
+        let msgId = null;
+        const isMuted = isBroadcastMutedCallsign(spot.activator) || isBroadcastMutedCallsign(callKey);
 
-            for (const row of prevPinned) {
-              await pinManager.unpinSpotNow(telegramClient, channelId, row.message_id);
+        if (isMuted) {
+          console.log(`\x1b[33m[Cluster Spot]\x1b[0m 🔇 Пропуск трансляции в канал/группу для экспедиции \x1b[1m${spot.activator}\x1b[0m @ \x1b[33m${ref}\x1b[0m (позывной в списке исключений вещания)`);
+        } else {
+          let channelId = ACTIVITY_CHANNEL_ID;
+          if (channelId && !channelId.startsWith('-100') && !channelId.startsWith('@') && /^[0-9-]+$/.test(channelId)) {
+            if (channelId.startsWith('-')) {
+              channelId = '-100' + channelId.substring(1);
+            } else {
+              channelId = '-100' + channelId;
             }
-          } catch (pinErr) {}
-
-          if (!isQrt) {
-            // Pin spot silently in channel, schedule auto-unpin, and clean up Telegram's pin service message
-            await pinManager.pinSpotInChannel(telegramClient, channelId, msgId);
+          } else if (channelId && channelId.includes('t.me/')) {
+            channelId = '@' + channelId.split('t.me/')[1].replace('/', '');
           }
-        } catch (e) {
-          console.error(`\x1b[31m[Broadcast Error]\x1b[0m Не удалось отправить спот в канал:`, e.message);
+          
+          try {
+            const sentMsg = await telegramClient.sendMessage(channelId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+            msgId = sentMsg.message_id;
+            console.log(`\x1b[34m[Broadcast]\x1b[0m 📢 Спот ${spot.activator} опубликован в канал`);
+
+            // Unpin earlier pinned spots for this station in channel so pins don't stack up
+            try {
+              const prevPinned = db.prepare(`
+                SELECT p.message_id 
+                FROM pinned_spots p
+                JOIN spots s ON s.msg_id = p.message_id
+                WHERE p.chat_id = ? AND p.status = 'pinned' AND (s.callsign = ? OR s.callsign = ? OR s.callsign LIKE ?)
+              `).all(String(channelId), rawActivator, callKey, `${callKey}/%`);
+
+              for (const row of prevPinned) {
+                await pinManager.unpinSpotNow(telegramClient, channelId, row.message_id);
+              }
+            } catch (pinErr) {}
+
+            if (!isQrt) {
+              // Pin spot silently in channel, schedule auto-unpin, and clean up Telegram's pin service message
+              await pinManager.pinSpotInChannel(telegramClient, channelId, msgId);
+            }
+          } catch (e) {
+            console.error(`\x1b[31m[Broadcast Error]\x1b[0m Не удалось отправить спот в канал:`, e.message);
+          }
         }
 
         // 5. Save to DB to prevent duplicate processing (and save msgId for web panel deletion)

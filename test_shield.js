@@ -255,11 +255,49 @@ const mockRestoreClient = {
 await pinManager.ensurePermanentChannelPin(mockRestoreClient);
 assert(pinnedCalls.some(c => c.chatId === '-1003954691719' && c.messageId === 25), 'ensurePermanentChannelPin automatically restores permanent post 25 when unpinned');
 
+// 7. Testing Muted Broadcast Callsigns (Expedition Spam Prevention)
+console.log('\n[7] Testing Muted Broadcast Callsigns (isBroadcastMutedCallsign)...');
+const { isBroadcastMutedCallsign } = await import('./src/bot/utils.js');
+
+// Save original env
+const origMutedEnv = process.env.IGNORED_BROADCAST_CALLSIGNS;
+delete process.env.IGNORED_BROADCAST_CALLSIGNS;
+
+// Default tests (RI1FJZ)
+assert(isBroadcastMutedCallsign('RI1FJZ') === true, 'Default mutes exact RI1FJZ');
+assert(isBroadcastMutedCallsign('ri1fjz') === true, 'Case-insensitive: mutes ri1fjz');
+assert(isBroadcastMutedCallsign('RI1FJZ/P') === true, 'Mutes portable slash RI1FJZ/P');
+assert(isBroadcastMutedCallsign('RI1FJZ/M') === true, 'Mutes mobile slash RI1FJZ/M');
+assert(isBroadcastMutedCallsign('RI1FJZ/1') === true, 'Mutes district slash RI1FJZ/1');
+assert(isBroadcastMutedCallsign('R1/RI1FJZ') === true, 'Mutes prefix slash R1/RI1FJZ');
+assert(isBroadcastMutedCallsign('R1/RI1FJZ/P') === true, 'Mutes complex slash R1/RI1FJZ/P');
+assert(isBroadcastMutedCallsign('R2BBX') === false, 'Allows regular station R2BBX');
+assert(isBroadcastMutedCallsign('UN7ECA/P') === false, 'Allows regular portable UN7ECA/P');
+assert(isBroadcastMutedCallsign('') === false, 'Handles empty callsign gracefully');
+assert(isBroadcastMutedCallsign(null) === false, 'Handles null callsign gracefully');
+
+// Custom comma-separated env
+process.env.IGNORED_BROADCAST_CALLSIGNS = 'DP0GVN, RI1FJZ, R9OGL/TEST';
+assert(isBroadcastMutedCallsign('DP0GVN') === true, 'Mutes custom configured DP0GVN');
+assert(isBroadcastMutedCallsign('DP0GVN/MM') === true, 'Mutes custom configured DP0GVN/MM');
+assert(isBroadcastMutedCallsign('RI1FJZ') === true, 'Still mutes RI1FJZ in custom list');
+assert(isBroadcastMutedCallsign('R2BBX') === false, 'Still allows unmuted R2BBX');
+
+// Empty env explicitly disables mute
+process.env.IGNORED_BROADCAST_CALLSIGNS = '';
+assert(isBroadcastMutedCallsign('RI1FJZ') === false, 'Empty IGNORED_BROADCAST_CALLSIGNS disables mute');
+
 // Restore env
 if (originalChannelId) {
   process.env.ACTIVITY_CHANNEL_ID = originalChannelId;
 } else {
   delete process.env.ACTIVITY_CHANNEL_ID;
+}
+
+if (origMutedEnv !== undefined) {
+  process.env.IGNORED_BROADCAST_CALLSIGNS = origMutedEnv;
+} else {
+  delete process.env.IGNORED_BROADCAST_CALLSIGNS;
 }
 
 console.log(`\n--- TEST RESULTS: ${passed} PASSED, ${failed} FAILED ---`);

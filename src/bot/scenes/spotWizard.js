@@ -2,7 +2,7 @@ import { Scenes } from 'telegraf';
 import dotenv from 'dotenv';
 import db from '../../db/database.js';
 import { potaApi } from '../../api/potaApi.js';
-import { deleteUserMessage, replyWithAutoDelete, getMainMenu, getBaseCallsign } from '../utils.js';
+import { deleteUserMessage, replyWithAutoDelete, getMainMenu, getBaseCallsign, isBroadcastMutedCallsign } from '../utils.js';
 import { pinManager } from '../../services/pinManager.js';
 import axios from 'axios';
 dotenv.config();
@@ -275,11 +275,18 @@ export const spotWizard = new Scenes.WizardScene(
         } catch (unpinErr) {}
       }
 
-      const msg = await ctx.telegram.sendMessage(channelId, formattedSpot, { parse_mode: 'HTML', disable_web_page_preview: true });
-      await ctx.reply('✅ Спот успешно опубликован в канале активности!', { reply_markup: getMainMenu(ctx) });
-      
-      // Pin spot silently in channel, schedule auto-unpin, and clean up Telegram's pin service message
-      await pinManager.pinSpotInChannel(ctx.telegram, channelId, msg.message_id);
+      let msgId = null;
+      if (isBroadcastMutedCallsign(s.callsign)) {
+        console.log(`\x1b[33m[Spot Wizard]\x1b[0m 🔇 Пропуск трансляции в канал для ${s.callsign} (в списке исключений)`);
+        await ctx.reply('✅ Спот успешно сохранен (вещание в канал pota_activity для данного позывного ограничено).', { reply_markup: getMainMenu(ctx) });
+      } else {
+        const msg = await ctx.telegram.sendMessage(channelId, formattedSpot, { parse_mode: 'HTML', disable_web_page_preview: true });
+        msgId = msg.message_id;
+        await ctx.reply('✅ Спот успешно опубликован в канале активности!', { reply_markup: getMainMenu(ctx) });
+        
+        // Pin spot silently in channel, schedule auto-unpin, and clean up Telegram's pin service message
+        await pinManager.pinSpotInChannel(ctx.telegram, channelId, msgId);
+      }
 
       // Normalize frequency data for full bot & TMA compatibility
       const freqNumber = String(s.freq).replace(/[^0-9.]/g, '');
@@ -297,7 +304,7 @@ export const spotWizard = new Scenes.WizardScene(
       // Save spot to DB for editing later
       s.baseComment = baseComment;
       s.comment = comment; // full comment
-      db.prepare('UPDATE users SET last_spot_msg_id = ?, last_spot_data = ? WHERE telegram_id = ?').run(msg.message_id, JSON.stringify(s), ctx.from.id);
+      db.prepare('UPDATE users SET last_spot_msg_id = ?, last_spot_data = ? WHERE telegram_id = ?').run(msgId, JSON.stringify(s), ctx.from.id);
       
       // Post to POTA API
       const spotter = ctx.state.user?.callsign || 'UNKNOWN';
@@ -318,7 +325,7 @@ export const spotWizard = new Scenes.WizardScene(
             INSERT INTO spots (spot_id, callsign, reference, frequency, mode, comment, source, msg_id)
             VALUES (?, ?, ?, ?, ?, ?, 'bot', ?)
           `);
-          insertStmt.run(spotId, s.callsign, s.reference, freqNumber, s.mode, comment, msg.message_id);
+          insertStmt.run(spotId, s.callsign, s.reference, freqNumber, s.mode, comment, msgId);
         }
         
         // Auto-respot logic

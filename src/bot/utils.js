@@ -87,3 +87,30 @@ export const getBaseCallsign = (callsign = '') => {
   }
   return parts.reduce((a, b) => a.length >= b.length ? a : b);
 };
+
+/**
+ * Checks if a callsign is muted from public channel and group broadcasting
+ * (e.g. high-frequency multi-band Arctic expeditions like RI1FJZ on Franz Josef Land).
+ * Configured via process.env.IGNORED_BROADCAST_CALLSIGNS (comma-separated).
+ * Defaults to 'RI1FJZ'.
+ * @param {string} callsign 
+ * @returns {boolean}
+ */
+export const isBroadcastMutedCallsign = (callsign) => {
+  if (!callsign) return false;
+  const rawList = process.env.IGNORED_BROADCAST_CALLSIGNS !== undefined 
+    ? process.env.IGNORED_BROADCAST_CALLSIGNS 
+    : 'RI1FJZ';
+  const mutedList = rawList
+    .split(',')
+    .map(c => c.trim().toUpperCase())
+    .filter(Boolean);
+
+  if (mutedList.length === 0) return false;
+
+  const clean = String(callsign).trim().toUpperCase();
+  const base = getBaseCallsign(clean);
+  const withoutSlash = clean.replace(/\/(P|M|MM|AM|[0-9])$/i, '');
+
+  return mutedList.some(m => m === clean || m === base || m === withoutSlash);
+};

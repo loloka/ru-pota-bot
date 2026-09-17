@@ -1,6 +1,6 @@
 # RU-POTA Telegram Bot & Mini App 🌲📡
 
-[![Version](https://img.shields.io/badge/version-1.16.0-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.16.1-blue.svg)](package.json)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![Telegraf](https://img.shields.io/badge/telegraf-4.x-orange.svg)](https://telegraf.js.org/)
 [![Database](https://img.shields.io/badge/SQLite-better--sqlite3%20(WAL)-lightgrey.svg)](https://github.com/WiseLibs/better-sqlite3)
@@ -144,6 +144,7 @@ MAIN_CHAT_ID=-1001234567890
 ACTIVITY_CHANNEL_ID=-1000987654321
 ADMIN_ID=123456789
 ADMIN_PASSWORD=your_secure_password
+IGNORED_BROADCAST_CALLSIGNS=RI1FJZ
 ```
 
 ### 4. Start the bot

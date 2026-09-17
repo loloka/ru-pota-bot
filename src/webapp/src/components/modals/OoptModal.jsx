@@ -435,12 +435,12 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                     type="button"
                     onClick={() => {
                       if (!copied) handleCopySubmitter();
-                      telegram.openTelegramLink('https://t.me/R2BBX');
+                      telegram.openTelegramLink('https://t.me/ManuUmAn');
                     }}
                     className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
                   >
                     <User className="w-3.5 h-3.5 shrink-0" />
-                    <span>Отправить R2BBX (в ЛС)</span>
+                    <span>Отправить R2BBX (@ManuUmAn)</span>
                   </button>
                   <button
                     type="button"

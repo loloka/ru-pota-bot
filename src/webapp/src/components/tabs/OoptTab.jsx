@@ -280,7 +280,7 @@ export default function OoptTab({ onNavigateToMap }) {
               <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold">Подайте заявку</span>
             </div>
             <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
-              Выберите территорию из списка, нажмите <span className="font-semibold text-emerald-600 dark:text-emerald-400">«📋 Заявка для R2BBX»</span> и отправьте готовый текст координатору <a href="https://t.me/R2BBX" target="_blank" rel="noreferrer" className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">@R2BBX</a> или прямиком в <a href="https://t.me/+Pek5olQhfPdiZDIy" target="_blank" rel="noreferrer" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">чат RU-POTA</a>!
+              Выберите территорию из списка, нажмите <span className="font-semibold text-emerald-600 dark:text-emerald-400">«📋 Заявка для R2BBX»</span> и отправьте готовый текст координатору <a href="https://t.me/ManuUmAn" target="_blank" rel="noreferrer" className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">R2BBX (@ManuUmAn)</a> или прямиком в <a href="https://t.me/+Pek5olQhfPdiZDIy" target="_blank" rel="noreferrer" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">чат RU-POTA</a>!
             </div>
           </div>
         </div>

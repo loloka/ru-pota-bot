@@ -733,12 +733,12 @@ export const startAdminServer = (telegramClient) => {
                     <div class="d-flex justify-content-between align-items-center mb-1">
                       <label class="form-label small fw-bold mb-0">7. Сайт объекта, ссылка:</label>
                       <div class="d-flex gap-1">
-                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-1.5" style="font-size:11px;" id="btn-set-link-aari" title="Установить ссылку oopt.aari.ru">oopt.aari.ru</button>
-                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:11px;" id="btn-set-link-nextgis" title="Установить ссылку NextGIS зеркала">NextGIS</button>
+                        <button type="button" class="btn btn-xs btn-outline-success py-0 px-1.5" style="font-size:11px;" id="btn-set-link-nextgis" title="Установить ссылку NextGIS зеркала (приоритет R2BBX)">NextGIS (R2BBX)</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:11px;" id="btn-set-link-oczk" title="Установить ссылку официальной карты ООПТ">карта.оцзк.рф</button>
                       </div>
                     </div>
-                    <input type="text" class="form-control form-control-sm" id="subm-site" required>
-                    <div class="form-text small text-muted">Приоритет: официальный портал oopt.aari.ru или зеркало NextGIS. Википедия, VK и коммерческие ресурсы не принимаются.</div>
+                    <input type="text" class="form-control form-control-sm" id="subm-site" placeholder="https://ooptaari.nextgis.ru/oopt/... или сайт парка" required>
+                    <div class="form-text small text-muted">Приоритет: собственный сайт парка или NextGIS по требованию R2BBX. Википедия, VK и коммерческие ресурсы не принимаются.</div>
                   </div>
 
                   <div class="mb-3">
@@ -1685,7 +1685,7 @@ export const startAdminServer = (telegramClient) => {
             var region = ate || '';
             if (region.indexOf('(') !== -1) region = region.split('(')[0].trim();
 
-            var siteUrl = nid ? ('http://oopt.aari.ru/oopt/' + nid) : 'http://oopt.aari.ru/';
+            var siteUrl = nid ? ('https://ooptaari.nextgis.ru/oopt/' + nid) : 'https://карта.оцзк.рф/';
 
             return {
               name: cleanName,
@@ -1742,20 +1742,17 @@ export const startAdminServer = (telegramClient) => {
           });
 
           // Quick switch buttons for site links
-          document.getElementById('btn-set-link-aari')?.addEventListener('click', function() {
-            var nid = document.getElementById('subm-nid').value;
-            if (nid) {
-              document.getElementById('subm-site').value = 'http://oopt.aari.ru/oopt/' + nid;
-              updateSubmitterPreview();
-            }
-          });
-
           document.getElementById('btn-set-link-nextgis')?.addEventListener('click', function() {
             var nid = document.getElementById('subm-nid').value;
             if (nid) {
               document.getElementById('subm-site').value = 'https://ooptaari.nextgis.ru/oopt/' + nid;
               updateSubmitterPreview();
             }
+          });
+
+          document.getElementById('btn-set-link-oczk')?.addEventListener('click', function() {
+            document.getElementById('subm-site').value = 'https://карта.оцзк.рф';
+            updateSubmitterPreview();
           });
 
           // Open Submitter Modal

@@ -493,8 +493,8 @@ export function parseSubmitterFields(item) {
   const lat = item.lat !== null && item.lat !== undefined ? Number(item.lat).toFixed(6) : '';
   const lon = item.lon !== null && item.lon !== undefined ? Number(item.lon).toFixed(6) : '';
 
-  // Official AARI portal link (http://oopt.aari.ru/oopt/:id)
-  const siteUrl = item.nid ? `http://oopt.aari.ru/oopt/${item.nid}` : 'http://oopt.aari.ru/';
+  // Priority NextGIS link requested by Manu (R2BBX) or direct website
+  const siteUrl = item.nid ? `https://ooptaari.nextgis.ru/oopt/${item.nid}` : 'https://карта.оцзк.рф/';
 
   // Clarification
   const clarifies = [];

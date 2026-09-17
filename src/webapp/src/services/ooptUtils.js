@@ -179,8 +179,8 @@ export function parseOoptForSubmitter(item) {
   const lat = (item.lat !== null && item.lat !== undefined && item.lat !== '') ? Number(item.lat).toFixed(6) : '';
   const lon = (item.lon !== null && item.lon !== undefined && item.lon !== '') ? Number(item.lon).toFixed(6) : '';
 
-  // Priority official AARI registry link (http://oopt.aari.ru/oopt/:id)
-  const site = item.nid ? `http://oopt.aari.ru/oopt/${item.nid}` : 'http://oopt.aari.ru/';
+  // Priority link requested by Manu (R2BBX): https://ooptaari.nextgis.ru/oopt/:id
+  const site = item.nid ? `https://ooptaari.nextgis.ru/oopt/${item.nid}` : 'https://карта.оцзк.рф/';
 
   // Clarification
   const clarifies = [];

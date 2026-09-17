@@ -15,7 +15,9 @@ import {
   Sparkles,
   Edit3,
   Info,
-  Navigation
+  Navigation,
+  User,
+  MessageCircle
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -426,6 +428,32 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                 <pre className="p-3 rounded-xl bg-slate-900 text-emerald-400 font-mono text-[11px] leading-relaxed whitespace-pre-wrap select-all border border-slate-800 overflow-x-auto shadow-inner">
                   {previewText}
                 </pre>
+
+                {/* Quick send actions */}
+                <div className="mt-2.5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!copied) handleCopySubmitter();
+                      telegram.openTelegramLink('https://t.me/R2BBX');
+                    }}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
+                  >
+                    <User className="w-3.5 h-3.5 shrink-0" />
+                    <span>Отправить R2BBX (в ЛС)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!copied) handleCopySubmitter();
+                      telegram.openTelegramLink('https://t.me/+Pek5olQhfPdiZDIy');
+                    }}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>В чат RU-POTA</span>
+                  </button>
+                </div>
               </div>
             </div>
           ) : (

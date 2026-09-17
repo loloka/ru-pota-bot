@@ -270,6 +270,22 @@ export default function OoptTab({ onNavigateToMap }) {
         </div>
       </div>
 
+      {/* Help Banner: Submitting new park to POTA */}
+      <div className="mb-2.5 p-2.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/20 text-xs">
+        <div className="flex items-start gap-2">
+          <Sparkles className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+          <div className="flex-1 space-y-0.5">
+            <div className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5 flex-wrap">
+              <span>Вашего парка ещё нет в POTA?</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold">Подайте заявку</span>
+            </div>
+            <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+              Выберите территорию из списка, нажмите <span className="font-semibold text-emerald-600 dark:text-emerald-400">«📋 Заявка для R2BBX»</span> и отправьте готовый текст координатору <a href="https://t.me/R2BBX" target="_blank" rel="noreferrer" className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">@R2BBX</a> или прямиком в <a href="https://t.me/+Pek5olQhfPdiZDIy" target="_blank" rel="noreferrer" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">чат RU-POTA</a>!
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Search & Region Filter Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-2">
         <div className="relative sm:col-span-7">

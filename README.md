@@ -177,7 +177,9 @@ npm run dev
 ```bash
 git clone https://github.com/loloka/ru-pota-bot.git /opt/potabot
 cd /opt/potabot
-npm install --production
+npm install
+npm run build
+npm run update:oopt # Первичное наполнение реестра ООПТ (11 342 объекта) и сопоставление POTA
 cp .env.example .env && nano .env
 pm2 start src/bot/index.js --name potabot
 pm2 save

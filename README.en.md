@@ -162,7 +162,9 @@ Quick deployment commands:
 ```bash
 git clone https://github.com/loloka/ru-pota-bot.git /opt/potabot
 cd /opt/potabot
-npm install --production
+npm install
+npm run build
+npm run update:oopt # Initial ingestion of Russian Protected Areas registry & POTA matching
 cp .env.example .env && nano .env
 pm2 start src/bot/index.js --name potabot
 pm2 save

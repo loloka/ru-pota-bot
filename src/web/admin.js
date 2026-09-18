@@ -962,6 +962,7 @@ export const startAdminServer = (telegramClient) => {
                 <span class="text-muted small" id="subm-coords-status"></span>
                 <div class="d-flex gap-2">
                   <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрыть</button>
+                  <button type="button" class="btn btn-outline-primary btn-sm" id="btn-email-submitter" title="Открыть почтовую программу с готовой заявкой для Manu R2BBX"><i class="bi bi-envelope-fill"></i> Отправить на Email</button>
                   <button type="button" class="btn btn-success btn-sm" id="btn-copy-submitter-bottom"><i class="bi bi-clipboard-check"></i> Скопировать готовую заявку</button>
                 </div>
               </div>
@@ -2088,6 +2089,14 @@ export const startAdminServer = (telegramClient) => {
 
           document.getElementById('btn-copy-submitter')?.addEventListener('click', copySubmitterAction);
           document.getElementById('btn-copy-submitter-bottom')?.addEventListener('click', copySubmitterAction);
+
+          document.getElementById('btn-email-submitter')?.addEventListener('click', function() {
+            var text = document.getElementById('subm-preview')?.textContent || '';
+            var nameEn = document.getElementById('subm-name-en')?.value || document.getElementById('subm-name')?.value || '';
+            var subject = encodeURIComponent('Заявка POTA: ' + nameEn);
+            var body = encodeURIComponent(text);
+            window.location.href = 'mailto:r2bbx.mua@gmail.com?subject=' + subject + '&body=' + body;
+          });
 
           // ==========================================
           // Leaflet Interactive Coordinate Picker

@@ -17,7 +17,8 @@ import {
   Info,
   Navigation,
   User,
-  MessageCircle
+  MessageCircle,
+  Mail
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -458,28 +459,44 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                 </pre>
 
                 {/* Quick send actions */}
-                <div className="mt-2.5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!copied) handleCopySubmitter();
-                      telegram.openTelegramLink('https://t.me/ManuUmAn');
-                    }}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
-                  >
-                    <User className="w-3.5 h-3.5 shrink-0" />
-                    <span>Отправить R2BBX (@ManuUmAn)</span>
-                  </button>
+                <div className="mt-2.5 flex flex-col gap-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!copied) handleCopySubmitter();
+                        telegram.openTelegramLink('https://t.me/ManuUmAn');
+                      }}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
+                    >
+                      <User className="w-3.5 h-3.5 shrink-0" />
+                      <span>Отправить в TG (@ManuUmAn)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!copied) handleCopySubmitter();
+                        const subject = encodeURIComponent(`Заявка POTA: ${form.nameEn || form.name}`);
+                        const body = encodeURIComponent(previewText);
+                        window.location.href = `mailto:r2bbx.mua@gmail.com?subject=${subject}&body=${body}`;
+                      }}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
+                      title="Открыть почтовую программу с готовым текстом заявки"
+                    >
+                      <Mail className="w-3.5 h-3.5 shrink-0" />
+                      <span>Отправить на Email</span>
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
                       if (!copied) handleCopySubmitter();
                       telegram.openTelegramLink('https://t.me/+Pek5olQhfPdiZDIy');
                     }}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
+                    className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
                   >
                     <MessageCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>В чат RU-POTA</span>
+                    <span>В чат RU-POTA (Telegram)</span>
                   </button>
                 </div>
               </div>
@@ -511,21 +528,12 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                           href={yandexInfo.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors shadow-sm"
+                          title="Открыть границы и координаты в Яндекс.Картах"
                         >
-                          <ExternalLink className="w-3 h-3" />
-                          Яндекс
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Яндекс Карты</span>
                         </a>
-                      )}
-                      {onShowOnMap && (
-                        <button
-                          type="button"
-                          onClick={() => onShowOnMap(current)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-                        >
-                          <Compass className="w-3 h-3" />
-                          На карту
-                        </button>
                       )}
                     </div>
                   </div>

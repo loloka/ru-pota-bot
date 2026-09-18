@@ -933,7 +933,7 @@ export const startAdminServer = (telegramClient) => {
                       <label class="form-label small fw-bold mb-0">8. Сайт объекта, ссылка:</label>
                       <div class="d-flex gap-1">
                         <button type="button" class="btn btn-xs btn-outline-success py-0 px-1.5" style="font-size:11px;" id="btn-set-link-nextgis" title="Установить ссылку NextGIS зеркала (приоритет R2BBX)">NextGIS (R2BBX)</button>
-                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:11px;" id="btn-set-link-oczk" title="Установить ссылку официальной карты ООПТ">карта.оцзк.рф</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:11px;" id="btn-set-link-custom" title="Ввести собственный сайт парка или заповедника">Свой сайт</button>
                       </div>
                     </div>
                     <input type="text" class="form-control form-control-sm" id="subm-site" placeholder="https://ooptaari.nextgis.ru/node/... или сайт парка" required>
@@ -1984,9 +1984,14 @@ export const startAdminServer = (telegramClient) => {
             }
           });
 
-          document.getElementById('btn-set-link-oczk')?.addEventListener('click', function() {
-            document.getElementById('subm-site').value = 'https://карта.оцзк.рф';
-            updateSubmitterPreview();
+          document.getElementById('btn-set-link-custom')?.addEventListener('click', function() {
+            var input = document.getElementById('subm-site');
+            if (input) {
+              input.value = 'https://';
+              input.focus();
+              input.setSelectionRange(input.value.length, input.value.length);
+              updateSubmitterPreview();
+            }
           });
 
           // Open Submitter Modal

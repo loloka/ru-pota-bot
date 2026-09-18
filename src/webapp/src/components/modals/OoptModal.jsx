@@ -388,16 +388,26 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleInputChange('site', 'https://карта.оцзк.рф')}
+                        onClick={() => {
+                          handleInputChange('site', 'https://');
+                          setTimeout(() => {
+                            const inputEl = document.getElementById('oopt-modal-site-input');
+                            if (inputEl) {
+                              inputEl.focus();
+                              inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+                            }
+                          }, 50);
+                        }}
                         className="px-1.5 py-0.5 text-[10px] rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 font-medium transition-colors"
-                        title="Установить ссылку карта.оцзк.рф"
+                        title="Ввести собственный сайт парка или заповедника"
                       >
-                        карта.оцзк.рф
+                        Свой сайт
                       </button>
                     </div>
                   </div>
                   <input
                     type="text"
+                    id="oopt-modal-site-input"
                     value={form.site}
                     onChange={(e) => handleInputChange('site', e.target.value)}
                     placeholder="https://ooptaari.nextgis.ru/node/... или сайт заповедника"

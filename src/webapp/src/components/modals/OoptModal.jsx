@@ -380,7 +380,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => current.nid && handleInputChange('site', `https://ooptaari.nextgis.ru/oopt/${current.nid}`)}
+                        onClick={() => current.nid && handleInputChange('site', `https://ooptaari.nextgis.ru/node/${current.nid}`)}
                         className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 font-medium transition-colors"
                         title="Установить ссылку NextGIS (приоритет R2BBX)"
                       >
@@ -400,7 +400,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                     type="text"
                     value={form.site}
                     onChange={(e) => handleInputChange('site', e.target.value)}
-                    placeholder="https://ooptaari.nextgis.ru/oopt/... или сайт заповедника"
+                    placeholder="https://ooptaari.nextgis.ru/node/... или сайт заповедника"
                     className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                   />
                   <div className="text-[11px] text-slate-400 mt-1">

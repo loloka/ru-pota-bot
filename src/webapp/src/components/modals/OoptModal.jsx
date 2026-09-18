@@ -18,7 +18,8 @@ import {
   Navigation,
   User,
   MessageCircle,
-  Mail
+  Mail,
+  ArrowLeft
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -83,6 +84,27 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
     };
   }, [oopt]);
 
+  // Native Telegram BackButton & desktop Escape key navigation
+  useEffect(() => {
+    const handleBack = () => {
+      onClose();
+    };
+
+    telegram.backButton.show(handleBack);
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      telegram.backButton.hide(handleBack);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   if (!oopt) return null;
 
   const current = details || oopt;
@@ -130,15 +152,28 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-fade-in"
+      onClick={onClose}
+    >
       <div 
         className="relative w-full max-w-lg max-h-[92vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-start justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/70">
-          <div className="flex-1 pr-3">
-            <div className="flex items-center gap-2 flex-wrap mb-1.5">
+        <div className="flex items-start justify-between p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/70 gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-600 rounded-xl border border-slate-200 dark:border-slate-700 transition-all shrink-0 active:scale-95 shadow-xs"
+            title="Вернуться к списку ООПТ"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">К списку</span>
+          </button>
+
+          <div className="flex-1 min-w-0 pr-1">
+            <div className="flex items-center gap-1.5 flex-wrap mb-1">
               {getSigBadge(current.sig, current.sig_display)}
               {current.category && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
@@ -157,14 +192,16 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                 </span>
               )}
             </div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight">
               {current.title}
             </h2>
           </div>
+
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors shrink-0"
+            title="Закрыть"
           >
             <X className="w-5 h-5" />
           </button>
@@ -498,6 +535,15 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                     <MessageCircle className="w-3.5 h-3.5 shrink-0" />
                     <span>В чат RU-POTA (Telegram)</span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full mt-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all active:scale-98 border border-slate-200/80 dark:border-slate-700/80 shadow-xs"
+                  >
+                    <ArrowLeft className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                    <span>Вернуться к списку ООПТ</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -622,22 +668,34 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                   </div>
                 </div>
               )}
+              {/* Dedicated Back to List Button */}
+              <div className="pt-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all active:scale-98 border border-slate-200/80 dark:border-slate-700/80 shadow-xs"
+                >
+                  <ArrowLeft className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                  <span>Вернуться к списку ООПТ</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
 
         {/* Modal Footer */}
-        <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/70 flex items-center justify-between text-xs text-slate-500">
-          <span>ID в реестре: <code>{current.nid}</code></span>
-          <a
-            href="https://xn--80aa2azak.xn--g1agk6a.xn--p1ai/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline"
+        <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/90 flex items-center justify-between text-xs">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-200/80 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 font-semibold transition-all active:scale-95 shadow-xs"
           >
-            карта.оцзк.рф
-            <ExternalLink className="w-3 h-3" />
-          </a>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Назад к списку</span>
+          </button>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+            ID в реестре: <strong>{current.nid}</strong>
+          </span>
         </div>
       </div>
     </div>

@@ -255,6 +255,32 @@ export const telegram = {
   },
 
   /**
+   * Telegram WebApp BackButton controls
+   */
+  backButton: {
+    show(callback) {
+      if (tg?.BackButton) {
+        try {
+          tg.BackButton.show();
+          if (callback) {
+            tg.BackButton.onClick(callback);
+          }
+        } catch (e) {}
+      }
+    },
+    hide(callback) {
+      if (tg?.BackButton) {
+        try {
+          if (callback) {
+            tg.BackButton.offClick(callback);
+          }
+          tg.BackButton.hide();
+        } catch (e) {}
+      }
+    },
+  },
+
+  /**
    * Close Telegram WebApp
    */
   close() {

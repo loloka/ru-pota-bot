@@ -24,23 +24,37 @@ import { telegram } from '../../services/telegram.js';
 import { parseOoptForSubmitter, formatR2bbxTemplate } from '../../services/ooptUtils.js';
 import OoptModal from '../modals/OoptModal.jsx';
 
+const OOPT_STORAGE_KEY = 'rupota_oopt_filter_state';
+
+const getInitialFilterState = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(OOPT_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return null;
+};
+
 export default function OoptTab({ onNavigateToMap }) {
+  // Restore filters if previously selected
+  const initial = useRef(getInitialFilterState()).current;
+
   // State
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [page, setPage] = useState(initial?.page || 1);
+  const [limit, setLimit] = useState(initial?.limit || 20);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
 
   // Filters
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [sigFilter, setSigFilter] = useState(''); // '' | 'federal' | 'regional' | 'local'
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [regionFilter, setRegionFilter] = useState('');
-  const [potaFilter, setPotaFilter] = useState(''); // '' | 'in_pota' | 'not_in_pota'
+  const [search, setSearch] = useState(initial?.search || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(initial?.search || '');
+  const [sigFilter, setSigFilter] = useState(initial?.sigFilter || ''); // '' | 'federal' | 'regional' | 'local'
+  const [categoryFilter, setCategoryFilter] = useState(initial?.categoryFilter || '');
+  const [regionFilter, setRegionFilter] = useState(initial?.regionFilter || '');
+  const [potaFilter, setPotaFilter] = useState(initial?.potaFilter || ''); // '' | 'in_pota' | 'not_in_pota'
   
   // Selected modal
   const [selectedOopt, setSelectedOopt] = useState(null);
@@ -50,11 +64,31 @@ export default function OoptTab({ onNavigateToMap }) {
   // Page input jump
   const [jumpPage, setJumpPage] = useState('');
 
-  // Debounce search
+  // Persist filter and page state to sessionStorage whenever it changes
   useEffect(() => {
+    try {
+      sessionStorage.setItem(OOPT_STORAGE_KEY, JSON.stringify({
+        page,
+        limit,
+        search,
+        sigFilter,
+        categoryFilter,
+        regionFilter,
+        potaFilter,
+      }));
+    } catch (e) {}
+  }, [page, limit, search, sigFilter, categoryFilter, regionFilter, potaFilter]);
+
+  // Debounce search without resetting page on initial mount
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1); // reset to page 1 on search change
+      setPage(1); // reset to page 1 only when user actually types
     }, 350);
     return () => clearTimeout(timer);
   }, [search]);
@@ -103,6 +137,20 @@ export default function OoptTab({ onNavigateToMap }) {
       handlePageChange(p);
       setJumpPage('');
     }
+  };
+
+  // Reset all filters and clear cached state
+  const handleResetFilters = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setSigFilter('');
+    setCategoryFilter('');
+    setRegionFilter('');
+    setPotaFilter('');
+    setPage(1);
+    try {
+      sessionStorage.removeItem(OOPT_STORAGE_KEY);
+    } catch (e) {}
   };
 
   // Fast copy coordinator template directly from card (auto-fetches coordinates if not yet in cache)
@@ -480,7 +528,7 @@ export default function OoptTab({ onNavigateToMap }) {
           {(search || sigFilter || categoryFilter || regionFilter || potaFilter) && (
             <button
               type="button"
-              onClick={() => { setSearch(''); setSigFilter(''); setCategoryFilter(''); setRegionFilter(''); setPotaFilter(''); setPage(1); }}
+              onClick={handleResetFilters}
               className="mt-3 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
             >
               Сбросить фильтры

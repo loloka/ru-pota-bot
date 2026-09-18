@@ -293,17 +293,27 @@ export default function OoptTab({ onNavigateToMap }) {
         </div>
       </div>
 
-      {/* Help Banner: Submitting new park to POTA */}
-      <div className="mb-2.5 p-2.5 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/20 text-xs">
-        <div className="flex items-start gap-2">
+      {/* Help Banner: Submitting new park to POTA & POTA OOPT Rules */}
+      <div className="mb-2.5 p-3 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 text-xs shadow-sm">
+        <div className="flex items-start gap-2.5">
           <Sparkles className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-          <div className="flex-1 space-y-0.5">
-            <div className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5 flex-wrap">
-              <span>Вашего парка ещё нет в POTA?</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold">Подайте заявку</span>
+          <div className="flex-1 space-y-1.5">
+            <div className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center justify-between flex-wrap gap-1">
+              <span className="flex items-center gap-1.5">
+                <span>Вашего парка ещё нет в POTA?</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold">Подать заявку</span>
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                Координатор: <a href="mailto:r2bbx.mua@gmail.com" className="font-medium text-emerald-600 dark:text-emerald-400 hover:underline">r2bbx.mua@gmail.com</a>
+              </span>
             </div>
+
             <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
-              Выберите территорию из списка, нажмите <span className="font-semibold text-emerald-600 dark:text-emerald-400">«📋 Заявка для R2BBX»</span> и отправьте готовый текст координатору <a href="https://t.me/ManuUmAn" target="_blank" rel="noreferrer" className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">R2BBX (@ManuUmAn)</a> или прямиком в <a href="https://t.me/+Pek5olQhfPdiZDIy" target="_blank" rel="noreferrer" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">чат RU-POTA</a>!
+              Выберите территорию из реестра, нажмите <span className="font-semibold text-emerald-600 dark:text-emerald-400">«📋 Заявка для R2BBX»</span> и отправьте готовый текст координатору <a href="https://t.me/ManuUmAn" target="_blank" rel="noreferrer" className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">@ManuUmAn</a> или на почту <a href="mailto:r2bbx.mua@gmail.com" className="font-bold text-slate-700 dark:text-slate-300 underline">r2bbx.mua@gmail.com</a> (либо в <a href="https://t.me/+Pek5olQhfPdiZDIy" target="_blank" rel="noreferrer" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">чат RU-POTA</a>).
+            </div>
+
+            <div className="pt-1.5 border-t border-emerald-500/10 text-[10.5px] text-slate-500 dark:text-slate-400 leading-normal">
+              🌲 <strong className="text-slate-700 dark:text-slate-300">Почему только ООПТ?</strong> По международным правилам POTA допускаются <u>исключительно</u> природные территории с официальным охранным статусом регионального или федерального значения (заповедники, нацпарки, заказники, памятники природы). Обычные городские скверы и парки развлечений международная программа POTA строго отклоняет.
             </div>
           </div>
         </div>

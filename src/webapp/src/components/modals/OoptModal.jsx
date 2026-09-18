@@ -234,11 +234,13 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                   <span>Правила координатора POTA (R2BBX):</span>
                 </div>
                 <ul className="space-y-0.5 text-[11px] leading-relaxed text-amber-800/90 dark:text-amber-300/90 list-disc list-inside">
+                  <li><strong>Охранный статус:</strong> только официальные ООПТ РФ (регионального или федерального значения). Городские скверы и парки отдыха без статуса ООПТ не допускаются правилами POTA.</li>
                   <li><strong>Название:</strong> очищенное от кавычек и бюрократических приставок (напр. <em>Лосиный Остров</em>).</li>
                   <li><strong>На английском:</strong> авто-перевод для POTA (напр. <em>Losinyy Ostrov National Park</em>).</li>
                   <li><strong>Статус:</strong> <em>Национальный парк</em>, <em>Природный заказник</em> и т.д.</li>
                   <li><strong>Регионы:</strong> указать все субъекты, если ООПТ на стыке (напр. <em>Москва, Московская область</em>).</li>
-                  <li><strong>Сайт:</strong> приоритет — NextGIS (ooptaari.nextgis.ru). Википедия, VK и коммерческие сайты не принимаются.</li>
+                  <li><strong>Сайт:</strong> приоритет — NextGIS (node/:id) или официальный сайт парка. Википедия, VK и коммерческие сайты не принимаются.</li>
+                  <li><strong>Куда отправлять:</strong> в Telegram <a href="https://t.me/ManuUmAn" target="_blank" rel="noreferrer" className="font-bold underline">@ManuUmAn</a> или по почте <a href="mailto:r2bbx.mua@gmail.com" className="font-bold underline">r2bbx.mua@gmail.com</a>.</li>
                 </ul>
               </div>
 

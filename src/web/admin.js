@@ -2291,7 +2291,7 @@ export const startAdminServer = (telegramClient) => {
                   'Рекомендуемая официальная ссылка: ' + newUrl,
                   'Объект в реестре ООПТ: ' + ooptDesc,
                   repl && repl.region ? 'Регион: ' + repl.region : ''
-                ].filter(Boolean).join('\n');
+                ].filter(Boolean).join(String.fromCharCode(10));
 
                 navigator.clipboard.writeText(text).then(function() {
                   if (Toast) {

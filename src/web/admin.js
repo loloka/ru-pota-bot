@@ -258,6 +258,15 @@ export const startAdminServer = (telegramClient) => {
     const kickedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE action = 'kicked'").get().count;
     const warnedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE action = 'warned'").get().count;
 
+    // 4. POTA Links Audit stats for sidebar badge
+    let auditStats = { wikipedia: 10, empty: 16, insecure_http: 36 };
+    try {
+      const audit = auditPotaLinks();
+      if (audit && audit.stats) {
+        auditStats = audit.stats;
+      }
+    } catch (e) {}
+
     const escapeHtmlServer = (str) => {
       if (!str) return '';
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -392,7 +401,7 @@ export const startAdminServer = (telegramClient) => {
                 <a class="list-group-item list-group-item-action" id="list-broadcast-list" data-bs-toggle="list" href="#list-broadcast" role="tab" aria-controls="list-broadcast"><i class="bi bi-megaphone"></i> Рассылка</a>
                 <a class="list-group-item list-group-item-action" id="list-welcome-list" data-bs-toggle="list" href="#list-welcome" role="tab" aria-controls="list-welcome"><i class="bi bi-pin-angle"></i> Закрепленный пост</a>
                 <a class="list-group-item list-group-item-action" id="list-oopt-list" data-bs-toggle="list" href="#list-oopt" role="tab" aria-controls="list-oopt"><i class="bi bi-tree"></i> Реестр ООПТ РФ</a>
-                <a class="list-group-item list-group-item-action" id="list-links-list" data-bs-toggle="list" href="#list-links" role="tab" aria-controls="list-links"><i class="bi bi-link-45deg"></i> Аудит ссылок POTA <span class="badge bg-warning text-dark rounded-pill ms-1" id="links-wiki-badge">10</span></a>
+                <a class="list-group-item list-group-item-action" id="list-links-list" data-bs-toggle="list" href="#list-links" role="tab" aria-controls="list-links"><i class="bi bi-link-45deg"></i> Аудит ссылок POTA <span class="badge bg-warning text-dark rounded-pill ms-1" id="links-wiki-badge" title="Википедия: ${auditStats.wikipedia}">${auditStats.wikipedia}</span> <span class="badge bg-danger rounded-pill ms-1" id="links-empty-badge" title="Без ссылок (Алярма): ${auditStats.empty}">${auditStats.empty}</span> <span class="badge bg-secondary rounded-pill ms-1" id="links-http-badge" title="Незащищенный HTTP: ${auditStats.insecure_http}">${auditStats.insecure_http}</span></a>
                 <a class="list-group-item list-group-item-action" id="list-console-list" data-bs-toggle="list" href="#list-console" role="tab" aria-controls="list-console"><i class="bi bi-terminal"></i> Live Консоль</a>
               </div>
             </div>
@@ -2169,11 +2178,23 @@ export const startAdminServer = (telegramClient) => {
                 document.getElementById('audit-stat-http').textContent = data.stats.insecure_http;
                 document.getElementById('audit-stat-empty').textContent = data.stats.empty;
                 document.getElementById('audit-stat-replacements').textContent = data.stats.with_replacement;
-                var badge = document.getElementById('links-wiki-badge');
-                if (badge) {
-                  badge.textContent = data.stats.wikipedia;
-                  if (data.stats.wikipedia === 0) badge.classList.add('d-none');
-                  else badge.classList.remove('d-none');
+                var badgeWiki = document.getElementById('links-wiki-badge');
+                if (badgeWiki) {
+                  badgeWiki.textContent = data.stats.wikipedia;
+                  if (data.stats.wikipedia === 0) badgeWiki.classList.add('d-none');
+                  else badgeWiki.classList.remove('d-none');
+                }
+                var badgeEmpty = document.getElementById('links-empty-badge');
+                if (badgeEmpty) {
+                  badgeEmpty.textContent = data.stats.empty;
+                  if (data.stats.empty === 0) badgeEmpty.classList.add('d-none');
+                  else badgeEmpty.classList.remove('d-none');
+                }
+                var badgeHttp = document.getElementById('links-http-badge');
+                if (badgeHttp) {
+                  badgeHttp.textContent = data.stats.insecure_http;
+                  if (data.stats.insecure_http === 0) badgeHttp.classList.add('d-none');
+                  else badgeHttp.classList.remove('d-none');
                 }
                 allAuditParks = data.parks || [];
                 renderAuditTable();

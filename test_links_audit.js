@@ -21,7 +21,7 @@ assert.strictEqual(categorizeLink('https://en.wikipedia.org/wiki/Anyuysky_Nation
 assert.strictEqual(categorizeLink('https://ru.wikipedia.org/wiki/Park').category, 'wikipedia');
 assert.strictEqual(categorizeLink('http://npalania.ru/').category, 'insecure_http');
 assert.strictEqual(categorizeLink('https://vk.com/club12345').category, 'social');
-assert.strictEqual(categorizeLink('https://ooptaari.nextgis.ru/oopt/6699').category, 'official_oopt');
+assert.strictEqual(categorizeLink('https://ooptaari.nextgis.ru/node/6699').category, 'official_oopt');
 assert.strictEqual(categorizeLink('https://карта.оцзк.рф/oopt/123').category, 'official_oopt');
 assert.strictEqual(categorizeLink('https://npalania.ru/').category, 'ok');
 console.log('✅ PASS: categorizeLink correctly categorizes all URL types\n');
@@ -49,7 +49,7 @@ assert.ok(anyuysky, 'RU-0003 must be in audit');
 assert.strictEqual(anyuysky.category, 'wikipedia');
 assert.ok(anyuysky.replacement, 'RU-0003 must have matched OOPT replacement');
 assert.strictEqual(anyuysky.replacement.nid, 6699);
-assert.strictEqual(anyuysky.replacement.url, 'https://ooptaari.nextgis.ru/oopt/6699');
+assert.strictEqual(anyuysky.replacement.url, 'https://ooptaari.nextgis.ru/node/6699');
 console.log('✅ PASS: auditPotaLinks correctly flagged RU-0003 Wikipedia link with NextGIS replacement\n');
 
 // 4. Test formatSingleReplacement
@@ -57,7 +57,7 @@ console.log('[4] Testing formatSingleReplacement...');
 const singleText = formatSingleReplacement(anyuysky);
 assert.ok(singleText.includes('RU-0003'));
 assert.ok(singleText.includes('https://en.wikipedia.org/wiki/Anyuysky_National_Park'));
-assert.ok(singleText.includes('https://ooptaari.nextgis.ru/oopt/6699'));
+assert.ok(singleText.includes('https://ooptaari.nextgis.ru/node/6699'));
 assert.ok(singleText.includes('Анюйский'));
 console.log('✅ PASS: formatSingleReplacement generates valid R2BBX proposal text\n');
 
@@ -66,7 +66,7 @@ console.log('[5] Testing formatBatchWikipediaReplacements...');
 const batchText = formatBatchWikipediaReplacements();
 assert.ok(batchText.includes('Сводный список предложений'));
 assert.ok(batchText.includes('RU-0003'));
-assert.ok(batchText.includes('https://ooptaari.nextgis.ru/oopt/6699'));
+assert.ok(batchText.includes('https://ooptaari.nextgis.ru/node/6699'));
 console.log('✅ PASS: formatBatchWikipediaReplacements generates valid batch document\n');
 
 // 5b. Test formatEmptyLinksReport (Manu R2BBX)

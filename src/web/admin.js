@@ -936,7 +936,7 @@ export const startAdminServer = (telegramClient) => {
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:11px;" id="btn-set-link-oczk" title="Установить ссылку официальной карты ООПТ">карта.оцзк.рф</button>
                       </div>
                     </div>
-                    <input type="text" class="form-control form-control-sm" id="subm-site" placeholder="https://ooptaari.nextgis.ru/oopt/... или сайт парка" required>
+                    <input type="text" class="form-control form-control-sm" id="subm-site" placeholder="https://ooptaari.nextgis.ru/node/... или сайт парка" required>
                     <div class="form-text small text-muted">Приоритет: собственный сайт парка или NextGIS по требованию R2BBX. Википедия, VK и коммерческие ресурсы не принимаются.</div>
                   </div>
 
@@ -1908,7 +1908,7 @@ export const startAdminServer = (telegramClient) => {
             var region = ate || '';
             if (region.indexOf('(') !== -1) region = region.split('(')[0].trim();
 
-            var siteUrl = nid ? ('https://ooptaari.nextgis.ru/oopt/' + nid) : 'https://карта.оцзк.рф/';
+            var siteUrl = nid ? ('https://ooptaari.nextgis.ru/node/' + nid) : 'https://карта.оцзк.рф/';
 
             var latVal = (lat !== null && lat !== undefined && lat !== '' && !isNaN(Number(lat))) ? Number(lat).toFixed(4) : '';
             var lonVal = (lon !== null && lon !== undefined && lon !== '' && !isNaN(Number(lon))) ? Number(lon).toFixed(4) : '';
@@ -1979,7 +1979,7 @@ export const startAdminServer = (telegramClient) => {
           document.getElementById('btn-set-link-nextgis')?.addEventListener('click', function() {
             var nid = document.getElementById('subm-nid').value;
             if (nid) {
-              document.getElementById('subm-site').value = 'https://ooptaari.nextgis.ru/oopt/' + nid;
+              document.getElementById('subm-site').value = 'https://ooptaari.nextgis.ru/node/' + nid;
               updateSubmitterPreview();
             }
           });

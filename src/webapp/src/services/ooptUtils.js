@@ -175,8 +175,8 @@ export function parseOoptForSubmitter(item) {
   const lat = (item.lat !== null && item.lat !== undefined && item.lat !== '') ? Number(item.lat).toFixed(4) : '';
   const lon = (item.lon !== null && item.lon !== undefined && item.lon !== '') ? Number(item.lon).toFixed(4) : '';
 
-  // Priority link requested by Manu (R2BBX): https://ooptaari.nextgis.ru/oopt/:id
-  const site = item.nid ? `https://ooptaari.nextgis.ru/oopt/${item.nid}` : 'https://карта.оцзк.рф/';
+  // Priority link requested by Manu (R2BBX): https://ooptaari.nextgis.ru/node/:id
+  const site = item.nid ? `https://ooptaari.nextgis.ru/node/${item.nid}` : 'https://карта.оцзк.рф/';
 
   // Clarification
   const clarifies = [];

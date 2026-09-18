@@ -153,7 +153,7 @@ export function auditPotaLinks() {
         category: matchedOopt.category || '',
         sig: matchedOopt.sig_display || matchedOopt.sig || '',
         region: matchedOopt.ate || '',
-        url: `https://ooptaari.nextgis.ru/oopt/${matchedOopt.nid}`,
+        url: `https://ooptaari.nextgis.ru/node/${matchedOopt.nid}`,
       };
       if (cat.category !== 'ok') {
         stats.with_replacement++;

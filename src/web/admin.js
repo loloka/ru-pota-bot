@@ -8,6 +8,7 @@ import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
 import { getOoptList, getOoptStats, syncOoptRegistry } from '../services/ooptService.js';
+import { auditPotaLinks, checkUrlOnline, formatSingleReplacement, formatBatchWikipediaReplacements } from '../services/potaAuditService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -350,6 +351,7 @@ export const startAdminServer = (telegramClient) => {
         <title>RU-POTA Web Admin 2.0</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <style>
           #log-container { height: 400px; overflow-y: scroll; background: #212529; color: #f8f9fa; font-family: monospace; padding: 10px; border-radius: 5px; }
@@ -383,6 +385,7 @@ export const startAdminServer = (telegramClient) => {
                 <a class="list-group-item list-group-item-action" id="list-broadcast-list" data-bs-toggle="list" href="#list-broadcast" role="tab" aria-controls="list-broadcast"><i class="bi bi-megaphone"></i> Рассылка</a>
                 <a class="list-group-item list-group-item-action" id="list-welcome-list" data-bs-toggle="list" href="#list-welcome" role="tab" aria-controls="list-welcome"><i class="bi bi-pin-angle"></i> Закрепленный пост</a>
                 <a class="list-group-item list-group-item-action" id="list-oopt-list" data-bs-toggle="list" href="#list-oopt" role="tab" aria-controls="list-oopt"><i class="bi bi-tree"></i> Реестр ООПТ РФ</a>
+                <a class="list-group-item list-group-item-action" id="list-links-list" data-bs-toggle="list" href="#list-links" role="tab" aria-controls="list-links"><i class="bi bi-link-45deg"></i> Аудит ссылок POTA <span class="badge bg-warning text-dark rounded-pill ms-1" id="links-wiki-badge">10</span></a>
                 <a class="list-group-item list-group-item-action" id="list-console-list" data-bs-toggle="list" href="#list-console" role="tab" aria-controls="list-console"><i class="bi bi-terminal"></i> Live Консоль</a>
               </div>
             </div>
@@ -730,6 +733,99 @@ export const startAdminServer = (telegramClient) => {
                   </div>
                 </div>
 
+                <!-- Tab: POTA Links Audit -->
+                <div class="tab-pane fade" id="list-links" role="tabpanel" aria-labelledby="list-links-list">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                      <h3 class="mb-1"><i class="bi bi-link-45deg"></i> Аудит ссылок парков POTA</h3>
+                      <div class="text-muted small">
+                        Анализ релевантности и проверка доступности сайтов российских парков (<a href="https://next.pota.app" target="_blank">POTA.app</a>). Приоритет координатора (Manu R2BBX): замена статей Википедии и временных ссылок на официальные реестры ООПТ (зеркало NextGIS).
+                      </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <button type="button" class="btn btn-sm btn-outline-success" id="btn-audit-copy-all-wiki" title="Скопировать все доступные предложения по замене ссылок Википедии на ООПТ">
+                        <i class="bi bi-clipboard-data"></i> Скопировать замены Википедии
+                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-primary" id="btn-audit-refresh">
+                        <i class="bi bi-arrow-clockwise"></i> Обновить
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Audit KPI Cards -->
+                  <div class="row g-2 mb-3">
+                    <div class="col-md-2 col-6">
+                      <div class="card bg-primary border-0 shadow-sm h-100 p-2 text-center text-white audit-kpi-card" data-filter="all" style="cursor: pointer;" title="Показать все парки РФ">
+                        <div class="small fw-semibold text-white-50"><i class="bi bi-tree"></i> Всего парков РФ</div>
+                        <div class="fs-4 fw-bold text-white" id="audit-stat-total">551</div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                      <div class="card bg-warning border-0 shadow-sm h-100 p-2 text-center text-dark audit-kpi-card" data-filter="wikipedia" style="cursor: pointer;" title="Фильтр: парки со ссылками на Википедию (требуют замены)">
+                        <div class="small fw-semibold text-dark-50"><i class="bi bi-exclamation-triangle-fill"></i> Википедия (на замену)</div>
+                        <div class="fs-4 fw-bold" id="audit-stat-wiki">10</div>
+                      </div>
+                    </div>
+                    <div class="col-md-2 col-4">
+                      <div class="card bg-secondary border-0 shadow-sm h-100 p-2 text-center text-white audit-kpi-card" data-filter="insecure_http" style="cursor: pointer;" title="Фильтр: ссылки на незащищенный HTTP">
+                        <div class="small fw-semibold text-white-50"><i class="bi bi-unlock"></i> HTTP (не HTTPS)</div>
+                        <div class="fs-4 fw-bold text-white" id="audit-stat-http">36</div>
+                      </div>
+                    </div>
+                    <div class="col-md-2 col-4">
+                      <div class="card bg-danger border-0 shadow-sm h-100 p-2 text-center text-white audit-kpi-card" data-filter="empty" style="cursor: pointer;" title="Фильтр: парки без ссылок">
+                        <div class="small fw-semibold text-white-50"><i class="bi bi-link-45deg"></i> Без ссылок</div>
+                        <div class="fs-4 fw-bold text-white" id="audit-stat-empty">16</div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-4">
+                      <div class="card bg-success border-0 shadow-sm h-100 p-2 text-center text-white audit-kpi-card" data-filter="replacement" style="cursor: pointer;" title="Фильтр: проблемные объекты с готовой официальной заменой из ООПТ РФ">
+                        <div class="small fw-semibold text-white-50"><i class="bi bi-check2-all"></i> Готово замен в ООПТ</div>
+                        <div class="fs-4 fw-bold text-white" id="audit-stat-replacements">106</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Search and Filter Bar -->
+                  <div class="row g-2 mb-3 align-items-center">
+                    <div class="col-md-5">
+                      <input type="text" class="form-control form-control-sm" id="audit-search-input" placeholder="🔍 Поиск по референции (RU-0003), названию или домену...">
+                    </div>
+                    <div class="col-md-4">
+                      <select class="form-select form-select-sm" id="audit-filter-select">
+                        <option value="all">Все объекты (551)</option>
+                        <option value="issues">Только с замечаниями (Википедия / HTTP / Пустые)</option>
+                        <option value="wikipedia" selected>⚠️ Только Википедия (приоритет R2BBX)</option>
+                        <option value="replacement">🌲 Только с готовой официальной заменой в ООПТ</option>
+                        <option value="insecure_http">🔓 Только HTTP (незащищенные)</option>
+                        <option value="empty">❌ Только без ссылки</option>
+                      </select>
+                    </div>
+                    <div class="col-md-3 text-end">
+                      <span class="small text-muted" id="audit-count-info">Загрузка данных...</span>
+                    </div>
+                  </div>
+
+                  <!-- Audit Table -->
+                  <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th style="width: 110px;">Референция</th>
+                          <th style="width: 220px;">Название POTA</th>
+                          <th>Текущая ссылка в POTA</th>
+                          <th>Рекомендуемая официальная ссылка (ООПТ РФ)</th>
+                          <th style="width: 140px;">Категория</th>
+                          <th style="width: 140px;" class="text-center">Действия</th>
+                        </tr>
+                      </thead>
+                      <tbody id="audit-table-body">
+                        <tr><td colspan="6" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm text-primary"></span> Загрузка аудита ссылок...</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
                 <!-- Tab: Console -->
                 <div class="tab-pane fade" id="list-console" role="tabpanel" aria-labelledby="list-console-list">
                   <div class="d-flex justify-content-between align-items-center mb-2">
@@ -784,17 +880,22 @@ export const startAdminServer = (telegramClient) => {
                   </div>
 
                   <div class="row g-2 mb-2">
-                    <div class="col-md-4">
-                      <label class="form-label small fw-bold mb-1">5. Координата первая (Широта / Lat):</label>
+                    <div class="col-md-3">
+                      <label class="form-label small fw-bold mb-1">5. Широта (Lat):</label>
                       <input type="text" class="form-control form-control-sm font-monospace" id="subm-lat" placeholder="55.8821">
                     </div>
-                    <div class="col-md-4">
-                      <label class="form-label small fw-bold mb-1">6. Координата вторая (Долгота / Lon):</label>
+                    <div class="col-md-3">
+                      <label class="form-label small fw-bold mb-1">6. Долгота (Lon):</label>
                       <input type="text" class="form-control form-control-sm font-monospace" id="subm-lon" placeholder="37.7812">
                     </div>
-                    <div class="col-md-4 d-flex align-items-end">
+                    <div class="col-md-3 d-flex align-items-end">
+                      <button type="button" id="btn-subm-open-map" class="btn btn-sm btn-outline-primary w-100" title="Интерактивный выбор и уточнение координат на карте">
+                        <i class="bi bi-pin-map-fill"></i> На карте
+                      </button>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
                       <a href="#" id="subm-yandex-link" target="_blank" class="btn btn-sm btn-outline-warning w-100">
-                        <i class="bi bi-geo-alt"></i> <span id="subm-yandex-text">Проверить в Яндекс.Картах</span>
+                        <i class="bi bi-geo-alt"></i> <span id="subm-yandex-text">Яндекс.Карты</span>
                       </a>
                     </div>
                   </div>
@@ -846,7 +947,34 @@ export const startAdminServer = (telegramClient) => {
           </div>
         </div>
 
+        <!-- Modal: Leaflet Interactive Coordinate Picker -->
+        <div class="modal fade" id="modal-coord-picker" tabindex="-1" aria-labelledby="modalCoordPickerLabel" aria-hidden="true" style="z-index: 1060;">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+              <div class="modal-header bg-primary text-white py-2 px-3">
+                <h6 class="modal-title mb-0" id="modalCoordPickerLabel"><i class="bi bi-pin-map-fill"></i> Интерактивный выбор координат для заявки</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body p-2">
+                <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                  <small class="text-muted"><i class="bi bi-info-circle"></i> Перетащите маркер 📍 или кликните по карте в нужную точку парка (въезд, парковка, поляна для антенны).</small>
+                  <div class="badge bg-dark font-monospace fs-6" id="picker-coords-display">Широта: 0.0000 | Долгота: 0.0000</div>
+                </div>
+                <div id="coord-picker-map" style="height: 440px; border-radius: 6px; border: 1px solid #ced4da;"></div>
+              </div>
+              <div class="modal-footer py-2 px-3 bg-light d-flex justify-content-between">
+                <span class="text-muted small" id="picker-status-info">Кликните по карте для перемещения маркера</span>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Отмена</button>
+                  <button type="button" class="btn btn-success btn-sm" id="btn-apply-coords"><i class="bi bi-check2-circle"></i> Применить координаты</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script>
           let Toast;
           if (typeof Swal !== 'undefined') {
@@ -1934,6 +2062,293 @@ export const startAdminServer = (telegramClient) => {
           document.getElementById('btn-copy-submitter')?.addEventListener('click', copySubmitterAction);
           document.getElementById('btn-copy-submitter-bottom')?.addEventListener('click', copySubmitterAction);
 
+          // ==========================================
+          // Leaflet Interactive Coordinate Picker
+          // ==========================================
+          var coordPickerMap = null;
+          var coordPickerMarker = null;
+          var currentPickerLat = 55.7512;
+          var currentPickerLon = 37.6184;
+
+          function updatePickerDisplay(lat, lon) {
+            currentPickerLat = Number(lat);
+            currentPickerLon = Number(lon);
+            var displayEl = document.getElementById('picker-coords-display');
+            if (displayEl) {
+              displayEl.textContent = 'Широта: ' + currentPickerLat.toFixed(4) + ' | Долгота: ' + currentPickerLon.toFixed(4);
+            }
+            var statusEl = document.getElementById('picker-status-info');
+            if (statusEl) {
+              statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Координаты: <code>' + currentPickerLat.toFixed(4) + ', ' + currentPickerLon.toFixed(4) + '</code></span>';
+            }
+          }
+
+          document.getElementById('btn-subm-open-map')?.addEventListener('click', function() {
+            var latVal = parseFloat(document.getElementById('subm-lat').value);
+            var lonVal = parseFloat(document.getElementById('subm-lon').value);
+            var hasCoords = !isNaN(latVal) && !isNaN(lonVal) && latVal !== 0 && lonVal !== 0;
+
+            var initialLat = hasCoords ? latVal : 55.7512;
+            var initialLon = hasCoords ? lonVal : 37.6184;
+            var initialZoom = hasCoords ? 13 : 5;
+
+            var modalEl = document.getElementById('modal-coord-picker');
+            var modal = new bootstrap.Modal(modalEl);
+            modal.show();
+
+            setTimeout(function() {
+              if (!coordPickerMap) {
+                coordPickerMap = L.map('coord-picker-map').setView([initialLat, initialLon], initialZoom);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                  attribution: '&copy; OpenStreetMap contributors',
+                  maxZoom: 19
+                }).addTo(coordPickerMap);
+
+                coordPickerMarker = L.marker([initialLat, initialLon], { draggable: true }).addTo(coordPickerMap);
+
+                coordPickerMarker.on('dragend', function(e) {
+                  var pos = e.target.getLatLng();
+                  updatePickerDisplay(pos.lat, pos.lng);
+                });
+
+                coordPickerMap.on('click', function(e) {
+                  var pos = e.latlng;
+                  coordPickerMarker.setLatLng(pos);
+                  updatePickerDisplay(pos.lat, pos.lng);
+                });
+              } else {
+                coordPickerMap.invalidateSize();
+                coordPickerMap.setView([initialLat, initialLon], initialZoom);
+                coordPickerMarker.setLatLng([initialLat, initialLon]);
+              }
+              updatePickerDisplay(initialLat, initialLon);
+            }, 300);
+          });
+
+          document.getElementById('btn-apply-coords')?.addEventListener('click', function() {
+            document.getElementById('subm-lat').value = currentPickerLat.toFixed(4);
+            document.getElementById('subm-lon').value = currentPickerLon.toFixed(4);
+            updateSubmitterPreview();
+            var modalEl = document.getElementById('modal-coord-picker');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            if (Toast) {
+              Toast.fire({ icon: 'success', title: '✅ Координаты (' + currentPickerLat.toFixed(4) + ', ' + currentPickerLon.toFixed(4) + ') применены к заявке!' });
+            }
+          });
+
+          // ==========================================
+          // POTA Park Links Audit JS
+          // ==========================================
+          var allAuditParks = [];
+          var currentAuditFilter = 'wikipedia';
+
+          async function loadAuditData() {
+            var tbody = document.getElementById('audit-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm text-primary"></span> Загрузка аудита ссылок...</td></tr>';
+            try {
+              var res = await fetch('/api/admin/pota-links/audit');
+              var data = await res.json();
+              if (data && data.stats) {
+                document.getElementById('audit-stat-total').textContent = data.stats.total;
+                document.getElementById('audit-stat-wiki').textContent = data.stats.wikipedia;
+                document.getElementById('audit-stat-http').textContent = data.stats.insecure_http;
+                document.getElementById('audit-stat-empty').textContent = data.stats.empty;
+                document.getElementById('audit-stat-replacements').textContent = data.stats.with_replacement;
+                var badge = document.getElementById('links-wiki-badge');
+                if (badge) {
+                  badge.textContent = data.stats.wikipedia;
+                  if (data.stats.wikipedia === 0) badge.classList.add('d-none');
+                  else badge.classList.remove('d-none');
+                }
+                allAuditParks = data.parks || [];
+                renderAuditTable();
+              }
+            } catch(err) {
+              tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Ошибка загрузки данных аудита: ' + err.message + '</td></tr>';
+            }
+          }
+
+          function renderAuditTable() {
+            var tbody = document.getElementById('audit-table-body');
+            var search = (document.getElementById('audit-search-input')?.value || '').toLowerCase().trim();
+            var filter = currentAuditFilter;
+
+            var filtered = allAuditParks.filter(function(p) {
+              if (filter === 'wikipedia' && p.category !== 'wikipedia') return false;
+              if (filter === 'insecure_http' && p.category !== 'insecure_http') return false;
+              if (filter === 'empty' && p.category !== 'empty') return false;
+              if (filter === 'replacement' && (!p.replacement || p.category === 'ok')) return false;
+              if (filter === 'issues' && !p.hasIssue) return false;
+
+              if (search) {
+                var matchRef = p.reference.toLowerCase().includes(search);
+                var matchName = (p.name || '').toLowerCase().includes(search);
+                var matchUrl = (p.website || '').toLowerCase().includes(search);
+                var matchOopt = p.replacement && p.replacement.title.toLowerCase().includes(search);
+                if (!matchRef && !matchName && !matchUrl && !matchOopt) return false;
+              }
+              return true;
+            });
+
+            var countEl = document.getElementById('audit-count-info');
+            if (countEl) {
+              countEl.textContent = 'Показано: ' + filtered.length + ' из ' + allAuditParks.length;
+            }
+
+            if (filtered.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">Объекты не найдены по текущему фильтру</td></tr>';
+              return;
+            }
+
+            tbody.innerHTML = filtered.map(function(p) {
+              var currentLinkHtml = p.website
+                ? '<a href="' + escapeHtmlClient(p.website) + '" target="_blank" class="text-break font-monospace small"><i class="bi bi-box-arrow-up-right"></i> ' + escapeHtmlClient(p.website.length > 45 ? p.website.slice(0, 45) + '...' : p.website) + '</a>'
+                : '<span class="text-danger small"><i class="bi bi-x-circle"></i> Ссылка отсутствует</span>';
+
+              var replHtml = p.replacement
+                ? '<div class="small"><a href="' + escapeHtmlClient(p.replacement.url) + '" target="_blank" class="text-success fw-bold text-decoration-none"><i class="bi bi-box-arrow-up-right"></i> NextGIS #' + p.replacement.nid + '</a>' +
+                  '<div class="text-muted small">' + escapeHtmlClient(p.replacement.category ? p.replacement.category + ' ' : '') + '«' + escapeHtmlClient(p.replacement.title) + '»' + (p.replacement.sig ? ' <span class="badge bg-light text-secondary border">' + escapeHtmlClient(p.replacement.sig) + '</span>' : '') + '</div></div>'
+                : '<span class="text-muted small">—</span>';
+
+              var checkStatusId = 'audit-status-' + p.reference;
+
+              return '<tr>' +
+                '<td><span class="badge bg-dark font-monospace fs-6">' + escapeHtmlClient(p.reference) + '</span>' +
+                (p.region ? '<div class="small text-muted font-monospace">' + escapeHtmlClient(p.region) + '</div>' : '') + '</td>' +
+                '<td><strong>' + escapeHtmlClient(p.name) + '</strong></td>' +
+                '<td>' + currentLinkHtml + '</td>' +
+                '<td>' + replHtml + '</td>' +
+                '<td><span class="badge ' + p.badgeClass + '">' + escapeHtmlClient(p.categoryLabel) + '</span><div id="' + checkStatusId + '" class="mt-1"></div></td>' +
+                '<td>' +
+                  '<div class="d-flex gap-1 justify-content-center">' +
+                    '<button type="button" class="btn btn-xs btn-outline-success copy-single-audit-btn py-0 px-1.5" style="font-size:12px;" data-ref="' + p.reference + '" title="Скопировать готовый текст заявки на замену для R2BBX"><i class="bi bi-clipboard"></i> Заявка</button>' +
+                    (p.website ? '<button type="button" class="btn btn-xs btn-outline-secondary check-url-btn py-0 px-1.5" style="font-size:12px;" data-url="' + escapeHtmlClient(p.website) + '" data-target="' + checkStatusId + '" title="Проверить ответ веб-сервера онлайн"><i class="bi bi-activity"></i></button>' : '') +
+                  '</div>' +
+                '</td>' +
+              '</tr>';
+            }).join('');
+          }
+
+          // Search and filter listeners for Audit
+          document.getElementById('audit-search-input')?.addEventListener('input', renderAuditTable);
+          document.getElementById('audit-filter-select')?.addEventListener('change', function(e) {
+            currentAuditFilter = e.target.value;
+            renderAuditTable();
+          });
+
+          // KPI card click filters
+          document.querySelectorAll('.audit-kpi-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+              var f = this.getAttribute('data-filter');
+              if (f) {
+                currentAuditFilter = f;
+                var selectEl = document.getElementById('audit-filter-select');
+                if (selectEl) selectEl.value = f;
+                renderAuditTable();
+              }
+            });
+          });
+
+          document.getElementById('btn-audit-refresh')?.addEventListener('click', loadAuditData);
+
+          // Copy batch Wikipedia replacements
+          document.getElementById('btn-audit-copy-all-wiki')?.addEventListener('click', async function() {
+            try {
+              var res = await fetch('/api/admin/pota-links/batch-wiki');
+              var data = await res.json();
+              if (data && data.text) {
+                navigator.clipboard.writeText(data.text).then(function() {
+                  if (Toast) {
+                    Toast.fire({ icon: 'success', title: '📋 Сводный список замен Википедии скопирован в буфер!' });
+                  } else {
+                    alert('Скопировано в буфер!');
+                  }
+                });
+              }
+            } catch(e) {
+              alert('Ошибка получения сводки замен: ' + e.message);
+            }
+          });
+
+          // Copy single park replacement
+          document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.copy-single-audit-btn');
+            if (btn) {
+              var ref = btn.getAttribute('data-ref');
+              var park = allAuditParks.find(function(p) { return p.reference === ref; });
+              if (park) {
+                var currentUrl = park.website || '(нет ссылки)';
+                var repl = park.replacement;
+                var newUrl = repl ? repl.url : 'https://карта.оцзк.рф';
+                var ooptDesc = repl ? (repl.category ? repl.category + ' ' : '') + '«' + repl.title + '» (' + (repl.sig || 'ООПТ РФ') + ')' : 'ООПТ РФ';
+
+                var text = [
+                  'Замена ссылки для парка POTA:',
+                  'Референция: ' + park.reference + ' (' + park.name + ')',
+                  'Текущая ссылка: ' + currentUrl + (park.category === 'wikipedia' ? ' [Википедия]' : ''),
+                  'Рекомендуемая официальная ссылка: ' + newUrl,
+                  'Объект в реестре ООПТ: ' + ooptDesc,
+                  repl && repl.region ? 'Регион: ' + repl.region : ''
+                ].filter(Boolean).join('\n');
+
+                navigator.clipboard.writeText(text).then(function() {
+                  if (Toast) {
+                    Toast.fire({ icon: 'success', title: '📋 Заявка на замену для ' + ref + ' скопирована!' });
+                  } else {
+                    alert('Скопировано: ' + ref);
+                  }
+                });
+              }
+            }
+          });
+
+          // Online URL checker click
+          document.addEventListener('click', async function(e) {
+            var btn = e.target.closest('.check-url-btn');
+            if (btn) {
+              var url = btn.getAttribute('data-url');
+              var targetId = btn.getAttribute('data-target');
+              var targetEl = document.getElementById(targetId);
+              if (!targetEl || !url) return;
+
+              btn.disabled = true;
+              targetEl.innerHTML = '<span class="spinner-border spinner-border-sm text-primary" style="width: 10px; height: 10px;"></span> <small class="text-muted">Проверка...</small>';
+              try {
+                var res = await fetch('/api/admin/pota-links/check-url', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ url: url })
+                });
+                var result = await res.json();
+                if (result.ok) {
+                  targetEl.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle"></i> ' + (result.status || 200) + ' OK</span>';
+                } else {
+                  targetEl.innerHTML = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle" title="' + escapeHtmlClient(result.error || '') + '"><i class="bi bi-x-circle"></i> ' + escapeHtmlClient(result.error || 'Ошибка') + '</span>';
+                }
+              } catch (err) {
+                targetEl.innerHTML = '<span class="badge bg-danger-subtle text-danger">Ошибка запроса</span>';
+              } finally {
+                btn.disabled = false;
+              }
+            }
+          });
+
+          // Open and load audit on tab click or hash
+          document.getElementById('list-links-list')?.addEventListener('shown.bs.tab', function() {
+            if (allAuditParks.length === 0) {
+              loadAuditData();
+            }
+          });
+
+          if (window.location.hash === '#list-links') {
+            loadAuditData();
+          } else {
+            // Load audit in background to initialize badge count
+            loadAuditData();
+          }
+
           // Instant load on page reload (F5) if tab is oopt
           if (window.location.hash === '#list-oopt') {
             loadAdminOopt(1);
@@ -2276,6 +2691,36 @@ export const startAdminServer = (telegramClient) => {
     try {
       const stats = getOoptStats();
       res.json(stats);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POTA Links Audit API Endpoints
+  app.get('/api/admin/pota-links/audit', requireAuth, (req, res) => {
+    try {
+      const data = auditPotaLinks();
+      res.json(data);
+    } catch (err) {
+      console.error('[Admin] Links audit error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/pota-links/check-url', requireAuth, async (req, res) => {
+    try {
+      const { url } = req.body || {};
+      const result = await checkUrlOnline(url);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/admin/pota-links/batch-wiki', requireAuth, (req, res) => {
+    try {
+      const text = formatBatchWikipediaReplacements();
+      res.json({ text });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

@@ -766,23 +766,31 @@ export const startAdminServer = (telegramClient) => {
                     <div class="col-md-5">
                       <label class="form-label small fw-bold mb-1">2. Название для POTA (EN):</label>
                       <input type="text" class="form-control form-control-sm font-monospace text-success fw-bold" id="subm-name-en" required>
-                      <div class="form-text small text-muted">Авто-перевод для международной базы POTA</div>
+                      <div class="form-text small text-muted">Чистое имя без категории для базы POTA</div>
                     </div>
                   </div>
 
-                  <div class="mb-2">
-                    <label class="form-label small fw-bold mb-1">3. Статус (парк/ООПТ и т.п.):</label>
-                    <input type="text" class="form-control form-control-sm" id="subm-status" required>
+                  <div class="row g-2 mb-2">
+                    <div class="col-md-5">
+                      <label class="form-label small fw-bold mb-1">3. Статус ООПТ для POTA (EN):</label>
+                      <input type="text" class="form-control form-control-sm font-monospace text-success fw-bold" id="subm-status-en" required>
+                      <div class="form-text small text-muted">Категория POTA (National Park / Nature Sanctuary)</div>
+                    </div>
+                    <div class="col-md-7">
+                      <label class="form-label small fw-bold mb-1">4. Статус (парк/ООПТ и т.п.) (RU):</label>
+                      <input type="text" class="form-control form-control-sm" id="subm-status" required>
+                      <div class="form-text small text-muted">Официальная категория в РФ со значением</div>
+                    </div>
                   </div>
 
                   <div class="row g-2 mb-2">
                     <div class="col-md-4">
-                      <label class="form-label small fw-bold mb-1">4. Координата первая (Широта / Lat):</label>
-                      <input type="text" class="form-control form-control-sm font-monospace" id="subm-lat" placeholder="55.882100">
+                      <label class="form-label small fw-bold mb-1">5. Координата первая (Широта / Lat):</label>
+                      <input type="text" class="form-control form-control-sm font-monospace" id="subm-lat" placeholder="55.8821">
                     </div>
                     <div class="col-md-4">
-                      <label class="form-label small fw-bold mb-1">5. Координата вторая (Долгота / Lon):</label>
-                      <input type="text" class="form-control form-control-sm font-monospace" id="subm-lon" placeholder="37.781200">
+                      <label class="form-label small fw-bold mb-1">6. Координата вторая (Долгота / Lon):</label>
+                      <input type="text" class="form-control form-control-sm font-monospace" id="subm-lon" placeholder="37.7812">
                     </div>
                     <div class="col-md-4 d-flex align-items-end">
                       <a href="#" id="subm-yandex-link" target="_blank" class="btn btn-sm btn-outline-warning w-100">
@@ -792,14 +800,14 @@ export const startAdminServer = (telegramClient) => {
                   </div>
 
                   <div class="mb-2">
-                    <label class="form-label small fw-bold mb-1">6. Регион России:</label>
+                    <label class="form-label small fw-bold mb-1">7. Регион России:</label>
                     <input type="text" class="form-control form-control-sm" id="subm-region" required>
                     <div class="form-text small text-muted">Для межрегиональных объектов указываются все субъекты через запятую (например: <i>Москва, Московская область</i>)</div>
                   </div>
 
                   <div class="mb-2">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                      <label class="form-label small fw-bold mb-0">7. Сайт объекта, ссылка:</label>
+                      <label class="form-label small fw-bold mb-0">8. Сайт объекта, ссылка:</label>
                       <div class="d-flex gap-1">
                         <button type="button" class="btn btn-xs btn-outline-success py-0 px-1.5" style="font-size:11px;" id="btn-set-link-nextgis" title="Установить ссылку NextGIS зеркала (приоритет R2BBX)">NextGIS (R2BBX)</button>
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:11px;" id="btn-set-link-oczk" title="Установить ссылку официальной карты ООПТ">карта.оцзк.рф</button>
@@ -810,8 +818,8 @@ export const startAdminServer = (telegramClient) => {
                   </div>
 
                   <div class="mb-3">
-                    <label class="form-label small fw-bold mb-1">8. Уточнение (не обязательно):</label>
-                    <input type="text" class="form-control form-control-sm" id="subm-clarify" placeholder="Например: границы на разных картах различаются, несколько кластерных участков...">
+                    <label class="form-label small fw-bold mb-1">9. Уточнение (не обязательно):</label>
+                    <input type="text" class="form-control form-control-sm" id="subm-clarify" placeholder="Например: площадь, границы на разных картах различаются...">
                   </div>
 
                   <div class="card bg-light border-success">
@@ -1474,8 +1482,8 @@ export const startAdminServer = (telegramClient) => {
                   : '';
 
                 var submitterBtn = r.pota_ref
-                  ? '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>'
-                  : '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-pota-ref="" data-pota-name=""><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
+                  ? '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>'
+                  : '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="" data-pota-name=""><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
 
                 return '<tr>' +
                   '<td><code>' + r.nid + '</code></td>' +
@@ -1736,17 +1744,14 @@ export const startAdminServer = (telegramClient) => {
               return w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '';
             }).join(' ').trim();
 
-            var suffix = getEnglishSuffixClient(category);
-            if (en.toLowerCase().indexOf(suffix.toLowerCase()) === -1) {
-              en = en + ' ' + suffix;
-            }
             return en.replace(/\\s+/g, ' ').trim();
           }
 
-          function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid) {
+          function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid, area, status, profile) {
             var detectedCategory = deduceOoptCategoryClient(rawTitle, category);
             var cleanName = cleanOoptNameClient(rawTitle, detectedCategory);
-            var nameEn = translateOoptNameToEnglishClient(cleanName, detectedCategory);
+            var nameEn = translateOoptNameToEnglishClient(cleanName);
+            var statusEn = getEnglishSuffixClient(detectedCategory);
             var catDisplay = detectedCategory.charAt(0).toUpperCase() + detectedCategory.slice(1);
 
             var fullStatus = sigDisplay ? (catDisplay + ' (' + sigDisplay + ' значение)') : catDisplay;
@@ -1755,21 +1760,31 @@ export const startAdminServer = (telegramClient) => {
 
             var siteUrl = nid ? ('https://ooptaari.nextgis.ru/oopt/' + nid) : 'https://карта.оцзк.рф/';
 
+            var latVal = (lat !== null && lat !== undefined && lat !== '' && !isNaN(Number(lat))) ? Number(lat).toFixed(4) : '';
+            var lonVal = (lon !== null && lon !== undefined && lon !== '' && !isNaN(Number(lon))) ? Number(lon).toFixed(4) : '';
+
+            var extra = [];
+            if (status && status !== 'действующий') extra.push('Статус: ' + status);
+            if (area) extra.push('Площадь: ' + Number(area).toLocaleString('ru-RU') + ' га');
+            if (profile) extra.push('Профиль: ' + profile);
+
             return {
               name: cleanName,
               nameEn: nameEn,
+              statusEn: statusEn,
               status: fullStatus,
               region: region,
-              lat: lat || '',
-              lon: lon || '',
+              lat: latVal,
+              lon: lonVal,
               site: siteUrl,
-              clarification: ''
+              clarification: extra.join('. ')
             };
           }
 
           function updateSubmitterPreview() {
             var name = document.getElementById('subm-name').value;
             var nameEn = document.getElementById('subm-name-en').value;
+            var statusEn = document.getElementById('subm-status-en').value;
             var status = document.getElementById('subm-status').value;
             var lat = document.getElementById('subm-lat').value;
             var lon = document.getElementById('subm-lon').value;
@@ -1780,6 +1795,7 @@ export const startAdminServer = (telegramClient) => {
             var lines = [
               'Название парка/ООПТ: ' + name,
               'Название для POTA (EN): ' + nameEn,
+              'Статус ООПТ для POTA (EN): ' + statusEn,
               'Статус (парк/ООПТ и т.п.): ' + status,
               'Координата первая с яндекс-карт: ' + lat,
               'Координата вторая: ' + lon,
@@ -1804,7 +1820,7 @@ export const startAdminServer = (telegramClient) => {
           }
 
           // Bind preview updates on input changes
-          ['subm-name', 'subm-name-en', 'subm-status', 'subm-lat', 'subm-lon', 'subm-region', 'subm-site', 'subm-clarify'].forEach(function(id) {
+          ['subm-name', 'subm-name-en', 'subm-status-en', 'subm-status', 'subm-lat', 'subm-lon', 'subm-region', 'subm-site', 'subm-clarify'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.addEventListener('input', updateSubmitterPreview);
           });
@@ -1834,18 +1850,22 @@ export const startAdminServer = (telegramClient) => {
               var lat = btn.getAttribute('data-lat') || '';
               var lon = btn.getAttribute('data-lon') || '';
               var nid = btn.getAttribute('data-nid') || '';
+              var area = btn.getAttribute('data-area') || '';
+              var status = btn.getAttribute('data-status') || '';
+              var profile = btn.getAttribute('data-profile') || '';
 
-              var parsed = parseOoptForSubmitter(title, category, sig, ate, lat, lon, nid);
+              var parsed = parseOoptForSubmitter(title, category, sig, ate, lat, lon, nid, area, status, profile);
 
               document.getElementById('subm-nid').value = nid;
               document.getElementById('subm-name').value = parsed.name;
               document.getElementById('subm-name-en').value = parsed.nameEn;
+              document.getElementById('subm-status-en').value = parsed.statusEn;
               document.getElementById('subm-status').value = parsed.status;
               document.getElementById('subm-lat').value = parsed.lat;
               document.getElementById('subm-lon').value = parsed.lon;
               document.getElementById('subm-region').value = parsed.region;
               document.getElementById('subm-site').value = parsed.site;
-              document.getElementById('subm-clarify').value = '';
+              document.getElementById('subm-clarify').value = parsed.clarification || '';
               var potaRef = btn.getAttribute('data-pota-ref') || '';
               var potaName = btn.getAttribute('data-pota-name') || '';
               var potaBox = document.getElementById('subm-pota-badge-container');
@@ -1873,24 +1893,28 @@ export const startAdminServer = (telegramClient) => {
                   var res = await fetch('/api/tma/oopt/' + nid);
                   var details = await res.json();
                   if (details.lat && details.lon) {
-                    document.getElementById('subm-lat').value = Number(details.lat).toFixed(6);
-                    document.getElementById('subm-lon').value = Number(details.lon).toFixed(6);
+                    document.getElementById('subm-lat').value = Number(details.lat).toFixed(4);
+                    document.getElementById('subm-lon').value = Number(details.lon).toFixed(4);
                     if (details.rf_subjects) {
                       document.getElementById('subm-region').value = details.rf_subjects;
                     }
-                    if (details.status && !document.getElementById('subm-clarify').value) {
-                      var extra = ['Статус: ' + details.status];
+                    if (!document.getElementById('subm-clarify').value) {
+                      var extra = [];
+                      if (details.status && details.status !== 'действующий') extra.push('Статус: ' + details.status);
                       if (details.area) extra.push('Площадь: ' + Number(details.area).toLocaleString('ru-RU') + ' га');
+                      if (details.profile) extra.push('Профиль: ' + details.profile);
                       document.getElementById('subm-clarify').value = extra.join('. ');
                     }
                     updateSubmitterPreview();
-                    document.getElementById('subm-coords-status').innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Координаты получены</span>';
+                    document.getElementById('subm-coords-status').innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Координаты получены (4 знака)</span>';
                   } else {
                     document.getElementById('subm-coords-status').innerHTML = '<span class="text-muted">Координаты в реестре отсутствуют</span>';
                   }
                 } catch(e) {
                   document.getElementById('subm-coords-status').innerHTML = '';
                 }
+              } else {
+                document.getElementById('subm-coords-status').innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Координаты указаны (4 знака)</span>';
               }
             }
           });

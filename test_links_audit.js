@@ -5,6 +5,8 @@ import {
   auditPotaLinks,
   formatSingleReplacement,
   formatBatchWikipediaReplacements,
+  formatEmptyLinksReport,
+  formatFullManuReport,
   checkUrlOnline,
 } from './src/services/potaAuditService.js';
 
@@ -66,6 +68,22 @@ assert.ok(batchText.includes('Сводный список предложений
 assert.ok(batchText.includes('RU-0003'));
 assert.ok(batchText.includes('https://ooptaari.nextgis.ru/oopt/6699'));
 console.log('✅ PASS: formatBatchWikipediaReplacements generates valid batch document\n');
+
+// 5b. Test formatEmptyLinksReport (Manu R2BBX)
+console.log('[5b] Testing formatEmptyLinksReport...');
+const emptyReport = formatEmptyLinksReport();
+assert.ok(emptyReport.includes('🚨 СПИСОК ПАРКОВ POTA БЕЗ ССЫЛОК'));
+assert.ok(emptyReport.includes('Всего парков без ссылки: 16'));
+console.log('✅ PASS: formatEmptyLinksReport formats 16 empty parks correctly\n');
+
+// 5c. Test formatFullManuReport (Manu R2BBX)
+console.log('[5c] Testing formatFullManuReport...');
+const fullReport = formatFullManuReport();
+assert.ok(fullReport.includes('СВОДНЫЙ АУДИТ И РЕКОМЕНДАЦИИ'));
+assert.ok(fullReport.includes('РАЗДЕЛ 1: ПАРКИ БЕЗ ССЫЛОК'));
+assert.ok(fullReport.includes('РАЗДЕЛ 2: ССЫЛКИ НА ВИКИПЕДИЮ'));
+assert.ok(fullReport.includes('РАЗДЕЛ 3: ССЫЛКИ НА НЕЗАЩИЩЕННЫЙ HTTP'));
+console.log('✅ PASS: formatFullManuReport generates full 3-section report\n');
 
 // 6. Test checkUrlOnline error handling
 console.log('[6] Testing checkUrlOnline...');

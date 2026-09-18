@@ -8,7 +8,14 @@ import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
 import { getOoptList, getOoptStats, syncOoptRegistry } from '../services/ooptService.js';
-import { auditPotaLinks, checkUrlOnline, formatSingleReplacement, formatBatchWikipediaReplacements } from '../services/potaAuditService.js';
+import {
+  auditPotaLinks,
+  checkUrlOnline,
+  formatSingleReplacement,
+  formatBatchWikipediaReplacements,
+  formatEmptyLinksReport,
+  formatFullManuReport
+} from '../services/potaAuditService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -742,9 +749,15 @@ export const startAdminServer = (telegramClient) => {
                         Анализ релевантности и проверка доступности сайтов российских парков (<a href="https://next.pota.app" target="_blank">POTA.app</a>). Приоритет координатора (Manu R2BBX): замена статей Википедии и временных ссылок на официальные реестры ООПТ (зеркало NextGIS).
                       </div>
                     </div>
-                    <div class="d-flex gap-2">
-                      <button type="button" class="btn btn-sm btn-outline-success" id="btn-audit-copy-all-wiki" title="Скопировать все доступные предложения по замене ссылок Википедии на ООПТ">
-                        <i class="bi bi-clipboard-data"></i> Скопировать замены Википедии
+                    <div class="d-flex gap-2 flex-wrap">
+                      <button type="button" class="btn btn-sm btn-outline-danger" id="btn-audit-copy-empty" title="Скопировать список парков без ссылок (Алярма для Manu R2BBX)">
+                        <i class="bi bi-exclamation-octagon-fill"></i> Алярма: Без ссылок (16)
+                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-warning" id="btn-audit-copy-all-wiki" title="Скопировать предложения по замене ссылок Википедии на ООПТ">
+                        <i class="bi bi-wikipedia"></i> Замены Википедии (10)
+                      </button>
+                      <button type="button" class="btn btn-sm btn-success" id="btn-audit-copy-full" title="Сформировать полный отчет всех проблемных ссылок для Manu R2BBX (Email / Telegram)">
+                        <i class="bi bi-envelope-paper-fill"></i> Полный отчет для Manu
                       </button>
                       <button type="button" class="btn btn-sm btn-outline-primary" id="btn-audit-refresh">
                         <i class="bi bi-arrow-clockwise"></i> Обновить
@@ -2253,6 +2266,25 @@ export const startAdminServer = (telegramClient) => {
 
           document.getElementById('btn-audit-refresh')?.addEventListener('click', loadAuditData);
 
+          // Copy empty links report (Manu R2BBX)
+          document.getElementById('btn-audit-copy-empty')?.addEventListener('click', async function() {
+            try {
+              var res = await fetch('/api/admin/pota-links/report-empty');
+              var data = await res.json();
+              if (data && data.text) {
+                navigator.clipboard.writeText(data.text).then(function() {
+                  if (Toast) {
+                    Toast.fire({ icon: 'warning', title: '🚨 Список парков без ссылок (Алярма) скопирован!' });
+                  } else {
+                    alert('Список парков без ссылок скопирован в буфер!');
+                  }
+                });
+              }
+            } catch(e) {
+              alert('Ошибка получения отчета: ' + e.message);
+            }
+          });
+
           // Copy batch Wikipedia replacements
           document.getElementById('btn-audit-copy-all-wiki')?.addEventListener('click', async function() {
             try {
@@ -2269,6 +2301,25 @@ export const startAdminServer = (telegramClient) => {
               }
             } catch(e) {
               alert('Ошибка получения сводки замен: ' + e.message);
+            }
+          });
+
+          // Copy full Manu audit report
+          document.getElementById('btn-audit-copy-full')?.addEventListener('click', async function() {
+            try {
+              var res = await fetch('/api/admin/pota-links/report-full');
+              var data = await res.json();
+              if (data && data.text) {
+                navigator.clipboard.writeText(data.text).then(function() {
+                  if (Toast) {
+                    Toast.fire({ icon: 'success', title: '📧 Полный отчет по ссылкам для Manu R2BBX скопирован!' });
+                  } else {
+                    alert('Полный отчет скопирован в буфер!');
+                  }
+                });
+              }
+            } catch(e) {
+              alert('Ошибка получения полного отчета: ' + e.message);
             }
           });
 
@@ -2720,6 +2771,24 @@ export const startAdminServer = (telegramClient) => {
   app.get('/api/admin/pota-links/batch-wiki', requireAuth, (req, res) => {
     try {
       const text = formatBatchWikipediaReplacements();
+      res.json({ text });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/admin/pota-links/report-empty', requireAuth, (req, res) => {
+    try {
+      const text = formatEmptyLinksReport();
+      res.json({ text });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/admin/pota-links/report-full', requireAuth, (req, res) => {
+    try {
+      const text = formatFullManuReport();
       res.json({ text });
     } catch (err) {
       res.status(500).json({ error: err.message });

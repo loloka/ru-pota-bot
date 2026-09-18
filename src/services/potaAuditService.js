@@ -135,6 +135,10 @@ export function auditPotaLinks() {
           matchedOopt = allOopt.find(o => (o.title || '').includes('Паанаярви')) || null;
         } else if (parkClean.includes('ilmensk')) {
           matchedOopt = allOopt.find(o => (o.title || '').includes('Ильменский')) || null;
+        } else if (parkClean.includes('chermyank')) {
+          matchedOopt = allOopt.find(o => (o.title || '').includes('Чермянки')) || null;
+        } else if (parkClean.includes('tosnensk')) {
+          matchedOopt = allOopt.find(o => (o.title || '').includes('Саблинский')) || null;
         } else if (ooptByTitleNorm.has(parkClean)) {
           matchedOopt = ooptByTitleNorm.get(parkClean);
         }
@@ -195,7 +199,7 @@ export async function checkUrlOnline(url) {
     const res = await axios.head(clean, {
       timeout: 6000,
       headers: {
-        'User-Agent': 'RU-POTA-Bot/1.16.4 (Link Health Checker; Node.js)',
+        'User-Agent': 'RU-POTA-Bot/1.16.5 (Link Health Checker; Node.js)',
         'Accept': '*/*',
       },
       validateStatus: () => true, // Don't throw on 4xx/5xx
@@ -207,7 +211,7 @@ export async function checkUrlOnline(url) {
       const getRes = await axios.get(clean, {
         timeout: 6000,
         headers: {
-          'User-Agent': 'RU-POTA-Bot/1.16.4 (Link Health Checker; Node.js)',
+          'User-Agent': 'RU-POTA-Bot/1.16.5 (Link Health Checker; Node.js)',
           'Accept': 'text/html,*/*',
         },
         validateStatus: () => true,
@@ -285,6 +289,106 @@ export function formatBatchWikipediaReplacements() {
       lines.push(`   ООПТ: ${p.replacement.category ? p.replacement.category + ' ' : ''}«${p.replacement.title}» (${p.replacement.sig || 'ООПТ'})`);
     } else {
       lines.push(`   ⚠️ Официальная ссылка: требуется ручное сопоставление (городской/нетипичный парк)`);
+    }
+    lines.push('');
+  });
+
+  return lines.join('\n');
+}
+
+/**
+ * Formats a report specifically for parks with missing links (Requested by Manu R2BBX)
+ */
+export function formatEmptyLinksReport() {
+  const { parks } = auditPotaLinks();
+  const emptyParks = parks.filter(p => p.category === 'empty');
+
+  const lines = [
+    `🚨 СПИСОК ПАРКОВ POTA БЕЗ ССЫЛОК (АЛЯРМА ДЛЯ MANU R2BBX)`,
+    `Всего парков без ссылки: ${emptyParks.length}`,
+    `------------------------------------------------------------`,
+  ];
+
+  emptyParks.forEach((p, idx) => {
+    lines.push(`${idx + 1}. [${p.reference}] ${p.name} (${p.region || 'RU'})`);
+    lines.push(`   Статус: ССЫЛКА ОТСУТСТВУЕТ`);
+    if (p.replacement) {
+      lines.push(`   ✅ Найдена официальная ссылка NextGIS: ${p.replacement.url}`);
+      lines.push(`   Объект ООПТ: ${p.replacement.category ? p.replacement.category + ' ' : ''}«${p.replacement.title}» (${p.replacement.sig || 'ООПТ РФ'})`);
+    } else {
+      lines.push(`   ⚠️ Официальная ссылка: требуется ручное сопоставление (городской парк)`);
+    }
+    lines.push('');
+  });
+
+  return lines.join('\n');
+}
+
+/**
+ * Formats a full comprehensive audit report for Manu R2BBX (Email / Telegram)
+ */
+export function formatFullManuReport() {
+  const { stats, parks } = auditPotaLinks();
+  const emptyParks = parks.filter(p => p.category === 'empty');
+  const wikiParks = parks.filter(p => p.category === 'wikipedia');
+  const httpParks = parks.filter(p => p.category === 'insecure_http');
+
+  const lines = [
+    `🌲 СВОДНЫЙ АУДИТ И РЕКОМЕНДАЦИИ ПО ССЫЛКАМ ПАРКОВ RU-POTA`,
+    `Для координатора POTA: Ивана (Manu R2BBX)`,
+    `Дата формирования: ${new Date().toLocaleDateString('ru-RU')}`,
+    `Всего парков в базе RU: ${stats.total}`,
+    `🚨 Без ссылок (АЛЯРМА): ${emptyParks.length}`,
+    `⚠️ Ссылки на Википедию: ${wikiParks.length}`,
+    `🔓 Небезопасный HTTP: ${httpParks.length}`,
+    `============================================================`,
+    '',
+    `🚨 РАЗДЕЛ 1: ПАРКИ БЕЗ ССЫЛОК (КРИТИЧНО — ${emptyParks.length} ОБЪЕКТОВ)`,
+    `------------------------------------------------------------`,
+  ];
+
+  emptyParks.forEach((p, idx) => {
+    lines.push(`${idx + 1}. [${p.reference}] ${p.name} (${p.region})`);
+    lines.push(`   Текущая ссылка: ОТСУТСТВУЕТ`);
+    if (p.replacement) {
+      lines.push(`   ✅ Рекомендуемая ссылка NextGIS: ${p.replacement.url}`);
+      lines.push(`   Объект ООПТ: ${p.replacement.category ? p.replacement.category + ' ' : ''}«${p.replacement.title}» (${p.replacement.sig || 'ООПТ'})`);
+    } else {
+      lines.push(`   ⚠️ Ссылка в ООПТ: требуется ручной поиск (городской парк)`);
+    }
+    lines.push('');
+  });
+
+  lines.push(`============================================================`);
+  lines.push(`⚠️ РАЗДЕЛ 2: ССЫЛКИ НА ВИКИПЕДИЮ (ТРЕБУЮТ ЗАМЕНЫ — ${wikiParks.length} ОБЪЕКТОВ)`);
+  lines.push(`------------------------------------------------------------`);
+
+  wikiParks.forEach((p, idx) => {
+    lines.push(`${idx + 1}. [${p.reference}] ${p.name} (${p.region})`);
+    lines.push(`   Текущая ссылка (Википедия): ${p.website}`);
+    if (p.replacement) {
+      lines.push(`   ✅ Официальная ссылка NextGIS: ${p.replacement.url}`);
+      lines.push(`   Объект в ООПТ РФ: ${p.replacement.category ? p.replacement.category + ' ' : ''}«${p.replacement.title}» (${p.replacement.sig || 'ООПТ'})`);
+    } else {
+      lines.push(`   ⚠️ Официальная ссылка: требуется ручное сопоставление`);
+    }
+    lines.push('');
+  });
+
+  lines.push(`============================================================`);
+  lines.push(`🔓 РАЗДЕЛ 3: ССЫЛКИ НА НЕЗАЩИЩЕННЫЙ HTTP (${httpParks.length} ОБЪЕКТОВ)`);
+  lines.push(`(У многих браузер блокирует открытие; рекомендуется замена на https:// или NextGIS)`);
+  lines.push(`------------------------------------------------------------`);
+
+  httpParks.forEach((p, idx) => {
+    const httpsAlternative = p.website.replace('http://', 'https://');
+    lines.push(`${idx + 1}. [${p.reference}] ${p.name} (${p.region})`);
+    lines.push(`   Текущая ссылка (HTTP): ${p.website}`);
+    if (p.replacement) {
+      lines.push(`   ✅ Рекомендуемая ссылка NextGIS: ${p.replacement.url}`);
+      lines.push(`   или HTTPS зеркало сайта: ${httpsAlternative}`);
+    } else {
+      lines.push(`   Рекомендуемое исправление: ${httpsAlternative}`);
     }
     lines.push('');
   });

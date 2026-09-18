@@ -14,7 +14,7 @@ const client = axios.create({
   baseURL: OOPT_BASE_URL,
   timeout: 25000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.2 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.3 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });
@@ -455,11 +455,6 @@ export function translateNameToEnglish(cleanName, category) {
 
   // Capitalize words
   en = en.split(' ').map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '').join(' ').trim();
-
-  const suffix = getEnglishCategorySuffix(category);
-  if (!en.toLowerCase().includes(suffix.toLowerCase())) {
-    en = `${en} ${suffix}`;
-  }
   return en.replace(/\s+/g, ' ').trim();
 }
 
@@ -476,8 +471,9 @@ export function parseSubmitterFields(item) {
   const cleanName = cleanOoptName(rawTitle, rawCat);
   const detectedCategory = rawCat.charAt(0).toUpperCase() + rawCat.slice(1);
 
-  // English translation for POTA
-  const nameEn = translateNameToEnglish(cleanName, rawCat);
+  // English translation for POTA (separated name and status per R2BBX request)
+  const nameEn = translateNameToEnglish(cleanName);
+  const statusEn = getEnglishCategorySuffix(rawCat);
 
   // Significance
   const sigDisplay = item.sig_display || (item.sig === 'federal' ? 'Федеральное' : item.sig === 'regional' ? 'Региональное' : 'Местное');
@@ -489,9 +485,9 @@ export function parseSubmitterFields(item) {
     region = region.split('(')[0].trim();
   }
 
-  // Coordinates (first Lat, second Lon in Yandex maps format)
-  const lat = item.lat !== null && item.lat !== undefined ? Number(item.lat).toFixed(6) : '';
-  const lon = item.lon !== null && item.lon !== undefined ? Number(item.lon).toFixed(6) : '';
+  // Coordinates (4 decimal places as requested by Manu R2BBX)
+  const lat = item.lat !== null && item.lat !== undefined && item.lat !== '' ? Number(item.lat).toFixed(4) : '';
+  const lon = item.lon !== null && item.lon !== undefined && item.lon !== '' ? Number(item.lon).toFixed(4) : '';
 
   // Priority NextGIS link requested by Manu (R2BBX) or direct website
   const siteUrl = item.nid ? `https://ooptaari.nextgis.ru/oopt/${item.nid}` : 'https://карта.оцзк.рф/';
@@ -509,6 +505,7 @@ export function parseSubmitterFields(item) {
     rawTitle,
     name: cleanName,
     nameEn,
+    statusEn,
     status: fullStatus,
     lat,
     lon,
@@ -529,6 +526,7 @@ export function generateR2bbxTemplate(item) {
   return [
     `Название парка/ООПТ: ${f.name}`,
     `Название для POTA (EN): ${f.nameEn}`,
+    `Статус ООПТ для POTA (EN): ${f.statusEn}`,
     `Статус (парк/ООПТ и т.п.): ${f.status}`,
     `Координата первая с яндекс-карт: ${f.lat}`,
     `Координата вторая: ${f.lon}`,

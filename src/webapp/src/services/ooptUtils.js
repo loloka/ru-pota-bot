@@ -148,21 +148,17 @@ export function translateNameToEnglish(cleanName, category) {
          .replace(/instituta\b/gi, 'Institute');
 
   en = en.split(' ').map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '').join(' ').trim();
-
-  const suffix = getEnglishCategorySuffix(category);
-  if (!en.toLowerCase().includes(suffix.toLowerCase())) {
-    en = `${en} ${suffix}`;
-  }
   return en.replace(/\s+/g, ' ').trim();
 }
 
 export function parseOoptForSubmitter(item) {
-  if (!item) return { name: '', nameEn: '', status: '', lat: '', lon: '', region: '', site: '', clarification: '' };
+  if (!item) return { name: '', nameEn: '', statusEn: '', status: '', lat: '', lon: '', region: '', site: '', clarification: '' };
 
   const rawTitle = (item.title || '').trim();
   const rawCat = deduceCategory(rawTitle, item.category);
   const cleanName = cleanOoptName(rawTitle, rawCat);
-  const nameEn = translateNameToEnglish(cleanName, rawCat);
+  const nameEn = translateNameToEnglish(cleanName);
+  const statusEn = getEnglishCategorySuffix(rawCat);
   const detectedCategory = rawCat.charAt(0).toUpperCase() + rawCat.slice(1);
 
   // Status with significance
@@ -175,9 +171,9 @@ export function parseOoptForSubmitter(item) {
     region = region.split('(')[0].trim();
   }
 
-  // Coordinates
-  const lat = (item.lat !== null && item.lat !== undefined && item.lat !== '') ? Number(item.lat).toFixed(6) : '';
-  const lon = (item.lon !== null && item.lon !== undefined && item.lon !== '') ? Number(item.lon).toFixed(6) : '';
+  // Coordinates: 4 decimal places as requested by Manu R2BBX
+  const lat = (item.lat !== null && item.lat !== undefined && item.lat !== '') ? Number(item.lat).toFixed(4) : '';
+  const lon = (item.lon !== null && item.lon !== undefined && item.lon !== '') ? Number(item.lon).toFixed(4) : '';
 
   // Priority link requested by Manu (R2BBX): https://ooptaari.nextgis.ru/oopt/:id
   const site = item.nid ? `https://ooptaari.nextgis.ru/oopt/${item.nid}` : 'https://карта.оцзк.рф/';
@@ -191,6 +187,7 @@ export function parseOoptForSubmitter(item) {
   return {
     name: cleanName,
     nameEn,
+    statusEn,
     status: fullStatus,
     lat,
     lon,
@@ -200,10 +197,11 @@ export function parseOoptForSubmitter(item) {
   };
 }
 
-export function formatR2bbxTemplate({ name, nameEn, status, lat, lon, region, site, clarification }) {
+export function formatR2bbxTemplate({ name, nameEn, statusEn, status, lat, lon, region, site, clarification }) {
   return [
     `Название парка/ООПТ: ${name || ''}`,
     `Название для POTA (EN): ${nameEn || ''}`,
+    `Статус ООПТ для POTA (EN): ${statusEn || ''}`,
     `Статус (парк/ООПТ и т.п.): ${status || ''}`,
     `Координата первая с яндекс-карт: ${lat || ''}`,
     `Координата вторая: ${lon || ''}`,

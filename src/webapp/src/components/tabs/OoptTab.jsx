@@ -45,6 +45,7 @@ export default function OoptTab({ onNavigateToMap }) {
   // Selected modal
   const [selectedOopt, setSelectedOopt] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [copyLoadingId, setCopyLoadingId] = useState(null);
 
   // Page input jump
   const [jumpPage, setJumpPage] = useState('');
@@ -104,17 +105,39 @@ export default function OoptTab({ onNavigateToMap }) {
     }
   };
 
-  // Fast copy coordinator template directly from card
-  const handleQuickCopy = (e, item) => {
+  // Fast copy coordinator template directly from card (auto-fetches coordinates if not yet in cache)
+  const handleQuickCopy = async (e, item) => {
     e.stopPropagation();
-    const parsed = parseOoptForSubmitter(item);
-    const template = formatR2bbxTemplate(parsed);
+    try {
+      let target = item;
+      if (!target.lat || !target.lon) {
+        setCopyLoadingId(item.nid);
+        const details = await api.getOoptDetails(item.nid);
+        if (details && (details.lat || details.lon)) {
+          target = { ...item, ...details };
+          // Cache in row object so subsequent operations have coordinates immediately
+          item.lat = details.lat;
+          item.lon = details.lon;
+          if (details.rf_subjects) item.rf_subjects = details.rf_subjects;
+        }
+      }
+      const parsed = parseOoptForSubmitter(target);
+      const template = formatR2bbxTemplate(parsed);
 
-    navigator.clipboard.writeText(template).then(() => {
+      await navigator.clipboard.writeText(template);
+      setCopyLoadingId(null);
       setCopiedId(item.nid);
       telegram.haptic.notification('success');
       setTimeout(() => setCopiedId(null), 2000);
-    });
+    } catch (err) {
+      console.warn('Quick copy failed:', err);
+      setCopyLoadingId(null);
+      const parsed = parseOoptForSubmitter(item);
+      const template = formatR2bbxTemplate(parsed);
+      navigator.clipboard.writeText(template);
+      setCopiedId(item.nid);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
   };
 
   // Generate page numbers for pagination
@@ -518,16 +541,31 @@ export default function OoptTab({ onNavigateToMap }) {
                     type="button"
                     onClick={(e) => handleQuickCopy(e, item)}
                     title={item.pota_ref ? `Парк уже в POTA (${item.pota_ref})` : "Скопировать готовую заявку для R2BBX"}
+                    disabled={copyLoadingId === item.nid}
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
                       copiedId === item.nid
                         ? 'bg-emerald-600 text-white shadow-sm'
+                        : copyLoadingId === item.nid
+                        ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
                         : item.pota_ref
                         ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-500/30'
                         : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-95'
                     }`}
                   >
-                    {copiedId === item.nid ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    {copiedId === item.nid ? 'Скопировано' : item.pota_ref ? `POTA: ${item.pota_ref}` : 'Заявка POTA'}
+                    {copiedId === item.nid ? (
+                      <Check className="w-3 h-3" />
+                    ) : copyLoadingId === item.nid ? (
+                      <Loader2 className="w-3 h-3 animate-spin text-emerald-500" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                    {copiedId === item.nid
+                      ? 'Скопировано'
+                      : copyLoadingId === item.nid
+                      ? 'Координаты...'
+                      : item.pota_ref
+                      ? `POTA: ${item.pota_ref}`
+                      : 'Заявка POTA'}
                   </button>
 
                   <button

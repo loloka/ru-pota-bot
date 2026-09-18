@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Copy, 
@@ -151,48 +152,48 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
     );
   };
 
-  return (
+  const modalContent = (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 pt-14 pb-safe bg-black/75 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-lg max-h-[92vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+        className="relative w-full max-w-lg max-h-[85vh] sm:max-h-[88vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-start justify-between p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/70 gap-2">
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/90 gap-2 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-600 rounded-xl border border-slate-200 dark:border-slate-700 transition-all shrink-0 active:scale-95 shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-200/80 dark:bg-slate-700 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-600 rounded-xl border border-slate-300/60 dark:border-slate-600 transition-all shrink-0 active:scale-95 shadow-xs"
             title="Вернуться к списку ООПТ"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">К списку</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span>Назад</span>
           </button>
 
-          <div className="flex-1 min-w-0 pr-1">
+          <div className="flex-1 min-w-0 px-1">
             <div className="flex items-center gap-1.5 flex-wrap mb-1">
               {getSigBadge(current.sig, current.sig_display)}
               {current.category && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {current.category}
                 </span>
               )}
               {current.status && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                   ● {current.status}
                 </span>
               )}
               {current.pota_ref && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                   <Sparkles className="w-3 h-3 text-emerald-500" />
                   В POTA: {current.pota_ref}
                 </span>
               )}
             </div>
-            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-tight truncate">
               {current.title}
             </h2>
           </div>
@@ -200,7 +201,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors shrink-0"
+            className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-700 transition-colors shrink-0"
             title="Закрыть"
           >
             <X className="w-5 h-5" />
@@ -700,4 +701,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modalContent, document.body);
 }

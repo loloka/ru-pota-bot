@@ -22,6 +22,7 @@ import {
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
 import { NEW_RDA_DISTRICTS } from '../../data/newRdaDistricts.js';
+import { NEW_REGIONS_BORDERS } from '../../data/newRegionsBorders.js';
 import RouteModal from '../modals/RouteModal.jsx';
 import OsmAndModal from '../modals/OsmAndModal.jsx';
 
@@ -668,8 +669,26 @@ export default function MapTab({
 
       const currentZoom = map.getZoom();
 
+      // 1. Draw boundary outlines for New Regions (DO, LU, ZP, HE) matching R1CF GeoServer magenta style (#d90077)
+      try {
+        const bordersLayer = L.geoJSON(NEW_REGIONS_BORDERS, {
+          style: {
+            color: '#d90077',
+            weight: 2,
+            opacity: 0.9,
+            fillColor: '#d90077',
+            fillOpacity: 0.02,
+          },
+          interactive: false,
+        });
+        rdaGroup.addLayer(bordersLayer);
+      } catch (e) {
+        console.warn('[MapTab] Could not render region borders:', e);
+      }
+
+      // 2. Draw RDA Centroid Badges according to Zoom LOD (Level of Detail)
       NEW_RDA_DISTRICTS.forEach((d) => {
-        if (currentZoom < (d.minZoom || 7)) return;
+        if (currentZoom < (d.minZoom || 8)) return;
 
         // Visual design: exactly matches R1CF GeoServer WMS RDA style
         const rdaHtml = `

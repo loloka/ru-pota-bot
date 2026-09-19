@@ -16,7 +16,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.965,
     "lon": 37.885,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-02",
@@ -24,7 +24,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.003,
     "lon": 37.805,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-03",
@@ -32,7 +32,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.01,
     "lon": 37.85,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-04",
@@ -40,7 +40,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.045,
     "lon": 37.795,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-05",
@@ -48,7 +48,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.965,
     "lon": 37.725,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-06",
@@ -56,7 +56,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.03,
     "lon": 37.74,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-07",
@@ -64,7 +64,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.975,
     "lon": 37.805,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-08",
@@ -72,7 +72,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.955,
     "lon": 37.615,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-09",
@@ -80,7 +80,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.975,
     "lon": 37.945,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-10",
@@ -88,7 +88,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.88,
     "lon": 37.7,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-11",
@@ -96,7 +96,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.33,
     "lon": 38.09,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-12",
@@ -104,7 +104,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.36,
     "lon": 37.995,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-13",
@@ -112,7 +112,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.305,
     "lon": 38.035,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-14",
@@ -120,7 +120,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.39,
     "lon": 37.85,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-15",
@@ -128,7 +128,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.03,
     "lon": 38.02,
-    "minZoom": 11
+    "minZoom": 5
   },
   {
     "code": "DO-16",
@@ -136,7 +136,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.01,
     "lon": 37.93,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-17",
@@ -144,7 +144,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.085,
     "lon": 38.075,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-18",
@@ -152,7 +152,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.045,
     "lon": 37.965,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-19",
@@ -160,7 +160,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.065,
     "lon": 37.9,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-20",
@@ -168,7 +168,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.105,
     "lon": 37.545,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-21",
@@ -176,7 +176,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.155,
     "lon": 37.58,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-22",
@@ -184,7 +184,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.115,
     "lon": 37.66,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-23",
@@ -192,7 +192,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.075,
     "lon": 37.505,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "DO-24",
@@ -200,7 +200,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.345,
     "lon": 38.42,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "DO-25",
@@ -208,7 +208,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.745,
     "lon": 37.675,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-26",
@@ -216,7 +216,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.225,
     "lon": 38.205,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-27",
@@ -224,7 +224,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.925,
     "lon": 38.195,
-    "minZoom": 7
+    "minZoom": 5
   },
   {
     "code": "DO-28",
@@ -232,7 +232,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.735,
     "lon": 37.585,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-29",
@@ -240,7 +240,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.025,
     "lon": 38.765,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-30",
@@ -248,7 +248,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.025,
     "lon": 38.625,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-31",
@@ -256,7 +256,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.045,
     "lon": 38.145,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-32",
@@ -264,7 +264,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.705,
     "lon": 36.915,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-33",
@@ -272,7 +272,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.795,
     "lon": 38.485,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-34",
@@ -280,7 +280,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.595,
     "lon": 38.005,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-35",
@@ -288,7 +288,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.845,
     "lon": 36.835,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "DO-36",
@@ -296,7 +296,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.595,
     "lon": 37.495,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-37",
@@ -304,7 +304,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.205,
     "lon": 37.315,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "DO-38",
@@ -312,7 +312,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.515,
     "lon": 37.075,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-39",
@@ -320,7 +320,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.535,
     "lon": 37.715,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-40",
@@ -328,7 +328,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.285,
     "lon": 37.185,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-41",
@@ -336,7 +336,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.985,
     "lon": 37.805,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-42",
@@ -344,7 +344,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.985,
     "lon": 37.275,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "DO-43",
@@ -352,7 +352,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 46.995,
     "lon": 37.215,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "DO-44",
@@ -360,7 +360,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.115,
     "lon": 38.085,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "DO-45",
@@ -368,7 +368,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.855,
     "lon": 37.615,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "DO-46",
@@ -376,7 +376,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.755,
     "lon": 38.035,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "DO-47",
@@ -384,7 +384,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 47.535,
     "lon": 37.985,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "DO-48",
@@ -392,7 +392,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.045,
     "lon": 38.485,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "DO-49",
@@ -400,7 +400,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ДНР",
     "lat": 48.125,
     "lon": 37.865,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "LU-01",
@@ -408,7 +408,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.545,
     "lon": 39.265,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "LU-02",
@@ -416,7 +416,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.605,
     "lon": 39.365,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "LU-03",
@@ -424,7 +424,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.595,
     "lon": 39.295,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "LU-04",
@@ -432,7 +432,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.565,
     "lon": 39.315,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "LU-05",
@@ -440,7 +440,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.675,
     "lon": 39.235,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "LU-06",
@@ -448,7 +448,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.475,
     "lon": 38.795,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "LU-07",
@@ -456,7 +456,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.115,
     "lon": 39.085,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "LU-08",
@@ -464,7 +464,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.505,
     "lon": 38.645,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "LU-09",
@@ -472,7 +472,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.635,
     "lon": 38.645,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "LU-10",
@@ -480,7 +480,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.295,
     "lon": 39.735,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "LU-11",
@@ -488,7 +488,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.135,
     "lon": 38.925,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-12",
@@ -496,7 +496,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.905,
     "lon": 38.435,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-13",
@@ -504,7 +504,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.635,
     "lon": 38.545,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-14",
@@ -512,7 +512,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.075,
     "lon": 39.355,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-15",
@@ -520,7 +520,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 49.015,
     "lon": 38.375,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-16",
@@ -528,7 +528,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.085,
     "lon": 39.655,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-17",
@@ -536,7 +536,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.955,
     "lon": 38.495,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-18",
@@ -544,7 +544,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.565,
     "lon": 38.645,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-19",
@@ -552,7 +552,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.165,
     "lon": 39.125,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-20",
@@ -560,7 +560,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 49.205,
     "lon": 39.585,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-21",
@@ -568,7 +568,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 49.535,
     "lon": 38.735,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-22",
@@ -576,7 +576,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.365,
     "lon": 39.695,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-23",
@@ -584,7 +584,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 49.045,
     "lon": 38.215,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-24",
@@ -592,7 +592,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.405,
     "lon": 39.215,
-    "minZoom": 7
+    "minZoom": 5
   },
   {
     "code": "LU-25",
@@ -600,7 +600,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 49.525,
     "lon": 39.565,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-26",
@@ -608,7 +608,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 49.375,
     "lon": 40.135,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "LU-27",
@@ -616,7 +616,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.975,
     "lon": 38.995,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "LU-28",
@@ -624,7 +624,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 49.605,
     "lon": 39.105,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "LU-29",
@@ -632,7 +632,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.435,
     "lon": 38.745,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "LU-30",
@@ -640,7 +640,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 49.415,
     "lon": 38.165,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "LU-31",
@@ -648,7 +648,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.035,
     "lon": 39.735,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-32",
@@ -656,7 +656,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.615,
     "lon": 38.975,
-    "minZoom": 10
+    "minZoom": 5
   },
   {
     "code": "LU-33",
@@ -664,7 +664,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 48.675,
     "lon": 39.535,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "LU-34",
@@ -672,7 +672,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 49.275,
     "lon": 38.915,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "LU-35",
@@ -680,7 +680,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "ЛНР",
     "lat": 49.905,
     "lon": 38.295,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "ZP-01",
@@ -688,7 +688,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 46.855,
     "lon": 35.375,
-    "minZoom": 7
+    "minZoom": 5
   },
   {
     "code": "ZP-02",
@@ -696,7 +696,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 46.755,
     "lon": 36.785,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "ZP-03",
@@ -704,7 +704,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 47.495,
     "lon": 34.655,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "ZP-04",
@@ -712,7 +712,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 46.695,
     "lon": 35.155,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "ZP-05",
@@ -720,7 +720,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 46.895,
     "lon": 36.705,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "ZP-06",
@@ -728,7 +728,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 47.435,
     "lon": 35.275,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "ZP-07",
@@ -736,7 +736,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 47.015,
     "lon": 34.915,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "ZP-08",
@@ -744,7 +744,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 47.495,
     "lon": 34.425,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "ZP-09",
@@ -752,7 +752,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 47.355,
     "lon": 36.655,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "ZP-10",
@@ -760,7 +760,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 46.955,
     "lon": 35.355,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "ZP-11",
@@ -768,7 +768,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 47.235,
     "lon": 35.225,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "ZP-12",
@@ -776,7 +776,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 47.485,
     "lon": 36.265,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "ZP-13",
@@ -784,7 +784,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 46.735,
     "lon": 35.635,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "ZP-14",
@@ -792,7 +792,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 46.735,
     "lon": 36.345,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "ZP-15",
@@ -800,7 +800,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 47.255,
     "lon": 35.705,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "ZP-16",
@@ -808,7 +808,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Запорожская обл.",
     "lat": 47.195,
     "lon": 36.205,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "HE-01",
@@ -816,7 +816,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.655,
     "lon": 32.655,
-    "minZoom": 7
+    "minZoom": 5
   },
   {
     "code": "HE-02",
@@ -824,7 +824,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.625,
     "lon": 32.585,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "HE-03",
@@ -832,7 +832,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.645,
     "lon": 32.615,
-    "minZoom": 11
+    "minZoom": 9
   },
   {
     "code": "HE-04",
@@ -840,7 +840,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.755,
     "lon": 33.365,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "HE-05",
@@ -848,7 +848,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.855,
     "lon": 32.255,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "HE-06",
@@ -856,7 +856,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.625,
     "lon": 32.725,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-07",
@@ -864,7 +864,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.625,
     "lon": 32.445,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-08",
@@ -872,7 +872,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.845,
     "lon": 33.425,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-09",
@@ -880,7 +880,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 47.325,
     "lon": 33.305,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-10",
@@ -888,7 +888,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 47.165,
     "lon": 33.935,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-11",
@@ -896,7 +896,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 47.245,
     "lon": 34.365,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-12",
@@ -904,7 +904,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 47.495,
     "lon": 33.535,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "HE-13",
@@ -912,7 +912,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.175,
     "lon": 34.805,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-14",
@@ -920,7 +920,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.525,
     "lon": 32.525,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-15",
@@ -928,7 +928,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.925,
     "lon": 33.735,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-16",
@@ -936,7 +936,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.715,
     "lon": 34.555,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-17",
@@ -944,7 +944,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.255,
     "lon": 33.295,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-18",
@@ -952,7 +952,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.815,
     "lon": 33.485,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-19",
@@ -960,7 +960,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.845,
     "lon": 34.375,
-    "minZoom": 8
+    "minZoom": 5
   },
   {
     "code": "HE-20",
@@ -968,7 +968,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 47.505,
     "lon": 33.925,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-21",
@@ -976,7 +976,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.355,
     "lon": 34.335,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-22",
@@ -984,7 +984,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.125,
     "lon": 32.915,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-23",
@@ -992,7 +992,7 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 47.075,
     "lon": 32.805,
-    "minZoom": 9
+    "minZoom": 5
   },
   {
     "code": "HE-24",
@@ -1000,6 +1000,6 @@ export const NEW_RDA_DISTRICTS = [
     "region": "Херсонская обл.",
     "lat": 46.365,
     "lon": 33.535,
-    "minZoom": 9
+    "minZoom": 5
   }
 ];

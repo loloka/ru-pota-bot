@@ -688,7 +688,7 @@ export default function MapTab({
 
       // 2. Draw RDA Centroid Badges according to Zoom LOD (Level of Detail)
       NEW_RDA_DISTRICTS.forEach((d) => {
-        if (currentZoom < (d.minZoom || 8)) return;
+        if (currentZoom < (d.minZoom || 5)) return;
 
         // Visual design: exactly matches R1CF GeoServer WMS RDA style
         const rdaHtml = `

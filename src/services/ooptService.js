@@ -14,7 +14,7 @@ const client = axios.create({
   baseURL: OOPT_BASE_URL,
   timeout: 25000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.16 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.17 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });

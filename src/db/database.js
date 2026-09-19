@@ -233,6 +233,12 @@ try {
     console.log('[DB] Migrated oopt_registry table: added pota_ref and pota_name columns');
   }
 
+  const hasNestedOopt = ooptColumns.some(col => col.name === 'nested_oopt');
+  if (!hasNestedOopt) {
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN nested_oopt TEXT`);
+    console.log('[DB] Migrated oopt_registry table: added nested_oopt column');
+  }
+
   // Ensure missing categories are populated
   try {
     db.exec(`

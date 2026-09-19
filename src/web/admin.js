@@ -892,7 +892,15 @@ export const startAdminServer = (telegramClient) => {
                     <div class="col-md-5">
                       <label class="form-label small fw-bold mb-1">3. Статус ООПТ для POTA (EN):</label>
                       <input type="text" class="form-control form-control-sm font-monospace text-success fw-bold" id="subm-status-en" required>
-                      <div class="form-text small text-muted">Категория POTA (National Park / Nature Sanctuary)</div>
+                      <div class="d-flex flex-wrap gap-1 mt-1">
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="State Nature Reserve">State Nature Reserve</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Nature Monument">Nature Monument</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="National Park">National Park</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Nature Park">Nature Park</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Protected Landscape">Protected Landscape</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Botanical Garden">Botanical Garden</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="State Marine Reserve">State Marine Reserve</button>
+                      </div>
                     </div>
                     <div class="col-md-7">
                       <label class="form-label small fw-bold mb-1">4. Статус (парк/ООПТ и т.п.) (RU):</label>
@@ -902,12 +910,28 @@ export const startAdminServer = (telegramClient) => {
                   </div>
 
                   <div class="row g-2 mb-2">
+                    <div class="col-md-6">
+                      <label class="form-label small fw-bold mb-1">5. DX Entity (POTA):</label>
+                      <select class="form-select form-select-sm" id="subm-dx-entity">
+                        <option value="European Russia (RU)">🇪🇺 European Russia (RU)</option>
+                        <option value="Asiatic Russia (RU)">🌏 Asiatic Russia (RU)</option>
+                        <option value="Kaliningrad (RU)">🏰 Kaliningrad (RU)</option>
+                        <option value="Franz Josef Land (RU)">❄️ Franz Josef Land (RU)</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label small fw-bold mb-1">6. Локация POTA (ISO):</label>
+                      <input type="text" class="form-control form-control-sm font-monospace fw-bold" id="subm-location-code" placeholder="RU-ST или RU-MOS, RU-MOW">
+                    </div>
+                  </div>
+
+                  <div class="row g-2 mb-2">
                     <div class="col-md-3">
-                      <label class="form-label small fw-bold mb-1">5. Широта (Lat):</label>
+                      <label class="form-label small fw-bold mb-1">7. Широта (Lat):</label>
                       <input type="text" class="form-control form-control-sm font-monospace" id="subm-lat" placeholder="55.8821">
                     </div>
                     <div class="col-md-3">
-                      <label class="form-label small fw-bold mb-1">6. Долгота (Lon):</label>
+                      <label class="form-label small fw-bold mb-1">8. Долгота (Lon):</label>
                       <input type="text" class="form-control form-control-sm font-monospace" id="subm-lon" placeholder="37.7812">
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
@@ -923,14 +947,14 @@ export const startAdminServer = (telegramClient) => {
                   </div>
 
                   <div class="mb-2">
-                    <label class="form-label small fw-bold mb-1">7. Регион России:</label>
+                    <label class="form-label small fw-bold mb-1">9. Регион России:</label>
                     <input type="text" class="form-control form-control-sm" id="subm-region" required>
                     <div class="form-text small text-muted">Для межрегиональных объектов указываются все субъекты через запятую (например: <i>Москва, Московская область</i>)</div>
                   </div>
 
                   <div class="mb-2">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                      <label class="form-label small fw-bold mb-0">8. Сайт объекта, ссылка:</label>
+                      <label class="form-label small fw-bold mb-0">10. Сайт объекта, ссылка:</label>
                       <div class="d-flex gap-1">
                         <button type="button" class="btn btn-xs btn-outline-success py-0 px-1.5" style="font-size:11px;" id="btn-set-link-nextgis" title="Установить ссылку NextGIS зеркала (приоритет R2BBX)">NextGIS (R2BBX)</button>
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:11px;" id="btn-set-link-custom" title="Ввести собственный сайт парка или заповедника">Свой сайт</button>
@@ -941,8 +965,12 @@ export const startAdminServer = (telegramClient) => {
                   </div>
 
                   <div class="mb-3">
-                    <label class="form-label small fw-bold mb-1">9. Уточнение (не обязательно):</label>
-                    <input type="text" class="form-control form-control-sm" id="subm-clarify" placeholder="Например: площадь, границы на разных картах различаются...">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <label class="form-label small fw-bold mb-0">11. Уточнение / Comments (не обязательно):</label>
+                      <span id="subm-clarify-counter" class="badge bg-light text-secondary border font-monospace" style="font-size: 11px;">0 / 255</span>
+                    </div>
+                    <textarea class="form-control form-control-sm" id="subm-clarify" rows="2" placeholder="Границы, кластерные участки, вложенные ООПТ (строгий лимит 255 символов)"></textarea>
+                    <div class="form-text small text-muted">Строгий лимит админки координатора POTA: не более 255 символов на всё поле.</div>
                   </div>
 
                   <div class="card bg-light border-success">
@@ -1812,17 +1840,199 @@ export const startAdminServer = (telegramClient) => {
             return 'ООПТ';
           }
 
+          var GEOGRAPHIC_TERMS_CLIENT = [
+            [/\bрусский лес\b/gi, 'Russian Forest'],
+            [/\bсосновый бор\b/gi, 'Pine Forest'],
+            [/\bкрасный бор\b/gi, 'Krasny Bor'],
+            [/\bзеленый остров\b/gi, 'Green Island'],
+            [/\bзелёный остров\b/gi, 'Green Island'],
+            [/\bбелое озеро\b/gi, 'White Lake'],
+            [/\bчерное озеро\b/gi, 'Black Lake'],
+            [/\bчёрное озеро\b/gi, 'Black Lake'],
+            [/\bсвятой источник\b/gi, 'Holy Spring'],
+            [/\bрусский\b/gi, 'Russian'],
+            [/\bрусская\b/gi, 'Russian'],
+            [/\bрусское\b/gi, 'Russian'],
+            [/\bлес\b/gi, 'Forest'],
+            [/\bлеса\b/gi, 'Forests'],
+            [/\bостров\b/gi, 'Island'],
+            [/\bострова\b/gi, 'Islands'],
+            [/\bозеро\b/gi, 'Lake'],
+            [/\bозера\b/gi, 'Lakes'],
+            [/\bозёра\b/gi, 'Lakes'],
+            [/\bгора\b/gi, 'Mountain'],
+            [/\bгоры\b/gi, 'Mountains'],
+            [/\bхребет\b/gi, 'Ridge'],
+            [/\bсопка\b/gi, 'Sopka'],
+            [/\bсопки\b/gi, 'Sopkas'],
+            [/\bскалы\b/gi, 'Rocks'],
+            [/\bскала\b/gi, 'Rock'],
+            [/\bпещера\b/gi, 'Cave'],
+            [/\bпещеры\b/gi, 'Caves'],
+            [/\bрека\b/gi, 'River'],
+            [/\bдолина\b/gi, 'Valley'],
+            [/\bурочище\b/gi, 'Tract'],
+            [/\bроща\b/gi, 'Grove'],
+            [/\bбор\b/gi, 'Pine Forest'],
+            [/\bмыс\b/gi, 'Cape'],
+            [/\bзалив\b/gi, 'Bay'],
+            [/\bбухта\b/gi, 'Cove'],
+            [/\bболото\b/gi, 'Bog'],
+            [/\bболота\b/gi, 'Bogs'],
+            [/\bпруд\b/gi, 'Pond'],
+            [/\bпруды\b/gi, 'Ponds'],
+            [/\bключ\b/gi, 'Spring'],
+            [/\bключи\b/gi, 'Springs'],
+            [/\bисточник\b/gi, 'Spring'],
+            [/\bисточники\b/gi, 'Springs'],
+            [/\bводопад\b/gi, 'Waterfall'],
+            [/\bводопады\b/gi, 'Waterfalls'],
+            [/\bущелье\b/gi, 'Gorge'],
+            [/\bканьон\b/gi, 'Canyon'],
+            [/\bкоса\b/gi, 'Spit'],
+            [/\bстепь\b/gi, 'Steppe'],
+            [/\bкурган\b/gi, 'Kurgan'],
+            [/\bсеверный\b/gi, 'Northern'],
+            [/\bсеверная\b/gi, 'Northern'],
+            [/\bсеверное\b/gi, 'Northern'],
+            [/\bюжный\b/gi, 'Southern'],
+            [/\bюжная\b/gi, 'Southern'],
+            [/\bюжное\b/gi, 'Southern'],
+            [/\bвосточный\b/gi, 'Eastern'],
+            [/\bвосточная\b/gi, 'Eastern'],
+            [/\bвосточное\b/gi, 'Eastern'],
+            [/\bзападный\b/gi, 'Western'],
+            [/\bзападная\b/gi, 'Western'],
+            [/\bзападное\b/gi, 'Western'],
+            [/\bцентральный\b/gi, 'Central'],
+            [/\bцентральная\b/gi, 'Central'],
+            [/\bцентральное\b/gi, 'Central'],
+            [/\bверхний\b/gi, 'Upper'],
+            [/\bверхняя\b/gi, 'Upper'],
+            [/\bверхнее\b/gi, 'Upper'],
+            [/\bнижний\b/gi, 'Lower'],
+            [/\bнижняя\b/gi, 'Lower'],
+            [/\bнижнее\b/gi, 'Lower'],
+            [/\bсредний\b/gi, 'Middle'],
+            [/\bсредняя\b/gi, 'Middle'],
+            [/\bсреднее\b/gi, 'Middle'],
+            [/\bбольшой\b/gi, 'Great'],
+            [/\bбольшая\b/gi, 'Great'],
+            [/\bбольшое\b/gi, 'Great'],
+            [/\bмалый\b/gi, 'Small'],
+            [/\bмалая\b/gi, 'Small'],
+            [/\bмалое\b/gi, 'Small'],
+            [/\bбелый\b/gi, 'White'],
+            [/\bбелая\b/gi, 'White'],
+            [/\bбелое\b/gi, 'White'],
+            [/\bчерный\b/gi, 'Black'],
+            [/\bчёрный\b/gi, 'Black'],
+            [/\bчерная\b/gi, 'Black'],
+            [/\bчёрная\b/gi, 'Black'],
+            [/\bкрасный\b/gi, 'Red'],
+            [/\bкрасная\b/gi, 'Red'],
+            [/\bкрасное\b/gi, 'Red'],
+            [/\bзеленый\b/gi, 'Green'],
+            [/\bзелёный\b/gi, 'Green'],
+            [/\bзеленая\b/gi, 'Green'],
+            [/\bзелёная\b/gi, 'Green'],
+            [/\bсиний\b/gi, 'Blue'],
+            [/\bсиняя\b/gi, 'Blue'],
+            [/\bголубой\b/gi, 'Blue'],
+            [/\bголубая\b/gi, 'Blue'],
+            [/\bзолотой\b/gi, 'Golden'],
+            [/\bзолотая\b/gi, 'Golden'],
+            [/\bзолотое\b/gi, 'Golden'],
+            [/\bсеребряный\b/gi, 'Silver'],
+            [/\bсеребряная\b/gi, 'Silver'],
+            [/\bсеребряное\b/gi, 'Silver'],
+            [/\bсвятой\b/gi, 'Holy'],
+            [/\bсвятая\b/gi, 'Holy'],
+            [/\bсвятое\b/gi, 'Holy']
+          ];
+
           function getEnglishSuffixClient(category) {
             var c = (category || '').toLowerCase();
+            if (c.indexOf('морск') !== -1) return 'State Marine Reserve';
             if (c.indexOf('национальный парк') !== -1) return 'National Park';
             if (c.indexOf('биосферный заповедник') !== -1) return 'State Biosphere Nature Reserve';
-            if (c.indexOf('заповедник') !== -1) return 'Nature Reserve';
-            if (c.indexOf('заказник') !== -1) return 'Nature Sanctuary';
+            if (c.indexOf('заповедник') !== -1) return 'State Nature Reserve';
+            if (c.indexOf('заказник') !== -1) return 'State Nature Reserve';
             if (c.indexOf('памятник природы') !== -1) return 'Nature Monument';
             if (c.indexOf('природный парк') !== -1) return 'Nature Park';
+            if (c.indexOf('ландшафт') !== -1) return 'Protected Landscape';
             if (c.indexOf('ботанический сад') !== -1) return 'Botanical Garden';
-            if (c.indexOf('дендрологический') !== -1) return 'Dendrological Park';
-            return 'Protected Area';
+            if (c.indexOf('дендрологический') !== -1) return 'Botanical Garden';
+            if (c.indexOf('резерват') !== -1) return 'Nature Reserve';
+            return 'Nature Reserve';
+          }
+
+          function getDxEntityClient(regionName, title) {
+            var r = (regionName || '').toLowerCase();
+            var t = (title || '').toLowerCase();
+
+            if (r.indexOf('калининград') !== -1 || t.indexOf('калининград') !== -1) return 'Kaliningrad (RU)';
+            if (t.indexOf('франца-иосифа') !== -1 || t.indexOf('франца иосифа') !== -1 || t.indexOf('земля франца') !== -1 || r.indexOf('франца-иосифа') !== -1) {
+              return 'Franz Josef Land (RU)';
+            }
+
+            var asiatic = ['свердловск', 'челябинск', 'курган', 'тюмен', 'ханты-мансий', 'югра', 'ямало-ненец',
+              'томск', 'омск', 'новосибирск', 'кемеров', 'алтай', 'красноярск', 'хакас', 'тыва', 'тува',
+              'иркутск', 'бурят', 'забайкал', 'якут', 'саха', 'амурск', 'хабаровск', 'приморск',
+              'еврейск', 'магадан', 'чукот', 'камчат', 'сахалин'];
+
+            for (var i = 0; i < asiatic.length; i++) {
+              if (r.indexOf(asiatic[i]) !== -1) return 'Asiatic Russia (RU)';
+            }
+            return 'European Russia (RU)';
+          }
+
+          var REGION_TO_POTA_LOCATION_CLIENT = {
+            'ставрополь': 'RU-ST', 'москва': 'RU-MOW', 'московская': 'RU-MOS',
+            'санкт-петербург': 'RU-SPE', 'ленинградская': 'RU-LEN', 'краснодарский': 'RU-KDA',
+            'калининградская': 'RU-KGD', 'ростовская': 'RU-ROS', 'волгоградская': 'RU-VGG',
+            'воронежская': 'RU-VOR', 'самарская': 'RU-SAM', 'саратовская': 'RU-SAR',
+            'нижегородская': 'RU-NIZ', 'татарстан': 'RU-TA', 'башкортостан': 'RU-BA',
+            'крым': 'RU-KRM', 'севастополь': 'RU-SEV', 'дагестан': 'RU-DAG',
+            'чечен': 'RU-CN', 'ингушет': 'RU-IN', 'кабардино-балкар': 'RU-KB',
+            'карачаево-черкес': 'RU-KC', 'северная осетия': 'RU-NO', 'адыгея': 'RU-AD',
+            'калмыкия': 'RU-KL', 'астраханская': 'RU-AST', 'архангельская': 'RU-ARK',
+            'мурманская': 'RU-MUR', 'вологодская': 'RU-VLG', 'карелия': 'RU-KR',
+            'коми': 'RU-KO', 'новгородская': 'RU-NGR', 'псковская': 'RU-PSK',
+            'тверская': 'RU-TVE', 'ярославская': 'RU-YAR', 'костромская': 'RU-KOS',
+            'ивановская': 'RU-IVA', 'владимирская': 'RU-VLA', 'рязанская': 'RU-RYA',
+            'тульская': 'RU-TUL', 'калужская': 'RU-KLU', 'смоленская': 'RU-SMO',
+            'брянская': 'RU-BRY', 'орловская': 'RU-ORL', 'липецкая': 'RU-LIP',
+            'тамбовская': 'RU-TAM', 'белгородская': 'RU-BEL', 'курская': 'RU-KUR',
+            'пензенская': 'RU-PNZ', 'ульяновская': 'RU-ULY', 'кировская': 'RU-KIR',
+            'чуваш': 'RU-CU', 'марий эл': 'RU-ME', 'мордовия': 'RU-MO',
+            'удмурт': 'RU-UD', 'пермский': 'RU-PER', 'оренбургская': 'RU-ORE',
+            'свердловская': 'RU-SVE', 'челябинская': 'RU-CHE', 'курганская': 'RU-KGN',
+            'тюменская': 'RU-TYU', 'ханты-мансийский': 'RU-KHM', 'ямало-ненецкий': 'RU-YAN',
+            'новосибирская': 'RU-NS', 'омская': 'RU-OMS', 'томская': 'RU-TOM',
+            'кемеровская': 'RU-KEM', 'алтайский': 'RU-ALT', 'алтай': 'RU-AL',
+            'красноярский': 'RU-KYA', 'хакасия': 'RU-KK', 'тыва': 'RU-TY',
+            'иркутская': 'RU-IRK', 'бурятия': 'RU-BUR', 'забайкальский': 'RU-ZAB',
+            'саха': 'RU-SA', 'якутия': 'RU-SA', 'еврейская': 'RU-YEV',
+            'амурская': 'RU-AMU', 'хабаровский': 'RU-KHA', 'приморский': 'RU-PRI',
+            'магаданская': 'RU-MAG', 'чукотский': 'RU-CHU', 'камчатский': 'RU-KAM',
+            'сахалинская': 'RU-SAK'
+          };
+
+          function getPotaLocationCodeClient(regionStr) {
+            if (!regionStr) return '';
+            var parts = regionStr.split(/[,;\/]+/).map(function(s) { return s.trim().toLowerCase(); });
+            var found = [];
+            for (var i = 0; i < parts.length; i++) {
+              for (var kw in REGION_TO_POTA_LOCATION_CLIENT) {
+                if (parts[i].indexOf(kw) !== -1) {
+                  var code = REGION_TO_POTA_LOCATION_CLIENT[kw];
+                  if (found.indexOf(code) === -1) found.push(code);
+                  break;
+                }
+              }
+            }
+            return found.join(', ');
           }
 
           function cleanOoptNameClient(rawTitle, category) {
@@ -1883,6 +2093,10 @@ export const startAdminServer = (telegramClient) => {
                  .replace(/СО РАН/g, 'SB RAS')
                  .replace(/Петра Великого/gi, 'Peter the Great');
 
+            for (var k = 0; k < GEOGRAPHIC_TERMS_CLIENT.length; k++) {
+              s = s.replace(GEOGRAPHIC_TERMS_CLIENT[k][0], GEOGRAPHIC_TERMS_CLIENT[k][1]);
+            }
+
             var en = transliterateClient(s);
             en = en.replace(/skogo\\b/gi, 'sky')
                    .replace(/skogo gosudarstvennogo\\b/gi, 'State')
@@ -1909,26 +2123,34 @@ export const startAdminServer = (telegramClient) => {
             var region = ate || '';
             if (region.indexOf('(') !== -1) region = region.split('(')[0].trim();
 
+            var dxEntity = getDxEntityClient(region, rawTitle);
+            var locationCode = getPotaLocationCodeClient(region);
+
             var siteUrl = nid ? ('https://ooptaari.nextgis.ru/node/' + nid) : 'https://карта.оцзк.рф/';
 
             var latVal = (lat !== null && lat !== undefined && lat !== '' && !isNaN(Number(lat))) ? Number(lat).toFixed(4) : '';
             var lonVal = (lon !== null && lon !== undefined && lon !== '' && !isNaN(Number(lon))) ? Number(lon).toFixed(4) : '';
 
             var extra = [];
+            if (profile) extra.push('Профиль: ' + profile);
             if (status && status !== 'действующий') extra.push('Статус: ' + status);
             if (area) extra.push('Площадь: ' + Number(area).toLocaleString('ru-RU') + ' га');
-            if (profile) extra.push('Профиль: ' + profile);
+
+            var clarifyText = extra.join('. ');
+            if (clarifyText.length > 250) clarifyText = clarifyText.substring(0, 247).trim() + '...';
 
             return {
               name: cleanName,
               nameEn: nameEn,
               statusEn: statusEn,
               status: fullStatus,
+              dxEntity: dxEntity,
+              locationCode: locationCode,
               region: region,
               lat: latVal,
               lon: lonVal,
               site: siteUrl,
-              clarification: extra.join('. ')
+              clarification: clarifyText
             };
           }
 
@@ -1937,20 +2159,38 @@ export const startAdminServer = (telegramClient) => {
             var nameEn = document.getElementById('subm-name-en').value;
             var statusEn = document.getElementById('subm-status-en').value;
             var status = document.getElementById('subm-status').value;
+            var dxEntity = document.getElementById('subm-dx-entity')?.value || '';
+            var locationCode = document.getElementById('subm-location-code')?.value || '';
+            var region = document.getElementById('subm-region').value;
             var lat = document.getElementById('subm-lat').value;
             var lon = document.getElementById('subm-lon').value;
-            var region = document.getElementById('subm-region').value;
             var site = document.getElementById('subm-site').value;
             var clarify = document.getElementById('subm-clarify').value;
+
+            // Update character counter
+            var counterEl = document.getElementById('subm-clarify-counter');
+            if (counterEl) {
+              var len = clarify.length;
+              counterEl.textContent = len + ' / 255';
+              if (len > 255) {
+                counterEl.className = 'badge bg-danger font-monospace';
+              } else if (len > 220) {
+                counterEl.className = 'badge bg-warning text-dark font-monospace';
+              } else {
+                counterEl.className = 'badge bg-light text-secondary border font-monospace';
+              }
+            }
 
             var lines = [
               'Название парка/ООПТ: ' + name,
               'Название для POTA (EN): ' + nameEn,
               'Статус ООПТ для POTA (EN): ' + statusEn,
               'Статус (парк/ООПТ и т.п.): ' + status,
+              'DX Entity: ' + dxEntity,
+              'Локация POTA: ' + locationCode,
+              'Регион России: ' + region,
               'Координата первая с яндекс-карт: ' + lat,
               'Координата вторая: ' + lon,
-              'Регион России: ' + region,
               'Сайт объекта, ссылка: ' + site,
               'Уточнение (не обязательно): ' + clarify
             ];
@@ -1971,9 +2211,25 @@ export const startAdminServer = (telegramClient) => {
           }
 
           // Bind preview updates on input changes
-          ['subm-name', 'subm-name-en', 'subm-status-en', 'subm-status', 'subm-lat', 'subm-lon', 'subm-region', 'subm-site', 'subm-clarify'].forEach(function(id) {
+          ['subm-name', 'subm-name-en', 'subm-status-en', 'subm-status', 'subm-dx-entity', 'subm-location-code', 'subm-lat', 'subm-lon', 'subm-region', 'subm-site', 'subm-clarify'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.addEventListener('input', updateSubmitterPreview);
+            if (el && el.tagName === 'SELECT') el.addEventListener('change', updateSubmitterPreview);
+          });
+
+          // Quick POTA Type chip buttons
+          document.addEventListener('click', function(e) {
+            var quickBtn = e.target.closest('.quick-pota-type-btn');
+            if (quickBtn) {
+              var t = quickBtn.getAttribute('data-type');
+              if (t) {
+                var input = document.getElementById('subm-status-en');
+                if (input) {
+                  input.value = t;
+                  updateSubmitterPreview();
+                }
+              }
+            }
           });
 
           // Quick switch buttons for site links
@@ -2017,6 +2273,8 @@ export const startAdminServer = (telegramClient) => {
               document.getElementById('subm-name-en').value = parsed.nameEn;
               document.getElementById('subm-status-en').value = parsed.statusEn;
               document.getElementById('subm-status').value = parsed.status;
+              if (document.getElementById('subm-dx-entity')) document.getElementById('subm-dx-entity').value = parsed.dxEntity;
+              if (document.getElementById('subm-location-code')) document.getElementById('subm-location-code').value = parsed.locationCode;
               document.getElementById('subm-lat').value = parsed.lat;
               document.getElementById('subm-lon').value = parsed.lon;
               document.getElementById('subm-region').value = parsed.region;
@@ -2053,24 +2311,23 @@ export const startAdminServer = (telegramClient) => {
                     document.getElementById('subm-lon').value = Number(details.lon).toFixed(4);
                     if (details.rf_subjects) {
                       document.getElementById('subm-region').value = details.rf_subjects;
+                      if (document.getElementById('subm-location-code')) {
+                        document.getElementById('subm-location-code').value = getPotaLocationCodeClient(details.rf_subjects);
+                      }
                     }
-                    if (!document.getElementById('subm-clarify').value) {
-                      var extra = [];
-                      if (details.status && details.status !== 'действующий') extra.push('Статус: ' + details.status);
-                      if (details.area) extra.push('Площадь: ' + Number(details.area).toLocaleString('ru-RU') + ' га');
-                      if (details.profile) extra.push('Профиль: ' + details.profile);
-                      document.getElementById('subm-clarify').value = extra.join('. ');
+                    if (details.submitterFields && details.submitterFields.clarification) {
+                      document.getElementById('subm-clarify').value = details.submitterFields.clarification;
                     }
+                    document.getElementById('subm-coords-status').textContent = '✅ Координаты загружены';
                     updateSubmitterPreview();
-                    document.getElementById('subm-coords-status').innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Координаты получены (4 знака)</span>';
                   } else {
-                    document.getElementById('subm-coords-status').innerHTML = '<span class="text-muted">Координаты в реестре отсутствуют</span>';
+                    document.getElementById('subm-coords-status').textContent = 'Координаты отсутствуют';
                   }
                 } catch(e) {
-                  document.getElementById('subm-coords-status').innerHTML = '';
+                  document.getElementById('subm-coords-status').textContent = 'Ошибка загрузки координат';
                 }
               } else {
-                document.getElementById('subm-coords-status').innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Координаты указаны (4 знака)</span>';
+                document.getElementById('subm-coords-status').textContent = '';
               }
             }
           });

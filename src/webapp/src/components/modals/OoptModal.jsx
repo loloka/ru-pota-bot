@@ -55,7 +55,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
         if (!isMounted) return;
         setDetails(data);
 
-        // Merge freshly loaded details (coordinates, rf_subjects, documents) into form
+        // Merge freshly loaded details (coordinates, rf_subjects, documents, nested_oopt) into form
         const detailedParsed = parseOoptForSubmitter(data);
         setForm((prev) => ({
           ...prev,
@@ -63,11 +63,13 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
           nameEn: prev.nameEn || detailedParsed.nameEn,
           statusEn: prev.statusEn || detailedParsed.statusEn,
           status: prev.status || detailedParsed.status,
+          dxEntity: detailedParsed.dxEntity || prev.dxEntity,
+          locationCode: detailedParsed.locationCode || prev.locationCode,
           lat: detailedParsed.lat || prev.lat,
           lon: detailedParsed.lon || prev.lon,
           region: detailedParsed.region || prev.region,
           site: prev.site || detailedParsed.site,
-          clarification: prev.clarification || detailedParsed.clarification,
+          clarification: detailedParsed.clarification || prev.clarification,
         }));
       })
       .catch((err) => {
@@ -111,6 +113,14 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
   const current = details || oopt;
   const previewText = formatR2bbxTemplate(form);
   const yandexInfo = getYandexMapsUrl(form.lat, form.lon, form.name, form.region);
+
+  const nestedList = Array.isArray(current.parsedNestedOopt) 
+    ? current.parsedNestedOopt 
+    : (Array.isArray(current.nested_oopt) 
+        ? current.nested_oopt 
+        : (typeof current.nested_oopt === 'string' 
+            ? (() => { try { return JSON.parse(current.nested_oopt); } catch(_) { return []; } })() 
+            : []));
 
   const handleInputChange = (field, value) => {
     setForm((prev) => ({
@@ -322,9 +332,34 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                       type="text"
                       value={form.statusEn || ''}
                       onChange={(e) => handleInputChange('statusEn', e.target.value)}
-                      placeholder="напр. National Park / Nature Sanctuary"
+                      placeholder="напр. State Nature Reserve"
                       className="w-full px-3 py-2 text-xs font-medium text-emerald-700 dark:text-emerald-300 rounded-xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                     />
+                    {/* Quick Park Type Chips */}
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {[
+                        'State Nature Reserve',
+                        'Nature Monument',
+                        'National Park',
+                        'Nature Park',
+                        'Protected Landscape',
+                        'Botanical Garden',
+                        'State Marine Reserve'
+                      ].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => handleInputChange('statusEn', t)}
+                          className={`px-1.5 py-0.5 text-[10px] rounded-md font-medium transition-all ${
+                            form.statusEn === t
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-600'
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
@@ -335,8 +370,40 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                       type="text"
                       value={form.status}
                       onChange={(e) => handleInputChange('status', e.target.value)}
-                      placeholder="напр. Национальный природный заповедник"
+                      placeholder="напр. Государственный природный заказник (Региональное значение)"
                       className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    />
+                  </div>
+                </div>
+
+                {/* DX Entity & POTA Location */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      5. DX Entity (POTA) <span className="text-emerald-500">*</span>
+                    </label>
+                    <select
+                      value={form.dxEntity || 'European Russia (RU)'}
+                      onChange={(e) => handleInputChange('dxEntity', e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    >
+                      <option value="European Russia (RU)">🇪🇺 European Russia (RU)</option>
+                      <option value="Asiatic Russia (RU)">🌏 Asiatic Russia (RU)</option>
+                      <option value="Kaliningrad (RU)">🏰 Kaliningrad (RU)</option>
+                      <option value="Franz Josef Land (RU)">❄️ Franz Josef Land (RU)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      6. Локация POTA (ISO код) <span className="text-emerald-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.locationCode || ''}
+                      onChange={(e) => handleInputChange('locationCode', e.target.value)}
+                      placeholder="напр. RU-ST или RU-MOS, RU-MOW"
+                      className="w-full px-3 py-2 text-xs font-mono font-semibold rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                     />
                   </div>
                 </div>
@@ -345,7 +412,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      5. Координата 1 (Широта, Lat) <span className="text-emerald-500">*</span>
+                      7. Координата 1 (Широта, Lat) <span className="text-emerald-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -357,7 +424,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      6. Координата 2 (Долгота, Lon) <span className="text-emerald-500">*</span>
+                      8. Координата 2 (Долгота, Lon) <span className="text-emerald-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -402,7 +469,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    7. Регион России (субъекты РФ) <span className="text-emerald-500">*</span>
+                    9. Регион России (субъекты РФ) <span className="text-emerald-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -416,7 +483,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      8. Сайт объекта, ссылка <span className="text-emerald-500">*</span>
+                      10. Сайт объекта, ссылка <span className="text-emerald-500">*</span>
                     </label>
                     <div className="flex items-center gap-1">
                       <button
@@ -460,16 +527,36 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    9. Уточнение (не обязательно)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      11. Уточнение / Comments (не обязательно)
+                    </label>
+                    <span 
+                      className={`text-[11px] font-mono ${
+                        (form.clarification?.length || 0) > 255 
+                          ? 'text-rose-500 font-bold' 
+                          : (form.clarification?.length || 0) > 220 
+                            ? 'text-amber-500 font-semibold' 
+                            : 'text-slate-400'
+                      }`}
+                    >
+                      {form.clarification?.length || 0} / 255
+                    </span>
+                  </div>
                   <textarea
                     rows={2}
                     value={form.clarification}
                     onChange={(e) => handleInputChange('clarification', e.target.value)}
-                    placeholder="Границы, кластерные участки, статус или примечания для координатора"
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 resize-none"
+                    placeholder="Границы, кластерные участки, вложенные ООПТ (лимит 255 символов)"
+                    className={`w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border ${
+                      (form.clarification?.length || 0) > 255
+                        ? 'border-rose-500 dark:border-rose-500'
+                        : 'border-slate-200 dark:border-slate-700'
+                    } text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 resize-none`}
                   />
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    Строгий лимит админки координатора POTA: не более 255 символов на всё поле.
+                  </div>
                 </div>
               </div>
 
@@ -629,6 +716,36 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                     Ведомство
                   </div>
                   <div className="text-slate-600 dark:text-slate-400 leading-snug">{current.agency}</div>
+                </div>
+              )}
+
+              {/* Nested OOPTs (Наличие в границах ООПТ иных ООПТ) */}
+              {nestedList && nestedList.length > 0 && (
+                <div className="pt-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
+                    <Trees className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>В границах объекта находятся иные ООПТ ({nestedList.length})</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {nestedList.map((item, idx) => (
+                      <div 
+                        key={idx}
+                        className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs flex items-center justify-between gap-2"
+                      >
+                        <span className="font-medium text-slate-800 dark:text-slate-200 leading-snug truncate">
+                          {typeof item === 'string' ? item : (item.name || item.title)}
+                        </span>
+                        {item.pota_ref ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shrink-0">
+                            <Sparkles className="w-2.5 h-2.5 text-emerald-500" />
+                            {item.pota_ref}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 shrink-0">не в POTA</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

@@ -2016,13 +2016,40 @@ export const startAdminServer = (telegramClient) => {
               return 'Franz Josef Land (RU)';
             }
 
-            var asiatic = ['свердловск', 'челябинск', 'курган', 'тюмен', 'ханты-мансий', 'югра', 'ямало-ненец',
-              'томск', 'омск', 'новосибирск', 'кемеров', 'алтай', 'красноярск', 'хакас', 'тыва', 'тува',
-              'иркутск', 'бурят', 'забайкал', 'якут', 'саха', 'амурск', 'хабаровск', 'приморск',
-              'еврейск', 'магадан', 'чукот', 'камчат', 'сахалин'];
+            var asiaticPatterns = [
+              /(?<![а-яёa-z0-9])свердловск/i,
+              /(?<![а-яёa-z0-9])челябинск/i,
+              /(?<![а-яёa-z0-9])курганск/i,
+              /(?<![а-яёa-z0-9])тюмен/i,
+              /(?<![а-яёa-z0-9])ханты-мансий/i,
+              /(?<![а-яёa-z0-9])югр/i,
+              /(?<![а-яёa-z0-9])ямало-ненец/i,
+              /(?<![а-яёa-z0-9])томск/i,
+              /(?<![а-яёa-z0-9])омск/i,
+              /(?<![а-яёa-z0-9])новосибирск/i,
+              /(?<![а-яёa-z0-9])кемеров/i,
+              /(?<![а-яёa-z0-9])алтай/i,
+              /(?<![а-яёa-z0-9])красноярск/i,
+              /(?<![а-яёa-z0-9])хакас/i,
+              /(?<![а-яёa-z0-9])тыв/i,
+              /(?<![а-яёa-z0-9])тув/i,
+              /(?<![а-яёa-z0-9])иркутск/i,
+              /(?<![а-яёa-z0-9])бурят/i,
+              /(?<![а-яёa-z0-9])забайкал/i,
+              /(?<![а-яёa-z0-9])якут/i,
+              /(?<![а-яёa-z0-9])саха(?![а-яёa-z0-9]*лин)/i,
+              /(?<![а-яёa-z0-9])амурск/i,
+              /(?<![а-яёa-z0-9])хабаровск/i,
+              /(?<![а-яёa-z0-9])приморск/i,
+              /(?<![а-яёa-z0-9])еврейск/i,
+              /(?<![а-яёa-z0-9])магадан/i,
+              /(?<![а-яёa-z0-9])чукот/i,
+              /(?<![а-яёa-z0-9])камчат/i,
+              /(?<![а-яёa-z0-9])сахалин/i
+            ];
 
-            for (var i = 0; i < asiatic.length; i++) {
-              if (r.indexOf(asiatic[i]) !== -1) return 'Asiatic Russia (RU)';
+            for (var i = 0; i < asiaticPatterns.length; i++) {
+              if (asiaticPatterns[i].test(r)) return 'Asiatic Russia (RU)';
             }
             return 'European Russia (RU)';
           }
@@ -2196,7 +2223,7 @@ export const startAdminServer = (telegramClient) => {
             return translated || transliterated || '';
           }
 
-          function formatClarificationClient(profile, status, area, nestedOopt) {
+          function formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid) {
             var parts = [];
             if (status && status !== 'действующий') parts.push('Статус: ' + status);
 
@@ -2211,16 +2238,22 @@ export const startAdminServer = (telegramClient) => {
               }
             }
 
-            if (nestedList && nestedList.length > 0) {
-              var formatted = nestedList.map(function(n) {
-                var name = typeof n === 'string' ? n : (n.name || n.title || '');
-                var ref = (typeof n === 'object' && n.pota_ref) ? (' (' + n.pota_ref + ')') : '';
-                return name ? (name + ref) : '';
-              }).filter(Boolean);
+            var selfTitle = (rawTitle || '').toLowerCase().trim();
+            var selfClean = (cleanName || '').toLowerCase().trim();
+            var selfNid = nid ? Number(nid) : null;
 
-              if (formatted.length > 0) {
-                parts.push('В границах ООПТ: ' + formatted.join(', '));
-              }
+            var formatted = (nestedList || []).map(function(n) {
+              var name = typeof n === 'string' ? n : (n.name || n.title || '');
+              var cleanN = name.toLowerCase().trim();
+              var nNid = (typeof n === 'object' && n.nid) ? Number(n.nid) : null;
+              if (selfNid && nNid && selfNid === nNid) return '';
+              if (cleanN && (cleanN === selfTitle || cleanN === selfClean)) return '';
+              var ref = (typeof n === 'object' && n.pota_ref) ? (' (' + n.pota_ref + ')') : '';
+              return name ? (name + ref) : '';
+            }).filter(Boolean);
+
+            if (formatted.length > 0) {
+              parts.push('В границах ООПТ: ' + formatted.join(', '));
             } else {
               if (profile) parts.push('Профиль: ' + profile);
               if (area) parts.push('Площадь: ' + Number(area).toLocaleString('ru-RU') + ' га');
@@ -2252,7 +2285,7 @@ export const startAdminServer = (telegramClient) => {
             var latVal = (lat !== null && lat !== undefined && lat !== '' && !isNaN(Number(lat))) ? Number(lat).toFixed(4) : '';
             var lonVal = (lon !== null && lon !== undefined && lon !== '' && !isNaN(Number(lon))) ? Number(lon).toFixed(4) : '';
 
-            var clarifyText = formatClarificationClient(profile, status, area, nestedOopt);
+            var clarifyText = formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid);
 
             return {
               name: cleanName,
@@ -2446,7 +2479,10 @@ export const startAdminServer = (telegramClient) => {
                       details.profile || profile,
                       details.status || status,
                       details.area || area,
-                      details.parsedNestedOopt || details.nested_oopt
+                      details.parsedNestedOopt || details.nested_oopt,
+                      title,
+                      parsed.name,
+                      nid
                     );
                     if (updatedClarify) {
                       document.getElementById('subm-clarify').value = updatedClarify;

@@ -674,16 +674,41 @@ export function getDxEntity(regionName = '', title = '') {
     return 'Franz Josef Land (RU)';
   }
 
-  // Asiatic Russia regions
-  const asiaticKeywords = [
-    'свердловск', 'челябинск', 'курган', 'тюмен', 'ханты-мансий', 'югра', 'ямало-ненец',
-    'томск', 'омск', 'новосибирск', 'кемеров', 'алтай', 'красноярск', 'хакас', 'тыва', 'тува',
-    'иркутск', 'бурят', 'забайкал', 'якут', 'саха', 'амурск', 'хабаровск', 'приморск',
-    'еврейск', 'магадан', 'чукот', 'камчат', 'сахалин'
+  // Asiatic Russia regions (requires word boundary to prevent 'костромская' matching 'омск'!)
+  const asiaticPatterns = [
+    /(?<![а-яёa-z0-9])свердловск/i,
+    /(?<![а-яёa-z0-9])челябинск/i,
+    /(?<![а-яёa-z0-9])курганск/i,
+    /(?<![а-яёa-z0-9])тюмен/i,
+    /(?<![а-яёa-z0-9])ханты-мансий/i,
+    /(?<![а-яёa-z0-9])югр/i,
+    /(?<![а-яёa-z0-9])ямало-ненец/i,
+    /(?<![а-яёa-z0-9])томск/i,
+    /(?<![а-яёa-z0-9])омск/i,
+    /(?<![а-яёa-z0-9])новосибирск/i,
+    /(?<![а-яёa-z0-9])кемеров/i,
+    /(?<![а-яёa-z0-9])алтай/i,
+    /(?<![а-яёa-z0-9])красноярск/i,
+    /(?<![а-яёa-z0-9])хакас/i,
+    /(?<![а-яёa-z0-9])тыв/i,
+    /(?<![а-яёa-z0-9])тув/i,
+    /(?<![а-яёa-z0-9])иркутск/i,
+    /(?<![а-яёa-z0-9])бурят/i,
+    /(?<![а-яёa-z0-9])забайкал/i,
+    /(?<![а-яёa-z0-9])якут/i,
+    /(?<![а-яёa-z0-9])саха(?![а-яёa-z0-9]*лин)/i,
+    /(?<![а-яёa-z0-9])амурск/i,
+    /(?<![а-яёa-z0-9])хабаровск/i,
+    /(?<![а-яёa-z0-9])приморск/i,
+    /(?<![а-яёa-z0-9])еврейск/i,
+    /(?<![а-яёa-z0-9])магадан/i,
+    /(?<![а-яёa-z0-9])чукот/i,
+    /(?<![а-яёa-z0-9])камчат/i,
+    /(?<![а-яёa-z0-9])сахалин/i,
   ];
 
-  for (const kw of asiaticKeywords) {
-    if (r.includes(kw)) {
+  for (const pat of asiaticPatterns) {
+    if (pat.test(r)) {
       return 'Asiatic Russia (RU)';
     }
   }
@@ -817,18 +842,25 @@ export function formatClarification(item) {
     }
   }
 
-  if (nestedList && nestedList.length > 0) {
-    const formattedNested = nestedList.map(n => {
-      const name = typeof n === 'string' ? n : (n.name || n.title || '');
-      const ref = typeof n === 'object' && n.pota_ref ? ` (${n.pota_ref})` : '';
-      return `${name}${ref}`;
-    }).filter(Boolean);
+  const selfTitle = (item.title || item.rawTitle || item.name || '').toLowerCase().trim();
+  const selfClean = cleanOoptName(selfTitle).toLowerCase().trim();
+  const selfNid = item.nid ? Number(item.nid) : null;
 
-    if (formattedNested.length > 0) {
-      parts.push(`В границах ООПТ: ${formattedNested.join(', ')}`);
-    }
+  // Filter out self-reference (e.g. NextGIS listing parent OOPT under its own nested items)
+  const formattedNested = (nestedList || []).map(n => {
+    const name = typeof n === 'string' ? n : (n.name || n.title || '');
+    const cleanN = name.toLowerCase().trim();
+    const nNid = typeof n === 'object' && n.nid ? Number(n.nid) : null;
+    if (selfNid && nNid && selfNid === nNid) return '';
+    if (cleanN && (cleanN === selfTitle || cleanN === selfClean)) return '';
+    const ref = typeof n === 'object' && n.pota_ref ? ` (${n.pota_ref})` : '';
+    return name ? `${name}${ref}` : '';
+  }).filter(Boolean);
+
+  if (formattedNested.length > 0) {
+    parts.push(`В границах ООПТ: ${formattedNested.join(', ')}`);
   } else {
-    // If no nested OOPTs, include Profile and Area
+    // If no nested OOPTs (or only self-reference), include Profile and Area
     if (item.profile) parts.push(`Профиль: ${item.profile}`);
     if (item.area) parts.push(`Площадь: ${Number(item.area).toLocaleString('ru-RU')} га`);
   }
@@ -996,10 +1028,19 @@ export async function getOoptDetails(nid) {
           items.push(...rawParts);
         }
 
+        const selfTitle = (row.title || '').toLowerCase().trim();
+        const selfClean = cleanOoptName(selfTitle).toLowerCase().trim();
+
         for (const itemTitle of items) {
-          const found = db.prepare('SELECT nid, title, pota_ref, pota_name FROM oopt_registry WHERE title = ? OR title LIKE ? LIMIT 1').get(itemTitle, `%${itemTitle}%`);
+          const cleanItem = itemTitle.trim();
+          const itemClean = cleanOoptName(cleanItem).toLowerCase().trim();
+          if (cleanItem.toLowerCase() === selfTitle || itemClean === selfClean) continue;
+
+          const found = db.prepare('SELECT nid, title, pota_ref, pota_name FROM oopt_registry WHERE title = ? OR title LIKE ? LIMIT 1').get(cleanItem, `%${cleanItem}%`);
+          if (found && found.nid === numNid) continue;
+
           extracted.push({
-            name: itemTitle,
+            name: cleanItem,
             pota_ref: found?.pota_ref || null,
             pota_name: found?.pota_name || null,
             nid: found?.nid || null

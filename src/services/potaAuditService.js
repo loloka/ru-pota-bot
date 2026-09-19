@@ -199,7 +199,7 @@ export async function checkUrlOnline(url) {
     const res = await axios.head(clean, {
       timeout: 6000,
       headers: {
-        'User-Agent': 'RU-POTA-Bot/1.16.9 (Link Health Checker; Node.js)',
+        'User-Agent': 'RU-POTA-Bot/1.16.10 (Link Health Checker; Node.js)',
         'Accept': '*/*',
       },
       validateStatus: () => true, // Don't throw on 4xx/5xx
@@ -211,7 +211,7 @@ export async function checkUrlOnline(url) {
       const getRes = await axios.get(clean, {
         timeout: 6000,
         headers: {
-          'User-Agent': 'RU-POTA-Bot/1.16.9 (Link Health Checker; Node.js)',
+          'User-Agent': 'RU-POTA-Bot/1.16.10 (Link Health Checker; Node.js)',
           'Accept': 'text/html,*/*',
         },
         validateStatus: () => true,

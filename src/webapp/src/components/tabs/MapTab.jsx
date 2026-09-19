@@ -122,6 +122,7 @@ export default function MapTab({
   const wmsLayersRef = useRef({});
   const markersLayerRef = useRef(null);
   const razaLayerRef = useRef(null);
+  const customOoptMarkerRef = useRef(null);
 
   const [parks, setParks] = useState([]);
   const [razaZones, setRazaZones] = useState([]);
@@ -318,11 +319,76 @@ export default function MapTab({
     });
   }, []);
 
-  // Handle external navigation target (e.g. from ClusterTab or PotaLookupWidget "На карте")
+  // Handle external navigation target (e.g. from ClusterTab, PotaLookupWidget or OoptTab "На карте")
   useEffect(() => {
     if (!mapTarget) return;
 
-    const clean = mapTarget.trim().toUpperCase();
+    // Case 1: mapTarget is an OOPT candidate object
+    if (typeof mapTarget === 'object' && mapTarget !== null) {
+      const lat = parseFloat(mapTarget.lat);
+      const lon = parseFloat(mapTarget.lon);
+
+      if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
+        const ooptTarget = {
+          type: 'oopt',
+          reference: mapTarget.pota_ref || (mapTarget.nid ? `ООПТ #${mapTarget.nid}` : 'Кандидат POTA'),
+          name: mapTarget.name || mapTarget.title || 'Объект ООПТ',
+          lat: lat,
+          lon: lon,
+          region: mapTarget.region || mapTarget.ate || '',
+          category: mapTarget.category || '',
+          sig: mapTarget.sig || mapTarget.sig_display || '',
+          status: mapTarget.status || '',
+          nid: mapTarget.nid,
+          oopt: mapTarget,
+        };
+
+        const applyOoptFocus = () => {
+          const map = mapInstanceRef.current;
+          if (!map) return;
+          map.invalidateSize();
+
+          // Remove previous temporary marker
+          if (customOoptMarkerRef.current) {
+            customOoptMarkerRef.current.remove();
+          }
+
+          // Glowing purple pine pin for Candidate OOPT
+          const ooptPinHtml = `
+            <div class="relative flex items-center justify-center cursor-pointer select-none">
+              <div class="absolute -inset-2 rounded-full bg-purple-500/40 animate-ping"></div>
+              <div class="w-10 h-10 rounded-full bg-purple-600 border-2 border-white flex items-center justify-center text-white shadow-2xl font-bold text-base hover:scale-110 transition-transform">
+                🌲
+              </div>
+            </div>
+          `;
+
+          const pinIcon = L.divIcon({
+            html: ooptPinHtml,
+            className: 'custom-oopt-candidate-pin',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+          });
+
+          const marker = L.marker([lat, lon], { icon: pinIcon }).addTo(map);
+          marker.on('click', () => {
+            focusItem(ooptTarget, 14);
+          });
+          customOoptMarkerRef.current = marker;
+
+          focusItem(ooptTarget, 14);
+          if (onClearMapTarget) onClearMapTarget();
+        };
+
+        const timer = setTimeout(applyOoptFocus, 250);
+        return () => clearTimeout(timer);
+      }
+      if (onClearMapTarget) onClearMapTarget();
+      return;
+    }
+
+    // Case 2: mapTarget is a string reference
+    const clean = String(mapTarget).trim().toUpperCase();
 
     const applyFocus = async () => {
       const map = mapInstanceRef.current;
@@ -854,9 +920,20 @@ export default function MapTab({
                     <span>✈️</span>
                     <span>{selectedItem.icao}</span>
                   </span>
+                ) : selectedItem.type === 'oopt' ? (
+                  <span className="font-mono font-extrabold text-sm px-2.5 py-0.5 rounded-lg bg-purple-600 text-white flex items-center gap-1.5 shadow-md">
+                    <span>🌲</span>
+                    <span>{selectedItem.reference}</span>
+                  </span>
                 ) : (
                   <span className="font-mono font-extrabold text-sm px-2.5 py-0.5 rounded-lg bg-emerald-500 text-slate-950">
                     {selectedItem.reference}
+                  </span>
+                )}
+
+                {selectedItem.type === 'oopt' && selectedItem.category && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25 truncate max-w-[200px]">
+                    {selectedItem.category}
                   </span>
                 )}
 
@@ -871,8 +948,9 @@ export default function MapTab({
                 {selectedItem.name}
               </h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                {selectedItem.region || selectedItem.city || (selectedItem.type === 'raza' ? 'Дипломная программа RAZA' : 'RU-POTA')} 
+                {selectedItem.region || selectedItem.city || (selectedItem.type === 'oopt' ? 'Реестр ООПТ РФ' : selectedItem.type === 'raza' ? 'Дипломная программа RAZA' : 'RU-POTA')} 
                 {selectedItem.grid ? ` • QTH: ${selectedItem.grid}` : ''}
+                {selectedItem.lat && selectedItem.lon ? ` • ${Number(selectedItem.lat).toFixed(4)}, ${Number(selectedItem.lon).toFixed(4)}` : ''}
               </p>
             </div>
 
@@ -928,6 +1006,22 @@ export default function MapTab({
                 <span>Инфо</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
+            )}
+
+            {/* OOPT Quick Copy Coordinates */}
+            {selectedItem.type === 'oopt' && (
+              <button
+                type="button"
+                onClick={() => {
+                  const coordStr = `${Number(selectedItem.lat).toFixed(4)}, ${Number(selectedItem.lon).toFixed(4)}`;
+                  navigator.clipboard.writeText(coordStr);
+                  telegram.haptic.notification('success');
+                }}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 transition active:scale-95"
+                title="Скопировать координаты точки"
+              >
+                <span>Координаты</span>
+              </button>
             )}
 
             {/* OsmAnd Offline Guide Button */}

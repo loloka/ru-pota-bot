@@ -242,7 +242,8 @@ export default function App() {
               language={language}
               t={t}
               onNavigateToMap={(oopt) => {
-                handleNavigate('map');
+                setMapTarget(oopt);
+                setActiveTab('map');
               }}
             />
           )}

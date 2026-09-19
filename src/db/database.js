@@ -146,6 +146,12 @@ try {
     console.log('[DB] Migrated spots table: added msg_id column');
   }
 
+  const hasIpAddress = spotColumns.some(col => col.name === 'ip_address');
+  if (!hasIpAddress) {
+    db.exec(`ALTER TABLE spots ADD COLUMN ip_address TEXT`);
+    console.log('[DB] Migrated spots table: added ip_address column');
+  }
+
   // Ensure pinned_spots table exists
   db.exec(`
     CREATE TABLE IF NOT EXISTS pinned_spots (
@@ -181,6 +187,7 @@ try {
       details TEXT,
       action TEXT NOT NULL,
       is_read INTEGER DEFAULT 0,
+      is_archived INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_blocked_users_tgid ON blocked_users (telegram_id);
@@ -193,6 +200,13 @@ try {
     db.exec(`ALTER TABLE blocked_users ADD COLUMN is_read INTEGER DEFAULT 0`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_blocked_users_is_read ON blocked_users (is_read)`);
     console.log('[DB] Migrated blocked_users table: added is_read column');
+  }
+
+  const hasIsArchived = blockedColumns.some(col => col.name === 'is_archived');
+  if (!hasIsArchived) {
+    db.exec(`ALTER TABLE blocked_users ADD COLUMN is_archived INTEGER DEFAULT 0`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_blocked_users_is_archived ON blocked_users (is_archived)`);
+    console.log('[DB] Migrated blocked_users table: added is_archived column');
   }
 
   // Ensure oopt_registry table exists for Russian Protected Areas

@@ -116,6 +116,22 @@ export default function DashboardTab({
   const [pwr, setPwr] = useState('');
   const [isEditingActiveSpot, setIsEditingActiveSpot] = useState(false);
 
+  // Guest callsign & active spot state (persisted in localStorage for web visitors)
+  const [guestCallsign, setGuestCallsign] = useState(() => {
+    try { return localStorage.getItem('pota_guest_callsign') || ''; } catch (e) { return ''; }
+  });
+  const [guestActiveSpot, setGuestActiveSpot] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pota_guest_active_spot');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const effectiveActiveSpot = activeSpot || guestActiveSpot;
+  const isOnAir = Boolean(effectiveActiveSpot);
+
   // Load preview of active stations (with smart fallback to world stations if RU is quiet)
   useEffect(() => {
     let isMounted = true;
@@ -143,14 +159,14 @@ export default function DashboardTab({
 
   const handleOpenEditSpot = () => {
     telegram.haptic.impact('light');
-    if (activeSpot) {
-      setParkRef(activeSpot.reference || 'RU-0073');
-      const curFreq = activeSpot.freqMHz || (activeSpot.frequency ? (parseFloat(activeSpot.frequency) > 1000 ? (parseFloat(activeSpot.frequency) / 1000).toFixed(3) : activeSpot.frequency) : activeSpot.freq) || '14144';
+    if (effectiveActiveSpot) {
+      setParkRef(effectiveActiveSpot.reference || 'RU-0073');
+      const curFreq = effectiveActiveSpot.freqMHz || (effectiveActiveSpot.frequency ? (parseFloat(effectiveActiveSpot.frequency) > 1000 ? (parseFloat(effectiveActiveSpot.frequency) / 1000).toFixed(3) : effectiveActiveSpot.frequency) : effectiveActiveSpot.freq) || '14144';
       setFreq(curFreq);
-      setMode(activeSpot.mode || 'SSB');
-      setComment(activeSpot.baseComment || '');
-      setRda(activeSpot.rda || '');
-      setPwr(activeSpot.pwr || '');
+      setMode(effectiveActiveSpot.mode || 'SSB');
+      setComment(effectiveActiveSpot.baseComment || '');
+      setRda(effectiveActiveSpot.rda || '');
+      setPwr(effectiveActiveSpot.pwr || '');
       setIsEditingActiveSpot(true);
     }
     setErrorMessage('');
@@ -166,14 +182,23 @@ export default function DashboardTab({
 
   const handleSpotSubmit = async (e) => {
     e.preventDefault();
-    if (!user || user.status !== 'approved' || !user.callsign) {
-      telegram.haptic.notification('error');
-      setErrorMessage(
-        language === 'RU'
-          ? 'Только подтвержденные радиолюбители с одобренным позывным могут публиковать споты.'
-          : 'Only verified operators with an approved callsign can post spots.'
-      );
-      return;
+    let finalCallsign = user?.callsign;
+    if (!finalCallsign) {
+      finalCallsign = (guestCallsign || '').trim().toUpperCase();
+      const baseCallsignRegex = /^([A-Z0-9]{1,4}\/)?([A-Z0-9]{1,3}[0-9][A-Z0-9]{1,5})(\/[A-Z0-9]{1,4})?$/;
+      const hasLetterRegex = /[A-Z]/;
+      if (!finalCallsign || !baseCallsignRegex.test(finalCallsign) || !hasLetterRegex.test(finalCallsign)) {
+        telegram.haptic.notification('error');
+        setErrorMessage(
+          language === 'RU'
+            ? 'Укажите корректный радиолюбительский позывной (например, R1ABC, RA/UA3ABC, R1ABC/P).'
+            : 'Please specify a valid amateur radio callsign (e.g. R1ABC, RA/UA3ABC).'
+        );
+        return;
+      }
+      try {
+        localStorage.setItem('pota_guest_callsign', finalCallsign);
+      } catch (err) {}
     }
 
     setErrorMessage('');
@@ -181,7 +206,8 @@ export default function DashboardTab({
     telegram.haptic.impact('medium');
 
     try {
-      await api.postSpot({
+      const res = await api.postSpot({
+        callsign: finalCallsign,
         reference: parkRef,
         frequency: freq,
         mode,
@@ -189,6 +215,13 @@ export default function DashboardTab({
         rda,
         pwr
       });
+
+      if (!user?.callsign && res?.activeSpot) {
+        setGuestActiveSpot(res.activeSpot);
+        try {
+          localStorage.setItem('pota_guest_active_spot', JSON.stringify(res.activeSpot));
+        } catch (err) {}
+      }
 
       telegram.haptic.notification('success');
       setSpotModalOpen(false);
@@ -212,7 +245,23 @@ export default function DashboardTab({
     if (!confirm(qrtPrompt)) return;
 
     try {
-      await api.stopSpot();
+      const actCall = user?.callsign || guestActiveSpot?.callsign || guestCallsign;
+      const parkRefToStop = effectiveActiveSpot?.reference || 'RU-0073';
+      await api.stopSpot({
+        callsign: actCall,
+        reference: parkRefToStop,
+        frequency: effectiveActiveSpot?.frequency || effectiveActiveSpot?.freq || '14000',
+        mode: effectiveActiveSpot?.mode || 'SSB',
+        parkName: effectiveActiveSpot?.parkName || ''
+      });
+
+      if (!user?.callsign) {
+        setGuestActiveSpot(null);
+        try {
+          localStorage.removeItem('pota_guest_active_spot');
+        } catch (err) {}
+      }
+
       telegram.haptic.notification('success');
       alert(language === 'RU' ? 'Сессия в эфире завершена (QRT)!' : 'Session finished (QRT)!');
       if (onRefreshProfile) await onRefreshProfile();
@@ -224,27 +273,26 @@ export default function DashboardTab({
 
   const handleRespot = async () => {
     telegram.haptic.impact('medium');
-    if (!activeSpot) return;
-    if (!user || user.status !== 'approved' || !user.callsign) {
+    if (!effectiveActiveSpot) return;
+
+    const actCall = user?.callsign || guestActiveSpot?.callsign || guestCallsign;
+    if (!actCall) {
       telegram.haptic.notification('error');
-      alert(
-        language === 'RU'
-          ? 'Только подтвержденные радиолюбители с одобренным позывным могут публиковать споты.'
-          : 'Only verified operators with an approved callsign can post spots.'
-      );
+      alert(language === 'RU' ? 'Позывной не указан' : 'Callsign not provided');
       return;
     }
 
-    const freqToSend = activeSpot.freqMHz || activeSpot.frequency || activeSpot.freq || '14144';
+    const freqToSend = effectiveActiveSpot.freqMHz || effectiveActiveSpot.frequency || effectiveActiveSpot.freq || '14144';
 
     try {
       await api.postSpot({
-        reference: activeSpot.reference,
+        callsign: actCall,
+        reference: effectiveActiveSpot.reference,
         frequency: freqToSend,
-        mode: activeSpot.mode,
-        comment: activeSpot.baseComment || '',
-        rda: activeSpot.rda || '',
-        pwr: activeSpot.pwr || '',
+        mode: effectiveActiveSpot.mode,
+        comment: effectiveActiveSpot.baseComment || '',
+        rda: effectiveActiveSpot.rda || '',
+        pwr: effectiveActiveSpot.pwr || '',
       });
 
       telegram.haptic.notification('success');
@@ -255,8 +303,6 @@ export default function DashboardTab({
       alert(`Error: ${err.message}`);
     }
   };
-
-  const isOnAir = Boolean(activeSpot);
 
   return (
     <div className="space-y-4 pb-tab-bottom animate-fade-in">
@@ -362,18 +408,18 @@ export default function DashboardTab({
 
             <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 space-y-1">
               <div className="flex items-center justify-between">
-                <span className="font-mono font-bold text-lg text-slate-900 dark:text-white">{activeSpot.reference}</span>
+                <span className="font-mono font-bold text-lg text-slate-900 dark:text-white">{effectiveActiveSpot.reference}</span>
                 <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                  {getDisplayFreq(activeSpot)} MHz {activeSpot.mode}
+                  {getDisplayFreq(effectiveActiveSpot)} MHz {effectiveActiveSpot.mode}
                 </span>
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300 truncate">
-                {activeSpot.parkName || (language === 'RU' ? 'Национальный парк' : 'National Park')}
-                {activeSpot.rda ? ` (RDA: ${activeSpot.rda})` : ''}
+                {effectiveActiveSpot.parkName || (language === 'RU' ? 'Национальный парк' : 'National Park')}
+                {effectiveActiveSpot.rda ? ` (RDA: ${effectiveActiveSpot.rda})` : ''}
               </p>
-              {activeSpot.comment && (
+              {effectiveActiveSpot.comment && (
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 italic truncate">
-                  "{activeSpot.comment}"
+                  "{effectiveActiveSpot.comment}"
                 </p>
               )}
             </div>
@@ -422,31 +468,15 @@ export default function DashboardTab({
                 {t('dash_not_on_air_desc')}
               </p>
             </div>
-            {/* Spot Action Button depends on verification status */}
+            {/* Spot Action Button: allows guests & verified operators to post spots */}
             {!user || !user.callsign || user.status === 'guest' ? (
               <button
                 type="button"
-                onClick={() => {
-                  telegram.haptic.impact('light');
-                  if (!user) {
-                    if (onRequireAuth) {
-                      onRequireAuth(
-                        language === 'RU' ? 'Отправка спота в эфир' : 'Post Spot to Cluster',
-                        language === 'RU'
-                          ? 'Для отправки спотов от своего позывного запустите RU-POTA Hub внутри Telegram-бота @ru_pota_bot.'
-                          : 'To post spots with your callsign, please launch RU-POTA Hub inside our Telegram bot @ru_pota_bot.'
-                      );
-                    } else {
-                      telegram.openTelegramBot('hub');
-                    }
-                    return;
-                  }
-                  if (onNavigate) onNavigate('profile');
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-slate-700 dark:text-slate-300 bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-700/80 border border-slate-300 dark:border-slate-700 transition-all active:scale-95"
+                onClick={handleOpenNewSpot}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-slate-950 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 shadow-glow-emerald transition-all active:scale-95"
               >
-                <Lock className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                <span>{t('dash_spot_locked_guest')}</span>
+                <Send className="w-4 h-4" />
+                <span>{t('dash_send_spot_btn')}</span>
               </button>
             ) : user.status === 'pending' ? (
               <button
@@ -739,6 +769,25 @@ export default function DashboardTab({
             )}
 
             <form onSubmit={handleSpotSubmit} className="space-y-3 text-xs">
+              {!user?.callsign && (
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-medium">
+                    {language === 'RU' ? 'Ваш позывной (Callsign)' : 'Your Callsign'}
+                  </label>
+                  <input 
+                    type="text" 
+                    value={guestCallsign}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      setGuestCallsign(val);
+                      try { localStorage.setItem('pota_guest_callsign', val); } catch (err) {}
+                    }}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:border-emerald-500 outline-none"
+                    placeholder="R1ABC"
+                    required
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-slate-600 dark:text-slate-400 mb-1 font-medium">{t('modal_park_label')}</label>
                 <input 

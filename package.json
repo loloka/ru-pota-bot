@@ -1,6 +1,6 @@
 {
   "name": "ru-pota",
-  "version": "1.16.11",
+  "version": "1.16.12",
   "description": "Telegram Bot for RU-POTA (Parks on the Air) Community",
 
   "main": "src/bot/index.js",

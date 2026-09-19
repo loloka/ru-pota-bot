@@ -239,7 +239,7 @@ export const startAdminServer = (telegramClient) => {
     const rejected = allUsers.filter(u => u.status === 'rejected');
 
     // 2. Spots & Muted Broadcast Callsigns
-    const spotsStmt = db.prepare("SELECT id, callsign, reference, frequency, mode, comment, source, created_at, msg_id FROM spots WHERE source != 'cluster_throttled' ORDER BY created_at DESC LIMIT 100");
+    const spotsStmt = db.prepare("SELECT id, callsign, reference, frequency, mode, comment, source, ip_address, created_at, msg_id FROM spots WHERE source != 'cluster_throttled' ORDER BY created_at DESC LIMIT 100");
     const latestSpots = spotsStmt.all();
 
     let dbMuted = [];
@@ -249,14 +249,18 @@ export const startAdminServer = (telegramClient) => {
     const envMuted = (process.env.IGNORED_BROADCAST_CALLSIGNS !== undefined ? process.env.IGNORED_BROADCAST_CALLSIGNS : 'RI1FJZ')
       .split(',').map(c => c.trim().toUpperCase()).filter(Boolean);
 
-    // 3. RU-POTA Shield Blocked Users & Incidents
-    const blockedStmt = db.prepare("SELECT id, telegram_id, first_name, last_name, username, reason, details, action, is_read, created_at FROM blocked_users ORDER BY created_at DESC LIMIT 100");
+    // 3. RU-POTA Shield Blocked Users & Incidents (Active vs Archive)
+    const blockedStmt = db.prepare("SELECT id, telegram_id, first_name, last_name, username, reason, details, action, is_read, is_archived, created_at FROM blocked_users WHERE is_archived = 0 ORDER BY created_at DESC LIMIT 100");
     const latestBlocked = blockedStmt.all();
+
+    const archivedStmt = db.prepare("SELECT id, telegram_id, first_name, last_name, username, reason, details, action, is_read, is_archived, created_at FROM blocked_users WHERE is_archived = 1 ORDER BY created_at DESC LIMIT 20");
+    const archivedBlocked = archivedStmt.all();
+
     const totalBlocked = db.prepare("SELECT count(*) as count FROM blocked_users").get().count;
-    const unreadBlockedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE is_read = 0").get().count;
-    const bannedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE action = 'banned'").get().count;
-    const kickedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE action = 'kicked'").get().count;
-    const warnedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE action = 'warned'").get().count;
+    const unreadBlockedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE is_read = 0 AND is_archived = 0").get().count;
+    const bannedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE action = 'banned' AND is_archived = 0").get().count;
+    const kickedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE action = 'kicked' AND is_archived = 0").get().count;
+    const warnedCount = db.prepare("SELECT count(*) as count FROM blocked_users WHERE action = 'warned' AND is_archived = 0").get().count;
 
     // 4. POTA Links Audit stats for sidebar badge
     let auditStats = { wikipedia: 10, empty: 16, insecure_http: 36 };
@@ -297,18 +301,37 @@ export const startAdminServer = (telegramClient) => {
     `;
 
     const generateSpotRow = (s) => {
-      const deleteBtn = `<button type="button" class="btn btn-sm btn-outline-danger delete-spot-btn" data-id="${s.id}" data-source="${s.source || ''}" data-msg="${s.msg_id || ''}">Удалить</button>`;
-      const sourceBadge = s.source === 'cluster_muted'
-        ? '<span class="badge bg-secondary text-light">🔇 cluster (muted)</span>'
-        : escapeHtmlServer(s.source);
+      const deleteBtn = `<button type="button" class="btn btn-sm btn-outline-danger delete-spot-btn" data-id="${s.id}" data-source="${escapeHtmlServer(s.source || '')}" data-msg="${s.msg_id || ''}" title="Удалить спот из БД (и канала)">Удалить</button>`;
+      const muteBtn = `<button type="button" class="btn btn-sm btn-outline-warning mute-spot-call-btn me-1" data-callsign="${escapeHtmlServer(s.callsign)}" title="Внести позывной в исключения вещания (бан)">В бан</button>`;
+      
+      let sourceBadge = escapeHtmlServer(s.source || '');
+      if (s.source?.includes('tma') && !s.source?.includes('guest')) {
+        sourceBadge = `<span class="badge bg-primary">📱 ${escapeHtmlServer(s.source)}</span>`;
+      } else if (s.source?.includes('guest')) {
+        sourceBadge = `<span class="badge bg-info text-dark">🌐 ${escapeHtmlServer(s.source)}</span>`;
+      } else if (s.source === 'bot') {
+        sourceBadge = '<span class="badge bg-secondary">🤖 Бот</span>';
+      } else if (s.source === 'cluster') {
+        sourceBadge = '<span class="badge bg-dark">📡 Кластер</span>';
+      } else if (s.source === 'cluster_muted') {
+        sourceBadge = '<span class="badge bg-secondary text-light">🔇 cluster (muted)</span>';
+      } else if (s.source === 'local') {
+        sourceBadge = '<span class="badge bg-primary">📱 TMA</span>';
+      }
+
+      const ipDisplay = s.ip_address 
+        ? `<span class="badge bg-light text-secondary font-monospace border">${escapeHtmlServer(s.ip_address)}</span>` 
+        : '<span class="text-muted small">—</span>';
+
       return `
       <tr id="spot-row-${s.id}">
         <td><strong>${escapeHtmlServer(s.callsign)}</strong></td>
         <td><a href="https://next.pota.app/park/${escapeHtmlServer(s.reference)}" target="_blank">${escapeHtmlServer(s.reference)}</a></td>
         <td>${escapeHtmlServer(s.frequency || '')} ${escapeHtmlServer(s.mode || '')}</td>
         <td>${sourceBadge}</td>
+        <td>${ipDisplay}</td>
         <td>${new Date(s.created_at).toLocaleString('ru-RU')}</td>
-        <td>${deleteBtn}</td>
+        <td class="text-nowrap">${muteBtn}${deleteBtn}</td>
       </tr>
       `;
     };
@@ -354,6 +377,40 @@ export const startAdminServer = (telegramClient) => {
           <td id="action-badge-${b.id}">${actionBadge}</td>
           <td>${new Date(b.created_at).toLocaleString('ru-RU')}</td>
           <td class="text-center" id="action-cell-${b.id}">${actionBtn}</td>
+        </tr>
+      `;
+    };
+
+    const generateArchivedRow = (b) => {
+      const name = [b.first_name, b.last_name].filter(Boolean).join(' ') || 'Без имени';
+      const userDisplay = b.username ? `@${b.username}` : name;
+      const actionBadge = b.action === 'banned' 
+        ? '<span class="badge bg-danger">Забанен</span>' 
+        : b.action === 'kicked' 
+        ? '<span class="badge bg-warning text-dark">Кикнут</span>' 
+        : b.action === 'unbanned'
+        ? '<span class="badge bg-success">Разблокирован</span>'
+        : '<span class="badge bg-info text-dark">Предупрежден</span>';
+      
+      const reasonLabels = {
+        'profile_face_control': 'Face-контроль (Профиль)',
+        'captcha_timeout': 'Таймаут капчи (120с)',
+        'newbie_link': 'Карантин ссылок новичка',
+        'scam_words': 'Фильтр скам-текста'
+      };
+      const reasonText = reasonLabels[b.reason] || b.reason;
+
+      return `
+        <tr class="text-muted">
+          <td>
+            <strong>${escapeHtmlServer(userDisplay)}</strong>
+            <div class="small text-muted">${escapeHtmlServer(name)}</div>
+          </td>
+          <td><code>${b.telegram_id}</code></td>
+          <td><span class="badge bg-secondary">${reasonText}</span></td>
+          <td><small class="text-break">${escapeHtmlServer(b.details || '')}</small></td>
+          <td>${actionBadge}</td>
+          <td class="small">${new Date(b.created_at).toLocaleString('ru-RU')}</td>
         </tr>
       `;
     };
@@ -500,12 +557,17 @@ export const startAdminServer = (telegramClient) => {
                     </div>
                   </div>
 
-                  <h3>Последние 100 спотов в БД</h3>
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">Последние 100 спотов в БД</h3>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="btn-clear-all-spots">
+                      <i class="bi bi-trash3"></i> Очистить все споты из БД
+                    </button>
+                  </div>
                   <div class="table-responsive">
                     <table class="table table-striped table-hover align-middle" style="overflow: hidden;">
-                      <thead class="table-light"><tr><th>Позывной</th><th>Парк</th><th>Частота/Модуляция</th><th>Источник</th><th>Дата</th><th>Действия</th></tr></thead>
+                      <thead class="table-light"><tr><th>Позывной</th><th>Парк</th><th>Частота/Модуляция</th><th>Источник</th><th>IP адрес</th><th>Дата</th><th>Действия</th></tr></thead>
                       <tbody id="spots-tbody">
-                        ${latestSpots.length > 0 ? latestSpots.map(generateSpotRow).join('') : '<tr><td colspan="6" class="text-center">Спотов пока нет</td></tr>'}
+                        ${latestSpots.length > 0 ? latestSpots.map(generateSpotRow).join('') : '<tr><td colspan="7" class="text-center">Спотов пока нет</td></tr>'}
                       </tbody>
                     </table>
                   </div>
@@ -564,11 +626,19 @@ export const startAdminServer = (telegramClient) => {
                     </div>
                   </div>
 
-                  <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4>Журнал инцидентов безопасности (${latestBlocked.length})</h4>
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="mark-all-read-btn">
-                      <i class="bi bi-check2-all"></i> Отметить все как прочитанные
-                    </button>
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h4 class="mb-0">Журнал активных инцидентов (${latestBlocked.length})</h4>
+                    <div class="d-flex gap-2">
+                      <button type="button" class="btn btn-sm btn-outline-primary" id="mark-all-read-btn">
+                        <i class="bi bi-check2-all"></i> Прочитать все
+                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-warning" id="btn-archive-all-shield">
+                        <i class="bi bi-archive"></i> В архив всё
+                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-danger" id="btn-clear-all-shield">
+                        <i class="bi bi-trash3"></i> Очистить журнал
+                      </button>
+                    </div>
                   </div>
                   <div class="table-responsive">
                     <table class="table table-bordered table-hover align-middle">
@@ -585,9 +655,38 @@ export const startAdminServer = (telegramClient) => {
                         </tr>
                       </thead>
                       <tbody>
-                        ${latestBlocked.length > 0 ? latestBlocked.map(generateBlockedRow).join('') : '<tr><td colspan="8" class="text-center text-muted">Спам-активности не зафиксировано. Все чисто! 🌲</td></tr>'}
+                        ${latestBlocked.length > 0 ? latestBlocked.map(generateBlockedRow).join('') : '<tr><td colspan="8" class="text-center text-muted">Активных инцидентов нет. Все чисто! 🌲</td></tr>'}
                       </tbody>
                     </table>
+                  </div>
+
+                  <!-- Shield Archive Section (max 20 records) -->
+                  <div class="card mt-4 border-0 shadow-sm bg-light">
+                    <div class="card-header bg-secondary bg-opacity-10 d-flex justify-content-between align-items-center">
+                      <h5 class="mb-0 fs-6 text-muted">
+                        <i class="bi bi-archive-fill me-1"></i> Архив инцидентов (${archivedBlocked.length} из макс. 20)
+                      </h5>
+                      <span class="badge bg-secondary">Хранение до 20 записей</span>
+                    </div>
+                    <div class="card-body p-0">
+                      <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                          <thead class="table-light text-muted small">
+                            <tr>
+                              <th>Пользователь</th>
+                              <th>Telegram ID</th>
+                              <th>Причина</th>
+                              <th>Детали</th>
+                              <th>Действие</th>
+                              <th>Дата</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${archivedBlocked.length > 0 ? archivedBlocked.map(generateArchivedRow).join('') : '<tr><td colspan="6" class="text-center text-muted py-3">Архив пуст</td></tr>'}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1158,15 +1257,20 @@ export const startAdminServer = (telegramClient) => {
               
               console.log('Delete button clicked for spot:', id, source, hasMsgId);
 
-              let warningHtml = 'Спот будет удален из <b>нашей локальной базы данных</b>.<br>';
-              if (hasMsgId) warningHtml += 'Сообщение также будет стерто из нашего Telegram-канала.<br>';
-              if (source === 'cluster') warningHtml += '<br><span style="color: #d33;"><b>Внимание:</b> Это глобальный спот из кластера POTA. Мы не можем удалить его с сайта <i>pota.app</i> (API не позволяет). Он удалится только у нас.</span>';
+              let warningHtml = 'Спот будет удален из <b>нашей локальной базы данных SQLite</b>.<br>';
+              if (hasMsgId) {
+                warningHtml += 'Сообщение также будет <b>удалено и откреплено из Telegram-канала</b>.<br>';
+              } else {
+                warningHtml += '<span class="text-muted small">(В Telegram-канале сообщение отсутствует либо уже удалено)</span><br>';
+              }
+              if (source === 'cluster' || source === 'cluster_muted') {
+                warningHtml += '<br><span style="color: #d33;"><b>Внимание:</b> Это глобальный спот из кластера POTA. Мы не можем удалить его с сайта <i>pota.app</i> (API не позволяет). Он удалится только у нас.</span>';
+              }
 
               let isConfirmed = false;
               if (typeof Swal === 'undefined') {
-                // Fallback if CDN is blocked
                 const plainText = warningHtml.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ');
-                isConfirmed = confirm("Удалить спот?\\n\\n" + plainText);
+                isConfirmed = confirm("Удалить спот?\n\n" + plainText);
               } else {
                 const result = await Swal.fire({
                   title: 'Удалить спот?',
@@ -1204,6 +1308,97 @@ export const startAdminServer = (telegramClient) => {
             }
           }
 
+          async function clearAllSpots() {
+            let isConfirmed = false;
+            if (typeof Swal === 'undefined') {
+              isConfirmed = confirm('Очистить все споты из локальной БД SQLite?');
+            } else {
+              const result = await Swal.fire({
+                title: 'Очистить все споты из БД?',
+                html: 'Все записи о спотах будут <b>безвозвратно удалены из локальной базы данных SQLite</b>.<br><small class="text-muted">(Сообщения в Telegram-канале при этом не затрагиваются)</small>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Да, очистить всё!',
+                cancelButtonText: 'Отмена'
+              });
+              isConfirmed = result.isConfirmed;
+            }
+
+            if (isConfirmed) {
+              try {
+                const res = await fetch('/api/spots/clear-all', { method: 'POST' });
+                if (res.ok) {
+                  if (Toast) Toast.fire({ icon: 'success', title: 'База спотов очищена!' });
+                  else alert('База спотов очищена!');
+                  loadSpots();
+                } else {
+                  throw new Error('Server error: ' + res.status);
+                }
+              } catch (err) {
+                console.error('Clear all spots error:', err);
+                if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка при очистке спотов' });
+                else alert('Ошибка при очистке спотов');
+              }
+            }
+          }
+
+          async function muteSpotCallsign(btn) {
+            const callsign = (btn.getAttribute('data-callsign') || '').trim().toUpperCase();
+            if (!callsign) return;
+
+            let reason = 'Спам из ленты спотов';
+            let isConfirmed = false;
+
+            if (typeof Swal === 'undefined') {
+              const inputReason = prompt('Внести позывной ' + callsign + ' в список исключений вещания (бан)? Укажите причину:', reason);
+              if (inputReason !== null) {
+                reason = inputReason.trim() || reason;
+                isConfirmed = true;
+              }
+            } else {
+              const result = await Swal.fire({
+                title: 'Внести ' + callsign + ' в бан?',
+                text: 'Позывной ' + callsign + ' будет добавлен в список исключений вещания. Его споты перестанут транслироваться в Telegram-канал и группу.',
+                input: 'text',
+                inputValue: reason,
+                inputLabel: 'Причина внесения в исключения:',
+                showCancelButton: true,
+                confirmButtonColor: '#ffc107',
+                confirmButtonText: 'Внести в исключения',
+                cancelButtonText: 'Отмена'
+              });
+              if (result.isConfirmed) {
+                reason = (result.value || '').trim() || reason;
+                isConfirmed = true;
+              }
+            }
+
+            if (isConfirmed) {
+              try {
+                const res = await fetch('/admin/muted-callsigns/add-ajax', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ callsign, reason })
+                });
+                if (res.ok) {
+                  btn.className = 'btn btn-sm btn-secondary disabled me-1';
+                  btn.innerHTML = '🔇 В бане';
+                  btn.disabled = true;
+                  if (Toast) Toast.fire({ icon: 'success', title: 'Позывной ' + callsign + ' добавлен в бан вещания!' });
+                  else alert('Позывной ' + callsign + ' добавлен в бан вещания!');
+                } else {
+                  throw new Error('Server error: ' + res.status);
+                }
+              } catch (err) {
+                console.error('Mute callsign error:', err);
+                if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка добавления в бан' });
+                else alert('Ошибка добавления в бан');
+              }
+            }
+          }
+
           async function loadSpots() {
             // Prevent refreshing table while user is confirming a deletion to avoid UI glitches
             if (typeof Swal !== 'undefined' && Swal.isVisible()) return;
@@ -1216,25 +1411,127 @@ export const startAdminServer = (telegramClient) => {
                   const dateStr = new Date(s.created_at).toLocaleString('ru-RU');
                   const msgAttr = s.msg_id ? 'true' : '';
                   const sourceAttr = s.source || '';
+
+                  let sourceBadge = escapeHtmlClient(sourceAttr);
+                  if (sourceAttr.includes('tma') && !sourceAttr.includes('guest')) {
+                    sourceBadge = '<span class="badge bg-primary">📱 ' + escapeHtmlClient(sourceAttr) + '</span>';
+                  } else if (sourceAttr.includes('guest')) {
+                    sourceBadge = '<span class="badge bg-info text-dark">🌐 ' + escapeHtmlClient(sourceAttr) + '</span>';
+                  } else if (sourceAttr === 'bot') {
+                    sourceBadge = '<span class="badge bg-secondary">🤖 Бот</span>';
+                  } else if (sourceAttr === 'cluster') {
+                    sourceBadge = '<span class="badge bg-dark">📡 Кластер</span>';
+                  } else if (sourceAttr === 'cluster_muted') {
+                    sourceBadge = '<span class="badge bg-secondary text-light">🔇 cluster (muted)</span>';
+                  } else if (sourceAttr === 'local') {
+                    sourceBadge = '<span class="badge bg-primary">📱 TMA</span>';
+                  }
+
+                  const ipDisplay = s.ip_address 
+                    ? '<span class="badge bg-light text-secondary font-monospace border">' + escapeHtmlClient(s.ip_address) + '</span>'
+                    : '<span class="text-muted small">—</span>';
+
+                  const muteBtn = '<button type="button" class="btn btn-sm btn-outline-warning mute-spot-call-btn me-1" data-callsign="' + escapeHtmlClient(s.callsign) + '" title="Внести позывной в исключения вещания (бан)">В бан</button>';
+                  const delBtn = '<button type="button" class="btn btn-sm btn-outline-danger delete-spot-btn" data-id="' + s.id + '" data-source="' + escapeHtmlClient(sourceAttr) + '" data-msg="' + msgAttr + '" title="Удалить спот из БД (и канала)">Удалить</button>';
+
                   html += '<tr id="spot-row-' + s.id + '">';
-                  html += '<td><strong>' + s.callsign + '</strong></td>';
-                  html += '<td><a href="https://next.pota.app/park/' + s.reference + '" target="_blank">' + s.reference + '</a></td>';
-                  html += '<td>' + (s.frequency || '') + ' ' + (s.mode || '') + '</td>';
-                  html += '<td>' + sourceAttr + '</td>';
+                  html += '<td><strong>' + escapeHtmlClient(s.callsign) + '</strong></td>';
+                  html += '<td><a href="https://next.pota.app/park/' + escapeHtmlClient(s.reference) + '" target="_blank">' + escapeHtmlClient(s.reference) + '</a></td>';
+                  html += '<td>' + escapeHtmlClient(s.frequency || '') + ' ' + escapeHtmlClient(s.mode || '') + '</td>';
+                  html += '<td>' + sourceBadge + '</td>';
+                  html += '<td>' + ipDisplay + '</td>';
                   html += '<td>' + dateStr + '</td>';
-                  html += '<td><button type="button" class="btn btn-sm btn-outline-danger delete-spot-btn" data-id="' + s.id + '" data-source="' + sourceAttr + '" data-msg="' + msgAttr + '">Удалить</button></td>';
+                  html += '<td class="text-nowrap">' + muteBtn + delBtn + '</td>';
                   html += '</tr>';
                 });
                 const tbody = document.getElementById('spots-tbody');
-                if (tbody) tbody.innerHTML = html || '<tr><td colspan="6" class="text-center">Спотов пока нет</td></tr>';
+                if (tbody) tbody.innerHTML = html || '<tr><td colspan="7" class="text-center">Спотов пока нет</td></tr>';
               }
             } catch (e) {
               console.error(e);
             }
           }
 
+          async function archiveAllShield() {
+            let isConfirmed = false;
+            if (typeof Swal === 'undefined') {
+              isConfirmed = confirm('Перенести все активные инциденты в архив (хранятся до 20 последних)?');
+            } else {
+              const result = await Swal.fire({
+                title: 'Архивировать все записи?',
+                html: 'Все активные инциденты будут помечены как прочитанные и перенесены в архив.<br><small class="text-muted">В архиве будут сохранены до 20 последних инцидентов, более старые очистятся.</small>',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#ffc107',
+                confirmButtonText: 'Да, в архив!',
+                cancelButtonText: 'Отмена'
+              });
+              isConfirmed = result.isConfirmed;
+            }
+
+            if (isConfirmed) {
+              try {
+                const res = await fetch('/api/shield/archive-all', { method: 'POST' });
+                if (res.ok) {
+                  if (Toast) Toast.fire({ icon: 'success', title: 'Инциденты перенесены в архив' });
+                  setTimeout(() => location.reload(), 600);
+                } else {
+                  throw new Error('Server error: ' + res.status);
+                }
+              } catch (err) {
+                console.error('Archive shield error:', err);
+                if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка архивации' });
+              }
+            }
+          }
+
+          async function clearAllShield() {
+            let isConfirmed = false;
+            if (typeof Swal === 'undefined') {
+              isConfirmed = confirm('Полностью очистить весь журнал инцидентов RU-POTA Shield?');
+            } else {
+              const result = await Swal.fire({
+                title: 'Очистить весь журнал?',
+                html: 'Все записи инцидентов антиспам-щита (включая архив) будут <b>безвозвратно удалены</b>.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'Да, удалить всё!',
+                cancelButtonText: 'Отмена'
+              });
+              isConfirmed = result.isConfirmed;
+            }
+
+            if (isConfirmed) {
+              try {
+                const res = await fetch('/api/shield/clear-all', { method: 'POST' });
+                if (res.ok) {
+                  if (Toast) Toast.fire({ icon: 'success', title: 'Журнал полностью очищен' });
+                  setTimeout(() => location.reload(), 600);
+                } else {
+                  throw new Error('Server error: ' + res.status);
+                }
+              } catch (err) {
+                console.error('Clear shield error:', err);
+                if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка очистки' });
+              }
+            }
+          }
+
           // Global event listener for spots and users deletion
           document.addEventListener('click', function(e) {
+            const clearSpotsBtn = e.target.closest('#btn-clear-all-spots');
+            if (clearSpotsBtn) {
+              e.preventDefault();
+              clearAllSpots();
+              return;
+            }
+            const muteSpotBtn = e.target.closest('.mute-spot-call-btn');
+            if (muteSpotBtn) {
+              e.preventDefault();
+              muteSpotCallsign(muteSpotBtn);
+              return;
+            }
             const spotBtn = e.target.closest('.delete-spot-btn');
             if (spotBtn) {
               e.preventDefault();
@@ -1275,6 +1572,18 @@ export const startAdminServer = (telegramClient) => {
             if (markAllBtn) {
               e.preventDefault();
               markAllRead();
+              return;
+            }
+            const archiveShieldBtn = e.target.closest('#btn-archive-all-shield');
+            if (archiveShieldBtn) {
+              e.preventDefault();
+              archiveAllShield();
+              return;
+            }
+            const clearShieldBtn = e.target.closest('#btn-clear-all-shield');
+            if (clearShieldBtn) {
+              e.preventDefault();
+              clearAllShield();
               return;
             }
           });
@@ -2993,8 +3302,20 @@ export const startAdminServer = (telegramClient) => {
 
   // API for spots
   app.get('/api/spots', requireAuth, (req, res) => {
-    const spotsStmt = db.prepare("SELECT id, callsign, reference, frequency, mode, comment, source, created_at, msg_id FROM spots WHERE source != 'cluster_throttled' ORDER BY created_at DESC LIMIT 100");
+    const spotsStmt = db.prepare("SELECT id, callsign, reference, frequency, mode, comment, source, ip_address, created_at, msg_id FROM spots WHERE source != 'cluster_throttled' ORDER BY created_at DESC LIMIT 100");
     res.json(spotsStmt.all());
+  });
+
+  // Clear all spots from SQLite DB
+  app.post('/api/spots/clear-all', requireAuth, async (req, res) => {
+    try {
+      db.prepare('DELETE FROM spots').run();
+      console.log('[Web Admin] 🗑️ База спотов полностью очищена администратором');
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[Web Admin] Ошибка очистки спотов:', err);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // Spot deletion route
@@ -3053,6 +3374,27 @@ export const startAdminServer = (telegramClient) => {
       }
     }
     res.redirect('/#list-spots');
+  });
+
+  // Add muted broadcast callsign via AJAX (1-click from spots table)
+  app.post('/admin/muted-callsigns/add-ajax', requireAuth, (req, res) => {
+    const callsign = (req.body?.callsign || '').trim().toUpperCase();
+    const reason = (req.body?.reason || 'Добавлен из ленты спотов').trim();
+    if (!callsign) {
+      return res.status(400).json({ error: 'Позывной не указан' });
+    }
+    try {
+      db.prepare(`
+        INSERT INTO muted_broadcast_callsigns (callsign, reason) 
+        VALUES (?, ?) 
+        ON CONFLICT(callsign) DO UPDATE SET reason = excluded.reason
+      `).run(callsign, reason);
+      console.log(`[Web Admin] 🔇 Добавлен позывной в список исключений вещания (из спотов): ${callsign} (${reason})`);
+      res.json({ success: true, callsign, reason });
+    } catch (e) {
+      console.error('[Web Admin] Ошибка добавления исключения:', e.message);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   // Delete muted broadcast callsign
@@ -3220,17 +3562,52 @@ export const startAdminServer = (telegramClient) => {
   // RU-POTA Shield Mark All as Read
   app.post('/api/shield/read-all', requireAuth, (req, res) => {
     try {
-      db.prepare('UPDATE blocked_users SET is_read = 1 WHERE is_read = 0').run();
+      db.prepare('UPDATE blocked_users SET is_read = 1 WHERE is_read = 0 AND is_archived = 0').run();
       res.json({ success: true, unreadCount: 0 });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  // RU-POTA Shield API for incidents
+  // RU-POTA Shield Archive All Incidents
+  app.post('/api/shield/archive-all', requireAuth, (req, res) => {
+    try {
+      db.prepare('UPDATE blocked_users SET is_archived = 1, is_read = 1 WHERE is_archived = 0').run();
+      // Keep only top 20 latest archived incidents, delete older ones
+      db.prepare(`
+        DELETE FROM blocked_users 
+        WHERE is_archived = 1 
+          AND id NOT IN (
+            SELECT id FROM blocked_users 
+            WHERE is_archived = 1 
+            ORDER BY created_at DESC 
+            LIMIT 20
+          )
+      `).run();
+      console.log('[RU-POTA Shield] 📦 Все активные инциденты перенесены в архив (макс. 20 записей)');
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[Shield Archive Error]:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // RU-POTA Shield Clear All Incidents
+  app.post('/api/shield/clear-all', requireAuth, (req, res) => {
+    try {
+      db.prepare('DELETE FROM blocked_users').run();
+      console.log('[RU-POTA Shield] 🗑️ Журнал инцидентов полностью очищен');
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[Shield Clear Error]:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // RU-POTA Shield API for incidents (active only)
   app.get('/api/shield/blocked', requireAuth, (req, res) => {
     try {
-      const rows = db.prepare("SELECT id, telegram_id, first_name, last_name, username, reason, details, action, is_read, created_at FROM blocked_users ORDER BY created_at DESC LIMIT 100").all();
+      const rows = db.prepare("SELECT id, telegram_id, first_name, last_name, username, reason, details, action, is_read, is_archived, created_at FROM blocked_users WHERE is_archived = 0 ORDER BY created_at DESC LIMIT 100").all();
       res.json(rows);
     } catch (err) {
       res.status(500).json({ error: err.message });

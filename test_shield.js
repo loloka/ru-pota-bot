@@ -6,7 +6,9 @@ import {
   isUserBlockedInDb,
   pendingCaptchas,
   escapeHtml,
-  formatDurationRu
+  formatDurationRu,
+  getAllowedBridgeBots,
+  isBridgeMessage
 } from './src/bot/middlewares/antiSpam.js';
 import { normalizeChatId } from './src/bot/middlewares/chatFilter.js';
 import { detectMode, normalizeFreq } from './src/services/clusterWorker.js';
@@ -108,6 +110,40 @@ assert(checkNewbieLinks('Привет всем!', [], true) === true, 'Catches f
 assert(checkNewbieLinks('Вопрос к @scambot', [{ type: 'mention', offset: 9, length: 8 }]) === true, 'Catches external @mention');
 assert(checkNewbieLinks('Бот доступен тут: @ru_pota_bot', [{ type: 'mention', offset: 18, length: 12 }]) === false, 'Allows official @ru_pota_bot mention');
 assert(checkNewbieLinks('Всем привет, я начинающий радиолюбитель!') === false, 'Allows clean newcomer message');
+
+// 3b. Bridge Bots Exemption Tests (MaxTelegramBridgeBot)
+console.log('\n[3b] Testing Bridge Bot Exemptions (MaxTelegramBridgeBot)...');
+assert(getAllowedBridgeBots().includes('maxtelegrambridgebot'), 'Default allowed bridges contains maxtelegrambridgebot');
+
+const bridgeMsgDirect = { from: { username: 'MaxTelegramBridgeBot' }, message: { text: 'Hello from Max with link https://example.com' } };
+assert(isBridgeMessage(bridgeMsgDirect) === true, 'Recognizes direct message from MaxTelegramBridgeBot');
+
+const bridgeMsgViaBot = { from: { id: 12345, username: 'someuser' }, message: { via_bot: { username: 'MaxTelegramBridgeBot' }, text: 'Look at https://pota.app' } };
+assert(isBridgeMessage(bridgeMsgViaBot) === true, 'Recognizes message sent via inline MaxTelegramBridgeBot');
+
+const bridgeMsgForward = { from: { id: 12345 }, message: { forward_from: { username: 'MaxTelegramBridgeBot' }, text: 'Forwarded link https://example.com' } };
+assert(isBridgeMessage(bridgeMsgForward) === true, 'Recognizes message forwarded from MaxTelegramBridgeBot');
+
+const bridgeMsgTag = { from: { id: 12345 }, message: { text: '[Max] User: Check this link https://pota.app via @MaxTelegramBridgeBot' } };
+assert(isBridgeMessage(bridgeMsgTag) === true, 'Recognizes bridge signature via @MaxTelegramBridgeBot');
+
+const regularUserMsg = { from: { id: 12345, username: 'regular_ham' }, message: { text: 'Just a normal link https://example.com' } };
+assert(isBridgeMessage(regularUserMsg) === false, 'Does not exempt regular user messages');
+
+// Mentioning @MaxTelegramBridgeBot should not be treated as spam channel mention
+function checkMentionExemption(text, entities = []) {
+  const botUsername = 'ru_pota_bot';
+  const bridges = getAllowedBridgeBots();
+  return entities.some(e => {
+    if (e.type === 'mention') {
+      const mentionText = text.substring(e.offset, e.offset + e.length).toLowerCase().replace('@', '');
+      return mentionText !== botUsername && !bridges.includes(mentionText);
+    }
+    return false;
+  });
+}
+assert(checkMentionExemption('Привет @MaxTelegramBridgeBot', [{ type: 'mention', offset: 7, length: 21 }]) === false, 'Allows @MaxTelegramBridgeBot mention without penalty');
+assert(checkMentionExemption('Заходи на @spammer_channel', [{ type: 'mention', offset: 10, length: 16 }]) === true, 'Still catches real spam channel mention');
 
 // 4. Echelon 4: Scam Stop-Phrases Regex Tests
 console.log('\n[4] Testing Scam Text Patterns...');

@@ -1,8 +1,18 @@
+import { getAllowedBridgeBots } from './antiSpam.js';
+
 const userLimits = new Map();
 
 export const rateLimit = (options = { window: 3000, limit: 3 }) => {
   return (ctx, next) => {
     if (!ctx.from) return next();
+    
+    // Exempt bridge bots/messages from rate limits so relayed bursts are not dropped
+    const fromUser = (ctx.from.username || '').toLowerCase();
+    const viaBot = (ctx.message?.via_bot?.username || '').toLowerCase();
+    const bridges = getAllowedBridgeBots();
+    if (bridges.includes(fromUser) || (viaBot && bridges.includes(viaBot))) {
+      return next();
+    }
     
     const now = Date.now();
     const userId = ctx.from.id;

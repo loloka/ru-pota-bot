@@ -122,6 +122,76 @@ export const isUserAdmin = async (ctx, userId) => {
 };
 
 /**
+ * List of allowed bridge bots and integration services exempt from newcomer link quarantine
+ */
+export const getAllowedBridgeBots = () => {
+  const list = ['maxtelegrambridgebot'];
+  if (process.env.ALLOWED_BRIDGE_BOTS) {
+    process.env.ALLOWED_BRIDGE_BOTS.split(',').forEach(b => {
+      const clean = b.trim().replace(/^@/, '').toLowerCase();
+      if (clean && !list.includes(clean)) {
+        list.push(clean);
+      }
+    });
+  }
+  return list;
+};
+
+/**
+ * Check if the message is sent from or bridged through an allowed bridge bot (e.g. MaxTelegramBridgeBot)
+ * @param {Object} ctx 
+ * @returns {boolean}
+ */
+export const isBridgeMessage = (ctx) => {
+  if (!ctx) return false;
+  const msg = ctx.message;
+  const bridges = getAllowedBridgeBots();
+
+  // 1. Direct sender username
+  const fromUsername = (ctx.from?.username || '').toLowerCase();
+  if (fromUsername && bridges.includes(fromUsername)) {
+    return true;
+  }
+
+  if (!msg) return false;
+
+  // 2. Sent via inline bot (e.g. via @MaxTelegramBridgeBot)
+  const viaBot = (msg.via_bot?.username || '').toLowerCase();
+  if (viaBot && bridges.includes(viaBot)) {
+    return true;
+  }
+
+  // 3. Forwarded from bridge bot or chat
+  const fwdFrom = (msg.forward_from?.username || '').toLowerCase();
+  if (fwdFrom && bridges.includes(fwdFrom)) {
+    return true;
+  }
+  const fwdChat = (msg.forward_from_chat?.username || '').toLowerCase();
+  if (fwdChat && bridges.includes(fwdChat)) {
+    return true;
+  }
+
+  // 4. Sender chat (if sent on behalf of channel/chat)
+  const senderChat = (msg.sender_chat?.username || '').toLowerCase();
+  if (senderChat && bridges.includes(senderChat)) {
+    return true;
+  }
+
+  // 5. Message text / caption contains bridge prefix or signature
+  const text = msg.text || msg.caption || '';
+  if (text) {
+    for (const b of bridges) {
+      const regex = new RegExp(`(?:via\\s*@?${b}|@${b}[:\\s]|\\[${b}\\])`, 'i');
+      if (regex.test(text)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+/**
  * Checks if user was previously banned in RU-POTA Shield
  */
 export const isUserBlockedInDb = (telegramId) => {
@@ -284,12 +354,13 @@ export const handleNewChatMembers = async (ctx) => {
       }
     }
 
-    // Whitelist ("Зелёный коридор"): approved radio amateurs & chat admins
+    // Whitelist ("Зелёный коридор"): approved radio amateurs, chat admins & bridge bots
     const isApproved = isUserApproved(member.id);
     const isAdmin = await isUserAdmin(ctx, member.id);
+    const isBridge = getAllowedBridgeBots().includes((member.username || '').toLowerCase());
 
-    if (isAdmin) {
-      console.log(`\x1b[32m[Shield]\x1b[0m 👑 Участник ${fromUser} (ID: ${member.id}) является администратором группы (Зелёный коридор)`);
+    if (isAdmin || isBridge) {
+      console.log(`\x1b[32m[Shield]\x1b[0m 👑 Участник ${fromUser} (ID: ${member.id}) входит через Зелёный коридор (админ/мост)`);
       continue;
     }
 
@@ -554,13 +625,14 @@ export const shieldMessageGuard = async (ctx, next) => {
     return next();
   }
 
-  // Never touch Telegram service notifications, anonymous admin, or linked channel forwards
+  // Never touch Telegram service notifications, anonymous admin, linked channel forwards, or trusted bridge messages
   if (
     userId === 777000 ||
     userId === 1087968824 ||
     ctx.from?.is_bot ||
     msg.is_automatic_forward ||
-    (msg.sender_chat && ctx.chat?.id === msg.sender_chat.id)
+    (msg.sender_chat && ctx.chat?.id === msg.sender_chat.id) ||
+    isBridgeMessage(ctx)
   ) {
     return next();
   }
@@ -624,12 +696,13 @@ export const shieldMessageGuard = async (ctx, next) => {
     const hasRawLink = /(?:https?:\/\/|t\.me\/|telegram\.me\/)/i.test(text);
     const isForward = !!(msg.forward_from || msg.forward_from_chat || msg.forward_sender_name || msg.forward_date);
     
-    // Check channel mentions: e.g. @somechannel (allow @ru_pota_bot or bot's own username)
+    // Check channel mentions: e.g. @somechannel (allow @ru_pota_bot or bot's own username or bridge bots)
     const botUsername = (ctx.botInfo?.username || 'ru_pota_bot').toLowerCase();
+    const bridgeBots = getAllowedBridgeBots();
     const hasChannelMention = entities.some(e => {
       if (e.type === 'mention') {
         const mentionText = text.substring(e.offset, e.offset + e.length).toLowerCase().replace('@', '');
-        return mentionText !== botUsername;
+        return mentionText !== botUsername && !bridgeBots.includes(mentionText);
       }
       return false;
     });

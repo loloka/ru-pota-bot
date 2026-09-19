@@ -311,13 +311,13 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      2. Название для POTA (EN) <span className="text-emerald-500">*</span>
+                      2. Название для POTA (EN: Перевод / Транскрипция) <span className="text-emerald-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={form.nameEn || ''}
                       onChange={(e) => handleInputChange('nameEn', e.target.value)}
-                      placeholder="напр. Losinyy Ostrov"
+                      placeholder="напр. Lakeside (Priozernyy)"
                       className="w-full px-3 py-2 text-xs font-medium text-emerald-700 dark:text-emerald-300 rounded-xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                     />
                   </div>

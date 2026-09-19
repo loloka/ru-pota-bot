@@ -338,31 +338,6 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                       placeholder="напр. State Nature Reserve"
                       className="w-full px-3 py-2 text-xs font-medium text-emerald-700 dark:text-emerald-300 rounded-xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                     />
-                    {/* Quick Park Type Chips */}
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {[
-                        'State Nature Reserve',
-                        'Nature Monument',
-                        'National Park',
-                        'Nature Park',
-                        'Protected Landscape',
-                        'Botanical Garden',
-                        'State Marine Reserve'
-                      ].map((t) => (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => handleInputChange('statusEn', t)}
-                          className={`px-1.5 py-0.5 text-[10px] rounded-md font-medium transition-all ${
-                            form.statusEn === t
-                              ? 'bg-emerald-600 text-white shadow-xs'
-                              : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-600'
-                          }`}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
                   </div>
 
                   <div>
@@ -411,71 +386,77 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                   </div>
                 </div>
 
-                  {/* Coordinates Row (4 decimal precision per R2BBX) */}
-                  <div className="grid grid-cols-2 gap-2 relative">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        7. Координата 1 (Широта, Lat) <span className="text-emerald-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={form.lat}
-                        onChange={(e) => handleInputChange('lat', e.target.value)}
-                        placeholder="55.8772"
-                        className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex justify-between">
-                        <span>8. Координата 2 (Долгота)</span>
-                        <button 
-                          type="button" 
-                          onClick={() => setShowCoordPicker(true)}
-                          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-bold px-1 rounded hover:bg-emerald-500/10 transition-colors flex items-center gap-1"
-                          title="Указать на карте"
-                        >
-                          <MapPin className="w-3.5 h-3.5" /> На карте
-                        </button>
-                      </label>
-                      <input
-                        type="text"
-                        value={form.lon}
-                        onChange={(e) => handleInputChange('lon', e.target.value)}
-                        placeholder="37.7818"
-                        className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                      />
-                    </div>
+                {/* Coordinates Row (4 decimal precision per R2BBX) */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      7. Координата 1 (Широта, Lat) <span className="text-emerald-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.lat}
+                      onChange={(e) => handleInputChange('lat', e.target.value)}
+                      placeholder="55.8772"
+                      className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      8. Координата 2 (Долгота, Lon) <span className="text-emerald-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.lon}
+                      onChange={(e) => handleInputChange('lon', e.target.value)}
+                      placeholder="37.7818"
+                      className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    />
+                  </div>
+                </div>
+
+                {/* Map Tools & Verification Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                  <div className="flex items-center text-xs">
+                    {loading ? (
+                      <span className="flex items-center gap-1.5 text-slate-400 text-[11px]">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
+                        Запрос координат...
+                      </span>
+                    ) : form.lat && form.lon ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        Координаты указаны (4 знака)
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400 text-[11px] font-medium">
+                        Координаты отсутствуют в базе
+                      </span>
+                    )}
                   </div>
 
-                {/* Yandex Map Verification Helper */}
-                <div className="flex items-center justify-between text-xs pt-0.5">
-                  {loading ? (
-                    <span className="flex items-center gap-1.5 text-slate-400 text-[11px]">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
-                      Запрос координат из реестра...
-                    </span>
-                  ) : form.lat && form.lon ? (
-                    <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-medium flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" />
-                      Координаты указаны (4 знака)
-                    </span>
-                  ) : (
-                    <span className="text-amber-600 dark:text-amber-400 text-[11px] font-medium">
-                      Координаты отсутствуют в базе
-                    </span>
-                  )}
-
-                  {yandexInfo && (
-                    <a
-                      href={yandexInfo.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCoordPicker(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-all active:scale-95 shadow-xs"
+                      title="Выбрать или уточнить точку на интерактивной карте"
                     >
-                      <Navigation className="w-3 h-3" />
-                      {yandexInfo.label}
-                    </a>
-                  )}
+                      <MapPin className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>На карте</span>
+                    </button>
+
+                    {yandexInfo && (
+                      <a
+                        href={yandexInfo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/25 transition-all active:scale-95 shadow-xs"
+                      >
+                        <Navigation className="w-3.5 h-3.5 text-amber-500" />
+                        <span>{yandexInfo.label}</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
 
                 <div>

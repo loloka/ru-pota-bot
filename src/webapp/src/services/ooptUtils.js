@@ -27,25 +27,54 @@ export function transliterateRuToEn(str) {
 }
 
 const BUREAUCRATIC_PATTERNS = [
+  /федерального государственного автономного образовательного учреждения высшего образования/gi,
+  /федерального государственного автономного образовательного учреждения высшего профессионального образования/gi,
+  /федерального государственного автономного образовательного учреждения/gi,
+  /федерального государственного автономного научного учреждения/gi,
+  /федерального государственного автономного учреждения/gi,
   /федерального государственного бюджетного образовательного учреждения высшего образования/gi,
   /федерального государственного бюджетного образовательного учреждения высшего профессионального образования/gi,
   /федерального государственного бюджетного образовательного учреждения/gi,
+  /федерального государственного бюджетного научного учреждения/gi,
   /федерального государственного бюджетного учреждения науки/gi,
   /федерального государственного бюджетного учреждения/gi,
+  /федерального государственного казенного учреждения/gi,
   /государственного бюджетного образовательного учреждения высшего образования/gi,
+  /государственного бюджетного образовательного учреждения высшего профессионального образования/gi,
   /государственного бюджетного образовательного учреждения/gi,
   /государственного образовательного учреждения высшего профессионального образования/gi,
   /государственного образовательного учреждения/gi,
+  /государственного бюджетного учреждения/gi,
+  /государственного казенного учреждения/gi,
+  /государственного автономного учреждения/gi,
+  /федерального бюджетного учреждения/gi,
+  /федерального автономного учреждения/gi,
+  /федерального казенного учреждения/gi,
   /высшего профессионального образования/gi,
   /высшего образования/gi,
   /образовательного учреждения/gi,
+  /научного учреждения/gi,
   /бюджетного учреждения/gi,
+  /автономного учреждения/gi,
+  /казенного учреждения/gi,
+  /обособленного подразделения/gi,
+  /структурного подразделения/gi,
+  /федерального исследовательского центра/gi,
+  /исследовательского центра/gi,
+  /научного центра/gi,
   /Сибирского отделения Российской академии наук/gi,
   /Дальневосточного отделения Российской академии наук/gi,
   /Уральского отделения Российской академии наук/gi,
   /Российской академии наук/gi,
   /Российской академии медицинских наук/gi,
   /Российской академии сельскохозяйственных наук/gi,
+  /федерального государственного автономного/gi,
+  /федерального государственного бюджетного/gi,
+  /федерального государственного казенного/gi,
+  /федерального государственного/gi,
+  /государственного бюджетного/gi,
+  /государственного автономного/gi,
+  /государственного казенного/gi,
 ];
 
 const CATEGORY_PREFIXES = [
@@ -58,9 +87,17 @@ const CATEGORY_PREFIXES = [
   'Природный парк',
   'Памятник природы',
   'Охраняемый природный ландшафт',
+  'Учебный Ботанический сад',
+  'Учебный ботанический сад',
+  'Главный ботанический сад',
+  'Главного ботанического сада',
+  'Ботанический сад-институт',
   'Дендрологический парк и ботанический сад',
   'Дендрологический парк',
-  'Ботанический сад'
+  'Дендрологический сад',
+  'Ботанический сад',
+  'Дендрарий',
+  'Чебоксарский филиал'
 ];
 
 export function deduceCategory(title, existingCategory) {
@@ -155,7 +192,20 @@ const RAW_GEOGRAPHIC_TERMS = [
   ['голуб(ой|ая|ое|ые)', 'Blue'],
   ['золот(ой|ая|ое|ые)', 'Golden'],
   ['серебрян(ый|ая|ое|ые)', 'Silver'],
-  ['свят(ой|ая|ое|ые)', 'Holy']
+  ['свят(ой|ая|ое|ые)', 'Holy'],
+
+  // Academic & Institutional
+  ['государственн(ый|ая|ое|ые|ого|ому|ом)', 'State'],
+  ['федеральн(ый|ая|ое|ые|ого|ому|ом)', 'Federal'],
+  ['университет(а|у|ом|е)?', 'University'],
+  ['институт(а|у|ом|е)?', 'Institute'],
+  ['академи(я|и|ю|ей)', 'Academy'],
+  ['аграрн(ый|ая|ое|ые|ого|ому|ом)', 'Agrarian'],
+  ['политехническ(ий|ая|ое|ие|ого|ому|ом)', 'Polytechnic'],
+  ['медицинск(ий|ая|ое|ие|ого|ому|ом)', 'Medical'],
+  ['педагогическ(ий|ая|ое|ие|ого|ому|ом)', 'Pedagogical'],
+  ['технологическ(ий|ая|ое|ие|ого|ому|ом)', 'Technological'],
+  ['приволжск(ий|ая|ое|ие|ого|ому|ом)', 'Volga Region']
 ];
 
 // Compile with Cyrillic-safe lookahead and lookbehind word boundaries
@@ -183,21 +233,37 @@ export function getEnglishCategorySuffix(category) {
 export function cleanOoptName(rawTitle, category) {
   let name = (rawTitle || '').trim();
 
-  // Strip quotes if they enclose the full name or part
+  // 1. Strip bureaucratic junk first
+  for (const pat of BUREAUCRATIC_PATTERNS) {
+    name = name.replace(pat, ' ');
+  }
+  name = name.replace(/\s+/g, ' ').trim();
+
+  // 2. Category prefix stripping
+  for (const p of CATEGORY_PREFIXES) {
+    if (name.toLowerCase().startsWith(p.toLowerCase())) {
+      const rem = name.substring(p.length).trim().replace(/^[-–—,: ]+/, '').trim();
+      if (rem.length > 2) {
+        name = rem;
+        break;
+      }
+    }
+  }
+
+  // 3. Extract quotes if present
   const quoteMatch = name.match(/["«]([^"»]+)["»]/);
   if (quoteMatch && quoteMatch[1].length > 3) {
-    const prefix = name.substring(0, quoteMatch.index).trim();
-    if (prefix.length < 50) {
+    const beforeQuote = name.substring(0, quoteMatch.index).trim().replace(/^[-–—,: ]+/, '').trim();
+    if (!beforeQuote || beforeQuote.length < 5 || /^(при|на|базе|отделения|института|центра)\b/i.test(beforeQuote)) {
+      name = quoteMatch[1].trim();
+    } else if (beforeQuote.includes('им.') || beforeQuote.toLowerCase().includes('имени')) {
+      name = beforeQuote + ' (' + quoteMatch[1].trim() + ')';
+    } else {
       name = quoteMatch[1].trim();
     }
   }
 
-  // Strip bureaucratic junk
-  for (const pat of BUREAUCRATIC_PATTERNS) {
-    name = name.replace(pat, ' ');
-  }
-
-  // Common institutional acronyms & cleanups
+  // 4. Common institutional acronyms & cleanups
   name = name.replace(/["«]/g, '').replace(/["»]/g, '')
     .replace(/Московского государственного университета/gi, 'МГУ')
     .replace(/Московский государственный университет/gi, 'МГУ')
@@ -206,7 +272,7 @@ export function cleanOoptName(rawTitle, category) {
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Category prefix stripping
+  // 5. Repeat category prefix stripping if revealed after quote extraction
   for (const p of CATEGORY_PREFIXES) {
     if (name.toLowerCase().startsWith(p.toLowerCase())) {
       const rem = name.substring(p.length).trim().replace(/^[-–—,: ]+/, '').trim();

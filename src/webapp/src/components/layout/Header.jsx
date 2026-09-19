@@ -55,12 +55,6 @@ export default function Header({
           >
             <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 dark:bg-slate-800/80 border border-emerald-500/30 shadow-glow-emerald group-hover:scale-105 transition-transform p-1 overflow-hidden">
               <img src="/app/pota-logo.png" alt="POTA Logo" className="w-full h-full object-contain select-none" />
-              <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 border border-emerald-500/50">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-              </div>
             </div>
             <div>
               <div className="flex items-center gap-1.5">

@@ -2084,33 +2084,33 @@ export const startAdminServer = (telegramClient) => {
               return w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '';
             }).join(' ').trim();
 
-            return en.replace(/\s+/g, ' ').trim();
+            return en.replace(/\\s+/g, ' ').trim();
           }
 
           function transliterateOnlyClient(cleanName) {
             if (!cleanName) return '';
             var s = cleanName.replace(/["«]/g, '').replace(/["»]/g, '').trim();
 
-            s = s.replace(/Биологического факультета МГУ им\.? М\.?В\.?\s*Ломоносова/gi, 'MSU Faculty of Biology')
-                 .replace(/МГУ им\.? М\.?В\.?\s*Ломоносова/gi, 'MSU')
+            s = s.replace(/Биологического факультета МГУ им\\.? М\\.?В\\.?\\s*Ломоносова/gi, 'MSU Faculty of Biology')
+                 .replace(/МГУ им\\.? М\\.?В\\.?\\s*Ломоносова/gi, 'MSU')
                  .replace(/МГУ/g, 'MSU')
                  .replace(/БИН РАН/g, 'BIN RAS')
                  .replace(/РАН/g, 'RAS')
                  .replace(/СО РАН/g, 'SB RAS');
 
             var en = transliterateClient(s);
-            en = en.replace(/skogo\b/gi, 'sky')
-                   .replace(/skogo gosudarstvennogo\b/gi, 'State')
-                   .replace(/gosudarstvennogo\b/gi, 'State')
-                   .replace(/pedagogicheskogo\b/gi, 'Pedagogical')
-                   .replace(/universiteta\b/gi, 'University')
-                   .replace(/instituta\b/gi, 'Institute');
+            en = en.replace(/skogo\\b/gi, 'sky')
+                   .replace(/skogo gosudarstvennogo\\b/gi, 'State')
+                   .replace(/gosudarstvennogo\\b/gi, 'State')
+                   .replace(/pedagogicheskogo\\b/gi, 'Pedagogical')
+                   .replace(/universiteta\\b/gi, 'University')
+                   .replace(/instituta\\b/gi, 'Institute');
 
             en = en.split(' ').map(function(w) {
               return w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '';
             }).join(' ').trim();
 
-            return en.replace(/\s+/g, ' ').trim();
+            return en.replace(/\\s+/g, ' ').trim();
           }
 
           function formatDualParkNameClient(cleanName, category) {

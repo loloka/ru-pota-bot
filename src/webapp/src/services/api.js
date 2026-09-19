@@ -128,10 +128,12 @@ export const api = {
 
   /**
    * Finish activation (QRT)
+   * @param {{ callsign?: string, reference?: string, frequency?: string|number, mode?: string, parkName?: string }} [data]
    */
-  async stopSpot() {
+  async stopSpot(data = {}) {
     return request('/spots/qrt', {
       method: 'POST',
+      body: JSON.stringify(data),
     });
   },
 

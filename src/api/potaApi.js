@@ -10,7 +10,7 @@ const axiosConfig = {
   baseURL: BASE_URL,
   timeout: 35000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.12 (Telegram Bot; Node.js)'
+    'User-Agent': 'RU-POTA-Bot/1.16.13 (Telegram Bot; Node.js)'
   }
 };
 
@@ -63,7 +63,14 @@ export const potaApi = {
   async getPark(reference) {
     try {
       const response = await apiClient.get(`/park/${encodeURIComponent(reference)}`);
-      return response.data;
+      const data = response.data;
+      if (data && data.name && data.parktypeDesc) {
+        const typeDesc = data.parktypeDesc.trim();
+        if (typeDesc && !data.name.toLowerCase().includes(typeDesc.toLowerCase())) {
+          data.name = `${data.name.trim()} ${typeDesc}`;
+        }
+      }
+      return data;
     } catch (error) {
       if (error.response?.status !== 404) {
         console.warn(`[POTA API] Error fetching park ${reference}:`, error.message);

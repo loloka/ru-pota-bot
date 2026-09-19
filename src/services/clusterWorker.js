@@ -195,11 +195,11 @@ export const startClusterWorker = (telegramClient) => {
         if (!lastBroadcastTime) {
           try {
             const recentRows = db.prepare(`
-              SELECT created_at, frequency, mode 
+              SELECT created_at, frequency, mode, source 
               FROM spots 
               WHERE (callsign = ? OR callsign = ? OR callsign LIKE ?)
                 AND reference = ? 
-                AND source IN ('cluster', 'bot', 'local')
+                AND source NOT IN ('cluster_muted', 'cluster_throttled')
                 AND msg_id IS NOT NULL
               ORDER BY id DESC 
               LIMIT 10
@@ -212,11 +212,13 @@ export const startClusterWorker = (telegramClient) => {
               const rowMode = detectMode(row.mode, '', rowFreqNum);
 
               const isSameMode = (rowBand === band && rowMode === mode);
-              const isSameFreq = (roundedFreq > 0 && rowRoundedFreq === roundedFreq);
+              const isSameFreq = (roundedFreq > 0 && Math.abs(rowRoundedFreq - roundedFreq) <= 5);
               const isSameBandRbn = (isRbn && rowBand === band);
+              const isLocalOrigin = (row.source !== 'cluster');
 
-              if (isSameMode || isSameFreq || isSameBandRbn) {
-                const rowTime = new Date(row.created_at + 'Z').getTime();
+              if (isSameMode || isSameFreq || isSameBandRbn || (isLocalOrigin && rowBand === band)) {
+                const dateStr = (row.created_at || '').includes('T') ? row.created_at : (row.created_at || '').replace(' ', 'T') + 'Z';
+                const rowTime = new Date(dateStr).getTime();
                 if (!isNaN(rowTime) && rowTime > lastBroadcastTime) {
                   lastBroadcastTime = rowTime;
                 }
@@ -229,9 +231,9 @@ export const startClusterWorker = (telegramClient) => {
 
         const elapsedMs = now - lastBroadcastTime;
         if (!isQrt && lastBroadcastTime > 0 && elapsedMs < SPOT_COOLDOWN_MS) {
-          // Throttled! Repetitive skimmer spot on same band & mode or same frequency within cooldown window
+          // Throttled! Repetitive skimmer spot on same band & mode or echo of our own local spot
           const minsAgo = Math.max(1, Math.round(elapsedMs / 60000));
-          console.log(`\x1b[33m[Cluster Spot]\x1b[0m ⏳ Пропуск повторного RBN-спота для \x1b[1m${rawActivator}\x1b[0m @ \x1b[33m${ref}\x1b[0m (${band} ${mode}, ${roundedFreq} kHz, респот через ${minsAgo}м при кулдауне ${CLUSTER_SPOT_COOLDOWN_MINUTES}м)`);
+          console.log(`\x1b[33m[Cluster Spot]\x1b[0m ⏳ Пропуск повторного/эхо-спота для \x1b[1m${rawActivator}\x1b[0m @ \x1b[33m${ref}\x1b[0m (${band} ${mode}, ${roundedFreq} kHz, через ${minsAgo}м при кулдауне ${CLUSTER_SPOT_COOLDOWN_MINUTES}м)`);
 
           // Record into SQLite as cluster_throttled so we never reprocess this spotId
           try {

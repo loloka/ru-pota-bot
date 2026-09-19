@@ -1039,7 +1039,7 @@ export function createTmaRouter(telegramClient) {
 
       // 4. Send to official POTA cluster (if not mocked)
       try {
-        await potaApi.postSpot({
+        const postedSpotId = await potaApi.postSpot({
           activator: callsign,
           spotter: callsign,
           reference,
@@ -1047,6 +1047,9 @@ export function createTmaRouter(telegramClient) {
           mode,
           comments: comment,
         });
+        if (postedSpotId && postedSpotId > 0) {
+          db.prepare('UPDATE spots SET spot_id = ? WHERE id = ?').run(postedSpotId, insertResult.lastInsertRowid);
+        }
       } catch (e) {
         console.warn('[TMA API] Post to POTA API cluster warning:', e.message);
       }
@@ -1106,15 +1109,6 @@ export function createTmaRouter(telegramClient) {
         }
       }
 
-      // 1. Unpin active spot in channel and delete from discussion group (if authenticated)
-      if (existingUser && existingUser.last_spot_msg_id && channelId) {
-        try {
-          await pinManager.unpinSpotNow(telegramClient, channelId, existingUser.last_spot_msg_id);
-        } catch (unpinErr) {
-          console.warn('[TMA API QRT] Unpin error:', unpinErr.message);
-        }
-      }
-
       let spotData = null;
       if (existingUser && existingUser.last_spot_data) {
         try {
@@ -1131,10 +1125,35 @@ export function createTmaRouter(telegramClient) {
       }
 
       const actCall = (existingUser?.callsign || spotData?.callsign || req.body?.callsign || '').toUpperCase().trim();
-      const parkRef = spotData?.reference || req.body?.reference;
+      const parkRef = (spotData?.reference || req.body?.reference || '').toUpperCase().trim();
 
       if (!actCall || !parkRef) {
         return res.status(400).json({ error: 'Не указан позывной или парк для завершения сессии (QRT).' });
+      }
+
+      // 1. Unpin active spot in channel and delete from discussion group
+      let spotMsgId = existingUser?.last_spot_msg_id;
+      if (!spotMsgId && channelId) {
+        try {
+          const row = db.prepare(`
+            SELECT msg_id FROM spots 
+            WHERE (UPPER(callsign) = ? OR UPPER(callsign) LIKE ?) 
+              AND UPPER(reference) = ? 
+              AND msg_id IS NOT NULL 
+            ORDER BY id DESC LIMIT 1
+          `).get(actCall, `${actCall}/%`, parkRef);
+          if (row?.msg_id) {
+            spotMsgId = row.msg_id;
+          }
+        } catch (dbErr) {}
+      }
+
+      if (spotMsgId && channelId) {
+        try {
+          await pinManager.unpinSpotNow(telegramClient, channelId, spotMsgId);
+        } catch (unpinErr) {
+          console.warn('[TMA API QRT] Unpin error:', unpinErr.message);
+        }
       }
 
       // 2. Send official QRT spot to POTA API cluster

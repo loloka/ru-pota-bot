@@ -1270,7 +1270,7 @@ export const startAdminServer = (telegramClient) => {
               let isConfirmed = false;
               if (typeof Swal === 'undefined') {
                 const plainText = warningHtml.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ');
-                isConfirmed = confirm("Удалить спот?\n\n" + plainText);
+                isConfirmed = confirm("Удалить спот?\\n\\n" + plainText);
               } else {
                 const result = await Swal.fire({
                   title: 'Удалить спот?',
@@ -1804,7 +1804,7 @@ export const startAdminServer = (telegramClient) => {
           // Poll logs every 3 seconds if the tab is visible
           setInterval(() => {
             const tab = document.getElementById('list-console');
-            if (tab.classList.contains('active')) {
+            if (tab && tab.classList.contains('active')) {
               fetchLogs();
             }
           }, 3000);

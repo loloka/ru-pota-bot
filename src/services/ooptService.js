@@ -14,7 +14,7 @@ const client = axios.create({
   baseURL: OOPT_BASE_URL,
   timeout: 25000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.6 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.11 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });
@@ -186,33 +186,36 @@ export function getOoptList({
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
   const offset = (pageNum - 1) * limitNum;
 
-  const conditions = [];
-  const params = [];
+  const baseConditions = [];
+  const baseParams = [];
 
   if (search && search.trim()) {
     const term = `%${search.trim()}%`;
-    conditions.push(`(title LIKE ? OR ate LIKE ? OR agency LIKE ? OR category LIKE ?)`);
-    params.push(term, term, term, term);
+    baseConditions.push(`(title LIKE ? OR ate LIKE ? OR agency LIKE ? OR category LIKE ?)`);
+    baseParams.push(term, term, term, term);
   }
+
+  if (category && category.trim()) {
+    baseConditions.push(`category = ?`);
+    baseParams.push(category.trim());
+  }
+
+  if (status && status.trim()) {
+    baseConditions.push(`status = ?`);
+    baseParams.push(status.trim().toLowerCase());
+  }
+
+  if (region && region.trim()) {
+    baseConditions.push(`ate LIKE ?`);
+    baseParams.push(`%${region.trim()}%`);
+  }
+
+  const conditions = [...baseConditions];
+  const params = [...baseParams];
 
   if (sig && sig.trim()) {
     conditions.push(`sig = ?`);
     params.push(sig.trim().toLowerCase());
-  }
-
-  if (category && category.trim()) {
-    conditions.push(`category = ?`);
-    params.push(category.trim());
-  }
-
-  if (status && status.trim()) {
-    conditions.push(`status = ?`);
-    params.push(status.trim().toLowerCase());
-  }
-
-  if (region && region.trim()) {
-    conditions.push(`ate LIKE ?`);
-    params.push(`%${region.trim()}%`);
   }
 
   if (pota === 'in_pota' || pota === '1' || pota === 'true') {
@@ -221,6 +224,7 @@ export function getOoptList({
     conditions.push(`pota_ref IS NULL`);
   }
 
+  const baseWhereClause = baseConditions.length > 0 ? `WHERE ${baseConditions.join(' AND ')}` : '';
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   // 1. Total count matching criteria
@@ -241,8 +245,29 @@ export function getOoptList({
   `;
   const rows = db.prepare(selectSql).all(...params, limitNum, offset);
 
-  // 3. Stats by significance
-  const stats = getOoptStats();
+  // 3. Stats by significance (dynamic based on base filters)
+  const globalStats = getOoptStats();
+  
+  const dynStatsSql = `
+    SELECT 
+      COUNT(*) as total,
+      SUM(CASE WHEN sig = 'federal' THEN 1 ELSE 0 END) as federal,
+      SUM(CASE WHEN sig = 'regional' THEN 1 ELSE 0 END) as regional,
+      SUM(CASE WHEN sig = 'local' THEN 1 ELSE 0 END) as local,
+      SUM(CASE WHEN pota_ref IS NOT NULL THEN 1 ELSE 0 END) as inPota
+    FROM oopt_registry
+    ${baseWhereClause}
+  `;
+  const dynStats = db.prepare(dynStatsSql).get(...baseParams);
+
+  const stats = {
+    ...globalStats,
+    total: dynStats.total || 0,
+    federal: dynStats.federal || 0,
+    regional: dynStats.regional || 0,
+    local: dynStats.local || 0,
+    inPota: dynStats.inPota || 0,
+  };
 
   return {
     rows,

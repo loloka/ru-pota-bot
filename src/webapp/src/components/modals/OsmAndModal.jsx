@@ -16,6 +16,12 @@ import { telegram } from '../../services/telegram.js';
 
 const WMS_LAYERS_GUIDE = [
   {
+    name: 'Парки RU-POTA (Ёлочки)',
+    code: 'POTA',
+    desc: 'Заповедники и нацпарки с зелёными метками-ёлочками',
+    url: 'https://pota.r9o.ru/api/tma/wms/pota?REQUEST=GetMap&SERVICE=WMS&VERSION=1.3.0&LAYERS=pota&STYLES=default&FORMAT=image/png&BBOX={bbox}&WIDTH=256&HEIGHT=256&TRANSPARENT=TRUE',
+  },
+  {
     name: 'Районы RDA (2025)',
     code: 'RDA',
     desc: 'Границы и шифры районов РФ (CB-02, NS-05 и др.)',
@@ -85,10 +91,10 @@ export default function OsmAndModal({ onClose, language = 'RU' }) {
             </div>
             <div>
               <h3 className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
-                Карты RDA от R1CF офлайн на OsmAnd
+                Карты RDA и RU-POTA офлайн на OsmAnd
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Полное руководство и офлайн-сборки OsmAnd PlusM
+                WMS-слои от R1CF, точки парков (GPX) и сборки OsmAnd PlusM
               </p>
             </div>
           </div>
@@ -106,6 +112,32 @@ export default function OsmAndModal({ onClose, language = 'RU' }) {
         {/* Scrollable Body */}
         <div className="overflow-y-auto space-y-4 pr-1 text-xs text-slate-700 dark:text-slate-300">
           
+          {/* POTA GPX 1-Click Offline Card */}
+          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xl select-none">🌲</span>
+              <div>
+                <h4 className="font-bold text-xs text-slate-900 dark:text-white leading-tight">
+                  Точки всех парков RU-POTA для OsmAnd (.GPX)
+                </h4>
+                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  Все парки РФ, Беларуси и Казахстана с номерами и значками ёлочек
+                </p>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+              Скачайте готовый файл путевых точек. При открытии через OsmAnd на офлайн-карте появятся все заповедники с номерами <b className="font-mono text-emerald-600 dark:text-emerald-400">RU-xxxx</b>. Вы сможете искать их по номеру и строить к ним маршруты по лесам и грунтовкам <b>полностью без интернета</b>!
+            </p>
+            <a
+              href="/api/tma/pota/gpx"
+              download="ru-pota-parks.gpx"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-glow-emerald transition active:scale-95 text-center"
+            >
+              <Download className="w-4 h-4" />
+              <span>Скачать парки POTA (.GPX)</span>
+            </a>
+          </div>
+
           {/* Intro Card */}
           <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2">
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs">

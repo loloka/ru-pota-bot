@@ -9,6 +9,7 @@ import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import { pinManager } from '../services/pinManager.js';
 import { getBaseCallsign, isBroadcastMutedCallsign } from '../bot/utils.js';
 import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry } from '../services/ooptService.js';
+import { renderPotaTile, parseWmsBbox, tileToBbox, generatePotaGpx, getEmptyPng } from '../services/potaTileService.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -1490,6 +1491,78 @@ export function createTmaRouter(telegramClient) {
     } catch (err) {
       console.error('[TMA API] Error fetching OOPT details:', err.message);
       res.status(err.message.includes('не найдено') ? 404 : 500).json({ error: err.message });
+    }
+  });
+
+  // ==========================================
+  // POTA GPX, WMS & Tiles for OsmAnd / GIS
+  // ==========================================
+
+  // 1. Full GPX 1.1 with tree icons for OsmAnd offline navigation
+  router.get('/pota/gpx', (req, res) => {
+    try {
+      const gpx = generatePotaGpx(cachedParks);
+      res.setHeader('Content-Type', 'application/gpx+xml; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="ru-pota-parks.gpx"');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.send(gpx);
+    } catch (err) {
+      console.error('[TMA API] Error generating GPX:', err);
+      res.status(500).send('Error generating GPX');
+    }
+  });
+
+  router.get('/pota.gpx', (req, res) => {
+    res.redirect('/api/tma/pota/gpx');
+  });
+
+  // 2. WMS GetMap endpoint for OsmAnd WMS overlay
+  router.get('/wms/pota', (req, res) => {
+    try {
+      const bboxStr = req.query.BBOX || req.query.bbox;
+      if (!bboxStr) {
+        res.setHeader('Content-Type', 'image/png');
+        return res.send(getEmptyPng());
+      }
+
+      const bbox = parseWmsBbox(bboxStr);
+      if (!bbox) {
+        res.setHeader('Content-Type', 'image/png');
+        return res.send(getEmptyPng());
+      }
+
+      const png = renderPotaTile(bbox, cachedParks);
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.send(png);
+    } catch (err) {
+      console.error('[TMA API] WMS render error:', err);
+      res.setHeader('Content-Type', 'image/png');
+      res.send(getEmptyPng());
+    }
+  });
+
+  // 3. XYZ / TMS Tile endpoint for OsmAnd Online Maps ({z}/{x}/{y}.png)
+  router.get('/tiles/pota/:z/:x/:y.png', (req, res) => {
+    try {
+      const z = parseInt(req.params.z, 10);
+      const x = parseInt(req.params.x, 10);
+      const y = parseInt(req.params.y, 10);
+
+      if (isNaN(z) || isNaN(x) || isNaN(y)) {
+        res.setHeader('Content-Type', 'image/png');
+        return res.send(getEmptyPng());
+      }
+
+      const bbox = tileToBbox(z, x, y);
+      const png = renderPotaTile(bbox, cachedParks);
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.send(png);
+    } catch (err) {
+      console.error('[TMA API] Tile render error:', err);
+      res.setHeader('Content-Type', 'image/png');
+      res.send(getEmptyPng());
     }
   });
 

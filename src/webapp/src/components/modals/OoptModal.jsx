@@ -29,6 +29,7 @@ import {
   formatR2bbxTemplate, 
   getYandexMapsUrl 
 } from '../../services/ooptUtils.js';
+import CoordPickerModal from './CoordPickerModal.jsx';
 
 export default function OoptModal({ oopt, onClose, onShowOnMap }) {
   const [activeTab, setActiveTab] = useState('submitter'); // 'submitter' | 'passport'
@@ -36,6 +37,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(null);
+  const [showCoordPicker, setShowCoordPicker] = useState(false);
 
   // Editable Submitter form state
   const [form, setForm] = useState(() => parseOoptForSubmitter(oopt));
@@ -163,10 +165,11 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
   };
 
   const modalContent = (
-    <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-3 pt-14 pb-safe bg-black/75 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}
-    >
+    <>
+      <div 
+        className="fixed inset-0 z-[100] flex items-center justify-center p-3 pt-14 pb-safe bg-black/75 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+      >
       <div 
         className="relative w-full max-w-lg max-h-[85vh] sm:max-h-[88vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -408,33 +411,41 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                   </div>
                 </div>
 
-                {/* Coordinates Row (4 decimal precision per R2BBX) */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      7. Координата 1 (Широта, Lat) <span className="text-emerald-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={form.lat}
-                      onChange={(e) => handleInputChange('lat', e.target.value)}
-                      placeholder="55.8772"
-                      className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                    />
+                  {/* Coordinates Row (4 decimal precision per R2BBX) */}
+                  <div className="grid grid-cols-2 gap-2 relative">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        7. Координата 1 (Широта, Lat) <span className="text-emerald-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.lat}
+                        onChange={(e) => handleInputChange('lat', e.target.value)}
+                        placeholder="55.8772"
+                        className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex justify-between">
+                        <span>8. Координата 2 (Долгота)</span>
+                        <button 
+                          type="button" 
+                          onClick={() => setShowCoordPicker(true)}
+                          className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-bold px-1 rounded hover:bg-emerald-500/10 transition-colors flex items-center gap-1"
+                          title="Указать на карте"
+                        >
+                          <MapPin className="w-3.5 h-3.5" /> На карте
+                        </button>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.lon}
+                        onChange={(e) => handleInputChange('lon', e.target.value)}
+                        placeholder="37.7818"
+                        className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      8. Координата 2 (Долгота, Lon) <span className="text-emerald-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={form.lon}
-                      onChange={(e) => handleInputChange('lon', e.target.value)}
-                      placeholder="37.7818"
-                      className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                    />
-                  </div>
-                </div>
 
                 {/* Yandex Map Verification Helper */}
                 <div className="flex items-center justify-between text-xs pt-0.5">
@@ -816,7 +827,21 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
           </span>
         </div>
       </div>
-    </div>
+      </div>
+      
+      {showCoordPicker && (
+        <CoordPickerModal
+          initialLat={form.lat}
+          initialLon={form.lon}
+          onSelect={(lat, lon) => {
+            handleInputChange('lat', lat);
+            handleInputChange('lon', lon);
+            setShowCoordPicker(false);
+          }}
+          onClose={() => setShowCoordPicker(false)}
+        />
+      )}
+    </>
   );
 
   if (typeof document === 'undefined') return null;

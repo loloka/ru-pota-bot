@@ -2616,12 +2616,14 @@ export const startAdminServer = (telegramClient) => {
             setTimeout(function() {
               if (!coordPickerMap) {
                 coordPickerMap = L.map('coord-picker-map').setView([initialLat, initialLon], initialZoom);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                  attribution: '&copy; OpenStreetMap contributors',
+                L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=ru', {
+                  attribution: '&copy; Google Maps',
                   maxZoom: 19
                 }).addTo(coordPickerMap);
 
-                coordPickerMarker = L.marker([initialLat, initialLon], { draggable: true }).addTo(coordPickerMap);
+                coordPickerMarker = L.marker([initialLat, initialLon], {
+                  draggable: true
+                }).addTo(coordPickerMap);
 
                 coordPickerMarker.on('dragend', function(e) {
                   var pos = e.target.getLatLng();

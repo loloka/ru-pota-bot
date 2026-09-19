@@ -1011,7 +1011,13 @@ export const startAdminServer = (telegramClient) => {
                   <small class="text-muted"><i class="bi bi-info-circle"></i> Перетащите маркер 📍 или кликните по карте в нужную точку парка (въезд, парковка, поляна для антенны).</small>
                   <div class="badge bg-dark font-monospace fs-6" id="picker-coords-display">Широта: 0.0000 | Долгота: 0.0000</div>
                 </div>
-                <div id="coord-picker-map" style="height: 440px; border-radius: 6px; border: 1px solid #ced4da;"></div>
+                  <style>
+                    #coord-picker-map .leaflet-control-attribution,
+                    .leaflet-control-attribution {
+                      display: none !important;
+                    }
+                  </style>
+                  <div id="coord-picker-map" style="height: 440px; border-radius: 6px; border: 1px solid #ced4da;"></div>
               </div>
               <div class="modal-footer py-2 px-3 bg-light d-flex justify-content-between">
                 <span class="text-muted small" id="picker-status-info">Кликните по карте для перемещения маркера</span>
@@ -2615,9 +2621,9 @@ export const startAdminServer = (telegramClient) => {
 
             setTimeout(function() {
               if (!coordPickerMap) {
-                coordPickerMap = L.map('coord-picker-map').setView([initialLat, initialLon], initialZoom);
+                coordPickerMap = L.map('coord-picker-map', { attributionControl: false }).setView([initialLat, initialLon], initialZoom);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                  attribution: '&copy; OpenStreetMap contributors',
+                  attribution: '',
                   maxZoom: 19
                 }).addTo(coordPickerMap);
 

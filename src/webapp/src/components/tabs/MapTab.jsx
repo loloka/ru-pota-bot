@@ -211,6 +211,7 @@ export default function MapTab({
       minZoom: 3,
       maxZoom: 18,
       zoomControl: false, // Custom buttons
+      attributionControl: false,
     });
 
     const currentBase = BASE_MAPS[baseMapType] || BASE_MAPS.osm;

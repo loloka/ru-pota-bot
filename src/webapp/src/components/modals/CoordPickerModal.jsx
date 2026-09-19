@@ -59,11 +59,12 @@ export default function CoordPickerModal({ initialLat, initialLon, onSelect, onC
       center: [startLat, startLon],
       zoom: initialZoom,
       zoomControl: true,
+      attributionControl: false,
     });
 
     // Base OSM tiles
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: '',
       maxZoom: 19,
     }).addTo(map);
 

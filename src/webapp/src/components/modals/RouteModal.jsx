@@ -57,7 +57,9 @@ export default function RouteModal({ park, onClose, language = 'RU' }) {
             </div>
             <div>
               <h3 className="font-bold text-sm text-slate-900 dark:text-white leading-tight">
-                {language === 'RU' ? 'Маршрут к парку' : 'Directions to Park'}
+                {language === 'RU' 
+                  ? (park.type === 'rda' ? 'Маршрут в район RDA' : park.type === 'oopt' ? 'Маршрут к ООПТ' : 'Маршрут к парку') 
+                  : (park.type === 'rda' ? 'Directions to RDA District' : 'Directions to Park')}
               </h3>
               <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">
                 {park.reference}

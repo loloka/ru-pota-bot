@@ -21,11 +21,18 @@ import {
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
+import { NEW_RDA_DISTRICTS } from '../../data/newRdaDistricts.js';
 import RouteModal from '../modals/RouteModal.jsx';
 import OsmAndModal from '../modals/OsmAndModal.jsx';
 
 // Clean base map providers without watermarks and with no API key requirement
 const BASE_MAPS = {
+  twogis: {
+    name: '2ГИС (Россия)',
+    url: 'https://tile{s}.maps.2gis.com/tiles?x={x}&y={y}&z={z}',
+    subdomains: ['0', '1', '2', '3'],
+    maxZoom: 18,
+  },
   osm: {
     name: 'Светлая (OSM)',
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -122,6 +129,7 @@ export default function MapTab({
   const wmsLayersRef = useRef({});
   const markersLayerRef = useRef(null);
   const razaLayerRef = useRef(null);
+  const newRdaLayerRef = useRef(null);
   const customOoptMarkerRef = useRef(null);
 
   const [parks, setParks] = useState([]);
@@ -150,10 +158,10 @@ export default function MapTab({
     } catch (e) {}
   };
 
-  // Base map type: default to OSM (clean light map per user request)
+  // Base map type: default to 2GIS (Russian labels and borders) per user request
   const [baseMapType, setBaseMapType] = useState(() => {
     const saved = localStorage.getItem('rupota_basemap');
-    if (!saved || saved === 'dark') return 'osm';
+    if (!saved || saved === 'dark') return 'twogis';
     return saved;
   });
 
@@ -215,8 +223,9 @@ export default function MapTab({
       attributionControl: false,
     });
 
-    const currentBase = BASE_MAPS[baseMapType] || BASE_MAPS.osm;
+    const currentBase = BASE_MAPS[baseMapType] || BASE_MAPS.twogis;
     const baseTile = L.tileLayer(currentBase.url, {
+      subdomains: currentBase.subdomains || 'abc',
       attribution: '',
       maxZoom: currentBase.maxZoom || 19,
     }).addTo(map);
@@ -229,6 +238,9 @@ export default function MapTab({
 
     const razaGroup = L.layerGroup().addTo(map);
     razaLayerRef.current = razaGroup;
+
+    const newRdaGroup = L.layerGroup().addTo(map);
+    newRdaLayerRef.current = newRdaGroup;
 
     mapInstanceRef.current = map;
 
@@ -244,9 +256,23 @@ export default function MapTab({
 
   // Update base tiles when baseMapType changes
   useEffect(() => {
-    if (!baseTileRef.current || !mapInstanceRef.current) return;
-    const currentBase = BASE_MAPS[baseMapType] || BASE_MAPS.osm;
-    baseTileRef.current.setUrl(currentBase.url);
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    const currentBase = BASE_MAPS[baseMapType] || BASE_MAPS.twogis;
+    
+    if (baseTileRef.current) {
+      map.removeLayer(baseTileRef.current);
+    }
+
+    const newBase = L.tileLayer(currentBase.url, {
+      subdomains: currentBase.subdomains || 'abc',
+      attribution: '',
+      maxZoom: currentBase.maxZoom || 19,
+    }).addTo(map);
+
+    newBase.bringToBack();
+    baseTileRef.current = newBase;
+
     try {
       localStorage.setItem('rupota_basemap', baseMapType);
     } catch (e) {}
@@ -457,6 +483,21 @@ export default function MapTab({
       return;
     }
 
+    // Exact RDA match (DO, LU, ZP, HE)
+    const exactRda = NEW_RDA_DISTRICTS.find(d => d.code.toUpperCase() === clean);
+    if (exactRda) {
+      focusItem({
+        type: 'rda',
+        reference: exactRda.code,
+        name: exactRda.name,
+        region: exactRda.region,
+        lat: exactRda.lat,
+        lon: exactRda.lon,
+        isRda: true,
+      }, 13);
+      return;
+    }
+
     // Exact RAZA match
     const exactRaza = razaZones.find(z => z.reference.toUpperCase() === clean);
     if (exactRaza && exactRaza.lat && exactRaza.lon) {
@@ -487,6 +528,24 @@ export default function MapTab({
       );
       if (parkMatch) {
         focusItem(parkMatch, 12);
+        return;
+      }
+
+      const rdaMatch = NEW_RDA_DISTRICTS.find(d =>
+        d.code.toUpperCase() === query ||
+        d.code.toUpperCase().startsWith(query) ||
+        d.name.toUpperCase().includes(query)
+      );
+      if (rdaMatch) {
+        focusItem({
+          type: 'rda',
+          reference: rdaMatch.code,
+          name: rdaMatch.name,
+          region: rdaMatch.region,
+          lat: rdaMatch.lat,
+          lon: rdaMatch.lon,
+          isRda: true,
+        }, 13);
         return;
       }
 
@@ -597,6 +656,60 @@ export default function MapTab({
     });
   }, [activeLayers.raza, razaZones, focusItem]);
 
+  // Render Official RDA markers for New Regions (DO, LU, ZP, HE) matching R1CF GeoServer style
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const rdaGroup = newRdaLayerRef.current;
+    if (!map || !rdaGroup) return;
+
+    const renderRdaMarkers = () => {
+      rdaGroup.clearLayers();
+      if (!activeLayers.rda) return;
+
+      const currentZoom = map.getZoom();
+
+      NEW_RDA_DISTRICTS.forEach((d) => {
+        if (currentZoom < (d.minZoom || 7)) return;
+
+        // Visual design: exactly matches R1CF GeoServer WMS RDA style
+        const rdaHtml = `
+          <div style="background:#fff83b; color:#000000; border:1.5px solid #d90077; border-radius:3px; padding:1px 4px; font-weight:800; font-size:11px; font-family:monospace, ui-monospace, sans-serif; box-shadow:0 1px 3px rgba(0,0,0,0.45); white-space:nowrap; cursor:pointer; user-select:none; line-height:1.2; text-align:center;">
+            ${d.code}
+          </div>
+        `;
+
+        const rdaIcon = L.divIcon({
+          html: rdaHtml,
+          className: 'custom-rda-district-badge',
+          iconSize: [44, 20],
+          iconAnchor: [22, 10],
+        });
+
+        const marker = L.marker([d.lat, d.lon], { icon: rdaIcon });
+        marker.on('click', () => {
+          focusItem({
+            type: 'rda',
+            reference: d.code,
+            name: d.name,
+            region: d.region,
+            lat: d.lat,
+            lon: d.lon,
+            isRda: true,
+          }, 13);
+        });
+
+        rdaGroup.addLayer(marker);
+      });
+    };
+
+    renderRdaMarkers();
+    map.on('zoomend', renderRdaMarkers);
+
+    return () => {
+      map.off('zoomend', renderRdaMarkers);
+    };
+  }, [activeLayers.rda, focusItem]);
+
   // Matching items for search suggestions dropdown
   const query = searchQuery.trim().toUpperCase();
   const parkMatches = query 
@@ -605,6 +718,13 @@ export default function MapTab({
         p.name.toUpperCase().includes(query) ||
         (p.region && p.region.toUpperCase().includes(query))
       ).slice(0, 4)
+    : [];
+
+  const rdaMatches = query
+    ? NEW_RDA_DISTRICTS.filter(d =>
+        d.code.toUpperCase().includes(query) ||
+        d.name.toUpperCase().includes(query)
+      ).slice(0, 3)
     : [];
 
   const razaMatches = query
@@ -725,8 +845,8 @@ export default function MapTab({
           </button>
         </div>
 
-        {/* Live Search Suggestions Dropdown (POTA + RAZA + Airfields) */}
-        {showSuggestions && (parkMatches.length > 0 || razaMatches.length > 0 || airfieldMatches.length > 0) && (
+        {/* Live Search Suggestions Dropdown (POTA + RDA + RAZA + Airfields) */}
+        {showSuggestions && (parkMatches.length > 0 || rdaMatches.length > 0 || razaMatches.length > 0 || airfieldMatches.length > 0) && (
           <div className="w-full max-h-60 overflow-y-auto rounded-2xl glass-card p-1.5 shadow-2xl border border-slate-300 dark:border-slate-800 space-y-1 animate-slide-up z-30">
             {/* POTA Parks */}
             {parkMatches.map((p) => (
@@ -752,6 +872,35 @@ export default function MapTab({
                     {p.region}
                   </span>
                 )}
+              </div>
+            ))}
+
+            {/* RDA Districts (DO, LU, ZP, HE) */}
+            {rdaMatches.map((r) => (
+              <div
+                key={r.code}
+                onClick={() => focusItem({
+                  type: 'rda',
+                  reference: r.code,
+                  name: r.name,
+                  region: r.region,
+                  lat: r.lat,
+                  lon: r.lon,
+                  isRda: true,
+                }, 13)}
+                className="flex items-center justify-between p-2 rounded-xl hover:bg-amber-500/10 cursor-pointer transition active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-mono font-bold text-[11px] px-2 py-0.5 rounded bg-[#fff83b] text-black border border-[#d90077] shrink-0">
+                    {r.code}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                    {r.name}
+                  </span>
+                </div>
+                <span className="text-[10px] text-amber-700 dark:text-amber-400 shrink-0 ml-2 font-semibold">
+                  {r.region}
+                </span>
               </div>
             ))}
 
@@ -910,7 +1059,12 @@ export default function MapTab({
             <div>
               <div className="flex items-center gap-2">
                 {/* Badge based on type */}
-                {selectedItem.type === 'raza' ? (
+                {selectedItem.type === 'rda' ? (
+                  <span className="font-mono font-extrabold text-sm px-2.5 py-0.5 rounded-lg bg-[#fff83b] text-black border border-[#d90077] flex items-center gap-1 shadow-sm">
+                    <span>🗺️</span>
+                    <span>{selectedItem.reference}</span>
+                  </span>
+                ) : selectedItem.type === 'raza' ? (
                   <span className="font-mono font-extrabold text-sm px-2.5 py-0.5 rounded-lg bg-amber-500 text-slate-950 flex items-center gap-1">
                     <span>⚡</span>
                     <span>{selectedItem.reference}</span>
@@ -948,7 +1102,9 @@ export default function MapTab({
                 {selectedItem.name}
               </h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                {selectedItem.region || selectedItem.city || (selectedItem.type === 'oopt' ? 'Реестр ООПТ РФ' : selectedItem.type === 'raza' ? 'Дипломная программа RAZA' : 'RU-POTA')} 
+                {selectedItem.type === 'rda'
+                  ? `Официальный район RDA (${selectedItem.region})`
+                  : selectedItem.region || selectedItem.city || (selectedItem.type === 'oopt' ? 'Реестр ООПТ РФ' : selectedItem.type === 'raza' ? 'Дипломная программа RAZA' : 'RU-POTA')} 
                 {selectedItem.grid ? ` • QTH: ${selectedItem.grid}` : ''}
                 {selectedItem.lat && selectedItem.lon ? ` • ${Number(selectedItem.lat).toFixed(4)}, ${Number(selectedItem.lon).toFixed(4)}` : ''}
               </p>
@@ -1008,8 +1164,8 @@ export default function MapTab({
               </a>
             )}
 
-            {/* OOPT Quick Copy Coordinates */}
-            {selectedItem.type === 'oopt' && (
+            {/* OOPT & RDA Quick Copy Coordinates */}
+            {(selectedItem.type === 'oopt' || selectedItem.type === 'rda') && (
               <button
                 type="button"
                 onClick={() => {
@@ -1017,8 +1173,12 @@ export default function MapTab({
                   navigator.clipboard.writeText(coordStr);
                   telegram.haptic.notification('success');
                 }}
-                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 transition active:scale-95"
-                title="Скопировать координаты точки"
+                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition active:scale-95 ${
+                  selectedItem.type === 'rda'
+                    ? 'text-black bg-[#fff83b] hover:bg-yellow-300 border border-[#d90077]'
+                    : 'text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30'
+                }`}
+                title="Скопировать координаты центра района"
               >
                 <span>Координаты</span>
               </button>

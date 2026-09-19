@@ -199,19 +199,18 @@ export async function checkUrlOnline(url) {
     const res = await axios.head(clean, {
       timeout: 6000,
       headers: {
-        'User-Agent': 'RU-POTA-Bot/1.16.10 (Link Health Checker; Node.js)',
-        'Accept': '*/*',
+        'User-Agent': 'RU-POTA-Bot/1.16.15 (Link Health Checker; Node.js)',
       },
-      validateStatus: () => true, // Don't throw on 4xx/5xx
-      maxRedirects: 3,
+      maxRedirects: 5,
+      validateStatus: () => true,
     });
-
-    // Some web servers reject HEAD with 405 Method Not Allowed; fallback to GET
-    if (res.status === 405) {
-      const getRes = await axios.get(clean, {
-        timeout: 6000,
+    return { ok: res.status >= 200 && res.status < 400, status: res.status, statusText: res.statusText || '' };
+  } catch (err) {
+    try {
+      const response = await axios.get(clean, {
+        timeout: 10000,
         headers: {
-          'User-Agent': 'RU-POTA-Bot/1.16.10 (Link Health Checker; Node.js)',
+          'User-Agent': 'RU-POTA-Bot/1.16.15 (Link Health Checker; Node.js)',
           'Accept': 'text/html,*/*',
         },
         validateStatus: () => true,
@@ -219,33 +218,27 @@ export async function checkUrlOnline(url) {
         responseType: 'stream',
       });
       return {
-        ok: getRes.status >= 200 && getRes.status < 400,
-        status: getRes.status,
-        statusText: getRes.statusText || '',
+        ok: response.status >= 200 && response.status < 400,
+        status: response.status,
+        statusText: response.statusText || '',
+      };
+    } catch (getErr) {
+      let errorMsg = getErr.message || 'Ошибка подключения';
+      if (getErr.code === 'ECONNABORTED' || getErr.message.includes('timeout')) {
+        errorMsg = 'Таймаут (10с)';
+      } else if (getErr.code === 'ENOTFOUND') {
+        errorMsg = 'DNS не найден (домен не существует)';
+      } else if (getErr.code === 'ECONNREFUSED') {
+        errorMsg = 'Сервер отклонил соединение';
+      } else if (getErr.code === 'CERT_HAS_EXPIRED' || getErr.code === 'DEPTH_ZERO_SELF_SIGNED_CERT') {
+        errorMsg = 'Ошибка SSL-сертификата';
+      }
+      return {
+        ok: false,
+        status: null,
+        error: errorMsg,
       };
     }
-
-    return {
-      ok: res.status >= 200 && res.status < 400,
-      status: res.status,
-      statusText: res.statusText || '',
-    };
-  } catch (err) {
-    let errorMsg = err.message || 'Ошибка подключения';
-    if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-      errorMsg = 'Таймаут (6с)';
-    } else if (err.code === 'ENOTFOUND') {
-      errorMsg = 'DNS не найден (домен не существует)';
-    } else if (err.code === 'ECONNREFUSED') {
-      errorMsg = 'Сервер отклонил соединение';
-    } else if (err.code === 'CERT_HAS_EXPIRED' || err.code === 'DEPTH_ZERO_SELF_SIGNED_CERT') {
-      errorMsg = 'Ошибка SSL-сертификата';
-    }
-    return {
-      ok: false,
-      status: null,
-      error: errorMsg,
-    };
   }
 }
 

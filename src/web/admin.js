@@ -2196,7 +2196,44 @@ export const startAdminServer = (telegramClient) => {
             return translated || transliterated || '';
           }
 
-          function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid, area, status, profile) {
+          function formatClarificationClient(profile, status, area, nestedOopt) {
+            var parts = [];
+            if (status && status !== 'действующий') parts.push('Статус: ' + status);
+
+            var nestedList = [];
+            if (Array.isArray(nestedOopt)) {
+              nestedList = nestedOopt;
+            } else if (typeof nestedOopt === 'string' && nestedOopt.trim()) {
+              try {
+                nestedList = JSON.parse(nestedOopt);
+              } catch (_) {
+                nestedList = nestedOopt.split(/[,;\\n]+/).map(function(s) { return { name: s.trim() }; }).filter(function(x) { return x.name; });
+              }
+            }
+
+            if (nestedList && nestedList.length > 0) {
+              var formatted = nestedList.map(function(n) {
+                var name = typeof n === 'string' ? n : (n.name || n.title || '');
+                var ref = (typeof n === 'object' && n.pota_ref) ? (' (' + n.pota_ref + ')') : '';
+                return name ? (name + ref) : '';
+              }).filter(Boolean);
+
+              if (formatted.length > 0) {
+                parts.push('В границах ООПТ: ' + formatted.join(', '));
+              }
+            } else {
+              if (profile) parts.push('Профиль: ' + profile);
+              if (area) parts.push('Площадь: ' + Number(area).toLocaleString('ru-RU') + ' га');
+            }
+
+            var text = parts.join('. ');
+            if (text.length > 255) {
+              text = text.substring(0, 252).trim() + '...';
+            }
+            return text;
+          }
+
+          function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid, area, status, profile, nestedOopt) {
             var detectedCategory = deduceOoptCategoryClient(rawTitle, category);
             var cleanName = cleanOoptNameClient(rawTitle, detectedCategory);
             var nameEn = formatDualParkNameClient(cleanName, detectedCategory);
@@ -2215,13 +2252,7 @@ export const startAdminServer = (telegramClient) => {
             var latVal = (lat !== null && lat !== undefined && lat !== '' && !isNaN(Number(lat))) ? Number(lat).toFixed(4) : '';
             var lonVal = (lon !== null && lon !== undefined && lon !== '' && !isNaN(Number(lon))) ? Number(lon).toFixed(4) : '';
 
-            var extra = [];
-            if (profile) extra.push('Профиль: ' + profile);
-            if (status && status !== 'действующий') extra.push('Статус: ' + status);
-            if (area) extra.push('Площадь: ' + Number(area).toLocaleString('ru-RU') + ' га');
-
-            var clarifyText = extra.join('. ');
-            if (clarifyText.length > 250) clarifyText = clarifyText.substring(0, 247).trim() + '...';
+            var clarifyText = formatClarificationClient(profile, status, area, nestedOopt);
 
             return {
               name: cleanName,
@@ -2384,31 +2415,48 @@ export const startAdminServer = (telegramClient) => {
               var modal = new bootstrap.Modal(modalEl);
               modal.show();
 
-              // If coordinates are empty, fetch live from API asynchronously
-              if (!parsed.lat || !parsed.lon) {
-                document.getElementById('subm-coords-status').innerHTML = '<span class="spinner-border spinner-border-sm text-success"></span> Запрос координат...';
+              // Always fetch live details from NextGIS (nested OOPTs, coordinates, subjects)
+              if (nid) {
+                var needsCoords = !parsed.lat || !parsed.lon;
+                if (needsCoords) {
+                  document.getElementById('subm-coords-status').innerHTML = '<span class="spinner-border spinner-border-sm text-success"></span> Запрос данных...';
+                }
                 try {
                   var res = await fetch('/api/tma/oopt/' + nid);
                   var details = await res.json();
-                  if (details.lat && details.lon) {
-                    document.getElementById('subm-lat').value = Number(details.lat).toFixed(4);
-                    document.getElementById('subm-lon').value = Number(details.lon).toFixed(4);
-                    if (details.rf_subjects) {
-                      document.getElementById('subm-region').value = details.rf_subjects;
-                      if (document.getElementById('subm-location-code')) {
-                        document.getElementById('subm-location-code').value = getPotaLocationCodeClient(details.rf_subjects);
+                  if (details) {
+                    if (details.lat && details.lon) {
+                      document.getElementById('subm-lat').value = Number(details.lat).toFixed(4);
+                      document.getElementById('subm-lon').value = Number(details.lon).toFixed(4);
+                      if (details.rf_subjects) {
+                        document.getElementById('subm-region').value = details.rf_subjects;
+                        if (document.getElementById('subm-location-code')) {
+                          document.getElementById('subm-location-code').value = getPotaLocationCodeClient(details.rf_subjects);
+                        }
                       }
+                      if (needsCoords) {
+                        document.getElementById('subm-coords-status').textContent = '✅ Данные загружены';
+                      }
+                    } else if (needsCoords) {
+                      document.getElementById('subm-coords-status').textContent = 'Координаты отсутствуют';
                     }
-                    if (details.submitterFields && details.submitterFields.clarification) {
-                      document.getElementById('subm-clarify').value = details.submitterFields.clarification;
+
+                    // Dynamically update clarification if details contain nested OOPTs!
+                    var updatedClarify = formatClarificationClient(
+                      details.profile || profile,
+                      details.status || status,
+                      details.area || area,
+                      details.parsedNestedOopt || details.nested_oopt
+                    );
+                    if (updatedClarify) {
+                      document.getElementById('subm-clarify').value = updatedClarify;
                     }
-                    document.getElementById('subm-coords-status').textContent = '✅ Координаты загружены';
                     updateSubmitterPreview();
-                  } else {
-                    document.getElementById('subm-coords-status').textContent = 'Координаты отсутствуют';
                   }
                 } catch(e) {
-                  document.getElementById('subm-coords-status').textContent = 'Ошибка загрузки координат';
+                  if (needsCoords) {
+                    document.getElementById('subm-coords-status').textContent = 'Ошибка загрузки данных';
+                  }
                 }
               } else {
                 document.getElementById('subm-coords-status').textContent = '';

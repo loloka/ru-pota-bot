@@ -491,17 +491,18 @@ export function getPotaLocationCode(regionStr = '') {
 }
 
 export function formatClarification(item) {
+  if (!item) return '';
   const parts = [];
 
-  // 1. Profile / Status
-  if (item.profile) parts.push(`Профиль: ${item.profile}`);
+  // Non-standard status
   if (item.status && item.status !== 'действующий') parts.push(`Статус: ${item.status}`);
-  if (item.area) parts.push(`Площадь: ${Number(item.area).toLocaleString('ru-RU')} га`);
 
-  // 2. Nested OOPTs
+  // 1. Nested OOPTs (Priority per Manu R2BBX: "Вместо площади")
   let nestedList = [];
   if (Array.isArray(item.nested_oopt)) {
     nestedList = item.nested_oopt;
+  } else if (Array.isArray(item.parsedNestedOopt)) {
+    nestedList = item.parsedNestedOopt;
   } else if (typeof item.nested_oopt === 'string' && item.nested_oopt.trim()) {
     try {
       nestedList = JSON.parse(item.nested_oopt);
@@ -518,13 +519,17 @@ export function formatClarification(item) {
     }).filter(Boolean);
 
     if (formattedNested.length > 0) {
-      parts.push(`В границах: ${formattedNested.join(', ')}`);
+      parts.push(`В границах ООПТ: ${formattedNested.join(', ')}`);
     }
+  } else {
+    // If no nested OOPTs, include Profile and Area
+    if (item.profile) parts.push(`Профиль: ${item.profile}`);
+    if (item.area) parts.push(`Площадь: ${Number(item.area).toLocaleString('ru-RU')} га`);
   }
 
   let text = parts.join('. ');
-  if (text.length > 250) {
-    text = text.substring(0, 247).trim() + '...';
+  if (text.length > 255) {
+    text = text.substring(0, 252).trim() + '...';
   }
   return text;
 }

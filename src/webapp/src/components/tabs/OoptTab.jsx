@@ -158,15 +158,17 @@ export default function OoptTab({ onNavigateToMap }) {
     e.stopPropagation();
     try {
       let target = item;
-      if (!target.lat || !target.lon) {
+      if (!target.lat || !target.lon || target.nested_oopt === undefined) {
         setCopyLoadingId(item.nid);
         const details = await api.getOoptDetails(item.nid);
-        if (details && (details.lat || details.lon)) {
+        if (details) {
           target = { ...item, ...details };
-          // Cache in row object so subsequent operations have coordinates immediately
+          // Cache in row object so subsequent operations have data immediately
           item.lat = details.lat;
           item.lon = details.lon;
           if (details.rf_subjects) item.rf_subjects = details.rf_subjects;
+          if (details.nested_oopt !== undefined) item.nested_oopt = details.nested_oopt;
+          if (details.parsedNestedOopt !== undefined) item.parsedNestedOopt = details.parsedNestedOopt;
         }
       }
       const parsed = parseOoptForSubmitter(target);

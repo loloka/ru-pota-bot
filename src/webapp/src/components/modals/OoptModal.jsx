@@ -69,7 +69,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
           lon: detailedParsed.lon || prev.lon,
           region: detailedParsed.region || prev.region,
           site: prev.site || detailedParsed.site,
-          clarification: detailedParsed.clarification || prev.clarification,
+          clarification: (detailedParsed.clarification !== undefined && detailedParsed.clarification !== null) ? detailedParsed.clarification : prev.clarification,
         }));
       })
       .catch((err) => {

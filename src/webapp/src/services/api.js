@@ -274,6 +274,14 @@ export const api = {
   },
 
   /**
+   * Online neural translation of OOPT name
+   */
+  async translateOoptName(text, category = '') {
+    const params = new URLSearchParams({ text, category });
+    return request(`/oopt/translate?${params.toString()}`);
+  },
+
+  /**
    * Request 6-digit email verification code for web login
    */
   async sendEmailCode({ callsign, email }) {

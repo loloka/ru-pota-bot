@@ -1,5 +1,23 @@
 # История изменений (Changelog)
 
+## [1.16.26] - 2026-09-21 (Smart Landscape Translation Engine & Neural AI Translation Integration)
+### Добавлено и улучшено
+- **Умный ландшафтно-географический переводчик названий ООПТ (POTA Submitter)**:
+  - Решена проблема с некорректным англоязычным переводом сложных и составных названий парков (обратная связь от координатора POTA Manu R2BBX):
+    - Внедрен обширный ландшафтно-географический словарь и предложные конструкции: «лесная балка» $\to$ `Wooded Ravine`, «степная балка» $\to$ `Steppe Ravine`, «каменная балка» $\to$ `Rocky Ravine`, «балка / овраг» $\to$ `Ravine / Gully`.
+    - Поддержка лесопарков и топонимических прилагательных: `Химкинском лесопарке` $\to$ `Khimki Forest Park`, `Битцевском` $\to$ `Bitsevsky`, `Измайловском` $\to$ `Izmaylovsky`.
+    - Поддержка предлогов и ориентиров с сохранением правильных падежей: `у села / у деревни / у с. / у д.` $\to$ `near the Village of`, `в окрестностях` $\to$ `in the Vicinity of`, `в районе` $\to$ `in the Area of`, `в пойме` $\to$ `in the Floodplain of`, `в устье` $\to$ `at the Mouth of`, `на реке / озере / острове / косе` $\to$ `on the River / on Lake / on Island / on Spit`.
+    - Исправлены границы слов кириллицы в регулярных выражениях JavaScript (`(?<![а-яёА-ЯЁa-zA-Z0-9])` и `(?![а-яёА-ЯЁa-zA-Z0-9])`), предотвращая ошибочные замены внутри русских слов.
+    - В скобках транслитерации (`transliterateOnly`) теперь сохраняется аутентичное русское звучание с исходными окончаниями: `(Lesnaya Balka V Khimkinskom Lesoparke)`.
+  - Пример результата:
+    - Было: `Forest Balka V Khimkinskom Lesoparke (Lesnaya Balka V Khimkinskom Lesoparke)`
+    - Стало: **`Wooded Ravine in Khimki Forest Park (Lesnaya Balka V Khimkinskom Lesoparke)`** — полностью соответствует эталонной правке национального координатора POTA.
+- **Интеграция с онлайн-нейропереводом (AI / Neural Translation)**:
+  - Добавлен серверный эндпоинт `/api/tma/oopt/translate?text=...&category=...` с предварительной нейтрализацией ландшафтных омонимов (чтобы геотермин «балка» не переводился как строительный брус `beam`).
+  - В карточку заявки POTA в Telegram Mini App (`OoptModal.jsx`) и в Web Admin 2.0 добавлена кнопка **`🪄 AI перевод`** для моментального запроса и уточнения нейросетевого перевода в 1 клик.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.26` (`package.json`, `potaApi.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.25] - 2026-09-20 (Standalone Web Authentication via Callsign & Email Resend OTP)
 ### Добавлено и улучшено
 - **Автономный вход по позывному и Email для веб-пользователей (https://pota.r9o.ru/)**:

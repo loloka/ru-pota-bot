@@ -469,87 +469,207 @@ export function deduceCategory(title, existingCategory) {
 }
 
 const RAW_GEOGRAPHIC_TERMS = [
-  // Multi-word phrases first
-  ['русский лес', 'Russian Forest'],
+  // 1. Specific multi-word landscape combinations
+  ['лесная балка', 'Wooded Ravine'],
+  ['степная балка', 'Steppe Ravine'],
+  ['каменная балка', 'Rocky Ravine'],
+  ['черная балка|чёрная балка', 'Black Ravine'],
+  ['крутая балка', 'Steep Ravine'],
+  ['глубокая балка', 'Deep Ravine'],
+  ['сухая балка', 'Dry Ravine'],
+  ['широкая балка', 'Broad Ravine'],
+  ['долгая балка', 'Long Ravine'],
   ['сосновый бор', 'Pine Forest'],
   ['красный бор', 'Krasny Bor'],
-  ['зеленый остров', 'Green Island'],
-  ['зелёный остров', 'Green Island'],
+  ['зеленый остров|зелёный остров', 'Green Island'],
   ['белое озеро', 'White Lake'],
-  ['черное озеро', 'Black Lake'],
-  ['чёрное озеро', 'Black Lake'],
+  ['черное озеро|чёрное озеро', 'Black Lake'],
   ['святой источник', 'Holy Spring'],
+  ['русский лес', 'Russian Forest'],
+  ['три брата', 'Three Brothers'],
 
-  // Russian / nationality
-  ['русск(ий|ая|ое|ие)', 'Russian'],
+  // 2. Prepositional phrases with settlements & locations
+  ['у села|у с\\.', 'near the Village of'],
+  ['у деревни|у д\\.', 'near the Village of'],
+  ['у поселка|у посёлка|у пос\\.|у п\\.', 'near the Settlement of'],
+  ['у города|у г\\.', 'near'],
+  ['в окрестностях', 'in the Vicinity of'],
+  ['в районе', 'in the Area of'],
+  ['в пойме', 'in the Floodplain of'],
+  ['в устье', 'at the Mouth of'],
+  ['в истоке', 'at the Headwaters of'],
+  ['в бухте', 'in Bay'],
+  ['в губе', 'in Bay'],
+  ['на реке|на р\\.', 'on the River'],
+  ['на озере|на оз\\.', 'on Lake'],
+  ['на острове|на о-ве|на о\\.', 'on Island'],
+  ['на косе', 'on Spit'],
+  ['на мысе', 'at Cape'],
 
-  // Relative/Location adjectives
-  ['приозерн(ый|ая|ое|ые)', 'Lakeside'],
-  ['приморск(ий|ая|ое|ие)', 'Seaside'],
-  ['приречн(ый|ая|ое|ые)', 'Riverside'],
-  ['заозерн(ый|ая|ое|ые)', 'Zaozerny'],
-  ['лесной|лесная|лесное|лесные', 'Forest'],
-  ['горный|горная|горное|горные', 'Mountain'],
-  ['степной|степная|степное|степные', 'Steppe'],
+  // 3. Known cities / urban forests / geographic adjectives
+  ['химкинск(ом|ий|ого|ому|ая|ое|их)', 'Khimki'],
+  ['битцевск(ом|ий|ого|ому|ая|ое|их)', 'Bitsevsky'],
+  ['измайловск(ом|ий|ого|ому|ая|ое|их)', 'Izmaylovsky'],
+  ['сокольническ(ом|ий|ого|ому|ая|ое|их)', 'Sokolniki'],
+  ['авачинск(ой|ая|ую|ом|ий)', 'Avacha'],
+  ['семеновск(ой|ая|ую|ом|ий|ое)', 'Semenovskaya'],
+  ['ловозерск(ом|ий|ого|ому|ая|ое)', 'Lovozero'],
+  ['никельск(ом|ий|ого|ому|ая|ое)', 'Nikel'],
 
-  // Natural features (nouns)
-  ['склон(ы)?', 'Slope'],
-  ['луг(а)?', 'Meadow'],
-  ['пол(е|я)', 'Field'],
-  ['руче(й|и)', 'Brook'],
-  ['холм(ы)?', 'Hill'],
-  ['берег(а)?', 'Shore'],
-  ['пески', 'Sands'],
-  ['дюн(а|ы)', 'Dune'],
-  ['лес(а)?', 'Forest'],
-  ['бор', 'Pine Forest'],
-  ['остров(а)?', 'Island'],
-  ['озер(о|а|ёра)', 'Lake'],
-  ['гор(а|ы)', 'Mountain'],
-  ['хребет', 'Ridge'],
-  ['сопк(а|и)', 'Sopka'],
-  ['скал(а|ы)', 'Rock'],
-  ['пещер(а|ы)', 'Cave'],
-  ['рек(а|и)', 'River'],
-  ['долин(а|ы)', 'Valley'],
-  ['урочище', 'Tract'],
-  ['рощ(а|и)', 'Grove'],
-  ['мыс', 'Cape'],
-  ['залив', 'Bay'],
-  ['бухт(а|ы)', 'Cove'],
-  ['болот(о|а)', 'Bog'],
-  ['пруд(ы)?', 'Pond'],
-  ['ключ(и)?', 'Spring'],
-  ['источник(и)?', 'Spring'],
-  ['водопад(ы)?', 'Waterfall'],
-  ['ущель(е|я)', 'Gorge'],
-  ['каньон', 'Canyon'],
-  ['кос(а|ы)', 'Spit'],
-  ['степ(ь|и)', 'Steppe'],
-  ['курган', 'Kurgan'],
+  // 4. Prepositions (strictly Cyrillic-safe)
+  ['вокруг', 'around'],
+  ['между', 'between'],
+  ['вблизи|возле|около|близ', 'near'],
+  ['у', 'near'],
+  ['в|во', 'in'],
+  ['на', 'on'],
+  ['под', 'near'],
+  ['при', 'at'],
+  ['с|со', 'with'],
 
-  // Adjectives
-  ['северн(ый|ая|ое|ые)', 'Northern'],
-  ['южн(ый|ая|ое|ые)', 'Southern'],
-  ['восточн(ый|ая|ое|ые)', 'Eastern'],
-  ['западн(ый|ая|ое|ые)', 'Western'],
-  ['центральн(ый|ая|ое|ые)', 'Central'],
-  ['верхн(ий|яя|ее|ие)', 'Upper'],
-  ['нижн(ий|яя|ее|ие)', 'Lower'],
-  ['средн(ий|яя|ее|ие)', 'Middle'],
-  ['больш(ой|ая|ое|ие)', 'Great'],
-  ['мал(ый|ая|ое|ые)', 'Small'],
-  ['бел(ый|ая|ое|ые)', 'White'],
-  ['черн(ый|ая|ое|ые)|чёрн(ый|ая|ое|ые)', 'Black'],
-  ['красн(ый|ая|ое|ые)', 'Red'],
-  ['зелен(ый|ая|ое|ые)|зелён(ый|ая|ое|ые)', 'Green'],
-  ['син(ий|яя|ее|ие)', 'Blue'],
-  ['голуб(ой|ая|ое|ые)', 'Blue'],
-  ['золот(ой|ая|ое|ые)', 'Golden'],
-  ['серебрян(ый|ая|ое|ые)', 'Silver'],
-  ['свят(ой|ая|ое|ые)', 'Holy'],
+  // 5. Parks and recreation
+  ['лесопарк(а|е|ом|у)?', 'Forest Park'],
+  ['парк(а|е|ом|у)?', 'Park'],
+  ['сад(а|е|ом|у|ы)?', 'Garden'],
+  ['дендрари(й|я|е|ем)', 'Arboretum'],
+  ['ботаническ(ий|ая|ое|ого|ом)', 'Botanical'],
 
-  // Academic & Institutional
+  // 6. Ravines, depressions, water bodies
+  ['балк(а|и|е|у|ой)', 'Ravine'],
+  ['овраг(а|е|ом|у|и)?', 'Ravine'],
+  ['ложбин(а|ы|е|у)', 'Hollow'],
+  ['пойм(а|ы|е|у)', 'Floodplain'],
+  ['стариц(а|ы|е|у)', 'Oxbow Lake'],
+  ['исток(а|е|ом|у)?', 'Headwaters'],
+  ['усть(е|я|ем)', 'Mouth'],
+  ['водопад(а|е|ом|у|ы)?', 'Waterfall'],
+  ['родник(а|е|ом|у|и|ов)?', 'Spring'],
+  ['источник(а|е|ом|у|и|ов)?', 'Spring'],
+  ['ключ(а|е|ом|у|и|ей)?', 'Spring'],
+  ['гейзер(а|е|ом|у|ы)?', 'Geyser'],
+  ['водохранилищ(е|а|ем)', 'Reservoir'],
+  ['пруд(а|е|ом|у|ы)?', 'Pond'],
+  ['озер(о|а|е|ом|ёра)', 'Lake'],
+  ['речк(а|и|е|у|ой)', 'Stream'],
+  ['рек(а|и|е|у|ой)', 'River'],
+  ['руче(й|я|е|ем|и)', 'Brook'],
+  ['болот(о|а|е|ом)', 'Bog'],
+  ['торфяник(а|е|ом|у)?', 'Peat Bog'],
+  ['мох|мхи', 'Moss'],
+  ['бухт(а|ы|е|у|ой)', 'Bay'],
+  ['губ(а|ы|е|у|ой)', 'Bay'],
+  ['залив(а|е|ом|у)?', 'Bay'],
+  ['пролив(а|е|ом|у)?', 'Strait'],
+  ['лиман(а|е|ом|у)?', 'Liman'],
+  ['кос(а|ы|е|у|ой)', 'Spit'],
+  ['мыс(а|е|ом|у)?', 'Cape'],
+  ['остров(а|е|ом|у)?', 'Island'],
+  ['полуостров(а|е|ом|у)?', 'Peninsula'],
+  ['берег(а|у|е|ом)?', 'Shore'],
+  ['побережь(е|я|ем)', 'Coast'],
+
+  // 7. Mountains, rocks, geological
+  ['гор(а|ы|е|у|ой)', 'Mountain'],
+  ['хребет|хребта', 'Ridge'],
+  ['гряд(а|ы|е|у)', 'Ridge'],
+  ['увал(а|е|ом|у|ы)?', 'Ridge'],
+  ['сопк(а|и|е|у)', 'Sopka'],
+  ['скал(а|ы|е|у|ой)', 'Rock'],
+  ['камень|камн(и|я|ем)', 'Stone'],
+  ['пещер(а|ы|е|у)', 'Cave'],
+  ['грот(а|е|ом|у|ы)?', 'Grotto'],
+  ['утёс|утес(а|е|ом|у|ы)?', 'Cliff'],
+  ['обнажени(е|я|ем)', 'Outcrop'],
+  ['разрез(а|е|ом|у)?', 'Exposure'],
+  ['каньон(а|е|ом|у)?', 'Canyon'],
+  ['ущель(е|я|ем)', 'Gorge'],
+  ['теснин(а|ы|е|у)', 'Gorge'],
+  ['перевал(а|е|ом|у)?', 'Pass'],
+  ['холм(а|е|ом|у|ы)?', 'Hill'],
+  ['курган(а|е|ом|у|ы)?', 'Kurgan'],
+  ['провал(а|е|ом|у)?', 'Sinkhole'],
+  ['воронк(а|и|е|у)', 'Sinkhole'],
+
+  // 8. Forest & Vegetation
+  ['дубрав(а|ы|е|у)', 'Oak Grove'],
+  ['дуб(а|е|ом|у|ы|ов)?', 'Oak'],
+  ['сосн(а|ы|е|у|ой)', 'Pine'],
+  ['берёз(а|ы|е|у)|берез(а|ы|е|у)', 'Birch'],
+  ['лиственниц(а|ы|е|у)', 'Larch'],
+  ['кедр(а|е|ом|у|ы|ов)?', 'Cedar'],
+  ['кедровник(а|е|ом|у)?', 'Cedar Forest'],
+  ['ель|ели|елью', 'Spruce'],
+  ['ельник(а|е|ом|у)?', 'Spruce Forest'],
+  ['пихт(а|ы|е|у)', 'Fir'],
+  ['пихтарник(а|е|ом|у)?', 'Fir Forest'],
+  ['лип(а|ы|е|у)', 'Linden'],
+  ['липняк(а|е|ом|у)?', 'Linden Grove'],
+  ['ольх(а|ы|е|у)', 'Alder'],
+  ['ив(а|ы|е|у)', 'Willow'],
+  ['можжевельник(а|е|ом|у)?', 'Juniper'],
+  ['тисс?|тиссов(ый|ая|ое|ые|ом)', 'Yew'],
+  ['рощ(а|и|е|у|ей)', 'Grove'],
+  ['бор(а|е|ом|у)?', 'Pine Forest'],
+  ['лес(а|е|ом|у)?', 'Forest'],
+  ['массив(а|е|ом|у)?', 'Massif'],
+  ['насаждени(я|й|ям)', 'Forest Stand'],
+  ['посадк(и|ок|ам)', 'Plantations'],
+  ['культур(ы|ах)', 'Plantations'],
+  ['дач(а|и|е|у)', 'Forestry Estate'],
+  ['лесничеств(о|а|е|ом)', 'Forestry'],
+  ['лесхоз(а|е|ом)?', 'Forest Enterprise'],
+  ['луг(а|е|ом|у|ов)?', 'Meadow'],
+  ['степ(ь|и|ью)', 'Steppe'],
+  ['дюн(а|ы|е|у)', 'Dune'],
+  ['песк(и|ов|ам)', 'Sands'],
+  ['урочищ(е|а|ем)', 'Tract'],
+  ['участок|участка', 'Site'],
+
+  // 9. Common adjectives
+  ['лесной|лесная|лесное|лесные|лесном', 'Forest'],
+  ['горный|горная|горное|горные|горном', 'Mountain'],
+  ['степной|степная|степное|степные|степном', 'Steppe'],
+  ['приозерн(ый|ая|ое|ые|ом)', 'Lakeside'],
+  ['приморск(ий|ая|ое|ие|ом)', 'Seaside'],
+  ['приречн(ый|ая|ое|ые|ом)', 'Riverside'],
+  ['заозерн(ый|ая|ое|ые|ом)', 'Zaozerny'],
+  ['северн(ый|ая|ое|ые|ом)', 'Northern'],
+  ['южн(ый|ая|ое|ые|ом)', 'Southern'],
+  ['восточн(ый|ая|ое|ые|ом)', 'Eastern'],
+  ['западн(ый|ая|ое|ые|ом)', 'Western'],
+  ['центральн(ый|ая|ое|ые|ом)', 'Central'],
+  ['верхн(ий|яя|ее|ие|ем)', 'Upper'],
+  ['нижн(ий|яя|ее|ие|ем)', 'Lower'],
+  ['средн(ий|яя|ее|ие|ем)', 'Middle'],
+  ['больш(ой|ая|ое|ие|ом)', 'Great'],
+  ['мал(ый|ая|ое|ые|ом)', 'Small'],
+  ['бел(ый|ая|ое|ые|ом)', 'White'],
+  ['черн(ый|ая|ое|ые|ом)|чёрн(ый|ая|ое|ые|ом)', 'Black'],
+  ['красн(ый|ая|ое|ые|ом)', 'Red'],
+  ['зелен(ый|ая|ое|ые|ом)|зелён(ый|ая|ое|ые|ом)', 'Green'],
+  ['син(ий|яя|ее|ие|ем)', 'Blue'],
+  ['голуб(ой|ая|ое|ые|ом)', 'Blue'],
+  ['золот(ой|ая|ое|ые|ом)', 'Golden'],
+  ['серебрян(ый|ая|ое|ые|ом)', 'Silver'],
+  ['свят(ой|ая|ое|ые|ом)', 'Holy'],
+  ['каменн(ый|ая|ое|ые|ом)', 'Stone'],
+  ['песчан(ый|ая|ое|ые|ом)', 'Sandy'],
+  ['торфян(ой|ая|ое|ые|ом)', 'Peat'],
+  ['глубок(ий|ая|ое|ие|ом)', 'Deep'],
+  ['крут(ой|ая|ое|ые|ом)', 'Steep'],
+  ['широк(ий|ая|ое|ие|ом)', 'Broad'],
+  ['долг(ий|ая|ое|ие|ом)', 'Long'],
+  ['сух(ой|ая|ое|ые|ом)', 'Dry'],
+  ['чист(ый|ая|ое|ые|ом)', 'Pure'],
+  ['ясн(ый|ая|ое|ые|ом)', 'Bright'],
+  ['тепл(ый|ая|ое|ые|ом)|тёпл(ый|ая|ое|ые|ом)', 'Warm'],
+  ['холодн(ый|ая|ое|ые|ом)', 'Cold'],
+  ['минеральн(ый|ая|ое|ые|ом|ых)', 'Mineral'],
+  ['целебн(ый|ая|ое|ые|ом)', 'Healing'],
+  ['древн(ий|яя|ее|ие|ем)', 'Ancient'],
+  ['реликтов(ый|ая|ое|ые|ом)', 'Relict'],
+
+  // 10. Academic & Institutional
   ['государственн(ый|ая|ое|ые|ого|ому|ом)', 'State'],
   ['федеральн(ый|ая|ое|ые|ого|ому|ом)', 'Federal'],
   ['университет(а|у|ом|е)?', 'University'],
@@ -563,9 +683,9 @@ const RAW_GEOGRAPHIC_TERMS = [
   ['приволжск(ий|ая|ое|ие|ого|ому|ом)', 'Volga Region']
 ];
 
-// Compile with Cyrillic-safe lookahead and lookbehind word boundaries
+// Compile with strictly Cyrillic-safe lookahead and lookbehind word boundaries
 const GEOGRAPHIC_TERMS = RAW_GEOGRAPHIC_TERMS.map(([pat, repl]) => [
-  new RegExp('(?<![а-яёa-z0-9])' + pat + '(?![а-яёa-z0-9])', 'gi'),
+  new RegExp('(?<![а-яёА-ЯЁa-zA-Z0-9])(' + pat + ')(?![а-яёА-ЯЁa-zA-Z0-9])', 'gi'),
   repl
 ]);
 
@@ -680,15 +800,24 @@ export function translateNameToEnglish(cleanName, category) {
   let en = transliterateRuToEn(s);
   // Normalize Russian adjective endings
   en = en.replace(/skogo\b/gi, 'sky')
+         .replace(/skoy\b/gi, 'skaya')
+         .replace(/skom\b/gi, 'sky')
          .replace(/skogo gosudarstvennogo\b/gi, 'State')
          .replace(/gosudarstvennogo\b/gi, 'State')
          .replace(/pedagogicheskogo\b/gi, 'Pedagogical')
          .replace(/universiteta\b/gi, 'University')
          .replace(/instituta\b/gi, 'Institute');
 
-  // Capitalize words
-  en = en.split(' ').map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '').join(' ').trim();
-  return en.replace(/\s+/g, ' ').trim();
+  // Capitalize words into Title Case, keeping mid-phrase prepositions lowercase
+  const words = en.split(/\s+/).map((w, idx) => {
+    if (!w) return '';
+    const lower = w.toLowerCase();
+    if (idx > 0 && ['in', 'on', 'near', 'at', 'with', 'between', 'around', 'of', 'the', 'and', 'a', 'an'].includes(lower)) {
+      return lower;
+    }
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  });
+  return words.join(' ').replace(/\s+/g, ' ').trim();
 }
 
 export function transliterateOnly(cleanName) {
@@ -703,12 +832,6 @@ export function transliterateOnly(cleanName) {
        .replace(/СО РАН/g, 'SB RAS');
 
   let en = transliterateRuToEn(s);
-  en = en.replace(/skogo\b/gi, 'sky')
-         .replace(/skogo gosudarstvennogo\b/gi, 'State')
-         .replace(/gosudarstvennogo\b/gi, 'State')
-         .replace(/pedagogicheskogo\b/gi, 'Pedagogical')
-         .replace(/universiteta\b/gi, 'University')
-         .replace(/instituta\b/gi, 'Institute');
 
   en = en.split(' ').map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '').join(' ').trim();
   return en.replace(/\s+/g, ' ').trim();
@@ -730,6 +853,48 @@ export function formatDualParkName(cleanName, category) {
     }
   }
   return translated || transliterated || '';
+}
+
+/**
+ * Online neural translation of OOPT name using Google Translate with
+ * landscape homonym pre-processing and fallback to smart local translation.
+ */
+export async function translateOoptNameOnline(cleanName, category) {
+  if (!cleanName) return '';
+  // Pre-process landscape homonyms (e.g. 'балка' in geography is ravine, not beam)
+  let prep = cleanName;
+  prep = prep.replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(лесная балка)(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'лесной овраг')
+             .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(степная балка)(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'степной овраг')
+             .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(каменная балка)(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'каменистый овраг')
+             .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(балк[аиеу])(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'овраг');
+
+  try {
+    const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=ru&tl=en&dt=t&q=' + encodeURIComponent(prep);
+    const res = await axios.get(url, { timeout: 4000 });
+    if (res.data && Array.isArray(res.data[0])) {
+      const rawTrans = res.data[0].map(item => item[0]).join('').trim();
+      if (rawTrans) {
+        const words = rawTrans.split(/\s+/).map((w, idx) => {
+          if (!w) return '';
+          const lower = w.toLowerCase();
+          if (idx > 0 && ['in', 'on', 'near', 'at', 'with', 'between', 'around', 'of', 'the', 'and', 'a', 'an'].includes(lower)) {
+            return lower;
+          }
+          return w.charAt(0).toUpperCase() + w.slice(1);
+        });
+        const cleanTranslated = words.join(' ').replace(/\s+/g, ' ').trim();
+        const transliterated = transliterateOnly(cleanName);
+        if (cleanTranslated && transliterated && cleanTranslated.toLowerCase() !== transliterated.toLowerCase()) {
+          return `${cleanTranslated} (${transliterated})`;
+        }
+        return cleanTranslated;
+      }
+    }
+  } catch (_) {
+    // Network / timeout fallback to smart local translation
+  }
+
+  return formatDualParkName(cleanName, category);
 }
 
 export function getDxEntity(regionName = '', title = '') {
@@ -1486,5 +1651,6 @@ export default {
   getOoptDetails,
   parseSubmitterFields,
   formatDualParkName,
+  translateOoptNameOnline,
   generateR2bbxTemplate,
 };

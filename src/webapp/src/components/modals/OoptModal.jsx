@@ -37,6 +37,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const [error, setError] = useState(null);
 
   // Editable Submitter form state
@@ -130,6 +131,24 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleAiTranslate = async () => {
+    const textToTranslate = form.name || oopt?.title || '';
+    if (!textToTranslate) return;
+    try {
+      setTranslating(true);
+      const res = await api.translateOoptName(textToTranslate, form.status || oopt?.category || '');
+      if (res && res.translated) {
+        handleInputChange('nameEn', res.translated);
+        telegram.haptic.notification('success');
+      }
+    } catch (err) {
+      console.warn('AI translation failed:', err.message);
+      telegram.haptic.notification('warning');
+    } finally {
+      setTranslating(false);
+    }
   };
 
   // Copy formatted application to clipboard
@@ -325,9 +344,25 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      2. Название для POTA (EN: Перевод / Транскрипция) <span className="text-emerald-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        2. Название для POTA (EN) <span className="text-emerald-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAiTranslate}
+                        disabled={translating || !form.name}
+                        title="Улучшить перевод с помощью онлайн-нейропереводчика"
+                        className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                      >
+                        {translating ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3 h-3" />
+                        )}
+                        <span>{translating ? 'Перевод...' : 'AI перевод'}</span>
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={form.nameEn || ''}

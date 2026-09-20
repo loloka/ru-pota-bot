@@ -8,7 +8,7 @@ import { potaApi } from '../api/potaApi.js';
 import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import { pinManager } from '../services/pinManager.js';
 import { getBaseCallsign, isBroadcastMutedCallsign } from '../bot/utils.js';
-import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry, translateOoptNameOnline, cleanOoptName } from '../services/ooptService.js';
 import crypto from 'crypto';
 import { renderPotaTile, parseWmsBbox, tileToBbox, generatePotaGpx, getEmptyPng } from '../services/potaTileService.js';
 import { resendService } from '../services/resendService.js';
@@ -1828,6 +1828,22 @@ export function createTmaRouter(telegramClient) {
       res.json(stats);
     } catch (err) {
       console.error('[TMA API] Error fetching OOPT stats:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/oopt/translate', async (req, res) => {
+    try {
+      const text = req.query.text || '';
+      const category = req.query.category || '';
+      if (!text.trim()) {
+        return res.status(400).json({ error: 'Параметр text обязателен' });
+      }
+      const clean = cleanOoptName(text, category);
+      const translated = await translateOoptNameOnline(clean, category);
+      res.json({ original: text, clean, translated });
+    } catch (err) {
+      console.error('[TMA API] Error translating OOPT name:', err.message);
       res.status(500).json({ error: err.message });
     }
   });

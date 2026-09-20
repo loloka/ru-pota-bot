@@ -175,6 +175,21 @@ export const startAdminServer = (telegramClient) => {
 
   app.get('/api/user-info/:id', requireAuth, async (req, res) => {
     const id = req.params.id;
+    const numId = Number(id);
+    if (numId < 0) {
+      try {
+        const dbUser = db.prepare('SELECT email, auth_type, callsign FROM users WHERE telegram_id = ?').get(numId);
+        return res.json({
+          first_name: dbUser?.callsign || 'Web User',
+          last_name: '',
+          username: dbUser?.email || '',
+          avatar: null,
+          isWeb: true
+        });
+      } catch (e) {
+        return res.json({ first_name: 'Web User', last_name: '', username: '', avatar: null, isWeb: true });
+      }
+    }
     console.log('[Web Admin] Fetching user info for ID:', id);
     if (userCache.has(id)) {
       console.log('[Web Admin] Returning cached info for', id);
@@ -232,7 +247,7 @@ export const startAdminServer = (telegramClient) => {
     res.setHeader('Expires', '0');
 
     // 1. Users
-    const usersStmt = db.prepare("SELECT telegram_id, callsign, status, created_at FROM users ORDER BY created_at DESC");
+    const usersStmt = db.prepare("SELECT telegram_id, callsign, status, email, auth_type, created_at FROM users ORDER BY created_at DESC");
     const allUsers = usersStmt.all();
     const pending = allUsers.filter(u => u.status === 'pending');
     const approved = allUsers.filter(u => u.status === 'approved');
@@ -276,15 +291,26 @@ export const startAdminServer = (telegramClient) => {
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     };
 
-    const generateUserRow = (u) => `
+    const generateUserRow = (u) => {
+      const isWeb = u.telegram_id < 0 || u.auth_type === 'web';
+      const authBadge = isWeb 
+        ? '<span class="badge bg-info text-dark ms-1" style="font-size: 0.75rem;"><i class="bi bi-globe"></i> Web</span>'
+        : '<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-telegram"></i> TG</span>';
+      const emailDisplay = u.email ? `<div class="small text-muted"><i class="bi bi-envelope"></i> ${escapeHtmlServer(u.email)}</div>` : '';
+
+      return `
       <tr id="user-row-${u.telegram_id}">
         <td>
           <div class="d-flex align-items-center">
-            <img src="https://ui-avatars.com/api/?name=${u.callsign}&background=random" id="avatar-${u.telegram_id}" class="rounded-circle me-3" width="45" height="45" alt="Avatar">
+            <img src="https://ui-avatars.com/api/?name=${escapeHtmlServer(u.callsign)}&background=random" id="avatar-${u.telegram_id}" class="rounded-circle me-3" width="45" height="45" alt="Avatar">
             <div>
-              <strong>${u.callsign}</strong>
+              <div class="d-flex align-items-center">
+                <strong>${escapeHtmlServer(u.callsign)}</strong>
+                ${authBadge}
+              </div>
+              ${emailDisplay}
               <div class="small text-muted" id="user-info-${u.telegram_id}">
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 10px; height: 10px;"></span> Загрузка...
+                ${isWeb ? '<span class="text-muted">Веб-пользователь (Email)</span>' : '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 10px; height: 10px;"></span> Загрузка...'}
               </div>
             </div>
           </div>
@@ -298,7 +324,8 @@ export const startAdminServer = (telegramClient) => {
           <button type="button" class="btn btn-sm btn-secondary delete-user-btn" data-id="${u.telegram_id}">Удалить</button>
         </td>
       </tr>
-    `;
+      `;
+    };
 
     const generateSpotRow = (s) => {
       const deleteBtn = `<button type="button" class="btn btn-sm btn-outline-danger delete-spot-btn" data-id="${s.id}" data-source="${escapeHtmlServer(s.source || '')}" data-msg="${s.msg_id || ''}" title="Удалить спот из БД (и канала)">Удалить</button>`;
@@ -1735,6 +1762,7 @@ export const startAdminServer = (telegramClient) => {
             const rows = document.querySelectorAll('tr[id^="user-row-"]');
             for (const row of rows) {
               const id = row.id.replace('user-row-', '');
+              if (parseInt(id, 10) < 0) continue; // Skip web users
               try {
                 const res = await fetch('/api/user-info/' + id);
                 if (res.ok) {
@@ -3286,9 +3314,11 @@ export const startAdminServer = (telegramClient) => {
     const telegramId = Number(req.params.id);
     try {
       db.prepare("UPDATE users SET status = 'approved' WHERE telegram_id = ?").run(telegramId);
-      try {
-        await telegramClient.sendMessage(telegramId, '✅ Ваша заявка одобрена! Теперь вам доступны все функции бота.');
-      } catch (e) {}
+      if (telegramId > 0 && telegramClient) {
+        try {
+          await telegramClient.sendMessage(telegramId, '✅ Ваша заявка одобрена! Теперь вам доступны все функции бота.');
+        } catch (e) {}
+      }
       res.json({ success: true });
     } catch (err) {
       console.error('Error approving user:', err);
@@ -3301,9 +3331,11 @@ export const startAdminServer = (telegramClient) => {
     const reason = (req.body && req.body.reason) || 'Причина не указана';
     try {
       db.prepare("UPDATE users SET status = 'rejected', reject_reason = ? WHERE telegram_id = ?").run(reason, telegramId);
-      try {
-        await telegramClient.sendMessage(telegramId, `❌ Ваша заявка на регистрацию была отклонена.\n\nПричина: ${reason}\n\nВы можете подать заявку повторно, используя команду /callsign`);
-      } catch (e) {}
+      if (telegramId > 0 && telegramClient) {
+        try {
+          await telegramClient.sendMessage(telegramId, `❌ Ваша заявка на регистрацию была отклонена.\n\nПричина: ${reason}\n\nВы можете подать заявку повторно, используя команду /callsign`);
+        } catch (e) {}
+      }
       res.json({ success: true });
     } catch (err) {
       console.error('Error rejecting user:', err);
@@ -3327,9 +3359,11 @@ export const startAdminServer = (telegramClient) => {
       }
       db.prepare("DELETE FROM users WHERE telegram_id = ?").run(telegramId);
       db.prepare("DELETE FROM subscriptions WHERE telegram_id = ?").run(telegramId);
-      try {
-        await telegramClient.sendMessage(telegramId, '⚠️ Ваш аккаунт был удален администратором. Вы можете зарегистрироваться заново с помощью команды /callsign');
-      } catch (e) {}
+      if (telegramId > 0 && telegramClient) {
+        try {
+          await telegramClient.sendMessage(telegramId, '⚠️ Ваш аккаунт был удален администратором. Вы можете зарегистрироваться заново с помощью команды /callsign');
+        } catch (e) {}
+      }
       res.json({ success: true });
     } catch (err) {
       console.error('Error deleting user:', err);

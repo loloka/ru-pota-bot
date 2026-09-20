@@ -109,14 +109,40 @@ export function tmaUserMiddleware(req, res, next) {
     return next();
   }
 
-  // 2. Guest request without Telegram session
+  // 2. Check Web Token authentication (for standalone browser users)
+  const webToken = req.headers['x-web-token'] || 
+    (authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : '');
+
+  if (webToken) {
+    const dbUser = db.prepare(`
+      SELECT telegram_id, callsign, status, email, auth_type, notifications_enabled, reject_reason, last_spot_data, last_spot_msg_id 
+      FROM users 
+      WHERE web_token = ?
+    `).get(webToken);
+
+    if (dbUser) {
+      req.dbUser = dbUser;
+      req.telegramUser = {
+        id: dbUser.telegram_id,
+        first_name: dbUser.callsign,
+        username: dbUser.callsign,
+        callsign: dbUser.callsign,
+        email: dbUser.email,
+        auth_type: dbUser.auth_type || 'web',
+        isWeb: true,
+      };
+      return next();
+    }
+  }
+
+  // 3. Guest request without Telegram session or valid Web Token
   if (!rawInitData) {
     req.telegramUser = null;
     req.dbUser = null;
     return next();
   }
 
-  // 3. Validate Real Telegram initData via HMAC-SHA256
+  // 4. Validate Real Telegram initData via HMAC-SHA256
   const verification = verifyTelegramInitData(rawInitData, BOT_TOKEN);
   if (!verification.valid || !verification.user) {
     req.telegramUser = null;

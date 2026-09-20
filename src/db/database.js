@@ -97,6 +97,18 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
   CREATE INDEX IF NOT EXISTS idx_user_notif_user ON user_notifications (user_id, is_read, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS email_verifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    callsign TEXT NOT NULL,
+    code TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    attempts INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_email_verif_lookup ON email_verifications (email, code);
+  CREATE INDEX IF NOT EXISTS idx_email_verif_email ON email_verifications (email);
 `);
 
 // Migration for existing tables
@@ -126,6 +138,25 @@ try {
     db.exec(`ALTER TABLE users ADD COLUMN onair_filters TEXT`);
     console.log('[DB] Migrated users table: added onair_filters column');
   }
+
+  const hasEmail = userColumns.some(col => col.name === 'email');
+  if (!hasEmail) {
+    db.exec(`ALTER TABLE users ADD COLUMN email TEXT`);
+    console.log('[DB] Migrated users table: added email column');
+  }
+
+  const hasAuthType = userColumns.some(col => col.name === 'auth_type');
+  if (!hasAuthType) {
+    db.exec(`ALTER TABLE users ADD COLUMN auth_type TEXT DEFAULT 'telegram'`);
+    console.log('[DB] Migrated users table: added auth_type column');
+  }
+
+  const hasWebToken = userColumns.some(col => col.name === 'web_token');
+  if (!hasWebToken) {
+    db.exec(`ALTER TABLE users ADD COLUMN web_token TEXT`);
+    console.log('[DB] Migrated users table: added web_token column');
+  }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_users_web_token ON users (web_token)`);
 
 
   const subColumns = db.pragma('table_info(subscriptions)');

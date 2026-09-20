@@ -9,6 +9,7 @@ import ProfileTab from './components/tabs/ProfileTab.jsx';
 import OoptTab from './components/tabs/OoptTab.jsx';
 import OsmAndModal from './components/modals/OsmAndModal.jsx';
 import TelegramAuthModal from './components/modals/TelegramAuthModal.jsx';
+import WebAuthModal from './components/modals/WebAuthModal.jsx';
 import { telegram } from './services/telegram.js';
 
 import { api } from './services/api.js';
@@ -38,10 +39,28 @@ export default function App() {
   const [showOsmAndModal, setShowOsmAndModal] = useState(false);
   const [mapTarget, setMapTarget] = useState(null);
 
-  // Guest Telegram Authorization Prompt Modal
+  // Guest Telegram Authorization Prompt Modal & Web Auth Modal
   const [authModal, setAuthModal] = useState({ open: false, title: '', reason: '' });
+  const [webAuthModalOpen, setWebAuthModalOpen] = useState(false);
+
   const handleRequireAuth = (title = '', reason = '') => {
     setAuthModal({ open: true, title, reason });
+  };
+
+  const handleOpenWebAuth = () => {
+    setAuthModal({ open: false, title: '', reason: '' });
+    setWebAuthModalOpen(true);
+  };
+
+  const handleWebLogout = async () => {
+    telegram.haptic.notification('warning');
+    await api.logoutWeb();
+    setUser(null);
+    setActiveSpot(null);
+    setStats(null);
+    setSubscriptionsCount(0);
+    setUnreadNotifsCount(0);
+    await loadProfile(false);
   };
 
   const loadProfile = useCallback(async (silent = false) => {
@@ -215,6 +234,7 @@ export default function App() {
               onRefreshProfile={loadProfile}
               onNavigate={handleNavigate}
               onRequireAuth={handleRequireAuth}
+              onOpenWebAuth={handleOpenWebAuth}
               language={language}
               t={t}
             />
@@ -263,6 +283,7 @@ export default function App() {
               onUnreadCountChange={setUnreadNotifsCount}
               onNavigate={handleNavigate}
               onRequireAuth={handleRequireAuth}
+              onOpenWebAuth={handleOpenWebAuth}
               onRefreshProfile={loadProfile}
               language={language}
               t={t}
@@ -275,6 +296,8 @@ export default function App() {
               stats={stats}
               onRefreshProfile={loadProfile}
               onRequireAuth={handleRequireAuth}
+              onOpenWebAuth={handleOpenWebAuth}
+              onWebLogout={handleWebLogout}
               language={language}
               t={t}
             />
@@ -304,7 +327,18 @@ export default function App() {
             language={language}
             title={authModal.title}
             reason={authModal.reason}
+            onOpenWebAuth={handleOpenWebAuth}
             onClose={() => setAuthModal({ open: false, title: '', reason: '' })}
+          />
+        )}
+
+        {/* Web Callsign + Email Authorization Modal */}
+        {webAuthModalOpen && (
+          <WebAuthModal 
+            isOpen={webAuthModalOpen}
+            language={language}
+            onClose={() => setWebAuthModalOpen(false)}
+            onSuccess={() => loadProfile(false)}
           />
         )}
       </div>

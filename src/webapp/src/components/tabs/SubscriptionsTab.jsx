@@ -16,7 +16,8 @@ import {
   Compass,
   Radio,
   Clock,
-  Sparkles
+  Sparkles,
+  Mail
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -30,6 +31,7 @@ export default function SubscriptionsTab({
   onUnreadCountChange,
   onNavigate,
   onRequireAuth, 
+  onOpenWebAuth,
   onRefreshProfile, 
   language = 'RU', 
   t = (k) => k 
@@ -287,19 +289,33 @@ export default function SubscriptionsTab({
             </p>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-2 space-y-2">
             <button
               type="button"
               onClick={() => {
                 telegram.haptic.impact('medium');
                 telegram.openTelegramBot('hub');
               }}
-              className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-lg shadow-sky-500/25 transition active:scale-95"
+              className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-lg shadow-sky-500/25 transition active:scale-95 cursor-pointer"
             >
               <Send className="w-4 h-4 -translate-x-0.5 translate-y-0.5" />
               <span>{language === 'RU' ? 'Подключить подписки в Telegram' : 'Manage Subscriptions in Telegram'}</span>
               <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-80" />
             </button>
+
+            {onOpenWebAuth && (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('light');
+                  onOpenWebAuth();
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm text-slate-900 dark:text-white bg-slate-200/90 dark:bg-slate-800/90 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 shadow-sm transition active:scale-95 cursor-pointer"
+              >
+                <Mail className="w-4 h-4 text-emerald-500" />
+                <span>{language === 'RU' ? 'Войти по позывному и Email' : 'Sign In with Callsign & Email'}</span>
+              </button>
+            )}
           </div>
         </div>
 

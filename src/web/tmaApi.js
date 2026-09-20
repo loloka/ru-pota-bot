@@ -9,7 +9,9 @@ import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import { pinManager } from '../services/pinManager.js';
 import { getBaseCallsign, isBroadcastMutedCallsign } from '../bot/utils.js';
 import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry } from '../services/ooptService.js';
+import crypto from 'crypto';
 import { renderPotaTile, parseWmsBbox, tileToBbox, generatePotaGpx, getEmptyPng } from '../services/potaTileService.js';
+import { resendService } from '../services/resendService.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -212,6 +214,184 @@ export function createTmaRouter(telegramClient) {
   router.use(tmaUserMiddleware);
 
   // ==========================================
+  // 0. WEB AUTHENTICATION (Callsign + Email via Resend)
+  // ==========================================
+
+  // POST /api/tma/auth/send-code - Request 6-digit verification code
+  router.post('/auth/send-code', async (req, res) => {
+    try {
+      const { callsign, email } = req.body || {};
+
+      if (!callsign || !email) {
+        return res.status(400).json({ error: 'Позывной и email обязательны для заполнения' });
+      }
+
+      const cleanCallsign = String(callsign).trim().toUpperCase();
+      const cleanEmail = String(email).trim().toLowerCase();
+
+      // Validate callsign format per rule 2.4
+      if (!baseCallsignRegex.test(cleanCallsign) || !hasLetterRegex.test(cleanCallsign)) {
+        return res.status(400).json({ error: 'Некорректный формат позывного (например: R9OGL, RA9ODW/P)' });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        return res.status(400).json({ error: 'Некорректный формат адреса электронной почты' });
+      }
+
+      // Check 60-second cooldown rate limit per email
+      const lastRequest = db.prepare(`
+        SELECT created_at FROM email_verifications 
+        WHERE email = ? 
+        ORDER BY id DESC LIMIT 1
+      `).get(cleanEmail);
+
+      if (lastRequest && lastRequest.created_at) {
+        const elapsedSec = (Date.now() - new Date(lastRequest.created_at).getTime()) / 1000;
+        if (elapsedSec < 60) {
+          const waitSec = Math.ceil(60 - elapsedSec);
+          return res.status(429).json({ 
+            error: `Пожалуйста, подождите ${waitSec} сек. перед повторной отправкой кода`,
+            retryAfter: waitSec 
+          });
+        }
+      }
+
+      // Generate 6-digit cryptographically secure code
+      const code = String(crypto.randomInt(100000, 999999));
+      const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+      db.prepare(`
+        INSERT INTO email_verifications (email, callsign, code, expires_at)
+        VALUES (?, ?, ?, ?)
+      `).run(cleanEmail, cleanCallsign, code, expiresAt);
+
+      // Send email via Resend
+      const sendResult = await resendService.sendVerificationCode({
+        email: cleanEmail,
+        callsign: cleanCallsign,
+        code,
+      });
+
+      if (!sendResult.success) {
+        return res.status(500).json({ 
+          error: sendResult.error || 'Не удалось отправить письмо с кодом. Проверьте адрес или повторите позже.' 
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Проверочный код отправлен на вашу почту',
+        email: cleanEmail,
+        callsign: cleanCallsign,
+        expiresInSeconds: 600,
+      });
+    } catch (err) {
+      console.error('[TMA API] Error in /auth/send-code:', err.message);
+      res.status(500).json({ error: 'Внутренняя ошибка сервера при отправке кода' });
+    }
+  });
+
+  // POST /api/tma/auth/verify-code - Verify code and log in
+  router.post('/auth/verify-code', async (req, res) => {
+    try {
+      const { email, code, callsign } = req.body || {};
+
+      if (!email || !code) {
+        return res.status(400).json({ error: 'Email и проверочный код обязательны' });
+      }
+
+      const cleanEmail = String(email).trim().toLowerCase();
+      const cleanCode = String(code).trim();
+      const cleanCallsign = callsign ? String(callsign).trim().toUpperCase() : null;
+
+      const now = Date.now();
+      const verification = db.prepare(`
+        SELECT * FROM email_verifications 
+        WHERE email = ? AND code = ? AND expires_at > ?
+        ORDER BY id DESC LIMIT 1
+      `).get(cleanEmail, cleanCode, now);
+
+      if (!verification) {
+        return res.status(400).json({ error: 'Неверный или истекший проверочный код' });
+      }
+
+      // Invalidate used verification code
+      db.prepare('DELETE FROM email_verifications WHERE email = ?').run(cleanEmail);
+
+      const targetCallsign = (cleanCallsign || verification.callsign || '').toUpperCase();
+
+      // Find existing user by email or by web callsign
+      let user = db.prepare(`
+        SELECT * FROM users 
+        WHERE email = ? OR (callsign = ? AND auth_type = 'web')
+      `).get(cleanEmail, targetCallsign);
+
+      const webToken = crypto.randomBytes(32).toString('hex');
+
+      if (!user) {
+        // Allocate persistent negative ID for web user
+        const minIdRow = db.prepare('SELECT MIN(telegram_id) as min_id FROM users').get();
+        let nextId = -1000000001;
+        if (minIdRow && minIdRow.min_id && minIdRow.min_id < 0) {
+          nextId = minIdRow.min_id - 1;
+        }
+
+        db.prepare(`
+          INSERT INTO users (telegram_id, callsign, status, email, auth_type, web_token)
+          VALUES (?, ?, 'approved', ?, 'web', ?)
+        `).run(nextId, targetCallsign, cleanEmail, webToken);
+
+        user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(nextId);
+        console.log(`\x1b[32m[Web Auth]\x1b[0m 🌐 Зарегистрирован новый веб-пользователь: ${targetCallsign} (${cleanEmail}), ID: ${nextId}`);
+      } else {
+        // Update existing user with new token and verified data
+        db.prepare(`
+          UPDATE users 
+          SET web_token = ?, callsign = ?, email = ?, auth_type = COALESCE(auth_type, 'web')
+          WHERE telegram_id = ?
+        `).run(webToken, targetCallsign, cleanEmail, user.telegram_id);
+
+        user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(user.telegram_id);
+        console.log(`\x1b[32m[Web Auth]\x1b[0m 🌐 Веб-вход пользователя: ${targetCallsign} (${cleanEmail}), ID: ${user.telegram_id}`);
+      }
+
+      res.json({
+        success: true,
+        token: webToken,
+        user: {
+          id: user.telegram_id,
+          callsign: user.callsign,
+          email: user.email,
+          status: user.status,
+          auth_type: user.auth_type || 'web',
+          isWeb: true,
+        }
+      });
+    } catch (err) {
+      console.error('[TMA API] Error in /auth/verify-code:', err.message);
+      res.status(500).json({ error: 'Ошибка верификации кода' });
+    }
+  });
+
+  // POST /api/tma/auth/logout - Logout web session
+  router.post('/auth/logout', (req, res) => {
+    try {
+      const authHeader = req.headers['authorization'] || '';
+      const webToken = req.headers['x-web-token'] || 
+        (authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : '');
+
+      if (webToken) {
+        db.prepare('UPDATE users SET web_token = NULL WHERE web_token = ?').run(webToken);
+      }
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Logout error' });
+    }
+  });
+
+  // ==========================================
   // 1. GET /api/tma/me - Operator Profile
   // ==========================================
   router.get('/me', async (req, res) => {
@@ -302,6 +482,9 @@ export function createTmaRouter(telegramClient) {
           username: tgUser.username || '',
           photo_url: tgUser.photo_url || null,
           callsign: dbUser.callsign,
+          email: dbUser.email || tgUser.email || null,
+          auth_type: dbUser.auth_type || (tgUser.isWeb ? 'web' : 'telegram'),
+          isWeb: Boolean(tgUser.isWeb),
           status: dbUser.status,
           reject_reason: dbUser.reject_reason || null,
           notifications_enabled: dbUser.notifications_enabled !== 0,

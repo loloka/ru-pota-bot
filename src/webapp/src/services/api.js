@@ -24,6 +24,15 @@ async function request(endpoint, options = {}) {
   if (initData) {
     headers['Authorization'] = `tma ${initData}`;
     headers['X-Telegram-Init-Data'] = initData;
+  } else {
+    // Check for standalone browser web token in localStorage
+    try {
+      const webToken = localStorage.getItem('rupota_web_token');
+      if (webToken) {
+        headers['Authorization'] = `Bearer ${webToken}`;
+        headers['X-Web-Token'] = webToken;
+      }
+    } catch (e) {}
   }
 
   if (isExplicitDevMock) {
@@ -262,5 +271,43 @@ export const api = {
    */
   async getOoptDetails(nid) {
     return request(`/oopt/${nid}`);
+  },
+
+  /**
+   * Request 6-digit email verification code for web login
+   */
+  async sendEmailCode({ callsign, email }) {
+    return request('/auth/send-code', {
+      method: 'POST',
+      body: JSON.stringify({ callsign, email }),
+    });
+  },
+
+  /**
+   * Verify code and login as web operator
+   */
+  async verifyEmailCode({ email, code, callsign }) {
+    const data = await request('/auth/verify-code', {
+      method: 'POST',
+      body: JSON.stringify({ email, code, callsign }),
+    });
+    if (data?.token) {
+      try {
+        localStorage.setItem('rupota_web_token', data.token);
+      } catch (e) {}
+    }
+    return data;
+  },
+
+  /**
+   * Logout web session
+   */
+  async logoutWeb() {
+    try {
+      await request('/auth/logout', { method: 'POST' });
+    } catch (e) {}
+    try {
+      localStorage.removeItem('rupota_web_token');
+    } catch (e) {}
   },
 };

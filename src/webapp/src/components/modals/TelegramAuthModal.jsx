@@ -1,8 +1,8 @@
 import React from 'react';
-import { Send, X, Radio, Bell, Award, ExternalLink } from 'lucide-react';
+import { Send, X, Radio, Bell, Award, ExternalLink, Mail } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 
-export default function TelegramAuthModal({ onClose, language = 'RU', title, reason }) {
+export default function TelegramAuthModal({ onClose, onOpenWebAuth, language = 'RU', title, reason }) {
   const isRu = language === 'RU';
 
   const handleOpenBot = () => {
@@ -30,10 +30,10 @@ export default function TelegramAuthModal({ onClose, language = 'RU', title, rea
           </div>
           <div>
             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-md border border-sky-500/20">
-              {isRu ? 'Telegram Mini App' : 'Telegram Mini App'}
+              {isRu ? 'Авторизация в RU-POTA' : 'RU-POTA Hub Auth'}
             </span>
             <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight mt-0.5">
-              {title || (isRu ? 'Авторизация оператора' : 'Operator Login')}
+              {title || (isRu ? 'Вход в аккаунт' : 'Operator Login')}
             </h3>
           </div>
         </div>
@@ -41,8 +41,8 @@ export default function TelegramAuthModal({ onClose, language = 'RU', title, rea
         {/* Reason / Explanation */}
         <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
           {reason || (isRu 
-            ? 'Вы просматриваете RU-POTA Hub в режиме гостя. Чтобы отправлять споты от своего позывного и настроить персональные подписки, откройте приложение через нашего Telegram-бота:'
-            : 'You are viewing RU-POTA Hub in guest mode. To post spots and manage subscriptions, please launch the app inside our Telegram bot:'
+            ? 'Вы просматриваете RU-POTA Hub в режиме гостя. Чтобы отправлять споты от своего позывного и настроить персональные подписки, войдите через Telegram или по Email:'
+            : 'You are viewing RU-POTA Hub in guest mode. To post spots and manage subscriptions, please log in via Telegram or Email:'
           )}
         </p>
 
@@ -54,7 +54,7 @@ export default function TelegramAuthModal({ onClose, language = 'RU', title, rea
           </div>
           <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
             <Bell className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span>{isRu ? 'Мгновенные push-алерты в ЛС от бота' : 'Instant Telegram DM alerts on new spots'}</span>
+            <span>{isRu ? 'Мгновенные push-алерты и радио-сигнал' : 'Instant radio chime alerts on new spots'}</span>
           </div>
           <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
             <Award className="w-3.5 h-3.5 text-sky-500 shrink-0" />
@@ -74,10 +74,24 @@ export default function TelegramAuthModal({ onClose, language = 'RU', title, rea
             <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-80" />
           </button>
 
+          {onOpenWebAuth && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onClose) onClose();
+                onOpenWebAuth();
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-xs text-slate-900 dark:text-white bg-slate-200/90 dark:bg-slate-800/90 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition active:scale-95"
+            >
+              <Mail className="w-3.5 h-3.5 text-emerald-500" />
+              <span>{isRu ? 'Войти по позывному и Email' : 'Sign In with Callsign & Email'}</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 bg-transparent hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition"
+            className="w-full py-2 px-3 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 bg-transparent hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition"
           >
             {isRu ? 'Продолжить просмотр как гость' : 'Continue browsing as guest'}
           </button>

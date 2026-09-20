@@ -13,12 +13,24 @@ import {
   Radio,
   Bell,
   Clock,
-  RefreshCw
+  RefreshCw,
+  Mail,
+  LogOut,
+  Globe
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
 
-export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAuth, language = 'RU', t = (k) => k }) {
+export default function ProfileTab({ 
+  user, 
+  stats, 
+  onRefreshProfile, 
+  onRequireAuth, 
+  onOpenWebAuth, 
+  onWebLogout, 
+  language = 'RU', 
+  t = (k) => k 
+}) {
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [changeCallsignModal, setChangeCallsignModal] = useState(false);
   const [requestedCallsign, setRequestedCallsign] = useState('');
@@ -79,19 +91,33 @@ export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAut
             </p>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-2 space-y-2">
             <button
               type="button"
               onClick={() => {
                 telegram.haptic.impact('medium');
                 telegram.openTelegramBot('hub');
               }}
-              className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-lg shadow-sky-500/25 transition active:scale-95"
+              className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-lg shadow-sky-500/25 transition active:scale-95 cursor-pointer"
             >
               <Send className="w-4 h-4 -translate-x-0.5 translate-y-0.5" />
               <span>{language === 'RU' ? 'Открыть в Telegram (@ru_pota_bot)' : 'Open in Telegram (@ru_pota_bot)'}</span>
               <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-80" />
             </button>
+
+            {onOpenWebAuth && (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('light');
+                  onOpenWebAuth();
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm text-slate-900 dark:text-white bg-slate-200/90 dark:bg-slate-800/90 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 shadow-sm transition active:scale-95 cursor-pointer"
+              >
+                <Mail className="w-4 h-4 text-emerald-500" />
+                <span>{language === 'RU' ? 'Войти по позывному и Email' : 'Sign In with Callsign & Email'}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -161,12 +187,22 @@ export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAut
           </div>
 
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white truncate">
-              {user.first_name} {user.last_name || ''}
-            </h2>
-            {user.username && (
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white truncate">
+                {user.first_name} {user.last_name || ''}
+              </h2>
+              {(user.isWeb || user.auth_type === 'web') && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0 flex items-center gap-1">
+                  <Globe className="w-3 h-3" />
+                  <span>WEB</span>
+                </span>
+              )}
+            </div>
+            {user.email ? (
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">{user.email}</p>
+            ) : user.username ? (
               <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">@{user.username}</p>
-            )}
+            ) : null}
 
             <div className="flex items-center gap-2 mt-2">
               <span className={`font-mono text-xs font-extrabold px-2.5 py-0.5 rounded-lg border ${
@@ -176,17 +212,19 @@ export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAut
               }`}>
                 {user.callsign || t('dash_no_callsign')}
               </span>
-              <button
-                type="button"
-                onClick={() => {
-                  telegram.haptic.impact('light');
-                  setChangeCallsignModal(true);
-                }}
-                className="text-[11px] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 underline underline-offset-2"
-              >
-                <Edit className="w-3 h-3" />
-                <span>{user.callsign ? t('profile_change_callsign') : t('profile_set_callsign')}</span>
-              </button>
+              {!user.isWeb && user.auth_type !== 'web' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    telegram.haptic.impact('light');
+                    setChangeCallsignModal(true);
+                  }}
+                  className="text-[11px] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 underline underline-offset-2"
+                >
+                  <Edit className="w-3 h-3" />
+                  <span>{user.callsign ? t('profile_change_callsign') : t('profile_set_callsign')}</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -364,6 +402,20 @@ export default function ProfileTab({ user, stats, onRefreshProfile, onRequireAut
           </a>
         </div>
       </div>
+
+      {/* Logout button for Web users */}
+      {(user.isWeb || user.auth_type === 'web') && onWebLogout && (
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={onWebLogout}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition active:scale-95 cursor-pointer shadow-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>{language === 'RU' ? 'Выйти из веб-аккаунта' : 'Sign Out of Web Account'}</span>
+          </button>
+        </div>
+      )}
 
       {/* Callsign Change Modal */}
       {changeCallsignModal && typeof document !== 'undefined' && createPortal(

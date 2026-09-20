@@ -140,6 +140,9 @@ let lastRazaFetchTime = 0;
 const statsCache = new Map();
 const STATS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache for stats
 
+const parkDetailsCache = new Map();
+const PARK_DETAILS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache for full park info, leaderboards, activations
+
 /**
  * Determine amateur radio band by frequency in kHz
  */
@@ -762,61 +765,143 @@ export function createTmaRouter(telegramClient) {
       }
 
       const tgUser = req.telegramUser;
+      const dbUser = req.dbUser;
 
-      // Fetch park info and activations from POTA
-      let parkData = null;
-      try {
-        const [park, leaderboard, activations] = await Promise.allSettled([
-          potaApi.getPark(ref),
-          potaApi.getParkLeaderboard(ref),
-          potaApi.getParkActivations(ref)
-        ]);
+      // Operator callsign for personalized matching:
+      // Can be supplied via query param ?callsign=... or obtained from authenticated telegram session
+      const rawUserCallsign = (req.query.callsign || dbUser?.callsign || '').trim().toUpperCase();
+      const userCallsign = baseCallsignRegex.test(rawUserCallsign) ? rawUserCallsign : (dbUser?.callsign || '');
+      const cleanUserCall = userCallsign ? getBaseCallsign(userCallsign) : null;
 
-        if (park.status === 'fulfilled' && park.value && (park.value.name || park.value.reference)) {
-          const p = park.value;
-          const lb = leaderboard.status === 'fulfilled' ? leaderboard.value : {};
-          const actList = activations.status === 'fulfilled' && Array.isArray(activations.value) ? activations.value : [];
-          const topAct = lb?.activations?.[0];
+      // Check in-memory cache for full park details
+      let parkDetails = null;
+      const now = Date.now();
+      const cached = parkDetailsCache.get(ref);
 
-          parkData = {
-            reference: p.reference || ref,
-            name: p.name || 'Национальный парк',
-            lat: parseFloat(p.latitude) || 0,
-            lon: parseFloat(p.longitude) || 0,
-            grid: p.grid || '',
-            region: p.locationDesc || '',
-            activations: p.activations || 0,
-            qsos: p.qsos || 0,
-            attempts: p.attempts || 0,
-            topActivator: topAct ? `${topAct.callsign} (${topAct.count})` : null,
-            recentActivations: actList.slice(0, 20).map(a => ({
-              callsign: a.activeCallsign,
+      if (cached && (now - cached.timestamp) < PARK_DETAILS_CACHE_TTL_MS) {
+        parkDetails = cached.data;
+      } else {
+        // Fetch park info, leaderboards and activations from POTA in parallel
+        try {
+          const [parkRes, leaderboardRes, activationsRes] = await Promise.allSettled([
+            potaApi.getPark(ref),
+            potaApi.getParkLeaderboard(ref),
+            potaApi.getParkActivations(ref)
+          ]);
+
+          if (parkRes.status === 'fulfilled' && parkRes.value && (parkRes.value.name || parkRes.value.reference)) {
+            const p = parkRes.value;
+            const lb = leaderboardRes.status === 'fulfilled' && leaderboardRes.value ? leaderboardRes.value : {};
+            const actList = activationsRes.status === 'fulfilled' && Array.isArray(activationsRes.value) ? activationsRes.value : [];
+
+            // Rank leaderboards
+            const activationsLb = Array.isArray(lb.activations) ? lb.activations.map((item, idx) => ({
+              rank: idx + 1,
+              callsign: (item.callsign || '').toUpperCase(),
+              count: parseInt(item.count, 10) || 0,
+            })) : [];
+
+            const activatorQsosLb = Array.isArray(lb.activator_qsos) ? lb.activator_qsos.map((item, idx) => ({
+              rank: idx + 1,
+              callsign: (item.callsign || '').toUpperCase(),
+              count: parseInt(item.count, 10) || 0,
+            })) : [];
+
+            const hunterQsosLb = Array.isArray(lb.hunter_qsos) ? lb.hunter_qsos.map((item, idx) => ({
+              rank: idx + 1,
+              callsign: (item.callsign || '').toUpperCase(),
+              count: parseInt(item.count, 10) || 0,
+            })) : [];
+
+            const recentActs = actList.slice(0, 30).map(a => ({
+              callsign: (a.activeCallsign || '').toUpperCase(),
               date: a.qso_date ? `${a.qso_date.substring(0,4)}-${a.qso_date.substring(4,6)}-${a.qso_date.substring(6,8)}` : '',
               totalQSOs: a.totalQSOs || 0,
               cw: a.qsosCW || 0,
               data: a.qsosDATA || 0,
               phone: a.qsosPHONE || 0,
               location: a.locationDesc || ''
-            }))
-          };
-        }
-      } catch (e) {}
+            }));
 
-      // Fallback to cachedParks if direct POTA endpoint fails
-      if (!parkData && cachedParks) {
-        const found = cachedParks.find(p => p.reference.toUpperCase() === ref);
-        if (found) {
-          parkData = { ...found, recentActivations: [] };
+            parkDetails = {
+              reference: p.reference || ref,
+              name: p.name || 'Парк POTA',
+              lat: parseFloat(p.latitude) || 0,
+              lon: parseFloat(p.longitude) || 0,
+              grid: p.grid6 || p.grid4 || p.grid || '',
+              grid4: p.grid4 || '',
+              grid6: p.grid6 || '',
+              region: p.locationDesc || '',
+              locationName: p.locationName || '',
+              entityName: p.entityName || '',
+              parktypeDesc: p.parktypeDesc || 'Park',
+              activations: p.activations || 0,
+              qsos: p.qsos || 0,
+              attempts: p.attempts || 0,
+              firstActivator: p.firstActivator ? p.firstActivator.toUpperCase() : null,
+              firstActivationDate: p.firstActivationDate || null,
+              accessMethods: p.accessMethods || null,
+              activationMethods: p.activationMethods || null,
+              website: p.website || null,
+              parkComments: p.parkComments || null,
+              leaderboard: {
+                activations: activationsLb,
+                activator_qsos: activatorQsosLb,
+                hunter_qsos: hunterQsosLb,
+              },
+              recentActivations: recentActs,
+            };
+
+            // Save in cache
+            parkDetailsCache.set(ref, { data: parkDetails, timestamp: now });
+          }
+        } catch (e) {
+          console.warn(`[TMA API] Warning fetching park details for ${ref}:`, e.message);
         }
       }
 
-      if (!parkData) {
+      // Fallback to cachedParks if direct POTA endpoint fails
+      if (!parkDetails && cachedParks) {
+        const found = cachedParks.find(p => p.reference.toUpperCase() === ref);
+        if (found) {
+          parkDetails = {
+            ...found,
+            grid4: found.grid ? found.grid.substring(0, 4) : '',
+            grid6: found.grid || '',
+            leaderboard: { activations: [], activator_qsos: [], hunter_qsos: [] },
+            recentActivations: [],
+          };
+        }
+      }
+
+      if (!parkDetails) {
         return res.status(404).json({ error: `Парк с кодом ${ref} не найден.` });
       }
 
-      if (!parkData.recentActivations) {
-        parkData.recentActivations = [];
+      // Personalized operator matching
+      let myStats = null;
+      if (cleanUserCall) {
+        const actEntry = parkDetails.leaderboard?.activations?.find(i => getBaseCallsign(i.callsign) === cleanUserCall);
+        const qsoEntry = parkDetails.leaderboard?.activator_qsos?.find(i => getBaseCallsign(i.callsign) === cleanUserCall);
+        const huntEntry = parkDetails.leaderboard?.hunter_qsos?.find(i => getBaseCallsign(i.callsign) === cleanUserCall);
+        const isFirst = Boolean(parkDetails.firstActivator && getBaseCallsign(parkDetails.firstActivator) === cleanUserCall);
+        const myActivations = (parkDetails.recentActivations || []).filter(a => getBaseCallsign(a.callsign) === cleanUserCall);
+
+        myStats = {
+          callsign: userCallsign,
+          cleanCallsign: cleanUserCall,
+          hasActivity: Boolean(actEntry || qsoEntry || huntEntry || isFirst || myActivations.length > 0),
+          isFirstActivator: isFirst,
+          activations: actEntry ? { count: actEntry.count, rank: actEntry.rank } : { count: 0, rank: null },
+          activatorQsos: qsoEntry ? { count: qsoEntry.count, rank: qsoEntry.rank } : { count: 0, rank: null },
+          hunterQsos: huntEntry ? { count: huntEntry.count, rank: huntEntry.rank } : { count: 0, rank: null },
+          myActivationsCount: myActivations.length,
+        };
       }
+
+      // Top activator summary for backward compatibility
+      const topAct = parkDetails.leaderboard?.activations?.[0];
+      const topActivator = topAct ? `${topAct.callsign} (${topAct.count})` : null;
 
       // Check if currently active in spots (within last 45 minutes)
       let activeSpot = null;
@@ -846,12 +931,15 @@ export function createTmaRouter(telegramClient) {
       ).get(tgUser.id, 'park', ref));
 
       res.json({
-        ...parkData,
+        ...parkDetails,
+        topActivator,
+        myStats,
         isActive: Boolean(activeSpot),
         activeSpot: activeSpot ? {
           callsign: activeSpot.activator,
           freq: (parseFloat(activeSpot.frequency) > 1000 ? (parseFloat(activeSpot.frequency)/1000).toFixed(3) : activeSpot.frequency),
           mode: activeSpot.mode,
+          comments: activeSpot.comments || '',
         } : null,
         isSubscribed,
       });

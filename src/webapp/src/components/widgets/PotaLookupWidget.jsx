@@ -22,6 +22,7 @@ import {
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
 import RouteModal from '../modals/RouteModal.jsx';
+import ParkModal from '../modals/ParkModal.jsx';
 
 export default function PotaLookupWidget({ 
   user, 
@@ -48,6 +49,7 @@ export default function PotaLookupWidget({
   
   // Route modal for park
   const [showRouteModal, setShowRouteModal] = useState(false);
+  const [showParkModal, setShowParkModal] = useState(false);
 
   // Subscribing loading state
   const [subscribing, setSubscribing] = useState(false);
@@ -778,8 +780,18 @@ export default function PotaLookupWidget({
                 )}
               </div>
 
-              <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-1 leading-tight">
-                {parkData.name}
+              <h4 
+                onClick={() => {
+                  telegram.haptic.impact('light');
+                  setShowParkModal(true);
+                }}
+                className="font-bold text-sm text-slate-900 dark:text-white mt-1 leading-tight cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition flex items-center gap-1.5"
+                title="Открыть лидеров и подробности парка"
+              >
+                <span>{parkData.name}</span>
+                <span className="text-[10px] text-emerald-500 font-normal underline decoration-dotted">
+                  ({language === 'RU' ? 'подробнее' : 'more'})
+                </span>
               </h4>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 {parkData.region || 'RU-POTA'} {parkData.grid ? `• QTH: ${parkData.grid}` : ''}
@@ -911,6 +923,20 @@ export default function PotaLookupWidget({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
+            {/* Leaders & Details Button */}
+            <button
+              type="button"
+              onClick={() => {
+                telegram.haptic.impact('medium');
+                setShowParkModal(true);
+              }}
+              className="flex items-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition active:scale-95 shadow-sm"
+              title={language === 'RU' ? 'Лидеры парка, ваша статистика и история' : 'Park leaders & stats'}
+            >
+              <Award className="w-3.5 h-3.5 text-emerald-500" />
+              <span>{language === 'RU' ? 'Лидеры' : 'Leaders'}</span>
+            </button>
+
             {/* Show on Map Button */}
             {parkData.lat && parkData.lon && (
               <button
@@ -987,6 +1013,21 @@ export default function PotaLookupWidget({
           park={parkData}
           language={language}
           onClose={() => setShowRouteModal(false)}
+        />
+      )}
+
+      {/* Full Park Details & Leaderboard Modal */}
+      {showParkModal && parkData && (
+        <ParkModal
+          park={parkData}
+          user={user}
+          language={language}
+          t={t}
+          onClose={() => setShowParkModal(false)}
+          onOpenRoute={() => setShowRouteModal(true)}
+          onNavigateToCallsign={(call) => {
+            handleSearch(call, 'callsign');
+          }}
         />
       )}
 

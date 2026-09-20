@@ -230,6 +230,8 @@ export default function App() {
 
           {activeTab === 'map' && (
             <MapTab 
+              user={user}
+              onNavigate={handleNavigate}
               language={language}
               t={t}
               mapTarget={mapTarget}

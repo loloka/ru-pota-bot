@@ -17,7 +17,8 @@ import {
   LocateFixed,
   Zap,
   Plane,
-  Info
+  Info,
+  Award
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -25,6 +26,7 @@ import { NEW_RDA_DISTRICTS } from '../../data/newRdaDistricts.js';
 import { NEW_REGIONS_BORDERS } from '../../data/newRegionsBorders.js';
 import RouteModal from '../modals/RouteModal.jsx';
 import OsmAndModal from '../modals/OsmAndModal.jsx';
+import ParkModal from '../modals/ParkModal.jsx';
 
 // Clean base map providers without watermarks and with no API key requirement
 const BASE_MAPS = {
@@ -118,10 +120,12 @@ const WMS_LAYERS_CONFIG = [
 const DEFAULT_LAYERS = { rda: true, raza: false, rafa: false, qth: false, sota: false, rlha: false };
 
 export default function MapTab({ 
+  user = null,
   language = 'RU', 
   t = (k) => k,
   mapTarget = null,
-  onClearMapTarget = () => {}
+  onClearMapTarget = () => {},
+  onNavigate = () => {}
 }) {
 
   const mapContainerRef = useRef(null);
@@ -143,6 +147,8 @@ export default function MapTab({
   const [filterActiveOnly, setFilterActiveOnly] = useState(false);
   
   const [selectedItem, setSelectedItem] = useState(null); // park or raza or airfield
+  const [showParkModal, setShowParkModal] = useState(false);
+  const [detailedPark, setDetailedPark] = useState(null);
   const [showRouteModal, setShowRouteModal] = useState(false);
   const [showOsmAndModal, setShowOsmAndModal] = useState(false);
   const [showLayersSheet, setShowLayersSheet] = useState(false);
@@ -1117,9 +1123,27 @@ export default function MapTab({
                 )}
               </div>
 
-              <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-1 leading-tight">
-                {selectedItem.name}
+              <h4 
+                onClick={() => {
+                  if (!selectedItem.type) {
+                    telegram.haptic.impact('light');
+                    setDetailedPark(selectedItem);
+                    setShowParkModal(true);
+                  }
+                }}
+                className={`font-bold text-sm text-slate-900 dark:text-white mt-1 leading-tight ${
+                  !selectedItem.type ? 'cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition flex items-center gap-1.5' : ''
+                }`}
+                title={!selectedItem.type ? 'Открыть подробную информацию и лидеров парка' : ''}
+              >
+                <span>{selectedItem.name}</span>
+                {!selectedItem.type && (
+                  <span className="text-[10px] text-emerald-500 font-normal underline decoration-dotted">
+                    ({language === 'RU' ? 'подробнее' : 'more'})
+                  </span>
+                )}
               </h4>
+
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 {selectedItem.type === 'rda'
                   ? `Официальный район RDA (${selectedItem.region})`
@@ -1127,6 +1151,16 @@ export default function MapTab({
                 {selectedItem.grid ? ` • QTH: ${selectedItem.grid}` : ''}
                 {selectedItem.lat && selectedItem.lon ? ` • ${Number(selectedItem.lat).toFixed(4)}, ${Number(selectedItem.lon).toFixed(4)}` : ''}
               </p>
+
+              {/* Park Quick Stats if POTA */}
+              {!selectedItem.type && (Boolean(selectedItem.activations) || Boolean(selectedItem.qsos)) && (
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                    <Award className="w-3 h-3 text-emerald-500" />
+                    <span>{selectedItem.activations || 0} {language === 'RU' ? 'поездок' : 'trips'} • {selectedItem.qsos || 0} QSO</span>
+                  </span>
+                </div>
+              )}
             </div>
 
             <button
@@ -1157,6 +1191,23 @@ export default function MapTab({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 pt-1">
+            {/* Leaders & Details Button for POTA Parks */}
+            {!selectedItem.type && (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('medium');
+                  setDetailedPark(selectedItem);
+                  setShowParkModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 transition active:scale-95 shadow-sm"
+                title={language === 'RU' ? 'Лидеры парка, ваша статистика и история' : 'Park leaders & stats'}
+              >
+                <Award className="w-4 h-4 text-emerald-500" />
+                <span>{language === 'RU' ? 'Лидеры' : 'Leaders'}</span>
+              </button>
+            )}
+
             {/* Route Button */}
             <button
               type="button"
@@ -1374,6 +1425,28 @@ export default function MapTab({
         <OsmAndModal
           language={language}
           onClose={() => setShowOsmAndModal(false)}
+        />
+      )}
+
+      {/* 9. Rich POTA Park Details & Leaderboard Modal */}
+      {showParkModal && detailedPark && (
+        <ParkModal
+          park={detailedPark}
+          user={user}
+          language={language}
+          t={t}
+          onClose={() => setShowParkModal(false)}
+          onOpenRoute={(p) => {
+            setShowRouteModal(true);
+          }}
+          onOpenOsmAnd={(p) => {
+            setShowOsmAndModal(true);
+          }}
+          onNavigateToCallsign={(call) => {
+            if (onNavigate) {
+              onNavigate('cluster', { search: call });
+            }
+          }}
         />
       )}
 

@@ -107,9 +107,10 @@ export const api = {
     return request(`/lookup/callsign/${encodeURIComponent(callsign.trim().toUpperCase())}`);
   },
 
-  async lookupPark(ref) {
+  async lookupPark(ref, callsign = '') {
     if (!ref) throw new Error('Park reference required');
-    return request(`/lookup/park/${encodeURIComponent(ref.trim().toUpperCase())}`);
+    const qs = callsign ? `?callsign=${encodeURIComponent(callsign.trim().toUpperCase())}` : '';
+    return request(`/lookup/park/${encodeURIComponent(ref.trim().toUpperCase())}${qs}`);
   },
 
 

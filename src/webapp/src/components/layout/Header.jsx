@@ -20,12 +20,12 @@ export default function Header({
   language, 
   onToggleLanguage, 
   notificationCount = 0,
+  onOpenSubscriptions,
   onOpenOsmAnd,
   t = (k) => k
 }) {
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleAction = (cb) => {
     telegram.haptic.impact('light');
@@ -88,21 +88,23 @@ export default function Header({
               )}
             </button>
 
-            {/* Notification Bell */}
+            {/* Notification Bell (Direct shortcut to Subscriptions & Live Feed) */}
             <button
               type="button"
               onClick={() => {
                 handleAction();
-                setShowNotifications(!showNotifications);
+                if (onOpenSubscriptions) {
+                  onOpenSubscriptions();
+                }
               }}
               className="relative p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-colors active:scale-95"
-              title="Уведомления"
-              aria-label="Уведомления"
+              title={language === 'RU' ? 'Входящие споты и подписки' : 'Alerts & Subscriptions'}
+              aria-label="Входящие споты и подписки"
             >
               <Bell className="w-4 h-4" />
               {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-bold text-slate-950">
-                  {notificationCount}
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-md animate-pulse">
+                  {notificationCount > 99 ? '99+' : notificationCount}
                 </span>
               )}
             </button>
@@ -135,63 +137,6 @@ export default function Header({
           </div>
         </div>
       </header>
-
-      {/* Notifications Popover Dropdown */}
-      {showNotifications && (
-        <div 
-          className="fixed inset-0 z-50 flex items-start justify-end px-4" 
-          style={{ paddingTop: 'calc(var(--app-safe-top, 0px) + 4.5rem)' }}
-          onClick={() => setShowNotifications(false)}
-        >
-          <div 
-            className="w-80 rounded-2xl glass-card p-4 shadow-2xl animate-fade-in text-sm"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
-                <Bell className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                <span>{t('header_notifications_title')}</span>
-              </div>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
-                {notificationCount} {language === 'RU' ? 'активно' : 'active'}
-              </span>
-            </div>
-            <div className="divide-y divide-slate-200 dark:divide-slate-800/60 mt-2 max-h-60 overflow-y-auto">
-              {notificationCount === 0 ? (
-                <div className="py-4 text-center text-xs text-slate-500">
-                  {t('header_no_notifications')}
-                </div>
-              ) : (
-                <>
-                  <div className="py-2.5">
-                    <p className="font-medium text-slate-800 dark:text-slate-200 text-xs">
-                      🔔 {language === 'RU' ? 'Подписка на парк' : 'Park alert'}: <span className="text-emerald-500 dark:text-emerald-400 font-mono font-bold">RU-0065</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      {language === 'RU' ? 'Заельцовский бор • Алерты в ЛС активны' : 'Zaeltsovsky Park • Alerts active'}
-                    </p>
-                  </div>
-                  <div className="py-2.5">
-                    <p className="font-medium text-slate-800 dark:text-slate-200 text-xs">
-                      🌲 {language === 'RU' ? 'Подписка на парк' : 'Park alert'}: <span className="text-emerald-500 dark:text-emerald-400 font-mono font-bold">RU-0100</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      {language === 'RU' ? 'Новосибирский дендропарк' : 'Novosibirsk Dendropark'}
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowNotifications(false)}
-              className="mt-3 w-full py-1.5 text-xs text-center font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/60 rounded-xl transition"
-            >
-              {language === 'RU' ? 'Закрыть' : 'Close'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Slide-out Drawer Side Menu */}
       {menuOpen && (

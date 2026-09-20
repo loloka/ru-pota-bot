@@ -197,7 +197,8 @@ export default function App() {
           onToggleTheme={toggleTheme}
           language={language}
           onToggleLanguage={toggleLanguage}
-          notificationCount={unreadNotifsCount > 0 ? unreadNotifsCount : (subscriptionsCount > 0 ? subscriptionsCount : 0)}
+          notificationCount={unreadNotifsCount}
+          onOpenSubscriptions={() => handleNavigate('subscriptions')}
           onOpenOsmAnd={() => setShowOsmAndModal(true)}
           t={t}
         />

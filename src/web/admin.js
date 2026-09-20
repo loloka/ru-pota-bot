@@ -2433,6 +2433,8 @@ export const startAdminServer = (telegramClient) => {
             'тюменская': 'RU-TY',
             'ханты-мансийский': 'RU-KM',
             'ямало-ненецкий': 'RU-YN',
+            'ненецкий': 'RU-NN',
+            'франца-иосифа': 'RU-FJ',
             'новосибирская': 'RU-NS',
             'омская': 'RU-OM',
             'томская': 'RU-TO',

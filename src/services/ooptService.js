@@ -212,8 +212,8 @@ export function getOoptList({
 
   if (search && search.trim()) {
     const term = `%${search.trim()}%`;
-    baseConditions.push(`(title LIKE ? OR ate LIKE ? OR agency LIKE ? OR category LIKE ?)`);
-    baseParams.push(term, term, term, term);
+    baseConditions.push(`(title LIKE ? OR ate LIKE ? OR agency LIKE ? OR category LIKE ? OR pota_ref LIKE ? OR pota_name LIKE ?)`);
+    baseParams.push(term, term, term, term, term, term);
   }
 
   if (category && category.trim()) {
@@ -1554,87 +1554,83 @@ export async function getOoptDetails(nid) {
 /**
  * Matches OOPT records with existing POTA database (RU-0001+)
  */
-// Region code map from POTA region (RU-XX) to Russian region names
-const POTA_LOCATION_TO_REGION = {
-  // 2-letter ISO codes used by POTA
-  'RU-NS': 'Новосибирск',
-  'RU-MOW': 'Москва', 'RU-MO': 'Москва',
-  'RU-MOS': 'Московская', 'RU-MS': 'Московская',
-  'RU-SPE': 'Санкт-Петербург', 'RU-SP': 'Санкт-Петербург',
-  'RU-LEN': 'Ленинградская', 'RU-LN': 'Ленинградская',
-  'RU-KDA': 'Краснодарский', 'RU-KD': 'Краснодарский',
-  'RU-KHM': 'Ханты-Мансийск', 'RU-HM': 'Ханты-Мансийск', 'RU-YU': 'Югра',
-  'RU-PRI': 'Приморский', 'RU-PR': 'Приморский',
-  'RU-KHA': 'Хабаровский', 'RU-HB': 'Хабаровский', 'RU-KH': 'Хабаровский',
-  'RU-KYA': 'Красноярский', 'RU-KY': 'Красноярский',
-  'RU-ALT': 'Алтайский', 'RU-AL': 'Алтай',
-  'RU-IRK': 'Иркутская', 'RU-IR': 'Иркутская',
-  'RU-SVE': 'Свердловская', 'RU-SV': 'Свердловская',
-  'RU-CHE': 'Челябинская', 'RU-CH': 'Челябинская', 'RU-CL': 'Челябинская',
-  'RU-NIZ': 'Нижегородская', 'RU-NN': 'Нижегородская',
-  'RU-SAM': 'Самарская', 'RU-SM': 'Самарская', 'RU-SR': 'Саратовская',
-  'RU-BA': 'Башкортостан', 'RU-BAS': 'Башкортостан',
-  'RU-TA': 'Татарстан', 'RU-TAT': 'Татарстан',
-  'RU-KRM': 'Крым', 'RU-CR': 'Крым',
-  'RU-SEV': 'Севастополь', 'RU-SE': 'Севастополь',
-  'RU-ROS': 'Ростовская', 'RU-RO': 'Ростовская',
-  'RU-VOR': 'Воронежская', 'RU-VR': 'Воронежская',
-  'RU-VGG': 'Волгоградская', 'RU-VG': 'Волгоградская',
-  'RU-STA': 'Ставропольский', 'RU-ST': 'Ставропольский',
-  'RU-DAG': 'Дагестан', 'RU-DA': 'Дагестан',
-  'RU-KEM': 'Кемеровская', 'RU-KM': 'Кемеровская',
-  'RU-TOM': 'Томская', 'RU-TO': 'Томская',
-  'RU-OMS': 'Омская', 'RU-OM': 'Омская',
-  'RU-TYU': 'Тюменская', 'RU-TM': 'Тюменская', 'RU-TY': 'Тыва',
-  'RU-PER': 'Пермский', 'RU-PM': 'Пермский',
-  'RU-ORE': 'Оренбургская', 'RU-OB': 'Оренбургская',
-  'RU-SAR': 'Саратовская',
-  'RU-KIR': 'Кировская', 'RU-KV': 'Кировская',
-  'RU-VLG': 'Вологодская', 'RU-VO': 'Вологодская',
-  'RU-ARK': 'Архангельская', 'RU-AR': 'Архангельская',
-  'RU-MUR': 'Мурманская', 'RU-MU': 'Мурманская',
-  'RU-KAREL': 'Карелия', 'RU-KR': 'Карелия', 'RU-KI': 'Карелия', 'RU-KL': 'Калмыкия',
-  'RU-KGD': 'Калининградская', 'RU-KN': 'Калининградская',
-  'RU-KAM': 'Камчатский', 'RU-KT': 'Камчатский',
-  'RU-SAK': 'Сахалинская', 'RU-SL': 'Сахалинская',
-  'RU-SA': 'Саха', 'RU-YA': 'Якутия',
-  'RU-YAN': 'Ямало-Ненецк', 'RU-YN': 'Ямало-Ненецк',
-  'RU-CHU': 'Чукотск', 'RU-CK': 'Чукотск',
-  'RU-MAG': 'Магаданск', 'RU-MG': 'Магаданск',
-  'RU-AMU': 'Амурск', 'RU-AM': 'Амурск',
-  'RU-ZAB': 'Забайкальск', 'RU-ZB': 'Забайкальск',
-  'RU-BUR': 'Бурятия', 'RU-BU': 'Бурятия',
-  'RU-KK': 'Хакасия', 'RU-HA': 'Хакасия',
-  'RU-NO': 'Осетия', 'RU-SE': 'Осетия',
-  'RU-KB': 'Кабардино-Балкар',
-  'RU-KC': 'Карачаево-Черкес',
-  'RU-AD': 'Адыгея',
-  'RU-MO': 'Мордовия', 'RU-MR': 'Мордовия',
-  'RU-ME': 'Марий Эл',
-  'RU-CU': 'Чуваш', 'RU-CV': 'Чуваш',
-  'RU-UD': 'Удмурт',
-  'RU-KO': 'Коми',
-  'RU-TVE': 'Тверская', 'RU-TV': 'Тверская',
-  'RU-YAR': 'Ярославская', 'RU-YR': 'Ярославская',
-  'RU-KOS': 'Костромская', 'RU-KS': 'Костромская',
-  'RU-IVA': 'Ивановская', 'RU-IV': 'Ивановская',
-  'RU-VLA': 'Владимирская', 'RU-VL': 'Владимирская',
-  'RU-RYA': 'Рязанская', 'RU-RZ': 'Рязанская',
-  'RU-TUL': 'Тульская', 'RU-TL': 'Тульская',
-  'RU-KLU': 'Калужская', 'RU-KG': 'Калужская',
-  'RU-SMO': 'Смоленская',
-  'RU-BRY': 'Брянская', 'RU-BR': 'Брянская',
-  'RU-ORL': 'Орловская', 'RU-OR': 'Орловская',
-  'RU-LIP': 'Липецкая', 'RU-LP': 'Липецкая',
-  'RU-TAM': 'Тамбовская', 'RU-TB': 'Тамбовская',
-  'RU-BEL': 'Белгородская', 'RU-BL': 'Белгородская',
-  'RU-KUR': 'Курская', 'RU-KU': 'Курская',
-  'RU-AST': 'Астраханская', 'RU-AS': 'Астраханская',
-  'RU-ULY': 'Ульяновская', 'RU-UL': 'Ульяновская',
-  'RU-PNZ': 'Пензенская', 'RU-PZ': 'Пензенская',
-  'RU-PSK': 'Псковская', 'RU-PS': 'Псковская',
-  'RU-NGR': 'Новгородская', 'RU-NV': 'Новгородская',
-};
+// Canonical region lookup derived from POTA_LOCATION_CANONICAL
+export const REGION_HINT_MAP = {};
+for (const [code, name] of Object.entries(POTA_LOCATION_CANONICAL)) {
+  const clean = name.toLowerCase().replace(/(республика|край|область|автономный|округ|город|федерального значения)/g, '').trim();
+  REGION_HINT_MAP[code] = clean;
+}
+REGION_HINT_MAP['RU-MOW'] = 'москва';
+REGION_HINT_MAP['RU-MO'] = 'москва';
+REGION_HINT_MAP['RU-MC'] = 'москва';
+REGION_HINT_MAP['RU-MOS'] = 'московск';
+REGION_HINT_MAP['RU-MS'] = 'московск';
+REGION_HINT_MAP['RU-SPE'] = 'петербург';
+REGION_HINT_MAP['RU-SP'] = 'петербург';
+REGION_HINT_MAP['RU-LEN'] = 'ленинградск';
+REGION_HINT_MAP['RU-LN'] = 'ленинградск';
+REGION_HINT_MAP['RU-KDA'] = 'краснодарск';
+REGION_HINT_MAP['RU-KD'] = 'краснодарск';
+REGION_HINT_MAP['RU-PRI'] = 'приморск';
+REGION_HINT_MAP['RU-PR'] = 'приморск';
+REGION_HINT_MAP['RU-KHA'] = 'хабаровск';
+REGION_HINT_MAP['RU-KH'] = 'хабаровск';
+REGION_HINT_MAP['RU-HB'] = 'хабаровск';
+REGION_HINT_MAP['RU-KYA'] = 'красноярск';
+REGION_HINT_MAP['RU-KY'] = 'красноярск';
+REGION_HINT_MAP['RU-KX'] = 'красноярск';
+REGION_HINT_MAP['RU-SVE'] = 'свердловск';
+REGION_HINT_MAP['RU-SV'] = 'свердловск';
+REGION_HINT_MAP['RU-CHE'] = 'челябинск';
+REGION_HINT_MAP['RU-CL'] = 'челябинск';
+REGION_HINT_MAP['RU-CH'] = 'челябинск';
+REGION_HINT_MAP['RU-NIZ'] = 'нижегородск';
+REGION_HINT_MAP['RU-NZ'] = 'нижегородск';
+REGION_HINT_MAP['RU-NN'] = 'нижегородск';
+REGION_HINT_MAP['RU-SAM'] = 'самарск';
+REGION_HINT_MAP['RU-SA'] = 'самарск';
+REGION_HINT_MAP['RU-SM'] = 'самарск';
+REGION_HINT_MAP['RU-KGD'] = 'калининградск';
+REGION_HINT_MAP['RU-KN'] = 'калининградск';
+REGION_HINT_MAP['RU-KAREL'] = 'карели';
+REGION_HINT_MAP['RU-KR'] = 'карели';
+REGION_HINT_MAP['RU-KI'] = 'карели';
+REGION_HINT_MAP['RU-BA'] = 'башкортостан';
+REGION_HINT_MAP['RU-BAS'] = 'башкортостан';
+REGION_HINT_MAP['RU-BK'] = 'башкортостан';
+REGION_HINT_MAP['RU-TA'] = 'татарстан';
+REGION_HINT_MAP['RU-TAT'] = 'татарстан';
+REGION_HINT_MAP['RU-TT'] = 'татарстан';
+REGION_HINT_MAP['RU-MUR'] = 'мурманск';
+REGION_HINT_MAP['RU-MU'] = 'мурманск';
+REGION_HINT_MAP['RU-MM'] = 'мурманск';
+REGION_HINT_MAP['RU-ORL'] = 'орловск';
+REGION_HINT_MAP['RU-OR'] = 'орловск';
+REGION_HINT_MAP['RU-OL'] = 'орловск';
+REGION_HINT_MAP['RU-YAR'] = 'ярославск';
+REGION_HINT_MAP['RU-YR'] = 'ярославск';
+REGION_HINT_MAP['RU-YS'] = 'ярославск';
+REGION_HINT_MAP['RU-KEM'] = 'кемеровск';
+REGION_HINT_MAP['RU-KM'] = 'кемеровск';
+REGION_HINT_MAP['RU-KE'] = 'кемеровск';
+REGION_HINT_MAP['RU-NGR'] = 'новгородск';
+REGION_HINT_MAP['RU-NV'] = 'новгородск';
+REGION_HINT_MAP['RU-NG'] = 'новгородск';
+REGION_HINT_MAP['RU-PNZ'] = 'пензенск';
+REGION_HINT_MAP['RU-PZ'] = 'пензенск';
+REGION_HINT_MAP['RU-PE'] = 'пензенск';
+REGION_HINT_MAP['RU-IRK'] = 'иркутск';
+REGION_HINT_MAP['RU-IR'] = 'иркутск';
+REGION_HINT_MAP['RU-IK'] = 'иркутск';
+REGION_HINT_MAP['RU-SAR'] = 'саратовск';
+REGION_HINT_MAP['RU-SR'] = 'саратовск';
+REGION_HINT_MAP['RU-SK'] = 'саратовск';
+REGION_HINT_MAP['RU-ULY'] = 'ульяновск';
+REGION_HINT_MAP['RU-UL'] = 'ульяновск';
+REGION_HINT_MAP['RU-YV'] = 'ульяновск';
+REGION_HINT_MAP['RU-ARK'] = 'архангельск';
+REGION_HINT_MAP['RU-AR'] = 'архангельск';
+REGION_HINT_MAP['RU-FJ'] = 'архангельск';
 
 const EN_TO_RU_WORDS = {
   'southern': ['южн'],
@@ -1650,21 +1646,68 @@ const EN_TO_RU_WORDS = {
   'botanical': ['ботаническ'],
   'ladoga': ['ладож'],
   'skerries': ['шхер'],
+  'river': ['рек'],
+  'lake': ['озер'],
+  'pond': ['пруд'],
+  'island': ['остров'],
+  'shore': ['берег'],
+  'coast': ['побережь', 'берег'],
+  'valley': ['долин'],
+  'bog': ['болот'],
+  'marsh': ['болот'],
+  'swamp': ['болот'],
+  'bay': ['залив', 'губ', 'бухт'],
+  'gulf': ['залив', 'губ'],
+  'spring': ['родник', 'источник', 'ключ'],
+  'forest': ['лес', 'бор', 'лесотехн'],
+  'wood': ['лес'],
+  'woods': ['лес'],
+  'grove': ['рощ', 'дубрав'],
+  'mountain': ['гор'],
+  'mount': ['гор'],
+  'hill': ['холм', 'сопк'],
+  'heights': ['высот'],
+  'cape': ['мыс'],
+  'spit': ['кос'],
+  'waterfall': ['водопад'],
+  'cave': ['пещер'],
+  'tract': ['урочищ'],
+  'peter': ['петр'],
+  'kirov': ['киров'],
+  'university': ['университет'],
+  'technical': ['техническ', 'лесотехническ'],
+  'academy': ['академи'],
+  'forestry': ['лесничеств', 'лесотехн'],
 };
 
 const STOP_WORDS = new Set([
   'park', 'parks', 'national', 'natural', 'nature', 'reserve', 'reserves', 'sanctuary', 'sanctuaries', 
   'monument', 'monuments', 'area', 'areas', 'zone', 'zones', 'memorial', 'state', 'federal', 'regional', 
-  'local', 'city', 'town', 'district', 'oblast', 'krai', 'republic', 'forest', 'forests', 'gardens', 
-  'garden', 'branch', 'pine', 'wood', 'woods', 'complex', 'landscape', 'recreation',
+  'local', 'city', 'town', 'district', 'oblast', 'krai', 'republic', 'branch', 'complex', 'landscape', 'recreation',
+  'historic', 'site', 'parkway',
   'парк', 'парки', 'национальный', 'природный', 'заповедник', 'заповедники', 'заказник', 'заказники', 
   'памятник', 'памятники', 'природы', 'государственный', 'федеральный', 'региональный', 'местный', 
-  'сад', 'сады', 'бор', 'роща', 'урочище', 'комплекс', 'ландшафт', 'ландшафтный', 'отделение', 
-  'филиал', 'институт', 'академия', 'наук', 'район', 'область', 'край', 'республика', 'округ', 'лесопарк'
+  'отделение', 'филиал', 'институт', 'академия', 'наук', 'район', 'область', 'край', 'республика', 'округ'
+]);
+
+const DESCRIPTOR_WORDS = new Set([
+  'dolina', 'reka', 'reki', 'reke', 'reku', 'prud', 'pruda', 'ozero', 'ozera', 'ostrov', 'ostrova',
+  'bereg', 'berega', 'gora', 'gory', 'kamen', 'kamni', 'mys', 'kosa', 'balka', 'balki', 'yar', 'log',
+  'ruchey', 'ruchi', 'istok', 'ustye', 'vodopad', 'klyuch', 'rodnik', 'rodniki', 'kholm', 'sopka', 'sopki',
+  'lesopark', 'dacha', 'lesnichestvo', 'leskhoz', 'les', 'lesa', 'bor', 'bora', 'roshcha', 'dubrava',
+  'sad', 'peski', 'boloto', 'bolota', 'urochishche', 'urochishcha',
+  'river', 'lake', 'pond', 'island', 'shore', 'coast', 'valley', 'bog', 'marsh', 'swamp',
+  'bay', 'gulf', 'spring', 'forest', 'wood', 'woods', 'grove', 'mountain', 'mount', 'hill', 'heights',
+  'cape', 'spit', 'waterfall', 'cave', 'tract', 'creek', 'brook'
 ]);
 
 function normalizeStem(token) {
-  return (token || '').replace(/(skiy|sky|y|oe|aya|nyy|ogo|omu|ey|oy)$/, '');
+  if (!token) return '';
+  let s = token.toLowerCase();
+  s = s.replace(/^y(?=[aeou])/i, '');
+  s = s.replace(/yy|iy/g, 'y').replace(/i/g, 'y');
+  s = s.replace(/(skiy|sky|skoy|skaya|skoe|nyy|naya|noe|nyn|ov|ev|in|ye|oe|aya|ogo|omu|ey|oy|a|e|o|u|y)$/, '');
+  return s;
 }
 
 function cleanTokens(str) {
@@ -1673,7 +1716,7 @@ function cleanTokens(str) {
   for (const w of words) {
     if (w.length < 3) continue;
     if (STOP_WORDS.has(w)) continue;
-    const t = transliterateRuToEn(w).toLowerCase().replace(/yy|iy/g, 'y').replace(/i/g, 'y');
+    let t = transliterateRuToEn(w).toLowerCase().replace(/yy|iy/g, 'y').replace(/i/g, 'y');
     if (!STOP_WORDS.has(t) && t.length >= 3) {
       result.push(t);
     }
@@ -1728,16 +1771,15 @@ export function syncPotaMatches() {
     const pLat = parseFloat(p.lat);
     const pLon = parseFloat(p.lon);
 
-    // Region hint
-    let regionHint = null;
+    // Region hints
+    const regionHints = [];
     const pRegion = p.region || p.locationDesc;
     if (pRegion) {
       const locs = pRegion.split(',');
       for (const l of locs) {
-        const trimmed = l.trim();
-        if (POTA_LOCATION_TO_REGION[trimmed]) {
-          regionHint = POTA_LOCATION_TO_REGION[trimmed].toLowerCase();
-          break;
+        const trimmed = l.trim().toUpperCase();
+        if (REGION_HINT_MAP[trimmed]) {
+          regionHints.push(REGION_HINT_MAP[trimmed]);
         }
       }
     }
@@ -1750,44 +1792,62 @@ export function syncPotaMatches() {
       }
     }
 
-    const candidates = regionHint 
-      ? ooptPrepared.filter(o => o.ateLower.includes(regionHint))
-      : ooptPrepared;
+    let candidates = ooptPrepared;
+    if (regionHints.length > 0) {
+      candidates = ooptPrepared.filter(o => regionHints.some(hint => o.ateLower.includes(hint)));
+    }
 
     for (const o of candidates) {
       let score = 0;
       let properNameMatch = false;
-      let matchedTokenCount = 0;
 
-      // Reject if coordinates exist in both and distance is huge (> 120km)
+      // Coordinate distance check
       if (pLat && pLon && o.lat && o.lon) {
         const dist = getDistanceKm(pLat, pLon, o.lat, o.lon);
-        if (dist !== null && dist > 120) {
-          continue;
+        if (dist !== null) {
+          if (dist > 120) continue;
+          if (dist < 1.5) score += 50;
+          else if (dist < 5) score += 35;
+          else if (dist < 15) score += 20;
+          else if (dist < 30) score += 10;
+          else if (dist > 80) score -= 30;
         }
       }
 
-      // Check token overlap (proper nouns only!)
+      // Token matching
       for (const pt of pTokens) {
+        const isDesc = DESCRIPTOR_WORDS.has(pt);
         const pStem = normalizeStem(pt);
+
         for (const ot of o.tokens) {
+          const oIsDesc = DESCRIPTOR_WORDS.has(ot);
           const oStem = normalizeStem(ot);
+
           if (pt === ot) {
-            score += 50;
-            properNameMatch = true;
-            matchedTokenCount++;
-            break;
-          } else if (pStem.length >= 4 && oStem.length >= 4) {
-            if (pStem === oStem) {
-              score += 45;
+            if (isDesc || oIsDesc) {
+              score += 15;
+            } else {
+              score += 50;
               properNameMatch = true;
-              matchedTokenCount++;
+            }
+            break;
+          } else if (pStem.length >= 3 && oStem.length >= 3) {
+            if (pStem === oStem) {
+              if (isDesc || oIsDesc) {
+                score += 12;
+              } else {
+                score += 45;
+                properNameMatch = true;
+              }
               break;
             } else if (pStem.startsWith(oStem) || oStem.startsWith(pStem)) {
-              if (pStem !== 'ust' && oStem !== 'ust') {
-                score += 30;
-                properNameMatch = true;
-                matchedTokenCount++;
+              if (pStem.length >= 4 && oStem.length >= 4) {
+                if (isDesc || oIsDesc) {
+                  score += 8;
+                } else {
+                  score += 30;
+                  properNameMatch = true;
+                }
                 break;
               }
             }
@@ -1796,28 +1856,14 @@ export function syncPotaMatches() {
       }
 
       // Check English translation dictionary
-      let rootMatchesCount = 0;
       for (const root of matchingRuRoots) {
         if (o.titleLower.includes(root)) {
-          rootMatchesCount++;
-          score += 35;
-          properNameMatch = true;
+          score += 20;
         }
       }
-      matchedTokenCount += rootMatchesCount;
 
+      // Strict requirement: must have at least one proper noun match
       if (!properNameMatch) continue;
-
-      // Distance bonus/penalty (only if properNameMatch)
-      if (pLat && pLon && o.lat && o.lon) {
-        const dist = getDistanceKm(pLat, pLon, o.lat, o.lon);
-        if (dist !== null) {
-          if (dist < 10) score += 30;
-          else if (dist < 30) score += 20;
-          else if (dist < 60) score += 10;
-          else if (dist > 100) score -= 35;
-        }
-      }
 
       // Category bonus
       if (pNameLower.includes('national park') && o.catLower.includes('национальный парк')) score += 20;
@@ -1825,13 +1871,7 @@ export function syncPotaMatches() {
       if ((pNameLower.includes('sanctuary') || pNameLower.includes('natural reserve')) && o.catLower.includes('заказник')) score += 20;
       if (pNameLower.includes('botanical') && (o.catLower.includes('ботанический') || o.titleLower.includes('ботанический'))) score += 25;
       if (pNameLower.includes('dendrological') && (o.catLower.includes('дендрологический') || o.titleLower.includes('дендрологический'))) score += 25;
-
-      // Penalty if POTA is an urban/culture park but OOPT is a bog or steppe without close coordinates
-      if ((pNameLower.includes('park') || pNameLower.includes('garden') || pNameLower.includes('grove')) && 
-          (o.titleLower.includes('болот') || o.titleLower.includes('степ') || o.titleLower.includes('пещ')) && 
-          (!pLat || !o.lat || getDistanceKm(pLat, pLon, o.lat, o.lon) > 20)) {
-        score -= 40;
-      }
+      if ((pNameLower.includes('monument') || pNameLower.includes('natural monument')) && o.catLower.includes('памятник')) score += 15;
 
       if (score >= 45) {
         potentialMatches.push({
@@ -1858,14 +1898,29 @@ export function syncPotaMatches() {
     }
   }
 
-  // Update Database: reset old matches then apply high-confidence matches
+  // Update Database: reset old matches then apply high-confidence matches and backfill missing coordinates
   const resetStmt = db.prepare('UPDATE oopt_registry SET pota_ref = NULL, pota_name = NULL');
-  const updateStmt = db.prepare('UPDATE oopt_registry SET pota_ref = ?, pota_name = ? WHERE nid = ?');
+  const updateStmt = db.prepare(`
+    UPDATE oopt_registry 
+    SET pota_ref = ?, 
+        pota_name = ?,
+        lat = CASE WHEN (lat IS NULL OR lat = 0) AND ? IS NOT NULL THEN ? ELSE lat END,
+        lon = CASE WHEN (lon IS NULL OR lon = 0) AND ? IS NOT NULL THEN ? ELSE lon END
+    WHERE nid = ?
+  `);
 
   const transaction = db.transaction((list) => {
     resetStmt.run();
     for (const m of list) {
-      updateStmt.run(m.pota.reference, m.pota.name, m.oopt.nid);
+      updateStmt.run(
+        m.pota.reference, 
+        m.pota.name, 
+        m.pota.lat, 
+        m.pota.lat, 
+        m.pota.lon, 
+        m.pota.lon, 
+        m.oopt.nid
+      );
     }
   });
 

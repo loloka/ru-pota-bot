@@ -8,7 +8,7 @@ import { potaApi } from '../api/potaApi.js';
 import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import { pinManager } from '../services/pinManager.js';
 import { getBaseCallsign, isBroadcastMutedCallsign } from '../bot/utils.js';
-import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry, translateOoptNameOnline, cleanOoptName } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry, translateOoptNameOnline, cleanOoptName, transliterateRuToEn } from '../services/ooptService.js';
 import crypto from 'crypto';
 import { renderPotaTile, parseWmsBbox, tileToBbox, generatePotaGpx, getEmptyPng } from '../services/potaTileService.js';
 import { resendService } from '../services/resendService.js';
@@ -707,17 +707,32 @@ export function createTmaRouter(telegramClient) {
         }
       }
 
+      // Map OOPT Russian titles from SQLite
+      const ooptTitlesMap = new Map();
+      try {
+        const ooptRows = db.prepare('SELECT pota_ref, title FROM oopt_registry WHERE pota_ref IS NOT NULL').all();
+        for (const r of ooptRows) {
+          if (r.pota_ref) {
+            ooptTitlesMap.set(r.pota_ref.toUpperCase(), r.title);
+          }
+        }
+      } catch (e) {}
+
       const search = (req.query.search || '').trim().toUpperCase();
+      const searchEn = search ? transliterateRuToEn(search).toUpperCase() : '';
       const activeOnly = req.query.activeOnly === 'true';
 
       const mapped = allParks.map(p => {
-        const spot = activeSpotsMap.get(p.reference.toUpperCase());
+        const pRef = (p.reference || '').toUpperCase();
+        const spot = activeSpotsMap.get(pRef);
         const isActive = Boolean(spot);
         const freqKHz = spot ? parseFloat(spot.frequency || 0) : 0;
         const freqMHz = freqKHz > 1000 ? (freqKHz / 1000).toFixed(3) : (freqKHz || 0);
+        const titleRu = ooptTitlesMap.get(pRef) || null;
 
         return {
           ...p,
+          titleRu,
           isActive,
           activeStation: isActive ? `${spot.activator} (${freqMHz} MHz ${spot.mode})` : null,
           activeCallsign: isActive ? spot.activator : null,
@@ -729,10 +744,17 @@ export function createTmaRouter(telegramClient) {
       const filtered = mapped.filter(p => {
         if (activeOnly && !p.isActive) return false;
         if (search) {
+          const pRef = (p.reference || '').toUpperCase();
+          const pName = (p.name || '').toUpperCase();
+          const pRegion = (p.region || '').toUpperCase();
+          const pTitleRu = (p.titleRu || '').toUpperCase();
           return (
-            p.reference.toUpperCase().includes(search) ||
-            p.name.toUpperCase().includes(search) ||
-            p.region.toUpperCase().includes(search)
+            pRef.includes(search) ||
+            pName.includes(search) ||
+            (searchEn && pName.includes(searchEn)) ||
+            (pTitleRu && pTitleRu.includes(search)) ||
+            pRegion.includes(search) ||
+            (searchEn && pRegion.includes(searchEn))
           );
         }
         return true;

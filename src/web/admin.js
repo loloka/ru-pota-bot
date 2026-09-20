@@ -992,13 +992,13 @@ export const startAdminServer = (telegramClient) => {
                       <label class="form-label small fw-bold mb-1">3. Статус ООПТ для POTA (EN):</label>
                       <input type="text" class="form-control form-control-sm font-monospace text-success fw-bold" id="subm-status-en" required>
                       <div class="d-flex flex-wrap gap-1 mt-1">
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Natural Monument">Natural Monument</button>
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="State Nature Reserve">State Nature Reserve</button>
-                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Nature Monument">Nature Monument</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="State Nature Preserve">State Nature Preserve</button>
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="National Park">National Park</button>
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Nature Park">Nature Park</button>
-                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Protected Landscape">Protected Landscape</button>
-                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Botanical Garden">Botanical Garden</button>
-                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="State Marine Reserve">State Marine Reserve</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Botanical Gardens">Botanical Gardens</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Reserve">Reserve</button>
                       </div>
                     </div>
                     <div class="col-md-7">

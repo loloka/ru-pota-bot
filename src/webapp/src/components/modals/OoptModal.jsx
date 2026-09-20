@@ -350,33 +350,6 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                       placeholder="напр. State Nature Reserve"
                       className="w-full px-3 py-2 text-xs font-medium text-emerald-700 dark:text-emerald-300 rounded-xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                     />
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {[
-                        'Natural Monument',
-                        'State Nature Reserve',
-                        'State Nature Preserve',
-                        'National Park',
-                        'Nature Park',
-                        'Botanical Gardens',
-                        'Landscape Reserve',
-                        'Protected Landscape Area',
-                        'Reserve',
-                        'National Historical Park'
-                      ].map((chip) => (
-                        <button
-                          key={chip}
-                          type="button"
-                          onClick={() => handleInputChange('statusEn', chip)}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-medium border transition-all ${
-                            form.statusEn === chip
-                              ? 'bg-emerald-600 text-white border-emerald-700 shadow-2xs'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-500/50'
-                          }`}
-                        >
-                          {chip}
-                        </button>
-                      ))}
-                    </div>
                   </div>
 
                   <div>

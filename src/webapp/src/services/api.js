@@ -188,6 +188,40 @@ export const api = {
     });
   },
 
+  /**
+   * Get user notification feed (incoming spots)
+   */
+  async getNotifications() {
+    return request('/notifications');
+  },
+
+  /**
+   * Mark all notifications as read
+   */
+  async markAllNotificationsRead() {
+    return request('/notifications/read-all', {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Delete single notification by ID
+   */
+  async deleteNotification(id) {
+    return request(`/notifications/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
+   * Clear all user notifications
+   */
+  async clearAllNotifications() {
+    return request('/notifications', {
+      method: 'DELETE',
+    });
+  },
+
 
   /**
    * Submit a callsign change request to bot administrators

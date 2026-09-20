@@ -81,6 +81,22 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
   CREATE INDEX IF NOT EXISTS idx_muted_broadcast_callsigns_call ON muted_broadcast_callsigns (callsign);
+
+  CREATE TABLE IF NOT EXISTS user_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    type TEXT NOT NULL DEFAULT 'callsign_spotted', -- 'callsign_spotted' | 'park_spotted' | 'system'
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    callsign TEXT,
+    reference TEXT,
+    frequency TEXT,
+    mode TEXT,
+    spot_time TEXT,
+    is_read INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_user_notif_user ON user_notifications (user_id, is_read, created_at DESC);
 `);
 
 // Migration for existing tables

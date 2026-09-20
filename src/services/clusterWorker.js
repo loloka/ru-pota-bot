@@ -74,6 +74,50 @@ export const detectMode = (rawMode, comments = '', freqKHz = 0) => {
   return mode;
 };
 
+/**
+ * Dispatch notification to both Telegram bot DM and SQLite user_notifications for TMA Live Feed
+ */
+function dispatchSubscriberNotification(telegramClient, userId, spot, notifType, title, htmlMsg) {
+  // 1. Record to SQLite user_notifications for TMA Live Feed & Web inbox
+  try {
+    db.prepare(`
+      INSERT INTO user_notifications (user_id, type, title, message, callsign, reference, frequency, mode, spot_time)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      userId,
+      notifType,
+      title,
+      htmlMsg,
+      spot.activator || '',
+      spot.reference || '',
+      String(spot.frequency || ''),
+      spot.mode || '',
+      spot.spotTime || new Date().toISOString()
+    );
+
+    // Keep last 100 notifications per user
+    db.prepare(`
+      DELETE FROM user_notifications 
+      WHERE id NOT IN (
+        SELECT id FROM user_notifications WHERE user_id = ? ORDER BY id DESC LIMIT 100
+      ) AND user_id = ?
+    `).run(userId, userId);
+  } catch (err) {
+    // Non-critical if DB write fails
+  }
+
+  // 2. Dispatch Telegram DM if telegramClient is provided and valid user
+  if (telegramClient && userId > 0) {
+    telegramClient.sendMessage(userId, `${title}\n\n${htmlMsg}`, { parse_mode: 'HTML', disable_web_page_preview: true })
+      .then(() => {
+        console.log(`\x1b[35m[Notification]\x1b[0m 🔔 Уведомление отправлено пользователю ${userId}`);
+      })
+      .catch((e) => {
+        console.warn(`\x1b[31m[Notification Warning]\x1b[0m Ошибка отправки подписчику ${userId}:`, e.message);
+      });
+  }
+}
+
 export const startClusterWorker = (telegramClient) => {
   const intervalSec = Math.round(POLL_INTERVAL_MS / 1000);
   console.log(`\x1b[36m[Cluster Worker]\x1b[0m 🚀 Запущен воркер кластера (опрос каждые ${intervalSec}с, кулдаун RBN: ${CLUSTER_SPOT_COOLDOWN_MINUTES}м, фильтр: \x1b[33m${ALLOWED_PREFIXES.join(', ')}\x1b[0m)`);
@@ -163,17 +207,23 @@ export const startClusterWorker = (telegramClient) => {
 
           const notificationsMap = new Map();
           for (const sub of callsignSubscribers) {
-            notificationsMap.set(sub.telegram_id, `🚨 <b>Ваш друг ${spot.activator} сейчас в эфире!</b>\n\n${msg}`);
+            notificationsMap.set(sub.telegram_id, {
+              type: 'callsign_spotted',
+              title: `🚨 Ваш отслеживаемый позывной ${spot.activator} в эфире!`,
+              msg
+            });
           }
           for (const sub of parkSubscribers) {
             if (!notificationsMap.has(sub.telegram_id)) {
-              notificationsMap.set(sub.telegram_id, `🏞 <b>Новая активность в отслеживаемом парке ${ref}!</b>\n\n${msg}`);
+              notificationsMap.set(sub.telegram_id, {
+                type: 'park_spotted',
+                title: `🏞 Новая активность в отслеживаемом парке ${ref}!`,
+                msg
+              });
             }
           }
-          for (const [userId, userMsg] of notificationsMap.entries()) {
-            try {
-              telegramClient.sendMessage(userId, userMsg, { parse_mode: 'HTML', disable_web_page_preview: true });
-            } catch (e) {}
+          for (const [userId, item] of notificationsMap.entries()) {
+            dispatchSubscriberNotification(telegramClient, userId, spot, item.type, item.title, item.msg);
           }
 
           continue; // Complete skip from public broadcast and RBN skimmer throttling logs
@@ -329,22 +379,25 @@ export const startClusterWorker = (telegramClient) => {
         const notificationsMap = new Map();
 
         for (const sub of callsignSubscribers) {
-          notificationsMap.set(sub.telegram_id, `🚨 <b>Ваш друг ${spot.activator} сейчас в эфире!</b>\n\n${msg}`);
+          notificationsMap.set(sub.telegram_id, {
+            type: 'callsign_spotted',
+            title: `🚨 Ваш отслеживаемый позывной ${spot.activator} в эфире!`,
+            msg
+          });
         }
 
         for (const sub of parkSubscribers) {
           if (!notificationsMap.has(sub.telegram_id)) {
-            notificationsMap.set(sub.telegram_id, `🏞 <b>Новая активность в отслеживаемом парке ${ref}!</b>\n\n${msg}`);
+            notificationsMap.set(sub.telegram_id, {
+              type: 'park_spotted',
+              title: `🏞 Новая активность в отслеживаемом парке ${ref}!`,
+              msg
+            });
           }
         }
 
-        for (const [userId, userMsg] of notificationsMap.entries()) {
-          try {
-            await telegramClient.sendMessage(userId, userMsg, { parse_mode: 'HTML', disable_web_page_preview: true });
-            console.log(`\x1b[35m[Notification]\x1b[0m 🔔 Уведомление отправлено пользователю ${userId}`);
-          } catch (e) {
-            console.error(`\x1b[31m[Notification Error]\x1b[0m Ошибка отправки подписчику ${userId}:`, e.message);
-          }
+        for (const [userId, item] of notificationsMap.entries()) {
+          dispatchSubscriberNotification(telegramClient, userId, spot, item.type, item.title, item.msg);
         }
       }
     } catch (error) {

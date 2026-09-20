@@ -18,7 +18,7 @@ export const TABS = [
   { id: 'profile', key: 'nav_profile', icon: User },
 ];
 
-export default function BottomNav({ activeTab, onSelectTab, t = (k) => k }) {
+export default function BottomNav({ activeTab, onSelectTab, unreadNotifsCount = 0, t = (k) => k }) {
   const handleTabClick = (tabId) => {
     if (tabId !== activeTab) {
       telegram.haptic.selection();
@@ -50,6 +50,13 @@ export default function BottomNav({ activeTab, onSelectTab, t = (k) => k }) {
                 <span className="absolute top-1 right-3 flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+              )}
+
+              {/* Unread badge for Subscriptions tab */}
+              {tab.id === 'subscriptions' && unreadNotifsCount > 0 && !isActive && (
+                <span className="absolute top-0.5 right-2 min-w-[17px] h-[17px] px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-md shadow-rose-500/30 border border-white/20 z-10 animate-bounce">
+                  {unreadNotifsCount > 99 ? '99+' : unreadNotifsCount}
                 </span>
               )}
 

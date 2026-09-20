@@ -33,6 +33,7 @@ export default function App() {
   const [activeSpot, setActiveSpot] = useState(null);
   const [stats, setStats] = useState(null);
   const [subscriptionsCount, setSubscriptionsCount] = useState(0);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [showOsmAndModal, setShowOsmAndModal] = useState(false);
   const [mapTarget, setMapTarget] = useState(null);
@@ -63,6 +64,7 @@ export default function App() {
       setActiveSpot(data?.activeSpot || null);
       setStats(data?.stats || null);
       setSubscriptionsCount(data?.subscriptionsCount || 0);
+      setUnreadNotifsCount(data?.unreadNotificationsCount || 0);
     } catch (err) {
       if (!silent) {
         console.warn('[App] Could not load operator profile from API:', err.message);
@@ -195,7 +197,7 @@ export default function App() {
           onToggleTheme={toggleTheme}
           language={language}
           onToggleLanguage={toggleLanguage}
-          notificationCount={subscriptionsCount > 0 ? subscriptionsCount : 0}
+          notificationCount={unreadNotifsCount > 0 ? unreadNotifsCount : (subscriptionsCount > 0 ? subscriptionsCount : 0)}
           onOpenOsmAnd={() => setShowOsmAndModal(true)}
           t={t}
         />
@@ -254,7 +256,11 @@ export default function App() {
           {activeTab === 'subscriptions' && (
             <SubscriptionsTab 
               user={user}
-              onCountChange={setSubscriptionsCount} 
+              subscriptionsCount={subscriptionsCount}
+              onCountChange={setSubscriptionsCount}
+              unreadNotifsCount={unreadNotifsCount}
+              onUnreadCountChange={setUnreadNotifsCount}
+              onNavigate={handleNavigate}
               onRequireAuth={handleRequireAuth}
               onRefreshProfile={loadProfile}
               language={language}
@@ -278,6 +284,7 @@ export default function App() {
         <BottomNav 
           activeTab={activeTab} 
           onSelectTab={handleNavigate} 
+          unreadNotifsCount={unreadNotifsCount}
           language={language}
           t={t}
         />

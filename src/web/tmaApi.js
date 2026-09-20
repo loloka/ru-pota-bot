@@ -226,6 +226,7 @@ export function createTmaRouter(telegramClient) {
           activeSpot: null,
           stats: null,
           subscriptionsCount: 0,
+          unreadNotificationsCount: 0,
           isGuest: true,
         });
       }
@@ -289,8 +290,9 @@ export function createTmaRouter(telegramClient) {
         }
       }
 
-      // Count subscriptions
+      // Count subscriptions and unread notifications
       const subsCount = db.prepare('SELECT COUNT(*) as count FROM subscriptions WHERE telegram_id = ?').get(tgUser.id)?.count || 0;
+      const unreadNotifCount = db.prepare('SELECT COUNT(*) as count FROM user_notifications WHERE user_id = ? AND is_read = 0').get(tgUser.id)?.count || 0;
 
       res.json({
         user: {
@@ -308,6 +310,7 @@ export function createTmaRouter(telegramClient) {
         activeSpot,
         stats,
         subscriptionsCount: subsCount,
+        unreadNotificationsCount: unreadNotifCount,
       });
     } catch (err) {
       console.error('[TMA API] Error in /me:', err.message);
@@ -1483,6 +1486,80 @@ export function createTmaRouter(telegramClient) {
       res.json({ success: true, changes: result.changes });
     } catch (err) {
       console.error('[TMA API] Error deleting subscription by target:', err.message);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  // ==========================================
+  // 7.2. GET /api/tma/notifications - Live Alerts Feed
+  // ==========================================
+  router.get('/notifications', requireTmaAuth, (req, res) => {
+    try {
+      const tgUser = req.telegramUser;
+      const notifications = db.prepare(`
+        SELECT id, type, title, message, callsign, reference, frequency, mode, spot_time, is_read, created_at 
+        FROM user_notifications 
+        WHERE user_id = ? 
+        ORDER BY id DESC 
+        LIMIT 50
+      `).all(tgUser.id);
+
+      const unreadCount = db.prepare(`
+        SELECT COUNT(*) as count 
+        FROM user_notifications 
+        WHERE user_id = ? AND is_read = 0
+      `).get(tgUser.id)?.count || 0;
+
+      res.json({
+        notifications,
+        unreadCount,
+        total: notifications.length,
+      });
+    } catch (err) {
+      console.error('[TMA API] Error fetching notifications:', err.message);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  // ==========================================
+  // 7.3. POST /api/tma/notifications/read-all - Mark all as read
+  // ==========================================
+  router.post('/notifications/read-all', requireTmaAuth, (req, res) => {
+    try {
+      const tgUser = req.telegramUser;
+      db.prepare('UPDATE user_notifications SET is_read = 1 WHERE user_id = ?').run(tgUser.id);
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[TMA API] Error marking notifications read:', err.message);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  // ==========================================
+  // 7.4. DELETE /api/tma/notifications/:id - Delete single notification
+  // ==========================================
+  router.delete('/notifications/:id', requireTmaAuth, (req, res) => {
+    try {
+      const tgUser = req.telegramUser;
+      const id = parseInt(req.params.id, 10);
+      db.prepare('DELETE FROM user_notifications WHERE id = ? AND user_id = ?').run(id, tgUser.id);
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[TMA API] Error deleting notification:', err.message);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  // ==========================================
+  // 7.5. DELETE /api/tma/notifications - Clear all notifications
+  // ==========================================
+  router.delete('/notifications', requireTmaAuth, (req, res) => {
+    try {
+      const tgUser = req.telegramUser;
+      db.prepare('DELETE FROM user_notifications WHERE user_id = ?').run(tgUser.id);
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[TMA API] Error clearing notifications:', err.message);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });

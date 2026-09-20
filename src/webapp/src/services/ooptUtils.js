@@ -499,6 +499,11 @@ export function formatDualParkName(cleanName, category) {
 
   if (translated && transliterated && translated.toLowerCase() !== transliterated.toLowerCase()) {
     if (!translated.includes('(')) {
+      const words = translated.trim().split(/\s+/).filter(Boolean);
+      // Per Manu R2BBX: if translated name is long (> 3 words or > 30 characters), use translation only
+      if (words.length > 3 || translated.length > 30) {
+        return translated;
+      }
       return `${translated} (${transliterated})`;
     }
   }

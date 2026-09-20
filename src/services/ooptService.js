@@ -20,6 +20,22 @@ const client = axios.create({
 });
 
 /**
+ * Loads Russian POTA parks from fallback dataset
+ */
+export function getRussianPotaParks() {
+  const fallbackPath = path.resolve(__dirname, '../data/parks_fallback.json');
+  try {
+    if (!fs.existsSync(fallbackPath)) return [];
+    const content = fs.readFileSync(fallbackPath, 'utf8');
+    const parks = JSON.parse(content);
+    return parks.filter(p => p.reference && p.reference.startsWith('RU-'));
+  } catch (err) {
+    console.warn('[OOPT Service] ⚠️ Failed to load parks fallback:', err.message);
+    return [];
+  }
+}
+
+/**
  * Normalizes encoding quirks and clean strings
  */
 function cleanString(str) {
@@ -348,6 +364,21 @@ export function getOoptStats() {
   const regions = Array.from(regionSet).sort((a, b) => a.localeCompare(b, 'ru'));
   const restrictedRegions = Array.from(restrictedSet).sort((a, b) => a.localeCompare(b, 'ru'));
 
+  // Compute existing POTA park counts for each region
+  const potaParks = getRussianPotaParks();
+  const regionPotaCounts = {};
+  for (const r of regions) {
+    const code = getPotaLocationCode(r);
+    if (!code) {
+      regionPotaCounts[r] = 0;
+      continue;
+    }
+    regionPotaCounts[r] = potaParks.filter(p => {
+      const pReg = (p.region || '').split(',').map(s => s.trim());
+      return pReg.includes(code);
+    }).length;
+  }
+
   cachedStats = {
     total,
     totalAll,
@@ -359,6 +390,7 @@ export function getOoptStats() {
     categories,
     regions,
     restrictedRegions,
+    regionPotaCounts,
   };
   lastStatsTime = now;
   return cachedStats;
@@ -849,6 +881,11 @@ export function formatDualParkName(cleanName, category) {
 
   if (translated && transliterated && translated.toLowerCase() !== transliterated.toLowerCase()) {
     if (!translated.includes('(')) {
+      const words = translated.trim().split(/\s+/).filter(Boolean);
+      // Per Manu R2BBX: if translated name is long (> 3 words or > 30 characters), use translation only
+      if (words.length > 3 || translated.length > 30) {
+        return translated;
+      }
       return `${translated} (${transliterated})`;
     }
   }
@@ -885,6 +922,11 @@ export async function translateOoptNameOnline(cleanName, category) {
         const cleanTranslated = words.join(' ').replace(/\s+/g, ' ').trim();
         const transliterated = transliterateOnly(cleanName);
         if (cleanTranslated && transliterated && cleanTranslated.toLowerCase() !== transliterated.toLowerCase()) {
+          const transWords = cleanTranslated.trim().split(/\s+/).filter(Boolean);
+          // Per Manu R2BBX: if translated name is long (> 3 words or > 30 characters), use translation only
+          if (transWords.length > 3 || cleanTranslated.length > 30) {
+            return cleanTranslated;
+          }
           return `${cleanTranslated} (${transliterated})`;
         }
         return cleanTranslated;
@@ -1055,6 +1097,199 @@ export function getPotaLocationCode(regionStr = '') {
   }
 
   return foundCodes.join(', ');
+}
+
+export const POTA_LOCATION_CANONICAL = {
+  'RU-AD': 'Республика Адыгея',
+  'RU-AL': 'Алтайский край',
+  'RU-AM': 'Амурская область',
+  'RU-AR': 'Архангельская область',
+  'RU-AS': 'Астраханская область',
+  'RU-BK': 'Республика Башкортостан',
+  'RU-BL': 'Белгородская область',
+  'RU-BR': 'Брянская область',
+  'RU-BU': 'Республика Бурятия',
+  'RU-CN': 'Чеченская Республика',
+  'RU-CL': 'Челябинская область',
+  'RU-CK': 'Чукотский автономный округ',
+  'RU-CV': 'Чувашская Республика',
+  'RU-DA': 'Республика Дагестан',
+  'RU-FJ': 'Земля Франца-Иосифа',
+  'RU-GA': 'Республика Алтай',
+  'RU-IN': 'Республика Ингушетия',
+  'RU-IK': 'Иркутская область',
+  'RU-IV': 'Ивановская область',
+  'RU-KB': 'Кабардино-Балкарская Республика',
+  'RU-KC': 'Карачаево-Черкесская Республика',
+  'RU-KD': 'Краснодарский край',
+  'RU-KE': 'Кемеровская область',
+  'RU-KG': 'Калужская область',
+  'RU-KH': 'Хабаровский край',
+  'RU-KI': 'Республика Карелия',
+  'RU-KK': 'Республика Хакасия',
+  'RU-KL': 'Республика Калмыкия',
+  'RU-KM': 'Ханты-Мансийский АО - Югра',
+  'RU-KN': 'Калининградская область',
+  'RU-KO': 'Республика Коми',
+  'RU-KQ': 'Камчатский край',
+  'RU-KS': 'Курская область',
+  'RU-KT': 'Костромская область',
+  'RU-KU': 'Курганская область',
+  'RU-KV': 'Кировская область',
+  'RU-KX': 'Красноярский край',
+  'RU-LN': 'Ленинградская область',
+  'RU-LP': 'Липецкая область',
+  'RU-MC': 'Москва',
+  'RU-ME': 'Республика Марий Эл',
+  'RU-MG': 'Магаданская область',
+  'RU-MM': 'Мурманская область',
+  'RU-MR': 'Республика Мордовия',
+  'RU-MS': 'Московская область',
+  'RU-NG': 'Новгородская область',
+  'RU-NN': 'Ненецкий автономный округ',
+  'RU-NO': 'Республика Северная Осетия - Алания',
+  'RU-NS': 'Новосибирская область',
+  'RU-NZ': 'Нижегородская область',
+  'RU-OB': 'Оренбургская область',
+  'RU-OL': 'Орловская область',
+  'RU-OM': 'Омская область',
+  'RU-PE': 'Пермский край',
+  'RU-PR': 'Приморский край',
+  'RU-PS': 'Псковская область',
+  'RU-PZ': 'Пензенская область',
+  'RU-RO': 'Ростовская область',
+  'RU-RZ': 'Рязанская область',
+  'RU-SA': 'Самарская область',
+  'RU-SK': 'Сахалинская область',
+  'RU-SL': 'Республика Саха (Якутия)',
+  'RU-SM': 'Смоленская область',
+  'RU-SP': 'Санкт-Петербург',
+  'RU-SR': 'Саратовская область',
+  'RU-ST': 'Ставропольский край',
+  'RU-SV': 'Свердловская область',
+  'RU-TB': 'Тамбовская область',
+  'RU-TL': 'Тульская область',
+  'RU-TO': 'Томская область',
+  'RU-TT': 'Республика Татарстан',
+  'RU-TU': 'Республика Тыва',
+  'RU-TV': 'Тверская область',
+  'RU-TY': 'Тюменская область',
+  'RU-UD': 'Удмуртская Республика',
+  'RU-UL': 'Ульяновская область',
+  'RU-VG': 'Волгоградская область',
+  'RU-VL': 'Владимирская область',
+  'RU-VO': 'Вологодская область',
+  'RU-VR': 'Воронежская область',
+  'RU-YN': 'Ямало-Ненецкий автономный округ',
+  'RU-YS': 'Ярославская область',
+  'RU-YV': 'Еврейская автономная область',
+  'RU-ZB': 'Забайкальский край',
+  // Restricted territories:
+  'RU-CR': 'Республика Крым',
+  'RU-SE': 'Севастополь',
+  'RU-DN': 'Донецкая Народная Республика',
+  'RU-LN2': 'Луганская Народная Республика',
+  'RU-ZP': 'Запорожская область',
+  'RU-HR': 'Херсонская область',
+};
+
+/**
+ * Calculates detailed statistics for all Russian regions:
+ * total POTA parks, parks activated at least once (unique), unactivated,
+ * activation percentage ('заинтересованность'), total QSOs and activations,
+ * candidate OOPT count from oopt_registry.
+ */
+export function getRegionalPotaStats() {
+  const parks = getRussianPotaParks();
+  let ooptRows = [];
+  try {
+    ooptRows = db.prepare("SELECT ate, COUNT(*) as cnt FROM oopt_registry WHERE ate IS NOT NULL AND ate != '' GROUP BY ate").all();
+  } catch (err) {
+    console.warn('[OOPT Service] ⚠️ Failed to query oopt_registry counts:', err.message);
+  }
+
+  const regionMap = new Map();
+  for (const [code, name] of Object.entries(POTA_LOCATION_CANONICAL)) {
+    const isRestricted = isPotaRestrictedAte(name) || ['RU-CR', 'RU-SE', 'RU-DN', 'RU-LN2', 'RU-ZP', 'RU-HR'].includes(code);
+    regionMap.set(code, {
+      code,
+      name,
+      totalParks: 0,
+      activatedParks: 0,
+      unactivatedParks: 0,
+      activationRate: 0,
+      totalActivations: 0,
+      totalQsos: 0,
+      ooptCandidates: 0,
+      isRestricted
+    });
+  }
+
+  let overallActivated = 0;
+  let overallActivations = 0;
+  let overallQsos = 0;
+
+  for (const p of parks) {
+    const isAct = (p.activations || 0) > 0;
+    if (isAct) overallActivated++;
+    overallActivations += (p.activations || 0);
+    overallQsos += (p.qsos || 0);
+
+    const codes = (p.region || '').split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    for (const c of codes) {
+      const canonicalCode = (c === 'RU-BA' ? 'RU-BK' : (c === 'RU-CE' ? 'RU-CN' : (c === 'RU-IR' ? 'RU-IK' : c)));
+      if (regionMap.has(canonicalCode)) {
+        const item = regionMap.get(canonicalCode);
+        item.totalParks += 1;
+        if (isAct) item.activatedParks += 1;
+        item.totalActivations += (p.activations || 0);
+        item.totalQsos += (p.qsos || 0);
+      }
+    }
+  }
+
+  for (const row of ooptRows) {
+    const ateLower = (row.ate || '').toLowerCase();
+    for (const [code, item] of regionMap.entries()) {
+      if (item.isRestricted) continue;
+      const kw = item.name.toLowerCase().replace(/(республика|край|область|автономный|округ|город|федерального значения)/g, '').trim();
+      if (kw.length >= 3 && ateLower.includes(kw)) {
+        item.ooptCandidates += row.cnt;
+      }
+    }
+  }
+
+  const regionsList = [];
+  let zeroParkCount = 0;
+
+  for (const item of regionMap.values()) {
+    item.unactivatedParks = item.totalParks - item.activatedParks;
+    item.activationRate = item.totalParks > 0 ? Math.round((item.activatedParks / item.totalParks) * 100) : 0;
+    if (!item.isRestricted && item.totalParks === 0) {
+      zeroParkCount++;
+    }
+    regionsList.push(item);
+  }
+
+  regionsList.sort((a, b) => {
+    if (a.isRestricted !== b.isRestricted) return a.isRestricted ? 1 : -1;
+    if (a.totalParks !== b.totalParks) return a.totalParks - b.totalParks;
+    return a.name.localeCompare(b.name, 'ru');
+  });
+
+  return {
+    summary: {
+      totalParks: parks.length,
+      activatedParks: overallActivated,
+      unactivatedParks: parks.length - overallActivated,
+      activationRate: parks.length > 0 ? Number(((overallActivated / parks.length) * 100).toFixed(1)) : 0,
+      totalActivations: overallActivations,
+      totalQsos: overallQsos,
+      zeroParkCount,
+      totalRegions: regionsList.filter(r => !r.isRestricted).length
+    },
+    regions: regionsList
+  };
 }
 
 export function formatClarification(item) {
@@ -1648,6 +1883,7 @@ export default {
   syncPotaMatches,
   getOoptList,
   getOoptStats,
+  getRegionalPotaStats,
   getOoptDetails,
   parseSubmitterFields,
   formatDualParkName,

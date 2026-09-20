@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
-import { getOoptList, getOoptStats, syncOoptRegistry } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry } from '../services/ooptService.js';
 import {
   auditPotaLinks,
   checkUrlOnline,
@@ -485,6 +485,7 @@ export const startAdminServer = (telegramClient) => {
                 <a class="list-group-item list-group-item-action" id="list-broadcast-list" data-bs-toggle="list" href="#list-broadcast" role="tab" aria-controls="list-broadcast"><i class="bi bi-megaphone"></i> Рассылка</a>
                 <a class="list-group-item list-group-item-action" id="list-welcome-list" data-bs-toggle="list" href="#list-welcome" role="tab" aria-controls="list-welcome"><i class="bi bi-pin-angle"></i> Закрепленный пост</a>
                 <a class="list-group-item list-group-item-action" id="list-oopt-list" data-bs-toggle="list" href="#list-oopt" role="tab" aria-controls="list-oopt"><i class="bi bi-tree"></i> Реестр ООПТ РФ</a>
+                <a class="list-group-item list-group-item-action" id="list-regions-list" data-bs-toggle="list" href="#list-regions" role="tab" aria-controls="list-regions"><i class="bi bi-geo-alt"></i> Регионы POTA</a>
                 <a class="list-group-item list-group-item-action" id="list-links-list" data-bs-toggle="list" href="#list-links" role="tab" aria-controls="list-links"><i class="bi bi-link-45deg"></i> Аудит ссылок POTA <span class="badge bg-warning text-dark rounded-pill ms-1" id="links-wiki-badge" title="Википедия: ${auditStats.wikipedia}">${auditStats.wikipedia}</span> <span class="badge bg-danger rounded-pill ms-1" id="links-empty-badge" title="Без ссылок (Алярма): ${auditStats.empty}">${auditStats.empty}</span></a>
                 <a class="list-group-item list-group-item-action" id="list-console-list" data-bs-toggle="list" href="#list-console" role="tab" aria-controls="list-console"><i class="bi bi-terminal"></i> Live Консоль</a>
               </div>
@@ -875,6 +876,122 @@ export const startAdminServer = (telegramClient) => {
                   </div>
                 </div>
 
+                <!-- Tab: POTA Regions Statistics -->
+                <div class="tab-pane fade" id="list-regions" role="tabpanel" aria-labelledby="list-regions-list">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                      <h3 class="mb-1"><i class="bi bi-geo-alt"></i> Статистика регионов POTA в РФ</h3>
+                      <div class="text-muted small">
+                        Анализ покрытия программы POTA по субъектам Российской Федерации: количество парков, уникальные активированные парки («заинтересованность»), активность радиосвязей и потенциальные кандидаты из реестра ООПТ.
+                      </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                      <button type="button" class="btn btn-sm btn-outline-primary" id="btn-regions-refresh">
+                        <i class="bi bi-arrow-clockwise"></i> Обновить
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Regional KPI Cards -->
+                  <div class="row g-2 mb-3">
+                    <div class="col-6 col-md-2">
+                      <div class="card bg-primary border-0 shadow-sm h-100 p-2 text-center text-white">
+                        <div class="small opacity-75">Всего парков POTA</div>
+                        <div class="fs-4 fw-bold text-white" id="reg-stat-total">...</div>
+                        <div class="small opacity-75" style="font-size:11px;">в реестре РФ</div>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <div class="card bg-success border-0 shadow-sm h-100 p-2 text-center text-white">
+                        <div class="small opacity-75">Активировано &ge;1 раз</div>
+                        <div class="fs-4 fw-bold text-white" id="reg-stat-activated">...</div>
+                        <div class="small opacity-75" style="font-size:11px;" id="reg-stat-rate">...</div>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <div class="card bg-secondary border-0 shadow-sm h-100 p-2 text-center text-white">
+                        <div class="small opacity-75">Не активировано</div>
+                        <div class="fs-4 fw-bold text-white" id="reg-stat-unactivated">...</div>
+                        <div class="small opacity-75" style="font-size:11px;">ждут первой связи</div>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <div class="card bg-danger border-0 shadow-sm h-100 p-2 text-center text-white">
+                        <div class="small opacity-75">Без парков (0 POTA)</div>
+                        <div class="fs-4 fw-bold text-white" id="reg-stat-zero">...</div>
+                        <div class="small opacity-75" style="font-size:11px;">высший приоритет</div>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <div class="card bg-info border-0 shadow-sm h-100 p-2 text-center text-dark">
+                        <div class="small opacity-75">Всего активаций</div>
+                        <div class="fs-4 fw-bold text-dark" id="reg-stat-activations">...</div>
+                        <div class="small opacity-75" style="font-size:11px;">выездов операторов</div>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <div class="card bg-warning border-0 shadow-sm h-100 p-2 text-center text-dark">
+                        <div class="small opacity-75">Всего связей (QSO)</div>
+                        <div class="fs-4 fw-bold text-dark" id="reg-stat-qsos">...</div>
+                        <div class="small opacity-75" style="font-size:11px;">в радиоэфире РФ</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Filters & Search -->
+                  <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-body p-2">
+                      <div class="row g-2 align-items-center">
+                        <div class="col-md-4">
+                          <input type="text" class="form-control form-control-sm" id="reg-search-input" placeholder="🔍 Поиск региона или кода (RU-XX)...">
+                        </div>
+                        <div class="col-md-4">
+                          <select class="form-select form-select-sm" id="reg-filter-select">
+                            <option value="all">Все регионы РФ</option>
+                            <option value="zero">⚠️ Без парков (0 POTA — срочно добавить)</option>
+                            <option value="low">🟡 Мало парков (1–3 POTA)</option>
+                            <option value="unactivated">⚪ Без активаций (0% связей)</option>
+                            <option value="active">🟢 Активные регионы (&ge;1 активации)</option>
+                          </select>
+                        </div>
+                        <div class="col-md-4">
+                          <select class="form-select form-select-sm" id="reg-sort-select">
+                            <option value="parks_asc">Сортировка: Меньше парков (приоритет создания)</option>
+                            <option value="parks_desc">Сортировка: Больше парков</option>
+                            <option value="rate_desc">Сортировка: По % активности (высокий &rarr; низкий)</option>
+                            <option value="rate_asc">Сортировка: По % активности (низкий &rarr; высокий)</option>
+                            <option value="qsos_desc">Сортировка: По числу связей QSO</option>
+                            <option value="name_asc">Сортировка: По названию (А &rarr; Я)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Regions Table -->
+                  <div class="table-responsive bg-white rounded shadow-sm">
+                    <table class="table table-hover table-striped mb-0 align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th style="width: 90px;">Код POTA</th>
+                          <th>Регион РФ</th>
+                          <th class="text-center" style="width: 100px;">Всего парков</th>
+                          <th class="text-center" style="width: 110px;">Активировано (&ge;1)</th>
+                          <th class="text-center" style="width: 100px;">Не активно</th>
+                          <th style="width: 170px;">Заинтересованность</th>
+                          <th class="text-center" style="width: 100px;">Активаций</th>
+                          <th class="text-center" style="width: 110px;">Связей (QSO)</th>
+                          <th class="text-center" style="width: 130px;">В реестре ООПТ</th>
+                          <th class="text-end" style="width: 120px;">Действие</th>
+                        </tr>
+                      </thead>
+                      <tbody id="regions-table-body">
+                        <tr><td colspan="10" class="text-center text-muted py-4">Загрузка данных по регионам...</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
                 <!-- Tab: POTA Links Audit -->
                 <div class="tab-pane fade" id="list-links" role="tabpanel" aria-labelledby="list-links-list">
                   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1049,7 +1166,7 @@ export const startAdminServer = (telegramClient) => {
                       </select>
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label small fw-bold mb-1">6. Локация POTA (ISO):</label>
+                      <label class="form-label small fw-bold mb-1">6. Локация POTA (ISO): <span id="subm-location-badge"></span></label>
                       <input type="text" class="form-control form-control-sm font-monospace fw-bold" id="subm-location-code" placeholder="RU-ST или RU-MOS, RU-MOW">
                     </div>
                   </div>
@@ -1935,10 +2052,13 @@ export const startAdminServer = (telegramClient) => {
 
                 const regionEl = document.getElementById('oopt-region-select');
                 if (regionEl && regionEl.options.length <= 1 && stats.regions) {
+                  window.__adminRegionPotaCounts = stats.regionPotaCounts || {};
                   stats.regions.forEach(function(r) {
                     const opt = document.createElement('option');
                     opt.value = r;
-                    opt.textContent = r;
+                    const pCount = (stats.regionPotaCounts && stats.regionPotaCounts[r] !== undefined) ? stats.regionPotaCounts[r] : null;
+                    const suffix = pCount !== null ? (pCount === 0 ? ' (0 POTA ⚠️)' : (' (' + pCount + ' POTA)')) : '';
+                    opt.textContent = r + suffix;
                     regionEl.appendChild(opt);
                   });
                   if (stats.restrictedRegions && stats.restrictedRegions.length > 0) {
@@ -2777,6 +2897,11 @@ export const startAdminServer = (telegramClient) => {
 
             if (translated && transliterated && translated.toLowerCase() !== transliterated.toLowerCase()) {
               if (translated.indexOf('(') === -1) {
+                var words = translated.trim().split(/\s+/).filter(Boolean);
+                // Per Manu R2BBX: if translated name is long (> 3 words or > 30 characters), use translation only
+                if (words.length > 3 || translated.length > 30) {
+                  return translated;
+                }
                 return translated + ' (' + transliterated + ')';
               }
             }
@@ -2983,6 +3108,16 @@ export const startAdminServer = (telegramClient) => {
               document.getElementById('subm-status').value = parsed.status;
               if (document.getElementById('subm-dx-entity')) document.getElementById('subm-dx-entity').value = parsed.dxEntity;
               if (document.getElementById('subm-location-code')) document.getElementById('subm-location-code').value = parsed.locationCode;
+              var locBadge = document.getElementById('subm-location-badge');
+              if (locBadge) {
+                var pReg = parsed.region || '';
+                var pCnt = (window.__adminRegionPotaCounts && window.__adminRegionPotaCounts[pReg] !== undefined) ? window.__adminRegionPotaCounts[pReg] : null;
+                if (pCnt !== null) {
+                  locBadge.innerHTML = '<span class="badge ' + (pCnt === 0 ? 'bg-danger' : 'bg-info text-dark') + ' ms-1" style="font-size:11px;">' + (pCnt === 0 ? '0 POTA в регионе ⚠️' : (pCnt + ' POTA в регионе')) + '</span>';
+                } else {
+                  locBadge.innerHTML = '';
+                }
+              }
               document.getElementById('subm-lat').value = parsed.lat;
               document.getElementById('subm-lon').value = parsed.lon;
               document.getElementById('subm-region').value = parsed.region;
@@ -3179,6 +3314,144 @@ export const startAdminServer = (telegramClient) => {
             if (modal) modal.hide();
             if (Toast) {
               Toast.fire({ icon: 'success', title: '✅ Координаты (' + currentPickerLat.toFixed(4) + ', ' + currentPickerLon.toFixed(4) + ') применены к заявке!' });
+            }
+          });
+
+          // ==========================================
+          // POTA Regions Statistics JS
+          // ==========================================
+          var allRegionsData = [];
+          var isRegionsLoaded = false;
+
+          async function loadRegionsData() {
+            var tbody = document.getElementById('regions-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm text-primary me-2"></span> Загрузка статистики регионов...</td></tr>';
+            try {
+              var res = await fetch('/api/admin/regions/stats');
+              var data = await res.json();
+              if (data && data.summary && data.regions) {
+                var s = data.summary;
+                if (document.getElementById('reg-stat-total')) document.getElementById('reg-stat-total').textContent = s.totalParks;
+                if (document.getElementById('reg-stat-activated')) document.getElementById('reg-stat-activated').textContent = s.activatedParks;
+                if (document.getElementById('reg-stat-rate')) document.getElementById('reg-stat-rate').textContent = s.activationRate + '% от всех парков';
+                if (document.getElementById('reg-stat-unactivated')) document.getElementById('reg-stat-unactivated').textContent = s.unactivatedParks;
+                if (document.getElementById('reg-stat-zero')) document.getElementById('reg-stat-zero').textContent = s.zeroParkCount;
+                if (document.getElementById('reg-stat-activations')) document.getElementById('reg-stat-activations').textContent = Number(s.totalActivations).toLocaleString('ru-RU');
+                if (document.getElementById('reg-stat-qsos')) document.getElementById('reg-stat-qsos').textContent = Number(s.totalQsos).toLocaleString('ru-RU');
+
+                allRegionsData = data.regions || [];
+                isRegionsLoaded = true;
+                renderRegionsTable();
+              }
+            } catch (err) {
+              tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4">Ошибка загрузки данных по регионам: ' + err.message + '</td></tr>';
+            }
+          }
+
+          function renderRegionsTable() {
+            var tbody = document.getElementById('regions-table-body');
+            if (!tbody) return;
+
+            var search = (document.getElementById('reg-search-input')?.value || '').toLowerCase().trim();
+            var filter = document.getElementById('reg-filter-select')?.value || 'all';
+            var sort = document.getElementById('reg-sort-select')?.value || 'parks_asc';
+
+            var list = allRegionsData.filter(function(r) {
+              if (search) {
+                var matchName = (r.name || '').toLowerCase().includes(search);
+                var matchCode = (r.code || '').toLowerCase().includes(search);
+                if (!matchName && !matchCode) return false;
+              }
+
+              if (filter === 'zero') return !r.isRestricted && r.totalParks === 0;
+              if (filter === 'low') return !r.isRestricted && r.totalParks > 0 && r.totalParks <= 3;
+              if (filter === 'unactivated') return !r.isRestricted && r.totalParks > 0 && r.activatedParks === 0;
+              if (filter === 'active') return r.activatedParks > 0;
+              return true;
+            });
+
+            // Sorting
+            list.sort(function(a, b) {
+              if (a.isRestricted !== b.isRestricted) return a.isRestricted ? 1 : -1;
+              if (sort === 'parks_asc') return a.totalParks - b.totalParks || a.name.localeCompare(b.name, 'ru');
+              if (sort === 'parks_desc') return b.totalParks - a.totalParks || a.name.localeCompare(b.name, 'ru');
+              if (sort === 'rate_desc') return b.activationRate - a.activationRate || b.totalParks - a.totalParks;
+              if (sort === 'rate_asc') return a.activationRate - b.activationRate || a.totalParks - b.totalParks;
+              if (sort === 'qsos_desc') return b.totalQsos - a.totalQsos;
+              if (sort === 'name_asc') return a.name.localeCompare(b.name, 'ru');
+              return 0;
+            });
+
+            if (list.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Регионы по заданным критериям не найдены.</td></tr>';
+              return;
+            }
+
+            var html = '';
+            list.forEach(function(r) {
+              var badgeClass = 'bg-primary';
+              if (r.activationRate >= 50) badgeClass = 'bg-success';
+              else if (r.activationRate >= 20) badgeClass = 'bg-info';
+              else if (r.activationRate > 0) badgeClass = 'bg-warning text-dark';
+              else badgeClass = 'bg-secondary';
+
+              var parksBadge = r.totalParks === 0
+                ? '<span class="badge bg-danger">0 POTA</span>'
+                : '<strong>' + r.totalParks + '</strong>';
+
+              var restrictedBadge = r.isRestricted ? '<span class="badge bg-danger ms-1" style="font-size:10px;">недоступно</span>' : '';
+
+              var ooptBadge = r.ooptCandidates > 0
+                ? '<span class="badge bg-light text-dark border">' + Number(r.ooptCandidates).toLocaleString('ru-RU') + ' ООПТ</span>'
+                : '<span class="text-muted">—</span>';
+
+              var actionBtn = (!r.isRestricted && r.ooptCandidates > 0)
+                ? '<button type="button" class="btn btn-xs btn-outline-success py-1 px-2 btn-goto-oopt" data-region="' + escapeHtmlClient(r.name) + '" title="Открыть кандидаты в реестре ООПТ"><i class="bi bi-tree"></i> Кандидаты</button>'
+                : '<span class="text-muted small">—</span>';
+
+              html += '<tr>' +
+                '<td><span class="badge bg-secondary font-monospace">' + r.code + '</span></td>' +
+                '<td><strong>' + escapeHtmlClient(r.name) + '</strong>' + restrictedBadge + '</td>' +
+                '<td class="text-center">' + parksBadge + '</td>' +
+                '<td class="text-center"><span class="text-success fw-bold">' + r.activatedParks + '</span></td>' +
+                '<td class="text-center"><span class="text-muted">' + r.unactivatedParks + '</span></td>' +
+                '<td>' +
+                  '<div class="d-flex align-items-center gap-2">' +
+                    '<div class="progress flex-grow-1" style="height: 6px;">' +
+                      '<div class="progress-bar ' + badgeClass + '" role="progressbar" style="width: ' + r.activationRate + '%" aria-valuenow="' + r.activationRate + '" aria-valuemin="0" aria-valuemax="100"></div>' +
+                    '</div>' +
+                    '<span class="small fw-bold" style="min-width: 38px;">' + r.activationRate + '%</span>' +
+                  '</div>' +
+                '</td>' +
+                '<td class="text-center">' + Number(r.totalActivations).toLocaleString('ru-RU') + '</td>' +
+                '<td class="text-center fw-bold">' + Number(r.totalQsos).toLocaleString('ru-RU') + '</td>' +
+                '<td class="text-center">' + ooptBadge + '</td>' +
+                '<td class="text-end">' + actionBtn + '</td>' +
+              '</tr>';
+            });
+
+            tbody.innerHTML = html;
+          }
+
+          document.getElementById('btn-regions-refresh')?.addEventListener('click', loadRegionsData);
+          document.getElementById('reg-search-input')?.addEventListener('input', renderRegionsTable);
+          document.getElementById('reg-filter-select')?.addEventListener('change', renderRegionsTable);
+          document.getElementById('reg-sort-select')?.addEventListener('change', renderRegionsTable);
+
+          document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.btn-goto-oopt');
+            if (!btn) return;
+            var regionName = btn.getAttribute('data-region');
+            if (!regionName) return;
+            var ooptTabTrigger = document.querySelector('#list-tab a[href="#list-oopt"]');
+            if (ooptTabTrigger) {
+              bootstrap.Tab.getOrCreateInstance(ooptTabTrigger).show();
+              var regSelect = document.getElementById('oopt-region-select');
+              if (regSelect) {
+                regSelect.value = regionName;
+                loadAdminOopt(1);
+              }
             }
           });
 
@@ -3442,6 +3715,17 @@ export const startAdminServer = (telegramClient) => {
           } else {
             // Load audit in background to initialize badge count
             loadAuditData();
+          }
+
+          // Open and load regions on tab click or hash
+          document.getElementById('list-regions-list')?.addEventListener('shown.bs.tab', function() {
+            if (!isRegionsLoaded) {
+              loadRegionsData();
+            }
+          });
+
+          if (window.location.hash === '#list-regions') {
+            loadRegionsData();
           }
 
           // Instant load on page reload (F5) if tab is oopt
@@ -3861,6 +4145,17 @@ export const startAdminServer = (telegramClient) => {
       const stats = getOoptStats();
       res.json(stats);
     } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Regional POTA Statistics API Endpoint
+  app.get('/api/admin/regions/stats', requireAuth, (req, res) => {
+    try {
+      const stats = getRegionalPotaStats();
+      res.json(stats);
+    } catch (err) {
+      console.error('[Admin] Regional stats error:', err);
       res.status(500).json({ error: err.message });
     }
   });

@@ -222,17 +222,36 @@ const GEOGRAPHIC_TERMS = RAW_GEOGRAPHIC_TERMS.map(([pat, repl]) => [
 export function getEnglishCategorySuffix(category) {
   const c = (category || '').toLowerCase();
   if (c.includes('морск')) return 'State Marine Reserve';
-  if (c.includes('национальный парк')) return 'National Park';
-  if (c.includes('биосферный заповедник')) return 'State Biosphere Nature Reserve';
-  if (c.includes('заповедник')) return 'State Nature Reserve';
+  if (c.includes('биосферн')) return 'State Biosphere Nature Reserve';
+  if (c.includes('памятник природы') || c.includes('памятные природные места')) return 'Natural Monument';
+  if (c.includes('ботанический сад') || c.includes('дендрологический') || c.includes('дендрарий')) return 'Botanical Gardens';
+  if (c.includes('национальный парк')) {
+    if (c.includes('резерват') || c.includes('reserve')) return 'National Park Reserve';
+    if (c.includes('абориген') || c.includes('aboriginal')) return 'National Park Aboriginal';
+    return 'National Park';
+  }
+  if (c.includes('природно-исторический') || c.includes('исторический парк') || c.includes('историко-природный')) return 'National Historical Park';
+  if (c.includes('ландшафтный заказник') || c.includes('особо охраняемый природный ландшафт')) return 'Landscape Reserve';
+  if (c.includes('заповедник')) return 'State Nature Preserve';
   if (c.includes('заказник')) return 'State Nature Reserve';
-  if (c.includes('памятник природы')) return 'Nature Monument';
-  if (c.includes('природный парк')) return 'Nature Park';
+  if (c.includes('охраняемый природный ландшафт')) return 'Protected Landscape Area';
+  if (c.includes('охраняемый ландшафт')) return 'Protected Landscape';
+  if (c.includes('ресурсный резерват')) return 'Reserve';
+  if (c.includes('природный резерват')) return 'Nature Conservation Reserve';
+  if (c.includes('резерват')) return 'Reserve';
+  if (c.includes('садово-паркового искусства') || c.includes('ландшафтный парк')) return 'Landscape Park';
+  if (c.includes('лесной парк')) return c.includes('государственный') ? 'State Forest Park' : 'Park';
+  if (c.includes('природный парк') || c.includes('парковая зона')) return 'Nature Park';
+  if (c.includes('рекреационная зона') || c.includes('природная рекреационная') || c.includes('ландшафтно-рекреационный') || c.includes('территория рекреационного')) return 'Nature Recreational Area';
+  if (c.includes('туристско-рекреацион')) return 'Recreation Site';
+  if (c.includes('уникальное озеро') || c.includes('озеро')) return 'National Lakeshore';
+  if (c.includes('природный комплекс')) return 'Nature and Landscape Complex';
+  if (c.includes('особо ценная территория')) return 'Area of Outstanding Natural Beauty';
+  if (c.includes('экологический коридор')) return 'Ecological Site';
+  if (c.includes('охраняемый природный объект')) return 'Protected Area';
+  if (c.includes('зона покоя')) return 'Nature Reserve';
   if (c.includes('ландшафт')) return 'Protected Landscape';
-  if (c.includes('ботанический сад')) return 'Botanical Garden';
-  if (c.includes('дендрологический')) return 'Botanical Garden';
-  if (c.includes('резерват')) return 'Nature Reserve';
-  return 'Nature Reserve';
+  return 'State Nature Reserve';
 }
 
 export function cleanOoptName(rawTitle, category) {

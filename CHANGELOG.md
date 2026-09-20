@@ -1,5 +1,40 @@
 # История изменений (Changelog)
 
+## [1.16.22] - 2026-09-20 (POTA Submitter: Coordinator Manu R2BBX 26 Protected Area Categories Mapping)
+### Добавлено и улучшено
+- **Полная синхронизация 26 категорий ООПТ с международными статусами POTA**:
+  - По официальной спецификации национального координатора POTA в РФ Manu (R2BBX) внедрено строгое соответствие между 26 категориями ООПТ из государственного реестра России (11 344 объекта) и полями `statusEn` в POTA Submitter:
+    - Памятник природы (7 423 шт.) $\to$ `Natural Monument`
+    - Государственный природный заказник (2 491 шт.) $\to$ `State Nature Reserve`
+    - Государственный природный заповедник (115 шт.) $\to$ `State Nature Preserve`
+    - Охраняемый природный ландшафт (139 шт.) $\to$ `Protected Landscape Area`
+    - Природный парк (126 шт.) $\to$ `Nature Park`
+    - Ресурсный резерват (106 шт., Якутия и др.) $\to$ `Reserve`
+    - Дендрологический парк и ботанический сад (98 шт.) $\to$ `Botanical Gardens`
+    - Природный резерват (78 шт.) $\to$ `Nature Conservation Reserve`
+    - Национальный парк (75 шт.) $\to$ `National Park`
+    - Государственный ландшафтный заказник (45 шт.) $\to$ `Landscape Reserve`
+    - Охраняемый ландшафт (48 шт.) $\to$ `Protected Landscape`
+    - Природная рекреационная зона (41 шт.) $\to$ `Nature Recreational Area`
+    - Парк-памятник садово-паркового искусства (27 шт.) $\to$ `Landscape Park`
+    - Уникальное озеро (26 шт.) $\to$ `National Lakeshore`
+    - Охраняемый природный объект (26 шт.) $\to$ `Protected Area`
+    - Туристско-рекреационная местность (24 шт.) $\to$ `Recreation Site`
+    - Ландшафтный парк (21 шт.) $\to$ `Landscape Park`
+    - Охраняемый природный комплекс (21 шт.) $\to$ `Nature and Landscape Complex`
+    - Особо охраняемый природный ландшафт (20 шт.) $\to$ `Landscape Reserve`
+    - Памятные природные места (19 шт.) $\to$ `Natural Monument`
+    - Лесной парк (18 шт.) $\to$ `Park`
+    - Особо ценная территория (18 шт.) $\to$ `Area of Outstanding Natural Beauty`
+    - Зона покоя (16 шт.) $\to$ `Nature Reserve`
+    - Природно-исторический парк (13 шт.) $\to$ `National Historical Park`
+    - Экологический коридор (11 шт.) $\to$ `Ecological Site`
+    - Специализированные формы: биосферный $\to$ `State Biosphere Nature Reserve`, морской $\to$ `State Marine Reserve`.
+  - Алгоритм каскадного автоопределения синхронизирован в бэкенд-сервисе (`ooptService.js`), модуле TMA (`ooptUtils.js`) и Web Admin 2.0 (`admin.js`).
+  - В карточке генерации заявки (`OoptModal.jsx`) добавлены быстрые кликабельные чипы (Quick Chips) для мгновенного выбора или корректировки английского статуса ООПТ в 1 клик на мобильных устройствах.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.22` (`package.json`, `potaApi.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.21] - 2026-09-20 (POTA Submitter: Exclusion of Conflict Territories & Coordinator Protection)
 ### Добавлено и улучшено
 - **Регулирование подачи заявок в POTA по регионам (по согласованию с координатором POTA R2BBX)**:

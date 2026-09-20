@@ -2325,17 +2325,36 @@ export const startAdminServer = (telegramClient) => {
           function getEnglishSuffixClient(category) {
             var c = (category || '').toLowerCase();
             if (c.indexOf('морск') !== -1) return 'State Marine Reserve';
-            if (c.indexOf('национальный парк') !== -1) return 'National Park';
-            if (c.indexOf('биосферный заповедник') !== -1) return 'State Biosphere Nature Reserve';
-            if (c.indexOf('заповедник') !== -1) return 'State Nature Reserve';
+            if (c.indexOf('биосферн') !== -1) return 'State Biosphere Nature Reserve';
+            if (c.indexOf('памятник природы') !== -1 || c.indexOf('памятные природные места') !== -1) return 'Natural Monument';
+            if (c.indexOf('ботанический сад') !== -1 || c.indexOf('дендрологический') !== -1 || c.indexOf('дендрарий') !== -1) return 'Botanical Gardens';
+            if (c.indexOf('национальный парк') !== -1) {
+              if (c.indexOf('резерват') !== -1 || c.indexOf('reserve') !== -1) return 'National Park Reserve';
+              if (c.indexOf('абориген') !== -1 || c.indexOf('aboriginal') !== -1) return 'National Park Aboriginal';
+              return 'National Park';
+            }
+            if (c.indexOf('природно-исторический') !== -1 || c.indexOf('исторический парк') !== -1 || c.indexOf('историко-природный') !== -1) return 'National Historical Park';
+            if (c.indexOf('ландшафтный заказник') !== -1 || c.indexOf('особо охраняемый природный ландшафт') !== -1) return 'Landscape Reserve';
+            if (c.indexOf('заповедник') !== -1) return 'State Nature Preserve';
             if (c.indexOf('заказник') !== -1) return 'State Nature Reserve';
-            if (c.indexOf('памятник природы') !== -1) return 'Nature Monument';
-            if (c.indexOf('природный парк') !== -1) return 'Nature Park';
+            if (c.indexOf('охраняемый природный ландшафт') !== -1) return 'Protected Landscape Area';
+            if (c.indexOf('охраняемый ландшафт') !== -1) return 'Protected Landscape';
+            if (c.indexOf('ресурсный резерват') !== -1) return 'Reserve';
+            if (c.indexOf('природный резерват') !== -1) return 'Nature Conservation Reserve';
+            if (c.indexOf('резерват') !== -1) return 'Reserve';
+            if (c.indexOf('садово-паркового искусства') !== -1 || c.indexOf('ландшафтный парк') !== -1) return 'Landscape Park';
+            if (c.indexOf('лесной парк') !== -1) return c.indexOf('государственный') !== -1 ? 'State Forest Park' : 'Park';
+            if (c.indexOf('природный парк') !== -1 || c.indexOf('парковая зона') !== -1) return 'Nature Park';
+            if (c.indexOf('рекреационная зона') !== -1 || c.indexOf('природная рекреационная') !== -1 || c.indexOf('ландшафтно-рекреационный') !== -1 || c.indexOf('территория рекреационного') !== -1) return 'Nature Recreational Area';
+            if (c.indexOf('туристско-рекреацион') !== -1) return 'Recreation Site';
+            if (c.indexOf('уникальное озеро') !== -1 || c.indexOf('озеро') !== -1) return 'National Lakeshore';
+            if (c.indexOf('природный комплекс') !== -1) return 'Nature and Landscape Complex';
+            if (c.indexOf('особо ценная территория') !== -1) return 'Area of Outstanding Natural Beauty';
+            if (c.indexOf('экологический коридор') !== -1) return 'Ecological Site';
+            if (c.indexOf('охраняемый природный объект') !== -1) return 'Protected Area';
+            if (c.indexOf('зона покоя') !== -1) return 'Nature Reserve';
             if (c.indexOf('ландшафт') !== -1) return 'Protected Landscape';
-            if (c.indexOf('ботанический сад') !== -1) return 'Botanical Garden';
-            if (c.indexOf('дендрологический') !== -1) return 'Botanical Garden';
-            if (c.indexOf('резерват') !== -1) return 'Nature Reserve';
-            return 'Nature Reserve';
+            return 'State Nature Reserve';
           }
 
           function getDxEntityClient(regionName, title) {

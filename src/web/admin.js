@@ -1910,6 +1910,17 @@ export const startAdminServer = (telegramClient) => {
                     opt.textContent = r;
                     regionEl.appendChild(opt);
                   });
+                  if (stats.restrictedRegions && stats.restrictedRegions.length > 0) {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = '⛔ Временно недоступно для POTA';
+                    stats.restrictedRegions.forEach(function(r) {
+                      const opt = document.createElement('option');
+                      opt.value = r;
+                      opt.textContent = r + ' (временно недоступно)';
+                      optgroup.appendChild(opt);
+                    });
+                    regionEl.appendChild(optgroup);
+                  }
                 }
                 ooptStatsLoaded = true;
               }
@@ -1975,9 +1986,14 @@ export const startAdminServer = (telegramClient) => {
                   ? ' <a href="https://next.pota.app/park/' + r.pota_ref + '" target="_blank" class="badge bg-success text-decoration-none ms-1" title="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check-circle-fill"></i> В POTA: ' + r.pota_ref + '</a>'
                   : '';
 
-                var submitterBtn = r.pota_ref
-                  ? '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>'
-                  : '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="" data-pota-name=""><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
+                var submitterBtn;
+                if (r.pota_restricted) {
+                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-secondary disabled" title="Приём заявок для данного региона временно приостановлен комитетом POTA"><i class="bi bi-slash-circle"></i> Недоступно для POTA</button>';
+                } else if (r.pota_ref) {
+                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>';
+                } else {
+                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="" data-pota-name=""><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
+                }
 
                 return '<tr>' +
                   '<td><code>' + r.nid + '</code></td>' +

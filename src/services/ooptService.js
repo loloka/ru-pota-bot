@@ -169,6 +169,11 @@ export async function syncOoptRegistry() {
   }
 }
 
+export function isPotaRestrictedAte(ate = '') {
+  if (!ate) return false;
+  return /крым|севастопол|донецк|луганск|запорож|херсон/i.test(ate);
+}
+
 /**
  * Paginated query for Russian Protected Areas
  */
@@ -208,6 +213,10 @@ export function getOoptList({
   if (region && region.trim()) {
     baseConditions.push(`ate LIKE ?`);
     baseParams.push(`%${region.trim()}%`);
+  } else if (!search || !search.trim()) {
+    // When browsing the general POTA candidates pool (no specific search/region),
+    // exclude conflict regions where POTA submissions are not accepted per coordinator request.
+    baseConditions.push(`(ate NOT LIKE '%Крым%' AND ate NOT LIKE '%Севастополь%' AND ate NOT LIKE '%Донецк%' AND ate NOT LIKE '%Луганск%' AND ate NOT LIKE '%Запорож%' AND ate NOT LIKE '%Херсон%')`);
   }
 
   const conditions = [...baseConditions];
@@ -243,7 +252,10 @@ export function getOoptList({
       title ASC
     LIMIT ? OFFSET ?
   `;
-  const rows = db.prepare(selectSql).all(...params, limitNum, offset);
+  const rows = db.prepare(selectSql).all(...params, limitNum, offset).map(r => ({
+    ...r,
+    pota_restricted: isPotaRestrictedAte(r.ate)
+  }));
 
   // 3. Stats by significance (dynamic based on base filters)
   const globalStats = getOoptStats();
@@ -293,16 +305,20 @@ export function getOoptStats() {
     return cachedStats;
   }
 
-  const total = db.prepare("SELECT COUNT(*) as count FROM oopt_registry").get()?.count || 0;
-  const federal = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE sig = 'federal'").get()?.count || 0;
-  const regional = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE sig = 'regional'").get()?.count || 0;
-  const local = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE sig = 'local'").get()?.count || 0;
+  const restrictedCondition = "(ate NOT LIKE '%Крым%' AND ate NOT LIKE '%Севастополь%' AND ate NOT LIKE '%Донецк%' AND ate NOT LIKE '%Луганск%' AND ate NOT LIKE '%Запорож%' AND ate NOT LIKE '%Херсон%')";
+
+  const totalAll = db.prepare("SELECT COUNT(*) as count FROM oopt_registry").get()?.count || 0;
+  const total = db.prepare(`SELECT COUNT(*) as count FROM oopt_registry WHERE ${restrictedCondition}`).get()?.count || 0;
+  const federal = db.prepare(`SELECT COUNT(*) as count FROM oopt_registry WHERE sig = 'federal' AND ${restrictedCondition}`).get()?.count || 0;
+  const regional = db.prepare(`SELECT COUNT(*) as count FROM oopt_registry WHERE sig = 'regional' AND ${restrictedCondition}`).get()?.count || 0;
+  const local = db.prepare(`SELECT COUNT(*) as count FROM oopt_registry WHERE sig = 'local' AND ${restrictedCondition}`).get()?.count || 0;
   const inPota = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE pota_ref IS NOT NULL").get()?.count || 0;
+  const restrictedCount = totalAll - total;
 
   const categories = db.prepare(`
     SELECT category, COUNT(*) as count 
     FROM oopt_registry 
-    WHERE category IS NOT NULL AND category != '' 
+    WHERE category IS NOT NULL AND category != '' AND ${restrictedCondition}
     GROUP BY category 
     ORDER BY count DESC
     LIMIT 25
@@ -311,6 +327,7 @@ export function getOoptStats() {
   // Extract clean regions list for filter dropdowns
   const rawAte = db.prepare("SELECT DISTINCT ate FROM oopt_registry WHERE ate IS NOT NULL AND ate != ''").all();
   const regionSet = new Set();
+  const restrictedSet = new Set();
   for (const row of rawAte) {
     let s = row.ate;
     if (s.includes('(')) {
@@ -320,20 +337,28 @@ export function getOoptStats() {
     for (const p of parts) {
       const clean = p.trim();
       if (clean.length > 2) {
-        regionSet.add(clean);
+        if (isPotaRestrictedAte(clean)) {
+          restrictedSet.add(clean);
+        } else {
+          regionSet.add(clean);
+        }
       }
     }
   }
   const regions = Array.from(regionSet).sort((a, b) => a.localeCompare(b, 'ru'));
+  const restrictedRegions = Array.from(restrictedSet).sort((a, b) => a.localeCompare(b, 'ru'));
 
   cachedStats = {
     total,
+    totalAll,
+    restrictedCount,
     federal,
     regional,
     local,
     inPota,
     categories,
     regions,
+    restrictedRegions,
   };
   lastStatsTime = now;
   return cachedStats;

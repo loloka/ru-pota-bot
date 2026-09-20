@@ -20,14 +20,16 @@ import {
   User,
   MessageCircle,
   Mail,
-  ArrowLeft
+  ArrowLeft,
+  AlertTriangle
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
 import { 
   parseOoptForSubmitter, 
   formatR2bbxTemplate, 
-  getYandexMapsUrl 
+  getYandexMapsUrl,
+  isPotaRestrictedAte
 } from '../../services/ooptUtils.js';
 
 export default function OoptModal({ oopt, onClose, onShowOnMap }) {
@@ -111,6 +113,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
   if (!oopt) return null;
 
   const current = details || oopt;
+  const isRestricted = Boolean(current.pota_restricted || isPotaRestrictedAte(current.ate || current.rf_subjects || form.region));
   const previewText = formatR2bbxTemplate(form);
   const yandexInfo = getYandexMapsUrl(form.lat, form.lon, form.name, form.region);
 
@@ -273,6 +276,18 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                     <ExternalLink className="w-3 h-3" />
                     pota.app
                   </a>
+                </div>
+              )}
+
+              {isRestricted && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs shadow-sm flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold mb-0.5">Включение в POTA временно недоступно</div>
+                    <div className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-300/90">
+                      По решению международного комитета POTA приём и регистрация новых природных объектов данного региона временно приостановлены по соображениям безопасности.
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -585,44 +600,52 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
 
                 {/* Quick send actions */}
                 <div className="mt-2.5 flex flex-col gap-2">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!copied) handleCopySubmitter();
-                        telegram.openTelegramLink('https://t.me/ManuUmAn');
-                      }}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
-                    >
-                      <User className="w-3.5 h-3.5 shrink-0" />
-                      <span>Отправить в TG (@ManuUmAn)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!copied) handleCopySubmitter();
-                        const subject = encodeURIComponent(`Заявка POTA: ${form.nameEn || form.name}`);
-                        const body = encodeURIComponent(previewText);
-                        window.location.href = `mailto:r2bbx.mua@gmail.com?subject=${subject}&body=${body}`;
-                      }}
-                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
-                      title="Открыть почтовую программу с готовым текстом заявки"
-                    >
-                      <Mail className="w-3.5 h-3.5 shrink-0" />
-                      <span>Отправить на Email</span>
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!copied) handleCopySubmitter();
-                      telegram.openTelegramLink('https://t.me/+Pek5olQhfPdiZDIy');
-                    }}
-                    className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>В чат RU-POTA (Telegram)</span>
-                  </button>
+                  {isRestricted ? (
+                    <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-center text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      ⛔ Отправка заявки координатору POTA заблокирована (приём объектов данного региона временно приостановлен комитетом POTA)
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!copied) handleCopySubmitter();
+                            telegram.openTelegramLink('https://t.me/ManuUmAn');
+                          }}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
+                        >
+                          <User className="w-3.5 h-3.5 shrink-0" />
+                          <span>Отправить в TG (@ManuUmAn)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!copied) handleCopySubmitter();
+                            const subject = encodeURIComponent(`Заявка POTA: ${form.nameEn || form.name}`);
+                            const body = encodeURIComponent(previewText);
+                            window.location.href = `mailto:r2bbx.mua@gmail.com?subject=${subject}&body=${body}`;
+                          }}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
+                          title="Открыть почтовую программу с готовым текстом заявки"
+                        >
+                          <Mail className="w-3.5 h-3.5 shrink-0" />
+                          <span>Отправить на Email</span>
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!copied) handleCopySubmitter();
+                          telegram.openTelegramLink('https://t.me/+Pek5olQhfPdiZDIy');
+                        }}
+                        className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-xs font-semibold transition-all active:scale-98 shadow-sm"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>В чат RU-POTA (Telegram)</span>
+                      </button>
+                    </>
+                  )}
 
                   <button
                     type="button"

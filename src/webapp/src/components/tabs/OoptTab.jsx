@@ -17,7 +17,8 @@ import {
   Sparkles, 
   ExternalLink,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { api } from '../../services/api.js';
 import { telegram } from '../../services/telegram.js';
@@ -399,15 +400,35 @@ export default function OoptTab({ onNavigateToMap }) {
             onChange={(e) => { setRegionFilter(e.target.value); setPage(1); }}
             className="w-full py-2 px-2.5 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 shadow-sm truncate"
           >
-            <option value="">Все регионы России (89)</option>
+            <option value="">Все доступные для POTA регионы ({stats?.regions?.length || 83})</option>
             {stats?.regions?.map((r) => (
               <option key={r} value={r}>
                 {r}
               </option>
             ))}
+            {stats?.restrictedRegions && stats.restrictedRegions.length > 0 && (
+              <optgroup label="⛔ Временно недоступно для POTA">
+                {stats.restrictedRegions.map((r) => (
+                  <option key={r} value={r}>
+                    {r} (временно недоступно)
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
       </div>
+
+      {/* Restricted Region Notification Banner */}
+      {stats?.restrictedRegions?.includes(regionFilter) && (
+        <div className="p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5 shadow-sm animate-fade-in">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div className="leading-relaxed">
+            <span className="font-bold">Приём заявок временно закрыт: </span>
+            по объектам данного региона добавление в международную программу POTA приостановлено международным комитетом POTA по соображениям безопасности.
+          </div>
+        </div>
+      )}
 
       {/* Filter Chips: Significance & POTA */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none text-xs">
@@ -597,36 +618,45 @@ export default function OoptTab({ onNavigateToMap }) {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={(e) => handleQuickCopy(e, item)}
-                    title={item.pota_ref ? `Парк уже в POTA (${item.pota_ref})` : "Скопировать готовую заявку для R2BBX"}
-                    disabled={copyLoadingId === item.nid}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                      copiedId === item.nid
-                        ? 'bg-emerald-600 text-white shadow-sm'
+                  {item.pota_restricted ? (
+                    <span 
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/80 cursor-default"
+                      title="Приём заявок для данного региона временно приостановлен комитетом POTA"
+                    >
+                      ⛔ Недоступно
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => handleQuickCopy(e, item)}
+                      title={item.pota_ref ? `Парк уже в POTA (${item.pota_ref})` : "Скопировать готовую заявку для R2BBX"}
+                      disabled={copyLoadingId === item.nid}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                        copiedId === item.nid
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : copyLoadingId === item.nid
+                          ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                          : item.pota_ref
+                          ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-500/30'
+                          : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-95'
+                      }`}
+                    >
+                      {copiedId === item.nid ? (
+                        <Check className="w-3 h-3" />
+                      ) : copyLoadingId === item.nid ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-emerald-500" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                      {copiedId === item.nid
+                        ? 'Скопировано'
                         : copyLoadingId === item.nid
-                        ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                        ? 'Координаты...'
                         : item.pota_ref
-                        ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-500/30'
-                        : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-95'
-                    }`}
-                  >
-                    {copiedId === item.nid ? (
-                      <Check className="w-3 h-3" />
-                    ) : copyLoadingId === item.nid ? (
-                      <Loader2 className="w-3 h-3 animate-spin text-emerald-500" />
-                    ) : (
-                      <Copy className="w-3 h-3" />
-                    )}
-                    {copiedId === item.nid
-                      ? 'Скопировано'
-                      : copyLoadingId === item.nid
-                      ? 'Координаты...'
-                      : item.pota_ref
-                      ? `POTA: ${item.pota_ref}`
-                      : 'Заявка POTA'}
-                  </button>
+                        ? `POTA: ${item.pota_ref}`
+                        : 'Заявка POTA'}
+                    </button>
+                  )}
 
                   <button
                     type="button"

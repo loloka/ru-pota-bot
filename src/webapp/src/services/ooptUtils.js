@@ -26,6 +26,11 @@ export function transliterateRuToEn(str) {
   }).join('');
 }
 
+export function isPotaRestrictedAte(ate = '') {
+  if (!ate) return false;
+  return /крым|севастопол|донецк|луганск|запорож|херсон/i.test(ate);
+}
+
 const BUREAUCRATIC_PATTERNS = [
   /федерального государственного автономного образовательного учреждения высшего образования/gi,
   /федерального государственного автономного образовательного учреждения высшего профессионального образования/gi,

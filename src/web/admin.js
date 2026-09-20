@@ -1016,14 +1016,14 @@ export const startAdminServer = (telegramClient) => {
                       </div>
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
-                      <button type="button" class="btn btn-sm btn-outline-danger" id="btn-audit-copy-empty" title="Скопировать список парков без ссылок (Алярма для Manu R2BBX)">
-                        <i class="bi bi-exclamation-octagon-fill"></i> Алярма: Без ссылок (16)
+                      <button type="button" class="btn btn-sm btn-outline-danger ${auditStats.empty > 0 ? '' : 'd-none'}" id="btn-audit-copy-empty" title="Скопировать список парков без ссылок (Алярма для Manu R2BBX)">
+                        <i class="bi bi-exclamation-octagon-fill"></i> <span id="btn-audit-copy-empty-text">Алярма: Без ссылок (${auditStats.empty})</span>
                       </button>
-                      <button type="button" class="btn btn-sm btn-outline-warning" id="btn-audit-copy-all-wiki" title="Скопировать предложения по замене ссылок Википедии на ООПТ">
-                        <i class="bi bi-wikipedia"></i> Замены Википедии (10)
+                      <button type="button" class="btn btn-sm btn-outline-warning ${auditStats.wikipedia > 0 ? '' : 'd-none'}" id="btn-audit-copy-all-wiki" title="Скопировать предложения по замене ссылок Википедии на ООПТ">
+                        <i class="bi bi-wikipedia"></i> <span id="btn-audit-copy-all-wiki-text">Замены Википедии (${auditStats.wikipedia})</span>
                       </button>
-                      <button type="button" class="btn btn-sm btn-success" id="btn-audit-copy-full" title="Сформировать полный отчет всех проблемных ссылок для Manu R2BBX (Email / Telegram)">
-                        <i class="bi bi-envelope-paper-fill"></i> Полный отчет для Manu
+                      <button type="button" class="btn btn-sm btn-success ${(auditStats.empty > 0 || auditStats.wikipedia > 0 || auditStats.insecure_http > 0) ? '' : 'd-none'}" id="btn-audit-copy-full" title="Сформировать отчет проблемных ссылок для Manu R2BBX (Email / Telegram)">
+                        <i class="bi bi-envelope-paper-fill"></i> <span id="btn-audit-copy-full-text">Полный отчет для Manu</span>
                       </button>
                       <button type="button" class="btn btn-sm btn-outline-primary" id="btn-audit-refresh">
                         <i class="bi bi-arrow-clockwise"></i> Обновить
@@ -3563,12 +3563,75 @@ export const startAdminServer = (telegramClient) => {
                   if (data.stats.insecure_http === 0) badgeHttp.classList.add('d-none');
                   else badgeHttp.classList.remove('d-none');
                 }
+
+                // Update header action buttons dynamically (hide alarm buttons if 0 issues!)
+                var btnEmpty = document.getElementById('btn-audit-copy-empty');
+                var btnEmptyText = document.getElementById('btn-audit-copy-empty-text');
+                if (btnEmpty) {
+                  if (data.stats.empty > 0) {
+                    btnEmpty.classList.remove('d-none');
+                    if (btnEmptyText) btnEmptyText.textContent = 'Алярма: Без ссылок (' + data.stats.empty + ')';
+                  } else {
+                    btnEmpty.classList.add('d-none');
+                  }
+                }
+
+                var btnWiki = document.getElementById('btn-audit-copy-all-wiki');
+                var btnWikiText = document.getElementById('btn-audit-copy-all-wiki-text');
+                if (btnWiki) {
+                  if (data.stats.wikipedia > 0) {
+                    btnWiki.classList.remove('d-none');
+                    if (btnWikiText) btnWikiText.textContent = 'Замены Википедии (' + data.stats.wikipedia + ')';
+                  } else {
+                    btnWiki.classList.add('d-none');
+                  }
+                }
+
+                var btnFull = document.getElementById('btn-audit-copy-full');
+                var btnFullText = document.getElementById('btn-audit-copy-full-text');
+                if (btnFull) {
+                  var totalIssues = (data.stats.empty || 0) + (data.stats.wikipedia || 0) + (data.stats.insecure_http || 0);
+                  if (totalIssues > 0) {
+                    btnFull.classList.remove('d-none');
+                    if (data.stats.wikipedia === 0 && data.stats.empty === 0) {
+                      if (btnFullText) btnFullText.textContent = 'Отчет по HTTP для Manu (' + data.stats.insecure_http + ')';
+                    } else {
+                      if (btnFullText) btnFullText.textContent = 'Полный отчет для Manu';
+                    }
+                  } else {
+                    btnFull.classList.add('d-none');
+                  }
+                }
+
+                // Smart initial filter: if current filter is 'wikipedia' and there are 0 wikipedia links, pick next relevant filter
+                if (currentAuditFilter === 'wikipedia' && data.stats.wikipedia === 0) {
+                  if (data.stats.empty > 0) currentAuditFilter = 'empty';
+                  else if (data.stats.insecure_http > 0) currentAuditFilter = 'insecure_http';
+                  else currentAuditFilter = 'all';
+
+                  var filterSelect = document.getElementById('audit-filter-select');
+                  if (filterSelect) filterSelect.value = currentAuditFilter;
+                }
+
                 allAuditParks = data.parks || [];
                 renderAuditTable();
+                updateActiveAuditCard();
               }
             } catch(err) {
               tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Ошибка загрузки данных аудита: ' + err.message + '</td></tr>';
             }
+          }
+
+          function updateActiveAuditCard() {
+            var currentFilter = currentAuditFilter;
+            document.querySelectorAll('.audit-kpi-card').forEach(function(card) {
+              var f = card.getAttribute('data-filter');
+              if (f === currentFilter) {
+                card.classList.add('active-kpi');
+              } else {
+                card.classList.remove('active-kpi');
+              }
+            });
           }
 
           function renderAuditTable() {
@@ -3636,6 +3699,7 @@ export const startAdminServer = (telegramClient) => {
           document.getElementById('audit-search-input')?.addEventListener('input', renderAuditTable);
           document.getElementById('audit-filter-select')?.addEventListener('change', function(e) {
             currentAuditFilter = e.target.value;
+            updateActiveAuditCard();
             renderAuditTable();
           });
 
@@ -3647,6 +3711,7 @@ export const startAdminServer = (telegramClient) => {
                 currentAuditFilter = f;
                 var selectEl = document.getElementById('audit-filter-select');
                 if (selectEl) selectEl.value = f;
+                updateActiveAuditCard();
                 renderAuditTable();
               }
             });

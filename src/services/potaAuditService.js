@@ -274,6 +274,11 @@ export function formatBatchWikipediaReplacements() {
     `----------------------------------------------------`,
   ];
 
+  if (wikiParks.length === 0) {
+    lines.push('✅ Замечаний нет: все ссылки на статьи Википедии успешно заменены!');
+    return lines.join('\n');
+  }
+
   wikiParks.forEach((p, idx) => {
     lines.push(`${idx + 1}. [${p.reference}] ${p.name}`);
     lines.push(`   Текущая ссылка (Википедия): ${p.website}`);
@@ -301,6 +306,11 @@ export function formatEmptyLinksReport() {
     `Всего парков без ссылки: ${emptyParks.length}`,
     `------------------------------------------------------------`,
   ];
+
+  if (emptyParks.length === 0) {
+    lines.push('✅ Замечаний нет: все парки POTA РФ имеют заполненные ссылки!');
+    return lines.join('\n');
+  }
 
   emptyParks.forEach((p, idx) => {
     lines.push(`${idx + 1}. [${p.reference}] ${p.name} (${p.region || 'RU'})`);
@@ -340,51 +350,66 @@ export function formatFullManuReport() {
     `------------------------------------------------------------`,
   ];
 
-  emptyParks.forEach((p, idx) => {
-    lines.push(`${idx + 1}. [${p.reference}] ${p.name} (${p.region})`);
-    lines.push(`   Текущая ссылка: ОТСУТСТВУЕТ`);
-    if (p.replacement) {
-      lines.push(`   ✅ Рекомендуемая ссылка NextGIS: ${p.replacement.url}`);
-      lines.push(`   Объект ООПТ: ${p.replacement.category ? p.replacement.category + ' ' : ''}«${p.replacement.title}» (${p.replacement.sig || 'ООПТ'})`);
-    } else {
-      lines.push(`   ⚠️ Ссылка в ООПТ: требуется ручной поиск (городской парк)`);
-    }
+  if (emptyParks.length === 0) {
+    lines.push('   ✅ Замечаний нет: все парки имеют заполненные ссылки!');
     lines.push('');
-  });
+  } else {
+    emptyParks.forEach((p, idx) => {
+      lines.push(`${idx + 1}. [${p.reference}] ${p.name} (${p.region})`);
+      lines.push(`   Текущая ссылка: ОТСУТСТВУЕТ`);
+      if (p.replacement) {
+        lines.push(`   ✅ Рекомендуемая ссылка NextGIS: ${p.replacement.url}`);
+        lines.push(`   Объект ООПТ: ${p.replacement.category ? p.replacement.category + ' ' : ''}«${p.replacement.title}» (${p.replacement.sig || 'ООПТ'})`);
+      } else {
+        lines.push(`   ⚠️ Ссылка в ООПТ: требуется ручной поиск (городской парк)`);
+      }
+      lines.push('');
+    });
+  }
 
   lines.push(`============================================================`);
   lines.push(`⚠️ РАЗДЕЛ 2: ССЫЛКИ НА ВИКИПЕДИЮ (ТРЕБУЮТ ЗАМЕНЫ — ${wikiParks.length} ОБЪЕКТОВ)`);
   lines.push(`------------------------------------------------------------`);
 
-  wikiParks.forEach((p, idx) => {
-    lines.push(`${idx + 1}. [${p.reference}] ${p.name} (${p.region})`);
-    lines.push(`   Текущая ссылка (Википедия): ${p.website}`);
-    if (p.replacement) {
-      lines.push(`   ✅ Официальная ссылка NextGIS: ${p.replacement.url}`);
-      lines.push(`   Объект в ООПТ РФ: ${p.replacement.category ? p.replacement.category + ' ' : ''}«${p.replacement.title}» (${p.replacement.sig || 'ООПТ'})`);
-    } else {
-      lines.push(`   ⚠️ Официальная ссылка: требуется ручное сопоставление`);
-    }
+  if (wikiParks.length === 0) {
+    lines.push('   ✅ Замечаний нет: статьи Википедии отсутствуют, все ссылки актуальны!');
     lines.push('');
-  });
+  } else {
+    wikiParks.forEach((p, idx) => {
+      lines.push(`${idx + 1}. [${p.reference}] ${p.name} (${p.region})`);
+      lines.push(`   Текущая ссылка (Википедия): ${p.website}`);
+      if (p.replacement) {
+        lines.push(`   ✅ Официальная ссылка NextGIS: ${p.replacement.url}`);
+        lines.push(`   Объект в ООПТ РФ: ${p.replacement.category ? p.replacement.category + ' ' : ''}«${p.replacement.title}» (${p.replacement.sig || 'ООПТ'})`);
+      } else {
+        lines.push(`   ⚠️ Официальная ссылка: требуется ручное сопоставление`);
+      }
+      lines.push('');
+    });
+  }
 
   lines.push(`============================================================`);
   lines.push(`🔓 РАЗДЕЛ 3: ССЫЛКИ НА НЕЗАЩИЩЕННЫЙ HTTP (${httpParks.length} ОБЪЕКТОВ)`);
   lines.push(`(У многих браузер блокирует открытие; рекомендуется замена на https:// или NextGIS)`);
   lines.push(`------------------------------------------------------------`);
 
-  httpParks.forEach((p, idx) => {
-    const httpsAlternative = p.website.replace('http://', 'https://');
-    lines.push(`${idx + 1}. [${p.reference}] ${p.name} (${p.region})`);
-    lines.push(`   Текущая ссылка (HTTP): ${p.website}`);
-    if (p.replacement) {
-      lines.push(`   ✅ Рекомендуемая ссылка NextGIS: ${p.replacement.url}`);
-      lines.push(`   или HTTPS зеркало сайта: ${httpsAlternative}`);
-    } else {
-      lines.push(`   Рекомендуемое исправление: ${httpsAlternative}`);
-    }
+  if (httpParks.length === 0) {
+    lines.push('   ✅ Замечаний нет: все ссылки используют защищенный протокол HTTPS!');
     lines.push('');
-  });
+  } else {
+    httpParks.forEach((p, idx) => {
+      const httpsAlternative = p.website.replace('http://', 'https://');
+      lines.push(`${idx + 1}. [${p.reference}] ${p.name} (${p.region})`);
+      lines.push(`   Текущая ссылка (HTTP): ${p.website}`);
+      if (p.replacement) {
+        lines.push(`   ✅ Рекомендуемая ссылка NextGIS: ${p.replacement.url}`);
+        lines.push(`   или HTTPS зеркало сайта: ${httpsAlternative}`);
+      } else {
+        lines.push(`   Рекомендуемое исправление: ${httpsAlternative}`);
+      }
+      lines.push('');
+    });
+  }
 
   return lines.join('\n');
 }

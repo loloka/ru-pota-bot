@@ -463,6 +463,19 @@ export const startAdminServer = (telegramClient) => {
             transform: translateX(100px);
             background-color: #f8d7da !important;
           }
+          .reg-kpi-card, .audit-kpi-card {
+            user-select: none;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+          }
+          .reg-kpi-card:hover, .audit-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
+          }
+          .reg-kpi-card.active-kpi {
+            box-shadow: 0 0 0 3px #212529, 0 6px 16px rgba(0,0,0,0.25) !important;
+            transform: translateY(-2px);
+          }
         </style>
       </head>
       <body>
@@ -895,43 +908,43 @@ export const startAdminServer = (telegramClient) => {
                   <!-- Regional KPI Cards -->
                   <div class="row g-2 mb-3">
                     <div class="col-6 col-md-2">
-                      <div class="card bg-primary border-0 shadow-sm h-100 p-2 text-center text-white">
-                        <div class="small opacity-75">Всего парков POTA</div>
+                      <div class="card bg-primary border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="all" title="Показать все регионы РФ">
+                        <div class="small opacity-75"><i class="bi bi-geo-alt"></i> Всего парков POTA</div>
                         <div class="fs-4 fw-bold text-white" id="reg-stat-total">...</div>
                         <div class="small opacity-75" style="font-size:11px;">в реестре РФ</div>
                       </div>
                     </div>
                     <div class="col-6 col-md-2">
-                      <div class="card bg-success border-0 shadow-sm h-100 p-2 text-center text-white">
-                        <div class="small opacity-75">Активировано &ge;1 раз</div>
+                      <div class="card bg-success border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="active" title="Фильтр: активные регионы (&ge;1 активации)">
+                        <div class="small opacity-75"><i class="bi bi-broadcast-pin"></i> Активировано &ge;1 раз</div>
                         <div class="fs-4 fw-bold text-white" id="reg-stat-activated">...</div>
                         <div class="small opacity-75" style="font-size:11px;" id="reg-stat-rate">...</div>
                       </div>
                     </div>
                     <div class="col-6 col-md-2">
-                      <div class="card bg-secondary border-0 shadow-sm h-100 p-2 text-center text-white">
-                        <div class="small opacity-75">Не активировано</div>
+                      <div class="card bg-secondary border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="unactivated" title="Фильтр: регионы с парками без активаций">
+                        <div class="small opacity-75"><i class="bi bi-clock-history"></i> Не активировано</div>
                         <div class="fs-4 fw-bold text-white" id="reg-stat-unactivated">...</div>
                         <div class="small opacity-75" style="font-size:11px;">ждут первой связи</div>
                       </div>
                     </div>
                     <div class="col-6 col-md-2">
-                      <div class="card bg-danger border-0 shadow-sm h-100 p-2 text-center text-white">
-                        <div class="small opacity-75">Без парков (0 POTA)</div>
+                      <div class="card bg-danger border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="zero" title="Фильтр: регионы без единого парка POTA (высший приоритет)">
+                        <div class="small opacity-75"><i class="bi bi-exclamation-triangle-fill"></i> Без парков (0 POTA)</div>
                         <div class="fs-4 fw-bold text-white" id="reg-stat-zero">...</div>
                         <div class="small opacity-75" style="font-size:11px;">высший приоритет</div>
                       </div>
                     </div>
                     <div class="col-6 col-md-2">
-                      <div class="card bg-info border-0 shadow-sm h-100 p-2 text-center text-dark">
-                        <div class="small opacity-75">Всего активаций</div>
+                      <div class="card bg-info border-0 shadow-sm h-100 p-2 text-center text-dark reg-kpi-card" data-filter="active" data-sort="activations_desc" title="Сортировка: активные регионы по числу выездов операторов">
+                        <div class="small opacity-75"><i class="bi bi-people-fill"></i> Всего активаций</div>
                         <div class="fs-4 fw-bold text-dark" id="reg-stat-activations">...</div>
                         <div class="small opacity-75" style="font-size:11px;">выездов операторов</div>
                       </div>
                     </div>
                     <div class="col-6 col-md-2">
-                      <div class="card bg-warning border-0 shadow-sm h-100 p-2 text-center text-dark">
-                        <div class="small opacity-75">Всего связей (QSO)</div>
+                      <div class="card bg-warning border-0 shadow-sm h-100 p-2 text-center text-dark reg-kpi-card" data-filter="all" data-sort="qsos_desc" title="Сортировка: регионы по общему числу QSO в эфире">
+                        <div class="small opacity-75"><i class="bi bi-activity"></i> Всего связей (QSO)</div>
                         <div class="fs-4 fw-bold text-dark" id="reg-stat-qsos">...</div>
                         <div class="small opacity-75" style="font-size:11px;">в радиоэфире РФ</div>
                       </div>
@@ -960,6 +973,7 @@ export const startAdminServer = (telegramClient) => {
                             <option value="parks_desc">Сортировка: Больше парков</option>
                             <option value="rate_desc">Сортировка: По % активности (высокий &rarr; низкий)</option>
                             <option value="rate_asc">Сортировка: По % активности (низкий &rarr; высокий)</option>
+                            <option value="activations_desc">Сортировка: По числу активаций</option>
                             <option value="qsos_desc">Сортировка: По числу связей QSO</option>
                             <option value="name_asc">Сортировка: По названию (А &rarr; Я)</option>
                           </select>
@@ -3343,6 +3357,7 @@ export const startAdminServer = (telegramClient) => {
                 allRegionsData = data.regions || [];
                 isRegionsLoaded = true;
                 renderRegionsTable();
+                updateActiveRegCard();
               }
             } catch (err) {
               tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4">Ошибка загрузки данных по регионам: ' + err.message + '</td></tr>';
@@ -3378,6 +3393,7 @@ export const startAdminServer = (telegramClient) => {
               if (sort === 'parks_desc') return b.totalParks - a.totalParks || a.name.localeCompare(b.name, 'ru');
               if (sort === 'rate_desc') return b.activationRate - a.activationRate || b.totalParks - a.totalParks;
               if (sort === 'rate_asc') return a.activationRate - b.activationRate || a.totalParks - b.totalParks;
+              if (sort === 'activations_desc') return b.totalActivations - a.totalActivations || b.totalQsos - a.totalQsos;
               if (sort === 'qsos_desc') return b.totalQsos - a.totalQsos;
               if (sort === 'name_asc') return a.name.localeCompare(b.name, 'ru');
               return 0;
@@ -3434,10 +3450,65 @@ export const startAdminServer = (telegramClient) => {
             tbody.innerHTML = html;
           }
 
+          function updateActiveRegCard() {
+            var currentFilter = document.getElementById('reg-filter-select')?.value || 'all';
+            var currentSort = document.getElementById('reg-sort-select')?.value;
+
+            document.querySelectorAll('.reg-kpi-card').forEach(function(card) {
+              var f = card.getAttribute('data-filter');
+              var s = card.getAttribute('data-sort');
+
+              var isActive = false;
+              if (s) {
+                isActive = (currentSort === s);
+              } else if (f) {
+                isActive = (currentFilter === f && currentSort !== 'activations_desc' && currentSort !== 'qsos_desc');
+              }
+
+              if (isActive) {
+                card.classList.add('active-kpi');
+              } else {
+                card.classList.remove('active-kpi');
+              }
+            });
+          }
+
+          // KPI card click filters
+          document.querySelectorAll('.reg-kpi-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+              var f = this.getAttribute('data-filter');
+              var s = this.getAttribute('data-sort');
+              var filterSelect = document.getElementById('reg-filter-select');
+              var sortSelect = document.getElementById('reg-sort-select');
+
+              var isAlreadyActive = this.classList.contains('active-kpi');
+              if (isAlreadyActive && f !== 'all') {
+                if (filterSelect) filterSelect.value = 'all';
+                if (sortSelect) sortSelect.value = 'parks_asc';
+              } else {
+                if (f && filterSelect) filterSelect.value = f;
+                if (s && sortSelect) {
+                  sortSelect.value = s;
+                } else if (sortSelect && (sortSelect.value === 'activations_desc' || sortSelect.value === 'qsos_desc')) {
+                  sortSelect.value = 'parks_asc';
+                }
+              }
+
+              updateActiveRegCard();
+              renderRegionsTable();
+            });
+          });
+
           document.getElementById('btn-regions-refresh')?.addEventListener('click', loadRegionsData);
           document.getElementById('reg-search-input')?.addEventListener('input', renderRegionsTable);
-          document.getElementById('reg-filter-select')?.addEventListener('change', renderRegionsTable);
-          document.getElementById('reg-sort-select')?.addEventListener('change', renderRegionsTable);
+          document.getElementById('reg-filter-select')?.addEventListener('change', function() {
+            updateActiveRegCard();
+            renderRegionsTable();
+          });
+          document.getElementById('reg-sort-select')?.addEventListener('change', function() {
+            updateActiveRegCard();
+            renderRegionsTable();
+          });
 
           document.addEventListener('click', function(e) {
             var btn = e.target.closest('.btn-goto-oopt');

@@ -275,11 +275,21 @@ export function createTmaRouter(telegramClient) {
         VALUES (?, ?, ?, ?)
       `).run(cleanEmail, cleanCallsign, code, expiresAt);
 
+      // Check if this callsign already belongs to an existing Telegram account
+      const existingTgUser = db.prepare(`
+        SELECT telegram_id, callsign, status 
+        FROM users 
+        WHERE callsign = ? AND telegram_id > 0
+      `).get(cleanCallsign);
+
+      const isTelegramLinked = Boolean(existingTgUser);
+
       // Send email via Resend
       const sendResult = await resendService.sendVerificationCode({
         email: cleanEmail,
         callsign: cleanCallsign,
         code,
+        isTelegramLinked,
       });
 
       if (!sendResult.success) {
@@ -293,6 +303,7 @@ export function createTmaRouter(telegramClient) {
         message: 'Проверочный код отправлен на вашу почту',
         email: cleanEmail,
         callsign: cleanCallsign,
+        hasTelegramAccount: isTelegramLinked,
         expiresInSeconds: 600,
       });
     } catch (err) {
@@ -304,7 +315,7 @@ export function createTmaRouter(telegramClient) {
   // POST /api/tma/auth/verify-code - Verify code and log in
   router.post('/auth/verify-code', async (req, res) => {
     try {
-      const { email, code, callsign } = req.body || {};
+      const { email, code, callsign, linkTelegram = true } = req.body || {};
 
       if (!email || !code) {
         return res.status(400).json({ error: 'Email и проверочный код обязательны' });
@@ -332,53 +343,111 @@ export function createTmaRouter(telegramClient) {
       db.prepare('DELETE FROM email_verifications WHERE email = ?').run(cleanEmail);
 
       const targetCallsign = (cleanCallsign || verification.callsign || '').toUpperCase();
-
-      // Find existing user by email or by web callsign
-      let user = db.prepare(`
-        SELECT * FROM users 
-        WHERE email = ? OR (callsign = ? AND auth_type = 'web')
-      `).get(cleanEmail, targetCallsign);
-
       const webToken = crypto.randomBytes(32).toString('hex');
 
-      if (!user) {
-        // Allocate persistent negative ID for web user
-        const minIdRow = db.prepare('SELECT MIN(telegram_id) as min_id FROM users').get();
-        let nextId = -1000000001;
-        if (minIdRow && minIdRow.min_id && minIdRow.min_id < 0) {
-          nextId = minIdRow.min_id - 1;
+      // Check if an existing Telegram account exists for this callsign
+      const existingTgUser = db.prepare(`
+        SELECT * FROM users 
+        WHERE callsign = ? AND telegram_id > 0
+      `).get(targetCallsign);
+
+      let user = null;
+      let isMergedWithTelegram = false;
+
+      if (existingTgUser && linkTelegram !== false) {
+        // Link with existing Telegram account!
+        // 1. If there's an orphan/old web account with negative ID for this email, migrate its data
+        const oldWebUser = db.prepare('SELECT telegram_id FROM users WHERE email = ? AND telegram_id < 0').get(cleanEmail);
+        if (oldWebUser) {
+          try {
+            // Migrate subscriptions
+            db.prepare('UPDATE OR IGNORE subscriptions SET telegram_id = ? WHERE telegram_id = ?')
+              .run(existingTgUser.telegram_id, oldWebUser.telegram_id);
+            db.prepare('DELETE FROM subscriptions WHERE telegram_id = ?').run(oldWebUser.telegram_id);
+            // Migrate notifications
+            db.prepare('UPDATE user_notifications SET user_id = ? WHERE user_id = ?')
+              .run(existingTgUser.telegram_id, oldWebUser.telegram_id);
+            // Remove orphan web user row
+            db.prepare('DELETE FROM users WHERE telegram_id = ?').run(oldWebUser.telegram_id);
+          } catch (migrateErr) {
+            console.warn('[Web Auth] Error migrating old web user data:', migrateErr.message);
+          }
         }
 
-        db.prepare(`
-          INSERT INTO users (telegram_id, callsign, status, email, auth_type, web_token)
-          VALUES (?, ?, 'approved', ?, 'web', ?)
-        `).run(nextId, targetCallsign, cleanEmail, webToken);
-
-        user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(nextId);
-        console.log(`\x1b[32m[Web Auth]\x1b[0m 🌐 Зарегистрирован новый веб-пользователь: ${targetCallsign} (${cleanEmail}), ID: ${nextId}`);
-      } else {
-        // Update existing user with new token and verified data
+        // 2. Attach email and web_token directly to Telegram user
         db.prepare(`
           UPDATE users 
-          SET web_token = ?, callsign = ?, email = ?, auth_type = COALESCE(auth_type, 'web')
+          SET email = ?, web_token = ? 
           WHERE telegram_id = ?
-        `).run(webToken, targetCallsign, cleanEmail, user.telegram_id);
+        `).run(cleanEmail, webToken, existingTgUser.telegram_id);
 
-        user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(user.telegram_id);
-        console.log(`\x1b[32m[Web Auth]\x1b[0m 🌐 Веб-вход пользователя: ${targetCallsign} (${cleanEmail}), ID: ${user.telegram_id}`);
+        user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(existingTgUser.telegram_id);
+        isMergedWithTelegram = true;
+        console.log(`\x1b[32m[Web Auth]\x1b[0m 🔗 Веб-вход объединён с Telegram-аккаунтом: ${targetCallsign} (${cleanEmail}), TG ID: ${user.telegram_id}`);
+
+        // 3. Send security notification in Telegram DM
+        if (telegramClient && user.telegram_id > 0) {
+          try {
+            await telegramClient.sendMessage(
+              user.telegram_id,
+              `🌐 <b>Успешный вход на сайте pota.r9o.ru</b>\n\n` +
+              `К вашему профилю <b>${user.callsign}</b> успешно привязан Email: <code>${cleanEmail}</code>.\n` +
+              `Теперь вы можете заходить в Личный кабинет прямо с браузера на компьютере или телефоне без Telegram!\n\n` +
+              `Все ваши подписки из бота и текущий статус в эфире автоматически синхронизированы. 73! 🌲📡`,
+              { parse_mode: 'HTML' }
+            );
+          } catch (tgNotifyErr) {
+            console.warn('[Web Auth] Failed to send Telegram DM security alert:', tgNotifyErr.message);
+          }
+        }
+      } else {
+        // Standalone Web user (or Telegram linking declined)
+        user = db.prepare(`
+          SELECT * FROM users 
+          WHERE email = ? OR (callsign = ? AND auth_type = 'web')
+        `).get(cleanEmail, targetCallsign);
+
+        if (!user) {
+          // Allocate persistent negative ID for web user
+          const minIdRow = db.prepare('SELECT MIN(telegram_id) as min_id FROM users').get();
+          let nextId = -1000000001;
+          if (minIdRow && minIdRow.min_id && minIdRow.min_id < 0) {
+            nextId = minIdRow.min_id - 1;
+          }
+
+          db.prepare(`
+            INSERT INTO users (telegram_id, callsign, status, email, auth_type, web_token)
+            VALUES (?, ?, 'approved', ?, 'web', ?)
+          `).run(nextId, targetCallsign, cleanEmail, webToken);
+
+          user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(nextId);
+          console.log(`\x1b[32m[Web Auth]\x1b[0m 🌐 Зарегистрирован новый автономный веб-пользователь: ${targetCallsign} (${cleanEmail}), ID: ${nextId}`);
+        } else {
+          // Update existing user with new token and verified data
+          db.prepare(`
+            UPDATE users 
+            SET web_token = ?, callsign = ?, email = ?, auth_type = COALESCE(auth_type, 'web')
+            WHERE telegram_id = ?
+          `).run(webToken, targetCallsign, cleanEmail, user.telegram_id);
+
+          user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(user.telegram_id);
+          console.log(`\x1b[32m[Web Auth]\x1b[0m 🌐 Веб-вход пользователя: ${targetCallsign} (${cleanEmail}), ID: ${user.telegram_id}`);
+        }
       }
 
       res.json({
         success: true,
         token: webToken,
+        merged: isMergedWithTelegram,
         user: {
           id: user.telegram_id,
           callsign: user.callsign,
           email: user.email,
           status: user.status,
-          auth_type: user.auth_type || 'web',
+          auth_type: user.auth_type,
           isWeb: true,
-        }
+          notifications_enabled: user.notifications_enabled,
+        },
       });
     } catch (err) {
       console.error('[TMA API] Error in /auth/verify-code:', err.message);

@@ -18,10 +18,10 @@ export const resendService = {
 
   /**
    * Send 6-digit verification code email to radio amateur
-   * @param {{ email: string, callsign: string, code: string }} param0 
+   * @param {{ email: string, callsign: string, code: string, isTelegramLinked?: boolean }} param0 
    * @returns {Promise<{ success: boolean, id?: string, error?: string }>}
    */
-  async sendVerificationCode({ email, callsign, code }) {
+  async sendVerificationCode({ email, callsign, code, isTelegramLinked = false }) {
     const apiKey = process.env.RESEND_API_KEY;
     const fromAddress = process.env.EMAIL_FROM || 'RU-POTA <noreply@pota.r9o.ru>';
 
@@ -33,7 +33,9 @@ export const resendService = {
     const cleanEmail = email.trim().toLowerCase();
     const cleanCallsign = callsign.trim().toUpperCase();
 
-    const subject = `Код подтверждения входа ${code} — RU-POTA Hub (${cleanCallsign})`;
+    const subject = isTelegramLinked 
+      ? `Код подтверждения входа ${code} — RU-POTA Hub (${cleanCallsign} • Синхронизация Telegram)`
+      : `Код подтверждения входа ${code} — RU-POTA Hub (${cleanCallsign})`;
 
     const html = `
 <!DOCTYPE html>
@@ -156,6 +158,13 @@ export const resendService = {
           <div class="callsign-box">${cleanCallsign}</div>
         </p>
       </div>
+
+      ${isTelegramLinked ? `
+      <div style="background-color: rgba(14, 165, 233, 0.12); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 12px; padding: 12px 16px; margin: 16px 0; font-size: 13px; color: #bae6fd; text-align: center; line-height: 1.5;">
+        📱 <b>Обнаружен Telegram-аккаунт для ${cleanCallsign}</b><br>
+        После ввода кода на сайте ваш веб-сеанс будет объединён с Telegram: подтянутся подписки, текущий спот и статус в эфире!
+      </div>
+      ` : ''}
 
       <div class="code-container">
         <div class="code-label">Ваш одноразовый код:</div>

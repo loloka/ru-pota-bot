@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mail, KeyRound, X, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Radio, ShieldCheck } from 'lucide-react';
+import { Mail, KeyRound, X, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Radio, ShieldCheck, Send } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
 
@@ -11,6 +11,8 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
   const [callsign, setCallsign] = useState('');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [hasTelegramAccount, setHasTelegramAccount] = useState(false);
+  const [linkTelegram, setLinkTelegram] = useState(true);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -73,6 +75,8 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
       });
 
       telegram.haptic.notification('success');
+      setHasTelegramAccount(Boolean(res.hasTelegramAccount));
+      setLinkTelegram(true);
       setStep('verify');
       setCode('');
       setResendCooldown(60); // 60s cooldown
@@ -98,6 +102,7 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
         email: email.trim().toLowerCase(),
         code: code.trim(),
         callsign: callsign.trim().toUpperCase(),
+        linkTelegram,
       });
 
       telegram.haptic.notification('success');
@@ -257,6 +262,36 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
               <b className="text-emerald-500 dark:text-emerald-400">{email}</b>.
               {isRu ? ' Введите его для подтверждения:' : ' Enter it below:'}
             </p>
+
+            {/* Telegram account detected & merge notification card */}
+            {hasTelegramAccount && (
+              <div className="p-3.5 rounded-2xl bg-sky-500/10 dark:bg-sky-950/40 border border-sky-500/30 text-xs space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-6 h-6 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <Send className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="space-y-1 leading-relaxed text-slate-700 dark:text-slate-300">
+                    <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>{isRu ? `Найден аккаунт Telegram для ${callsign}` : `Telegram Account found for ${callsign}`}</span>
+                    </p>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                      {isRu 
+                        ? 'Этот позывной уже зарегистрирован через бота. После входа аккаунты объединятся: подтянутся ваши подписки, текущий спот в эфире и профиль.'
+                        : 'Callsign is already registered via Telegram. Linking accounts will sync your subscriptions and active spot.'}
+                    </p>
+                    <label className="flex items-center gap-2 pt-1 cursor-pointer select-none text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+                      <input 
+                        type="checkbox"
+                        checked={linkTelegram}
+                        onChange={(e) => setLinkTelegram(e.target.checked)}
+                        className="rounded border-sky-500 text-sky-500 focus:ring-sky-500/20 w-3.5 h-3.5 cursor-pointer accent-sky-500"
+                      />
+                      <span>{isRu ? 'Объединить с Telegram-аккаунтом (рекомендуется)' : 'Link with Telegram account (recommended)'}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div>
               <input

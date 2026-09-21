@@ -292,12 +292,12 @@ export const api = {
   },
 
   /**
-   * Verify code and login as web operator
+   * Verify code and login as web operator (supports optional Telegram account linking)
    */
-  async verifyEmailCode({ email, code, callsign }) {
+  async verifyEmailCode({ email, code, callsign, linkTelegram = true }) {
     const data = await request('/auth/verify-code', {
       method: 'POST',
-      body: JSON.stringify({ email, code, callsign }),
+      body: JSON.stringify({ email, code, callsign, linkTelegram }),
     });
     if (data?.token) {
       try {

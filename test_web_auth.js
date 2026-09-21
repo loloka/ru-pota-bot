@@ -112,7 +112,67 @@ assert.strictEqual(validateBaseCallsign('ABCDEF'), false, 'No digits must be rej
 assert.strictEqual(validateBaseCallsign(''), false, 'Empty callsign must be rejected');
 console.log('✅ PASS: Base callsign validation strictly rejects slashes and accepts pure callsigns');
 
-// Cleanup test user
+// 9. Test Telegram account detection and linking (merge)
+const testTgId = 999888777;
+const testTgCallsign = 'R9OTEST';
+const testTgEmail = 'tg_operator@pota.r9o.ru';
+const testTgToken = crypto.randomBytes(32).toString('hex');
+
+// Cleanup any old test records
+db.prepare('DELETE FROM users WHERE telegram_id = ?').run(testTgId);
+db.prepare('DELETE FROM subscriptions WHERE telegram_id = ?').run(testTgId);
+
+// Insert existing Telegram user
+db.prepare(`
+  INSERT INTO users (telegram_id, callsign, status, auth_type)
+  VALUES (?, ?, 'approved', 'telegram')
+`).run(testTgId, testTgCallsign);
+
+// Add a Telegram subscription
+db.prepare(`
+  INSERT INTO subscriptions (telegram_id, type, target, target_name)
+  VALUES (?, 'park', 'RU-0065', 'Национальный парк Таганай')
+`).run(testTgId);
+
+// Check if existing Telegram user is detected by callsign
+const detectedTgUser = db.prepare(`
+  SELECT telegram_id, callsign, status 
+  FROM users 
+  WHERE callsign = ? AND telegram_id > 0
+`).get(testTgCallsign);
+
+assert.ok(detectedTgUser, 'Existing Telegram user must be detected');
+assert.strictEqual(detectedTgUser.telegram_id, testTgId, 'Detected ID must match testTgId');
+console.log('✅ PASS: Detected existing Telegram account by callsign');
+
+// Simulate account linking upon web verification
+db.prepare(`
+  UPDATE users 
+  SET email = ?, web_token = ? 
+  WHERE telegram_id = ?
+`).run(testTgEmail, testTgToken, testTgId);
+
+// Check that web token resolves to the Telegram user ID
+const resolvedUser = db.prepare(`
+  SELECT telegram_id, callsign, status, email, web_token 
+  FROM users 
+  WHERE web_token = ?
+`).get(testTgToken);
+
+assert.ok(resolvedUser, 'User must be resolvable by web_token');
+assert.strictEqual(resolvedUser.telegram_id, testTgId, 'telegram_id must be the positive Telegram ID');
+assert.strictEqual(resolvedUser.callsign, testTgCallsign, 'callsign must match');
+assert.strictEqual(resolvedUser.email, testTgEmail, 'email must match');
+
+// Check that original subscriptions are retained under the same positive telegram_id
+const subs = db.prepare('SELECT target FROM subscriptions WHERE telegram_id = ?').all(testTgId);
+assert.strictEqual(subs.length, 1, 'Must have 1 subscription');
+assert.strictEqual(subs[0].target, 'RU-0065', 'Target must be RU-0065');
+console.log('✅ PASS: Telegram account merged with web login, preserving subscriptions and ID');
+
+// Cleanup
+db.prepare('DELETE FROM users WHERE telegram_id = ?').run(testTgId);
+db.prepare('DELETE FROM subscriptions WHERE telegram_id = ?').run(testTgId);
 db.prepare('DELETE FROM users WHERE telegram_id = ?').run(nextWebId);
-console.log('✅ PASS: Cleanup test web user\n');
+console.log('✅ PASS: Cleanup test users\n');
 console.log('🎉 ALL WEB AUTHENTICATION TESTS PASSED SUCCESSFULLY!');

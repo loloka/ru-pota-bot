@@ -344,27 +344,35 @@ export default function ProfileTab({
         </div>
 
         {/* Telegram Linking Card */}
-        {user.telegram_id > 0 ? (
-          <div className="p-3.5 rounded-2xl glass-card border border-sky-500/20 bg-sky-500/5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="p-2 rounded-xl bg-sky-500/15 text-sky-500 shrink-0">
-                <Send className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">Telegram-аккаунт</h4>
-                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
-                    {language === 'RU' ? 'Привязан ✅' : 'Connected ✅'}
-                  </span>
+        {(() => {
+          const tgId = user.telegram_id !== undefined ? user.telegram_id : (user.id > 0 ? user.id : 0);
+          const isTelegramLinked = tgId > 0;
+
+          if (isTelegramLinked) {
+            return (
+              <div className="p-3.5 rounded-2xl glass-card border border-sky-500/20 bg-sky-500/5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-2 rounded-xl bg-sky-500/15 text-sky-500 shrink-0">
+                    <Send className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">Telegram-аккаунт</h4>
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+                        {language === 'RU' ? 'Привязан ✅' : 'Connected ✅'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                      ID: <span className="font-mono">{tgId}</span>
+                      {user.username ? ` (@${user.username})` : ''} • {language === 'RU' ? 'Оповещения приходят в ЛС бота' : 'Alerts delivered via DM'}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                  ID: <span className="font-mono">{user.telegram_id}</span>
-                  {user.username ? ` (@${user.username})` : ''} • {language === 'RU' ? 'Оповещения приходят в ЛС бота' : 'Alerts delivered via DM'}
-                </p>
               </div>
-            </div>
-          </div>
-        ) : (
+            );
+          }
+
+          return (
           <div className="p-3.5 rounded-2xl glass-card border border-sky-500/30 bg-gradient-to-r from-sky-500/10 via-slate-800/30 to-emerald-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="p-2.5 rounded-2xl bg-sky-500/20 text-sky-500 shrink-0">
@@ -392,7 +400,8 @@ export default function ProfileTab({
               <ExternalLink className="w-3 h-3 opacity-80" />
             </button>
           </div>
-        )}
+        );
+      })()}
 
         {/* Email Linking Card */}
         {user.email ? (

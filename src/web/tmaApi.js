@@ -399,6 +399,34 @@ export function createTmaRouter(telegramClient) {
           } catch (tgNotifyErr) {
             console.warn('[Web Auth] Failed to send Telegram DM security alert:', tgNotifyErr.message);
           }
+        // 4. Send notification to admin
+        const adminId = process.env.ADMIN_ID;
+        if (telegramClient && adminId) {
+          try {
+            const userLink = user.username 
+              ? `@${user.username}` 
+              : `<a href="tg://user?id=${user.telegram_id}">${user.first_name || user.callsign}</a>`;
+            await telegramClient.sendMessage(
+              adminId,
+              `🌐 <b>Вход через сайт (привязанный Telegram-аккаунт)</b>\n\n` +
+              `📡 Позывной: <b>${user.callsign}</b>\n` +
+              `👤 Telegram: ${userLink} (<code>${user.telegram_id}</code>)\n` +
+              `✉️ Email: <code>${cleanEmail}</code>\n` +
+              `🛡️ Статус: <b>Одобрен ✅</b>`,
+              {
+                parse_mode: 'HTML',
+                reply_markup: {
+                  inline_keyboard: [
+                    [
+                      { text: '🔍 Проверить на QRZ.ru', url: `https://www.qrz.ru/db/${user.callsign}` }
+                    ]
+                  ]
+                }
+              }
+            );
+          } catch (adminErr) {
+            console.warn('[Web Auth] Failed to notify admin about linked user:', adminErr.message);
+          }
         }
       } else {
         // Standalone Web user (or Telegram linking declined)
@@ -417,11 +445,43 @@ export function createTmaRouter(telegramClient) {
 
           db.prepare(`
             INSERT INTO users (telegram_id, callsign, status, email, auth_type, web_token)
-            VALUES (?, ?, 'approved', ?, 'web', ?)
+            VALUES (?, ?, 'pending', ?, 'web', ?)
           `).run(nextId, targetCallsign, cleanEmail, webToken);
 
           user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(nextId);
           console.log(`\x1b[32m[Web Auth]\x1b[0m 🌐 Зарегистрирован новый автономный веб-пользователь: ${targetCallsign} (${cleanEmail}), ID: ${nextId}`);
+
+          // Notify Admin via Telegram with approve/reject buttons and QRZ.ru link
+          const adminId = process.env.ADMIN_ID;
+          if (telegramClient && adminId) {
+            try {
+              await telegramClient.sendMessage(
+                adminId,
+                `🌐 <b>Новая регистрация через сайт pota.r9o.ru!</b>\n\n` +
+                `📡 Позывной: <b>${targetCallsign}</b>\n` +
+                `✉️ Email: <code>${cleanEmail}</code>\n` +
+                `🆔 Web ID: <code>${nextId}</code>\n` +
+                `⏳ Статус: <b>Ожидает модерации</b>\n\n` +
+                `👉 Проверьте позывной оператора:`,
+                {
+                  parse_mode: 'HTML',
+                  reply_markup: {
+                    inline_keyboard: [
+                      [
+                        { text: '✅ Одобрить', callback_data: `admin_appr:${nextId}` },
+                        { text: '❌ Отклонить', callback_data: `admin_rej:${nextId}` }
+                      ],
+                      [
+                        { text: '🔍 Проверить на QRZ.ru', url: `https://www.qrz.ru/db/${targetCallsign}` }
+                      ]
+                    ]
+                  }
+                }
+              );
+            } catch (adminErr) {
+              console.warn('[Web Auth] Failed to notify admin about new web user:', adminErr.message);
+            }
+          }
         } else {
           // Update existing user with new token and verified data
           db.prepare(`
@@ -441,11 +501,12 @@ export function createTmaRouter(telegramClient) {
         merged: isMergedWithTelegram,
         user: {
           id: user.telegram_id,
+          telegram_id: user.telegram_id,
           callsign: user.callsign,
           email: user.email,
           status: user.status,
           auth_type: user.auth_type,
-          isWeb: true,
+          isWeb: user.telegram_id < 0,
           notifications_enabled: user.notifications_enabled,
         },
       });
@@ -588,14 +649,15 @@ export function createTmaRouter(telegramClient) {
       res.json({
         user: {
           id: tgUser.id,
+          telegram_id: dbUser.telegram_id,
           first_name: tgUser.first_name,
           last_name: tgUser.last_name || '',
           username: tgUser.username || '',
           photo_url: tgUser.photo_url || null,
           callsign: dbUser.callsign,
           email: dbUser.email || tgUser.email || null,
-          auth_type: dbUser.auth_type || (tgUser.isWeb ? 'web' : 'telegram'),
-          isWeb: Boolean(tgUser.isWeb),
+          auth_type: dbUser.auth_type || (dbUser.telegram_id < 0 ? 'web' : 'telegram'),
+          isWeb: dbUser.telegram_id < 0,
           status: dbUser.status,
           reject_reason: dbUser.reject_reason || null,
           notifications_enabled: dbUser.notifications_enabled !== 0,

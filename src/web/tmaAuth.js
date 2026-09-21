@@ -124,12 +124,13 @@ export function tmaUserMiddleware(req, res, next) {
       req.dbUser = dbUser;
       req.telegramUser = {
         id: dbUser.telegram_id,
+        telegram_id: dbUser.telegram_id,
         first_name: dbUser.callsign,
         username: dbUser.callsign,
         callsign: dbUser.callsign,
         email: dbUser.email,
-        auth_type: dbUser.auth_type || 'web',
-        isWeb: true,
+        auth_type: dbUser.auth_type || (dbUser.telegram_id < 0 ? 'web' : 'telegram'),
+        isWeb: dbUser.telegram_id < 0,
       };
       return next();
     }

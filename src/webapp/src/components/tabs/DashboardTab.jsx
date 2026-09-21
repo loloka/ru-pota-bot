@@ -690,8 +690,8 @@ export default function DashboardTab({
               onRequireAuth(
                 language === 'RU' ? 'Статистика оператора' : 'Operator Statistics',
                 language === 'RU'
-                  ? 'Чтобы просматривать личную статистику активаций и дипломов, откройте RU-POTA Hub в Telegram-боте @ru_pota_bot.'
-                  : 'To track personal activations and awards, please launch RU-POTA Hub inside @ru_pota_bot.'
+                  ? 'Чтобы просматривать личную статистику активаций и дипломов, войдите через Telegram-бота или напрямую через сайт по Email.'
+                  : 'To track personal activations and awards, please sign in via Telegram bot or directly on the website with Email.'
               );
               return;
             }
@@ -736,8 +736,8 @@ export default function DashboardTab({
               onRequireAuth(
                 language === 'RU' ? 'Персональные подписки' : 'Personal Subscriptions',
                 language === 'RU'
-                  ? 'Чтобы получать push-уведомления в Telegram о выходе парков и друзей в эфир, откройте приложение через бота @ru_pota_bot.'
-                  : 'To receive instant Telegram alerts when your favourite parks or friends go on air, open the app inside @ru_pota_bot.'
+                  ? 'Чтобы настроить персональные подписки и получать мгновенные алерты, войдите через Telegram-бота или напрямую через сайт.'
+                  : 'To manage subscriptions and receive instant alerts, please sign in via Telegram bot or directly on the website.'
               );
               return;
             }

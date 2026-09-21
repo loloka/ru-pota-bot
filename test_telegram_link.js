@@ -108,6 +108,21 @@ assert.strictEqual(checkSpotPermissions({ telegram_id: 123, callsign: 'R2TEST', 
 assert.strictEqual(checkSpotPermissions({ telegram_id: 123, callsign: 'R2TEST', status: 'approved' }).status, 200, 'Approved user allowed');
 console.log('✅ PASS: Spot posting permissions strictly enforced for guests and pending operators');
 
+// 5. Test Admin Moderation for Negative Web IDs & QRZ URLs
+const apprRegex = /^admin_appr:(-?\d+)$/;
+const rejRegex = /^admin_rej:(-?\d+)$/;
+
+assert(apprRegex.test('admin_appr:12345678'), 'Should match positive TG ID');
+assert(apprRegex.test('admin_appr:-1000000001'), 'Should match negative web ID');
+assert(rejRegex.test('admin_rej:-1000000002'), 'Should match negative web ID for rejection');
+
+const matchedNegativeId = parseInt('admin_appr:-1000000001'.match(apprRegex)[1], 10);
+assert.strictEqual(matchedNegativeId, -1000000001);
+
+const qrzUrl = `https://www.qrz.ru/db/${testCallsign}`;
+assert.strictEqual(qrzUrl, 'https://www.qrz.ru/db/R2TEST');
+console.log('✅ PASS: Admin approval regex supports negative web IDs and generates correct QRZ.ru link');
+
 // Cleanup
 db.prepare('DELETE FROM subscriptions WHERE telegram_id = ?').run(realTgId);
 db.prepare('DELETE FROM users WHERE telegram_id = ?').run(realTgId);

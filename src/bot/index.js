@@ -160,7 +160,7 @@ bot.use(rateLimit({ window: 5000, limit: 4 }));
 
 // RU-POTA Shield interactive captcha verification
 bot.action(/^shield_verify:(\d+)$/, handleShieldVerify);
-bot.action(/^admin_appr:(\d+)$/, async (ctx) => {
+bot.action(/^admin_appr:(-?\d+)$/, async (ctx) => {
   if (ctx.from.id.toString() !== process.env.ADMIN_ID) return;
   const targetId = parseInt(ctx.match[1], 10);
   
@@ -179,23 +179,38 @@ bot.action(/^admin_appr:(\d+)$/, async (ctx) => {
 
     db.prepare('UPDATE users SET status = ? WHERE telegram_id = ?').run('approved', targetId);
     
+    // Record web notification
+    try {
+      db.prepare(`
+        INSERT INTO user_notifications (user_id, type, title, message)
+        VALUES (?, 'system', 'Позывной одобрен ✅', 'Администратор подтвердил ваш позывной. Теперь вам доступна публикация спотов в эфир!')
+      `).run(targetId);
+    } catch (_) {}
+
     await ctx.editMessageText(
       ctx.callbackQuery.message.text + `\n\n✅ <b>ОДОБРЕНО</b>`,
       { parse_mode: 'HTML', reply_markup: undefined }
     );
     
-    await ctx.telegram.sendMessage(
-      targetId,
-      `🎉 Ваш аккаунт подтвержден. Спасибо что вы с нами :)\nТеперь у вас есть возможность отправлять споты в наш канал и кластер POTA!\n\nНажмите /start чтобы обновить меню.`,
-      { parse_mode: 'HTML' }
-    );
+    if (targetId > 0) {
+      try {
+        await ctx.telegram.sendMessage(
+          targetId,
+          `🎉 Ваш аккаунт подтвержден. Спасибо что вы с нами :)\nТеперь у вас есть возможность отправлять споты в наш канал и кластер POTA!\n\nНажмите /start чтобы обновить меню.`,
+          { parse_mode: 'HTML' }
+        );
+      } catch (tgErr) {
+        console.warn('[Admin Appr] Could not send TG message to user:', tgErr.message);
+      }
+    }
+    await ctx.answerCbQuery('Заявка успешно одобрена!');
   } catch (e) {
     console.error(e);
     await ctx.answerCbQuery('Ошибка', { show_alert: true });
   }
 });
 
-bot.action(/^admin_rej:(\d+)$/, async (ctx) => {
+bot.action(/^admin_rej:(-?\d+)$/, async (ctx) => {
   if (ctx.from.id.toString() !== process.env.ADMIN_ID) return;
   const targetId = parseInt(ctx.match[1], 10);
   
@@ -214,16 +229,31 @@ bot.action(/^admin_rej:(\d+)$/, async (ctx) => {
 
     db.prepare('UPDATE users SET status = ?, reject_reason = ? WHERE telegram_id = ?').run('rejected', 'Отклонено администратором', targetId);
     
+    // Record web notification
+    try {
+      db.prepare(`
+        INSERT INTO user_notifications (user_id, type, title, message)
+        VALUES (?, 'system', 'Заявка отклонена ❌', 'Заявка на позывной была отклонена администратором.')
+      `).run(targetId);
+    } catch (_) {}
+
     await ctx.editMessageText(
       ctx.callbackQuery.message.text + `\n\n❌ <b>ОТКЛОНЕНО</b>`,
       { parse_mode: 'HTML', reply_markup: undefined }
     );
     
-    await ctx.telegram.sendMessage(
-      targetId,
-      `❌ Ваша заявка (позывной ${user.callsign}) была отклонена.\n\n<b>Причина:</b> Отклонено администратором\n\nВы можете подать повторную заявку используя команду /callsign`,
-      { parse_mode: 'HTML' }
-    );
+    if (targetId > 0) {
+      try {
+        await ctx.telegram.sendMessage(
+          targetId,
+          `❌ Ваша заявка (позывной ${user.callsign}) была отклонена.\n\n<b>Причина:</b> Отклонено администратором\n\nВы можете подать повторную заявку используя команду /callsign`,
+          { parse_mode: 'HTML' }
+        );
+      } catch (tgErr) {
+        console.warn('[Admin Rej] Could not send TG message to user:', tgErr.message);
+      }
+    }
+    await ctx.answerCbQuery('Заявка отклонена');
   } catch (e) {
     console.error(e);
     await ctx.answerCbQuery('Ошибка', { show_alert: true });
@@ -807,7 +837,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.40\x1b[0m 📡             \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.41\x1b[0m 📡             \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

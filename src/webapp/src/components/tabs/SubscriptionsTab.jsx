@@ -597,7 +597,7 @@ export default function SubscriptionsTab({
       {activeSection === 'manage' && (
         <div className="space-y-4">
           {/* 1. Master Toggle for DM notifications in Telegram OR Link Telegram prompt */}
-          {user?.telegram_id > 0 ? (
+          {(user?.telegram_id !== undefined ? user.telegram_id : (user?.id > 0 ? user.id : 0)) > 0 ? (
             <div className="flex items-center justify-between p-3.5 rounded-2xl glass-card">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">

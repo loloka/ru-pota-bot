@@ -85,9 +85,9 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
   };
 
   // Step 2: Verify 6-digit code
-  const handleVerifyCode = async (e) => {
-    e?.preventDefault();
-    if (!code.trim() || code.trim().length < 6) return;
+  const submitCode = async (codeToVerify) => {
+    const cleanCode = String(codeToVerify || code).trim();
+    if (!cleanCode || cleanCode.length < 6 || loading) return;
 
     setError('');
     setLoading(true);
@@ -96,13 +96,17 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
     try {
       const res = await api.verifyEmailCode({
         email: email.trim().toLowerCase(),
-        code: code.trim(),
+        code: cleanCode,
         callsign: callsign.trim().toUpperCase(),
       });
 
       telegram.haptic.notification('success');
-      if (onSuccess) {
-        onSuccess(res.user);
+      try {
+        if (onSuccess) {
+          onSuccess(res.user);
+        }
+      } catch (callbackErr) {
+        console.warn('[WebAuthModal] onSuccess callback error:', callbackErr);
       }
       onClose();
     } catch (err) {
@@ -111,6 +115,11 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVerifyCode = (e) => {
+    e?.preventDefault();
+    submitCode(code);
   };
 
   return (
@@ -269,6 +278,9 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, '').slice(0, 6);
                   setCode(val);
+                  if (val.length === 6 && !loading) {
+                    submitCode(val);
+                  }
                 }}
                 placeholder="123456"
                 className="w-full bg-slate-200/80 dark:bg-slate-900/90 border-2 border-emerald-500/50 rounded-2xl py-3 text-center text-2xl tracking-[12px] font-mono font-black text-emerald-600 dark:text-emerald-400 focus:border-emerald-500 outline-none shadow-glow-pill"

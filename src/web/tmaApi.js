@@ -348,19 +348,17 @@ export function createTmaRouter(telegramClient) {
         user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(user.telegram_id);
         console.log(`\x1b[32m[Web Auth]\x1b[0m 🌐 Успешный вход пользователя по Email: ${user.callsign} (${cleanEmail}), ID: ${user.telegram_id}`);
 
-        // If this user has Telegram connected, notify them in Telegram DM
+        // If this user has Telegram connected, notify them in Telegram DM (non-blocking)
         if (telegramClient && user.telegram_id > 0) {
-          try {
-            await telegramClient.sendMessage(
-              user.telegram_id,
-              `🌐 <b>Вход в личный кабинет на сайте pota.r9o.ru</b>\n\n` +
-              `Пользователь с позывным <b>${user.callsign}</b> успешно вошёл по привязанной почте <code>${cleanEmail}</code>.\n` +
-              `Если это были не вы, обратитесь к администратору сообщества. 73! 🌲📡`,
-              { parse_mode: 'HTML' }
-            );
-          } catch (tgNotifyErr) {
+          telegramClient.sendMessage(
+            user.telegram_id,
+            `🌐 <b>Вход в личный кабинет на сайте pota.r9o.ru</b>\n\n` +
+            `Пользователь с позывным <b>${user.callsign}</b> успешно вошёл по привязанной почте <code>${cleanEmail}</code>.\n` +
+            `Если это были не вы, обратитесь к администратору сообщества. 73! 🌲📡`,
+            { parse_mode: 'HTML' }
+          ).catch((tgNotifyErr) => {
             console.warn('[Web Auth] Failed to send Telegram DM alert:', tgNotifyErr.message);
-          }
+          });
         }
       } else {
         // 2. New Web registration (isolated standalone web user)
@@ -379,36 +377,34 @@ export function createTmaRouter(telegramClient) {
         user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(nextId);
         console.log(`\x1b[32m[Web Auth]\x1b[0m 🌐 Зарегистрирован новый веб-пользователь: ${targetCallsign} (${cleanEmail}), ID: ${nextId}`);
 
-        // Notify Admin via Telegram with approve/reject buttons and QRZ.ru link
+        // Notify Admin via Telegram with approve/reject buttons and QRZ.ru link (non-blocking)
         const adminId = process.env.ADMIN_ID;
         if (telegramClient && adminId) {
-          try {
-            await telegramClient.sendMessage(
-              adminId,
-              `🌐 <b>Новая регистрация через сайт pota.r9o.ru!</b>\n\n` +
-              `📡 Позывной: <b>${targetCallsign}</b>\n` +
-              `✉️ Email: <code>${cleanEmail}</code>\n` +
-              `🆔 Web ID: <code>${nextId}</code>\n` +
-              `⏳ Статус: <b>Ожидает модерации</b>\n\n` +
-              `👉 Проверьте позывной оператора:`,
-              {
-                parse_mode: 'HTML',
-                reply_markup: {
-                  inline_keyboard: [
-                    [
-                      { text: '✅ Одобрить', callback_data: `admin_appr:${nextId}` },
-                      { text: '❌ Отклонить', callback_data: `admin_rej:${nextId}` }
-                    ],
-                    [
-                      { text: '🔍 Проверить на QRZ.ru', url: `https://www.qrz.ru/db/${targetCallsign}` }
-                    ]
+          telegramClient.sendMessage(
+            adminId,
+            `🌐 <b>Новая регистрация через сайт pota.r9o.ru!</b>\n\n` +
+            `📡 Позывной: <b>${targetCallsign}</b>\n` +
+            `✉️ Email: <code>${cleanEmail}</code>\n` +
+            `🆔 Web ID: <code>${nextId}</code>\n` +
+            `⏳ Статус: <b>Ожидает модерации</b>\n\n` +
+            `👉 Проверьте позывной оператора:`,
+            {
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: '✅ Одобрить', callback_data: `admin_appr:${nextId}` },
+                    { text: '❌ Отклонить', callback_data: `admin_rej:${nextId}` }
+                  ],
+                  [
+                    { text: '🔍 Проверить на QRZ.ru', url: `https://www.qrz.ru/db/${targetCallsign}` }
                   ]
-                }
+                ]
               }
-            );
-          } catch (adminErr) {
+            }
+          ).catch((adminErr) => {
             console.warn('[Web Auth] Failed to notify admin about new web user:', adminErr.message);
-          }
+          });
         }
       }
 

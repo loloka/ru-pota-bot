@@ -41,11 +41,18 @@ async function request(endpoint, options = {}) {
 
   const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
+  // Request timeout protection (15 seconds default)
+  const timeoutMs = options.timeout || 15000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
     const res = await fetch(url, {
       ...options,
+      signal: options.signal || controller.signal,
       headers,
     });
+    clearTimeout(timer);
 
     const data = await res.json().catch(() => ({}));
 
@@ -59,6 +66,13 @@ async function request(endpoint, options = {}) {
 
     return data;
   } catch (err) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') {
+      const timeoutErr = new Error('Превышено время ожидания ответа сервера (15с)');
+      timeoutErr.status = 408;
+      console.error(`[API Timeout] ${options.method || 'GET'} ${endpoint}`);
+      throw timeoutErr;
+    }
     console.error(`[API Error] ${options.method || 'GET'} ${endpoint}:`, err.message);
     throw err;
   }

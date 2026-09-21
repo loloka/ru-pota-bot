@@ -2320,15 +2320,17 @@ export const startAdminServer = (telegramClient) => {
                   ? ' <a href="https://next.pota.app/park/' + r.pota_ref + '" target="_blank" class="badge bg-success text-decoration-none ms-1" title="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check-circle-fill"></i> В POTA: ' + r.pota_ref + '</a>'
                   : '';
 
-                var parentPotaJson = r.parent_pota ? escapeHtmlClient(JSON.stringify(r.parent_pota)) : '';
+                var parentRefAttr = (r.parent_pota && r.parent_pota.reference) ? r.parent_pota.reference : '';
+                var parentNameAttr = (r.parent_pota && r.parent_pota.name) ? escapeHtmlClient(r.parent_pota.name) : '';
+                var parentNotesAttr = (r.parent_pota && r.parent_pota.notes) ? escapeHtmlClient(r.parent_pota.notes) : '';
 
                 var submitterBtn;
                 if (r.pota_restricted) {
                   submitterBtn = '<button type="button" class="btn btn-sm btn-outline-secondary disabled" title="Приём заявок для данного региона временно приостановлен комитетом POTA"><i class="bi bi-slash-circle"></i> Недоступно для POTA</button>';
                 } else if (r.pota_ref) {
-                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-pota="' + parentPotaJson + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>';
+                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-ref="' + parentRefAttr + '" data-parent-name="' + parentNameAttr + '" data-parent-notes="' + parentNotesAttr + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>';
                 } else {
-                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="" data-pota-name="" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-pota="' + parentPotaJson + '"><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
+                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="" data-pota-name="" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-ref="' + parentRefAttr + '" data-parent-name="' + parentNameAttr + '" data-parent-notes="' + parentNotesAttr + '"><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
                 }
 
                 return '<tr>' +
@@ -3357,12 +3359,12 @@ export const startAdminServer = (telegramClient) => {
               var nid = btn.getAttribute('data-nid') || '';
               var area = btn.getAttribute('data-area') || '';
               var status = btn.getAttribute('data-status') || '';
+              var profile = btn.getAttribute('data-profile') || '';
               var isReorg = btn.getAttribute('data-is-reorganized') === 'true' || (status && status.toLowerCase() !== 'действующий');
-              var parentPotaJson = btn.getAttribute('data-parent-pota');
-              var parentPota = null;
-              if (parentPotaJson) {
-                try { parentPota = JSON.parse(parentPotaJson); } catch(_) {}
-              }
+              var parentRef = btn.getAttribute('data-parent-ref') || '';
+              var parentName = btn.getAttribute('data-parent-name') || '';
+              var parentNotes = btn.getAttribute('data-parent-notes') || '';
+              var parentPota = parentRef ? { reference: parentRef, name: parentName, notes: parentNotes } : null;
 
               var parsed = parseOoptForSubmitter(title, category, sig, ate, lat, lon, nid, area, status, profile, null, parentPota);
 

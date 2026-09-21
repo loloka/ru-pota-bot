@@ -1,5 +1,13 @@
 # История изменений (Changelog)
 
+## [1.16.45] - 2026-09-21 (Fix Missing useEffect Import in ProfileTab & Add ErrorBoundary)
+### Исправлено
+- **Исправление чёрного экрана в гостевом режиме в Профиле (`ProfileTab.jsx`)**:
+  - Устранена ошибка `ReferenceError: useEffect is not defined` в `ProfileTab.jsx` из-за отсутствия `useEffect` в импортах из `react`.
+  - Добавлен компонент предохранителя ошибок `ErrorBoundary` (`src/webapp/src/components/common/ErrorBoundary.jsx`), предотвращающий падение всего приложения при непредвиденных ошибках в табах и позволяющий быстро перезагрузить раздел.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.45` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.44] - 2026-09-21 (Secure Web Auth: Eliminate Telegram Detection Leak & Isolate Linking to Profile)
 ### Безопасность и конфиденциальность
 - **Устранение утечки привязки Telegram до регистрации**:

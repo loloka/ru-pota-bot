@@ -10,6 +10,7 @@ import OoptTab from './components/tabs/OoptTab.jsx';
 import OsmAndModal from './components/modals/OsmAndModal.jsx';
 import TelegramAuthModal from './components/modals/TelegramAuthModal.jsx';
 import WebAuthModal from './components/modals/WebAuthModal.jsx';
+import ErrorBoundary from './components/common/ErrorBoundary.jsx';
 import { telegram } from './services/telegram.js';
 
 import { api } from './services/api.js';
@@ -225,83 +226,85 @@ export default function App() {
 
         {/* Dynamic Screen Content */}
         <main className="flex-1 px-4 pt-3">
-          {activeTab === 'dashboard' && (
-            <DashboardTab 
-              user={user} 
-              activeSpot={activeSpot}
-              stats={stats}
-              subscriptionsCount={subscriptionsCount}
-              onRefreshProfile={loadProfile}
-              onNavigate={handleNavigate}
-              onRequireAuth={handleRequireAuth}
-              onOpenWebAuth={handleOpenWebAuth}
-              language={language}
-              t={t}
-            />
-          )}
+          <ErrorBoundary key={activeTab}>
+            {activeTab === 'dashboard' && (
+              <DashboardTab 
+                user={user} 
+                activeSpot={activeSpot}
+                stats={stats}
+                subscriptionsCount={subscriptionsCount}
+                onRefreshProfile={loadProfile}
+                onNavigate={handleNavigate}
+                onRequireAuth={handleRequireAuth}
+                onOpenWebAuth={handleOpenWebAuth}
+                language={language}
+                t={t}
+              />
+            )}
 
-          {activeTab === 'cluster' && (
-            <ClusterTab 
-              user={user}
-              onNavigate={handleNavigate} 
-              onRequireAuth={handleRequireAuth}
-              clusterFilter={clusterFilter}
-              language={language}
-              t={t}
-            />
-          )}
+            {activeTab === 'cluster' && (
+              <ClusterTab 
+                user={user}
+                onNavigate={handleNavigate} 
+                onRequireAuth={handleRequireAuth}
+                clusterFilter={clusterFilter}
+                language={language}
+                t={t}
+              />
+            )}
 
-          {activeTab === 'map' && (
-            <MapTab 
-              user={user}
-              onNavigate={handleNavigate}
-              language={language}
-              t={t}
-              mapTarget={mapTarget}
-              onClearMapTarget={() => setMapTarget(null)}
-            />
-          )}
+            {activeTab === 'map' && (
+              <MapTab 
+                user={user}
+                onNavigate={handleNavigate}
+                language={language}
+                t={t}
+                mapTarget={mapTarget}
+                onClearMapTarget={() => setMapTarget(null)}
+              />
+            )}
 
-          {activeTab === 'oopt' && (
-            <OoptTab 
-              language={language}
-              t={t}
-              onNavigateToMap={(oopt) => {
-                setMapTarget(oopt);
-                setActiveTab('map');
-              }}
-            />
-          )}
+            {activeTab === 'oopt' && (
+              <OoptTab 
+                language={language}
+                t={t}
+                onNavigateToMap={(oopt) => {
+                  setMapTarget(oopt);
+                  setActiveTab('map');
+                }}
+              />
+            )}
 
 
-          {activeTab === 'subscriptions' && (
-            <SubscriptionsTab 
-              user={user}
-              subscriptionsCount={subscriptionsCount}
-              onCountChange={setSubscriptionsCount}
-              unreadNotifsCount={unreadNotifsCount}
-              onUnreadCountChange={setUnreadNotifsCount}
-              onNavigate={handleNavigate}
-              onRequireAuth={handleRequireAuth}
-              onOpenWebAuth={handleOpenWebAuth}
-              onRefreshProfile={loadProfile}
-              language={language}
-              t={t}
-            />
-          )}
+            {activeTab === 'subscriptions' && (
+              <SubscriptionsTab 
+                user={user}
+                subscriptionsCount={subscriptionsCount}
+                onCountChange={setSubscriptionsCount}
+                unreadNotifsCount={unreadNotifsCount}
+                onUnreadCountChange={setUnreadNotifsCount}
+                onNavigate={handleNavigate}
+                onRequireAuth={handleRequireAuth}
+                onOpenWebAuth={handleOpenWebAuth}
+                onRefreshProfile={loadProfile}
+                language={language}
+                t={t}
+              />
+            )}
 
-          {activeTab === 'profile' && (
-            <ProfileTab 
-              user={user} 
-              stats={stats}
-              onRefreshProfile={loadProfile}
-              onRequireAuth={handleRequireAuth}
-              onOpenWebAuth={handleOpenWebAuth}
-              onWebLogout={handleWebLogout}
-              language={language}
-              t={t}
-            />
-          )}
+            {activeTab === 'profile' && (
+              <ProfileTab 
+                user={user} 
+                stats={stats}
+                onRefreshProfile={loadProfile}
+                onRequireAuth={handleRequireAuth}
+                onOpenWebAuth={handleOpenWebAuth}
+                onWebLogout={handleWebLogout}
+                language={language}
+                t={t}
+              />
+            )}
+          </ErrorBoundary>
         </main>
 
         {/* Bottom Navigation Bar */}

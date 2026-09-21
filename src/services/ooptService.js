@@ -619,12 +619,12 @@ const RAW_GEOGRAPHIC_TERMS = [
   ['вокруг', 'around'],
   ['между', 'between'],
   ['вблизи|возле|около|близ', 'near'],
-  ['у', 'near'],
-  ['в|во', 'in'],
-  ['на', 'on'],
-  ['под', 'near'],
-  ['при', 'at'],
-  ['с|со', 'with'],
+  ['у(?=\\s+[а-яёА-ЯЁ])', 'near'],
+  ['во|в(?=\\s+[а-яёА-ЯЁ])', 'in'],
+  ['на(?=\\s+[а-яёА-ЯЁ])', 'on'],
+  ['под(?=\\s+[а-яёА-ЯЁ])', 'near'],
+  ['при(?=\\s+[а-яёА-ЯЁ])', 'at'],
+  ['со|с(?=\\s+[а-яёА-ЯЁ])', 'with'],
 
   // 5. Parks and recreation
   ['лесопарк(а|е|ом|у)?', 'Forest Park'],
@@ -847,7 +847,11 @@ export function cleanOoptName(rawTitle, category) {
   const quoteMatch = name.match(/["«]([^"»]+)["»]/);
   if (quoteMatch && quoteMatch[1].length > 3) {
     const beforeQuote = name.substring(0, quoteMatch.index).trim().replace(/^[-–—,: ]+/, '').trim();
-    if (!beforeQuote || beforeQuote.length < 5 || /^(при|на|базе|отделения|института|центра)\b/i.test(beforeQuote)) {
+    const afterQuote = name.substring(quoteMatch.index + quoteMatch[0].length).trim().replace(/^[-–—,: ]+/, '').trim();
+
+    if (afterQuote && (afterQuote.includes('им.') || afterQuote.toLowerCase().includes('имени') || afterQuote.toLowerCase().includes('в честь'))) {
+      name = quoteMatch[1].trim() + ' ' + afterQuote;
+    } else if (!beforeQuote || beforeQuote.length < 5 || /^(при|на|базе|отделения|института|центра)\b/i.test(beforeQuote)) {
       name = quoteMatch[1].trim();
     } else if (beforeQuote.includes('им.') || beforeQuote.toLowerCase().includes('имени')) {
       name = beforeQuote + ' (' + quoteMatch[1].trim() + ')';
@@ -856,11 +860,13 @@ export function cleanOoptName(rawTitle, category) {
     }
   }
 
-  // 4. Common institutional acronyms & cleanups
+  // 4. Common institutional acronyms, initials normalization & cleanups
   name = name.replace(/["«]/g, '').replace(/["»]/g, '')
+    .replace(/([А-ЯЁA-Z]\.)\s*([А-ЯЁA-Z]\.)\s*([А-ЯЁA-Z][а-яёa-z]+)/g, '$1 $2 $3')
+    .replace(/([А-ЯЁA-Z]\.)\s*([А-ЯЁA-Z][а-яёa-z]+)/g, '$1 $2')
     .replace(/Московского государственного университета/gi, 'МГУ')
     .replace(/Московский государственный университет/gi, 'МГУ')
-    .replace(/имени М\.?В\.?\s*Ломоносова/gi, 'им. М.В. Ломоносова')
+    .replace(/имени М\.?В\.?\s*Ломоносова/gi, 'им. М. В. Ломоносова')
     .replace(/имени\s+/gi, 'им. ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -891,6 +897,16 @@ export function translateNameToEnglish(cleanName, category) {
        .replace(/СО РАН/g, 'SB RAS')
        .replace(/Петра Великого/gi, 'Peter the Great');
 
+  // Normalize initials spacing: В.А.Лебедева -> В. А. Лебедева
+  s = s.replace(/([А-ЯЁA-Z]\.)\s*([А-ЯЁA-Z]\.)\s*([А-ЯЁA-Z][а-яёa-z]+)/g, '$1 $2 $3');
+  s = s.replace(/([А-ЯЁA-Z]\.)\s*([А-ЯЁA-Z][а-яёa-z]+)/g, '$1 $2');
+
+  // Convert "имени ..." / "им. ..." to "named after ..." with nominative surname restoration
+  s = s.replace(/(?:^|\s)(?:имени|им\.)\s+/gi, ' named after ');
+  s = s.replace(/(named after\s+[А-ЯЁA-Z]\.\s*(?:[А-ЯЁA-Z]\.\s*)?[А-ЯЁ][а-яё]+?(?:ов|ев|ёв|ин))а(?![а-яёА-ЯЁa-zA-Z0-9])/gi, '$1');
+  s = s.replace(/(named after\s+[А-ЯЁA-Z]\.\s*(?:[А-ЯЁA-Z]\.\s*)?[А-ЯЁ][а-яё]+?)ского(?![а-яёА-ЯЁa-zA-Z0-9])/gi, '$1ский');
+  s = s.replace(/(named after\s+[А-ЯЁA-Z]\.\s*(?:[А-ЯЁA-Z]\.\s*)?[А-ЯЁ][а-яё]+?)кого(?![а-яёА-ЯЁa-zA-Z0-9])/gi, '$1кий');
+
   // Apply natural geographic terms translation
   for (const [pattern, repl] of GEOGRAPHIC_TERMS) {
     s = s.replace(pattern, repl);
@@ -907,11 +923,11 @@ export function translateNameToEnglish(cleanName, category) {
          .replace(/universiteta\b/gi, 'University')
          .replace(/instituta\b/gi, 'Institute');
 
-  // Capitalize words into Title Case, keeping mid-phrase prepositions lowercase
+  // Capitalize words into Title Case, keeping mid-phrase prepositions & "named after" lowercase
   const words = en.split(/\s+/).map((w, idx) => {
     if (!w) return '';
     const lower = w.toLowerCase();
-    if (idx > 0 && ['in', 'on', 'near', 'at', 'with', 'between', 'around', 'of', 'the', 'and', 'a', 'an'].includes(lower)) {
+    if (idx > 0 && ['in', 'on', 'near', 'at', 'with', 'between', 'around', 'of', 'the', 'and', 'a', 'an', 'named', 'after'].includes(lower)) {
       return lower;
     }
     return w.charAt(0).toUpperCase() + w.slice(1);
@@ -964,10 +980,13 @@ export function formatDualParkName(cleanName, category) {
  * landscape homonym pre-processing and fallback to smart local translation.
  */
 export async function translateOoptNameOnline(cleanName, category) {
-  if (!cleanName) return '';
-  // Pre-process landscape homonyms (e.g. 'балка' in geography is ravine, not beam)
+  // Pre-process landscape homonyms and name phrases
   let prep = cleanName;
-  prep = prep.replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(лесная балка)(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'лесной овраг')
+  prep = prep.replace(/(?:^|\s)(?:имени|им\.)\s+/gi, ' named after ')
+             .replace(/(named after\s+[А-ЯЁA-Z]\.\s*(?:[А-ЯЁA-Z]\.\s*)?[А-ЯЁ][а-яё]+?(?:ов|ев|ёв|ин))а(?![а-яёА-ЯЁa-zA-Z0-9])/gi, '$1')
+             .replace(/(named after\s+[А-ЯЁA-Z]\.\s*(?:[А-ЯЁA-Z]\.\s*)?[А-ЯЁ][а-яё]+?)ского(?![а-яёА-ЯЁa-zA-Z0-9])/gi, '$1ский')
+             .replace(/(named after\s+[А-ЯЁA-Z]\.\s*(?:[А-ЯЁA-Z]\.\s*)?[А-ЯЁ][а-яё]+?)кого(?![а-яёА-ЯЁa-zA-Z0-9])/gi, '$1кий')
+             .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(лесная балка)(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'лесной овраг')
              .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(степная балка)(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'степной овраг')
              .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(каменная балка)(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'каменистый овраг')
              .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(балк[аиеу])(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'овраг');
@@ -981,7 +1000,7 @@ export async function translateOoptNameOnline(cleanName, category) {
         const words = rawTrans.split(/\s+/).map((w, idx) => {
           if (!w) return '';
           const lower = w.toLowerCase();
-          if (idx > 0 && ['in', 'on', 'near', 'at', 'with', 'between', 'around', 'of', 'the', 'and', 'a', 'an'].includes(lower)) {
+          if (idx > 0 && ['in', 'on', 'near', 'at', 'with', 'between', 'around', 'of', 'the', 'and', 'a', 'an', 'named', 'after'].includes(lower)) {
             return lower;
           }
           return w.charAt(0).toUpperCase() + w.slice(1);

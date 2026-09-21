@@ -2577,12 +2577,12 @@ export const startAdminServer = (telegramClient) => {
             ['вокруг', 'around'],
             ['между', 'between'],
             ['вблизи|возле|около|близ', 'near'],
-            ['у', 'near'],
-            ['в|во', 'in'],
-            ['на', 'on'],
-            ['под', 'near'],
-            ['при', 'at'],
-            ['с|со', 'with'],
+            ['у(?=[ \\\\s]+[а-яёА-ЯЁ])', 'near'],
+            ['во|в(?=[ \\\\s]+[а-яёА-ЯЁ])', 'in'],
+            ['на(?=[ \\\\s]+[а-яёА-ЯЁ])', 'on'],
+            ['под(?=[ \\\\s]+[а-яёА-ЯЁ])', 'near'],
+            ['при(?=[ \\\\s]+[а-яёА-ЯЁ])', 'at'],
+            ['со|с(?=[ \\\\s]+[а-яёА-ЯЁ])', 'with'],
 
             // 5. Parks and recreation
             ['лесопарк(а|е|ом|у)?', 'Forest Park'],
@@ -2954,7 +2954,11 @@ export const startAdminServer = (telegramClient) => {
             var quoteMatch = name.match(/["«]([^"»]+)["»]/);
             if (quoteMatch && quoteMatch[1].length > 3) {
               var beforeQuote = name.substring(0, quoteMatch.index).trim().replace(/^[-–—,: ]+/, '').trim();
-              if (!beforeQuote || beforeQuote.length < 5 || /^(при|на|базе|отделения|института|центра)\\b/i.test(beforeQuote)) {
+              var afterQuote = name.substring(quoteMatch.index + quoteMatch[0].length).trim().replace(/^[-–—,: ]+/, '').trim();
+
+              if (afterQuote && (afterQuote.indexOf('им.') !== -1 || afterQuote.toLowerCase().indexOf('имени') !== -1 || afterQuote.toLowerCase().indexOf('в честь') !== -1)) {
+                name = quoteMatch[1].trim() + ' ' + afterQuote;
+              } else if (!beforeQuote || beforeQuote.length < 5 || /^(при|на|базе|отделения|института|центра)\\b/i.test(beforeQuote)) {
                 name = quoteMatch[1].trim();
               } else if (beforeQuote.indexOf('им.') !== -1 || beforeQuote.toLowerCase().indexOf('имени') !== -1) {
                 name = beforeQuote + ' (' + quoteMatch[1].trim() + ')';
@@ -2964,9 +2968,11 @@ export const startAdminServer = (telegramClient) => {
             }
 
             name = name.replace(/["«]/g, '').replace(/["»]/g, '')
+              .replace(/([А-ЯЁA-Z]\\.)\\s*([А-ЯЁA-Z]\\.)\\s*([А-ЯЁA-Z][а-яёa-z]+)/g, '$1 $2 $3')
+              .replace(/([А-ЯЁA-Z]\\.)\\s*([А-ЯЁA-Z][а-яёa-z]+)/g, '$1 $2')
               .replace(/Московского государственного университета/gi, 'МГУ')
               .replace(/Московский государственный университет/gi, 'МГУ')
-              .replace(/имени М\\.?В\\.?\\s*Ломоносова/gi, 'им. М.В. Ломоносова')
+              .replace(/имени М\\.?В\\.?\\s*Ломоносова/gi, 'им. М. В. Ломоносова')
               .replace(/имени\\s+/gi, 'им. ')
               .replace(/\\s+/g, ' ')
               .trim();
@@ -2995,6 +3001,14 @@ export const startAdminServer = (telegramClient) => {
                  .replace(/СО РАН/g, 'SB RAS')
                  .replace(/Петра Великого/gi, 'Peter the Great');
 
+            s = s.replace(/([А-ЯЁA-Z]\\.)\\s*([А-ЯЁA-Z]\\.)\\s*([А-ЯЁA-Z][а-яёa-z]+)/g, '$1 $2 $3');
+            s = s.replace(/([А-ЯЁA-Z]\\.)\\s*([А-ЯЁA-Z][а-яёa-z]+)/g, '$1 $2');
+
+            s = s.replace(/(?:^|\\s)(?:имени|им\\.)\\s+/gi, ' named after ');
+            s = s.replace(/(named after\\s+[А-ЯЁA-Z]\\.\\s*(?:[А-ЯЁA-Z]\\.\\s*)?[А-ЯЁ][а-яё]+?(?:ов|ев|ёв|ин))а(?![а-яёА-ЯЁa-zA-Z0-9])/gi, '$1');
+            s = s.replace(/(named after\\s+[А-ЯЁA-Z]\\.\\s*(?:[А-ЯЁA-Z]\\.\\s*)?[А-ЯЁ][а-яё]+?)ского(?![а-яёА-ЯЁa-zA-Z0-9])/gi, '$1ский');
+            s = s.replace(/(named after\\s+[А-ЯЁA-Z]\\.\\s*(?:[А-ЯЁA-Z]\\.\\s*)?[А-ЯЁ][а-яё]+?)кого(?![а-яёА-ЯЁa-zA-Z0-9])/gi, '$1кий');
+
             for (var k = 0; k < GEOGRAPHIC_TERMS_CLIENT.length; k++) {
               s = s.replace(GEOGRAPHIC_TERMS_CLIENT[k][0], GEOGRAPHIC_TERMS_CLIENT[k][1]);
             }
@@ -3012,7 +3026,7 @@ export const startAdminServer = (telegramClient) => {
             var words = en.split(/\\s+/).map(function(w, idx) {
               if (!w) return '';
               var lower = w.toLowerCase();
-              if (idx > 0 && ['in', 'on', 'near', 'at', 'with', 'between', 'around', 'of', 'the', 'and', 'a', 'an'].indexOf(lower) !== -1) {
+              if (idx > 0 && ['in', 'on', 'near', 'at', 'with', 'between', 'around', 'of', 'the', 'and', 'a', 'an', 'named', 'after'].indexOf(lower) !== -1) {
                 return lower;
               }
               return w.charAt(0).toUpperCase() + w.slice(1);

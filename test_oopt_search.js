@@ -1,6 +1,6 @@
 import assert from 'assert';
 import db from './src/db/database.js';
-import { getOoptList } from './src/services/ooptService.js';
+import { getOoptList, cleanOoptName, translateNameToEnglish } from './src/services/ooptService.js';
 
 console.log('=== RUNNING OOPT SEARCH & CYRILLIC CASE-INSENSITIVITY TESTS ===\n');
 
@@ -45,4 +45,19 @@ const resPota = getOoptList({ search: 'ru-0001' });
 assert(resPota.total >= 1);
 console.log('✅ PASS: getOoptList finds POTA park reference in lowercase ("ru-0001")');
 
-console.log('\n--- ALL OOPT SEARCH TESTS PASSED! ---');
+// 8. Test honoree name preservation when title has quotes: "Нижегородское Поволжье" имени В.А.Лебедева
+const cleanLebedev = cleanOoptName('"Нижегородское Поволжье" имени В.А.Лебедева');
+assert.strictEqual(cleanLebedev, 'Нижегородское Поволжье им. В. А. Лебедева', 'Must keep honoree name after quote and space initials');
+const enLebedev = translateNameToEnglish(cleanLebedev);
+assert.strictEqual(enLebedev, 'Nizhegorodskoe Povolzhe named after V. A. Lebedev', 'Must translate имени/им. to "named after" with nominative surname');
+console.log('✅ PASS: cleanOoptName & translateNameToEnglish preserve honoree names after quotes ("Нижегородское Поволжье" им. В. А. Лебедева)');
+
+// 9. Test initial "С." is NOT translated as preposition "with", and "им. С. А. Есенина" translates to "named after S. A. Esenin"
+const cleanEsenin = cleanOoptName('Агробиологическая станция Рязанского государственного университета им. С. А. Есенина');
+const enEsenin = translateNameToEnglish(cleanEsenin);
+assert(!enEsenin.includes('With.'), 'Initial С. must not be translated as With.');
+assert(!enEsenin.includes('with.'), 'Initial С. must not be translated as with.');
+assert(enEsenin.includes('named after S. A. Esenin'), 'Must contain "named after S. A. Esenin"');
+console.log('✅ PASS: Initial "С." is preserved and "им. С. А. Есенина" translates to "named after S. A. Esenin"');
+
+console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');

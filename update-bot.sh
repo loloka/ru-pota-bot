@@ -3,8 +3,8 @@ set -e
 
 echo "🌲 [RU-POTA] Обновление бота и Telegram Mini App..."
 
-# 1. Сброс локальных авто-изменений package-lock
-git checkout package-lock.json 2>/dev/null || true
+# 1. Сброс локальных авто-изменений package-lock и кэша парков
+git checkout -- package-lock.json src/data/parks_fallback.json 2>/dev/null || true
 
 # 2. Получение последних изменений из репозитория
 git pull

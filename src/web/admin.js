@@ -2206,8 +2206,13 @@ export const startAdminServer = (telegramClient) => {
                 if (potaEl && stats.inPota) potaEl.textContent = Number(stats.inPota).toLocaleString('ru-RU');
 
                 const regionEl = document.getElementById('oopt-region-select');
-                if (regionEl && regionEl.options.length <= 1 && stats.regions) {
+                if (regionEl && stats.regions) {
                   window.__adminRegionPotaCounts = stats.regionPotaCounts || {};
+                  const currentSelected = regionEl.value;
+                  // Preserve default first option ("Все регионы") and rebuild the rest with fresh counts
+                  while (regionEl.options.length > 1) {
+                    regionEl.remove(1);
+                  }
                   stats.regions.forEach(function(r) {
                     const opt = document.createElement('option');
                     opt.value = r;
@@ -2226,6 +2231,9 @@ export const startAdminServer = (telegramClient) => {
                       optgroup.appendChild(opt);
                     });
                     regionEl.appendChild(optgroup);
+                  }
+                  if (currentSelected) {
+                    regionEl.value = currentSelected;
                   }
                 }
                 ooptStatsLoaded = true;

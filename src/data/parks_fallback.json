@@ -6688,6 +6688,105 @@
     "qsos": 0
   },
   {
+    "reference": "RU-0609",
+    "name": "Meadow steppe by the Ozerna River (Lugovaya Steppe near River Ozerna) Natural Monument",
+    "lat": 52.7926,
+    "lon": 36.7388,
+    "grid": "KO82it",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/32784",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0610",
+    "name": "Lake Indovishche (Ozero Indovishche) Natural Monument",
+    "lat": 52.9182,
+    "lon": 35.0483,
+    "grid": "KO72mw",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/65986",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0611",
+    "name": "Remnants of mixed-herb fescue-feather grass steppe Natural Monument",
+    "lat": 52.2218,
+    "lon": 37.12,
+    "grid": "KO82nf",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/32786",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0612",
+    "name": "Tract Apushkina Mountain (Tract Annushkina Mountain) Natural Monument",
+    "lat": 52.3404,
+    "lon": 37.8903,
+    "grid": "KO82wi",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/32788",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0613",
+    "name": "Tract Kuzilinka (Urochishche Kuzilinka) Natural Monument",
+    "lat": 52.2618,
+    "lon": 38.0409,
+    "grid": "KO92ag",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/32789",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0614",
+    "name": "A tract of oak forest and mown meadow steppe Natural Monument",
+    "lat": 52.3718,
+    "lon": 37.7003,
+    "grid": "KO82ui",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/32790",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0615",
+    "name": "Site Raznotravnoy Steppe (Podmaslova Mountain) Natural Monument",
+    "lat": 53.2234,
+    "lon": 36.3196,
+    "grid": "KO83df",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/32791",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0616",
+    "name": "Area of ​​mixed-grass steppe and Devonian limestone outcrops (Zhilinskoye Hillfort) Natural Monument",
+    "lat": 53.1901,
+    "lon": 36.7611,
+    "grid": "KO83je",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/32792",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0617",
+    "name": "Steppe Vegetation Area (Uchastok Stepnoy Rastitelnosti) Natural Monument",
+    "lat": 53.0057,
+    "lon": 36.8265,
+    "grid": "KO83ja",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/32785",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
     "reference": "BY-0001",
     "name": "Белавежская пушча National Park",
     "lat": 52.5855,

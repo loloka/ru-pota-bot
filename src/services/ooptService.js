@@ -561,19 +561,40 @@ export function getOoptStats() {
   const regions = Array.from(regionSet).sort((a, b) => a.localeCompare(b, 'ru'));
   const restrictedRegions = Array.from(restrictedSet).sort((a, b) => a.localeCompare(b, 'ru'));
 
-  // Compute existing POTA park counts for each region
+  // Compute existing POTA park counts for each region (considering both POTA catalog and linked oopt_registry entries)
   const potaParks = getRussianPotaParks();
+  let dbRegionMap = {};
+  try {
+    const dbPotaCounts = db.prepare(`
+      SELECT ate, COUNT(DISTINCT pota_ref) as cnt 
+      FROM oopt_registry 
+      WHERE pota_ref IS NOT NULL AND pota_ref != '' 
+      GROUP BY ate
+    `).all();
+    for (const row of dbPotaCounts) {
+      if (!row.ate) continue;
+      const parts = row.ate.split('(')[0].split(/,\s*/);
+      for (const p of parts) {
+        const clean = p.trim();
+        if (clean.length > 2) {
+          dbRegionMap[clean] = (dbRegionMap[clean] || 0) + row.cnt;
+        }
+      }
+    }
+  } catch (_) {}
+
   const regionPotaCounts = {};
   for (const r of regions) {
     const code = getPotaLocationCode(r);
-    if (!code) {
-      regionPotaCounts[r] = 0;
-      continue;
+    let fromPota = 0;
+    if (code) {
+      fromPota = potaParks.filter(p => {
+        const pReg = (p.region || '').split(',').map(s => s.trim());
+        return pReg.includes(code);
+      }).length;
     }
-    regionPotaCounts[r] = potaParks.filter(p => {
-      const pReg = (p.region || '').split(',').map(s => s.trim());
-      return pReg.includes(code);
-    }).length;
+    const fromDb = dbRegionMap[r] || 0;
+    regionPotaCounts[r] = Math.max(fromPota, fromDb);
   }
 
   cachedStats = {

@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from '../db/database.js';
+import { potaApi } from '../api/potaApi.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,6 +33,75 @@ export function getRussianPotaParks() {
   } catch (err) {
     console.warn('[OOPT Service] ⚠️ Failed to load parks fallback:', err.message);
     return [];
+  }
+}
+
+/**
+ * Synchronizes POTA parks from official API (RU, BY, KZ),
+ * updates local parks_fallback.json, and re-matches with oopt_registry
+ * @returns {Promise<{ success: boolean, ruCount: number, totalCount: number, regionalEntries: number, matched: number, duration: string }>}
+ */
+export async function syncPotaParksWithApi() {
+  console.log('[OOPT Service] 🔄 Fetching latest POTA parks from official API...');
+  const startTime = Date.now();
+
+  try {
+    const [ru, by, kz] = await Promise.all([
+      potaApi.getProgramParks('RU'),
+      potaApi.getProgramParks('BY'),
+      potaApi.getProgramParks('KZ'),
+    ]);
+
+    if (!Array.isArray(ru) || ru.length === 0) {
+      throw new Error('Received empty parks list for RU from POTA API');
+    }
+
+    const mapPark = (p) => ({
+      reference: p.reference,
+      name: p.name,
+      lat: parseFloat(p.latitude) || 0,
+      lon: parseFloat(p.longitude) || 0,
+      grid: p.grid || '',
+      region: p.locationDesc || '',
+      website: p.website || '',
+      activations: p.activations || 0,
+      qsos: p.qsos || 0,
+    });
+
+    const mappedRu = ru.map(mapPark);
+    const mappedBy = Array.isArray(by) ? by.map(mapPark) : [];
+    const mappedKz = Array.isArray(kz) ? kz.map(mapPark) : [];
+
+    const combined = [...mappedRu, ...mappedBy, ...mappedKz];
+
+    // Count regional entries (accounting for multi-region parks)
+    let regionalEntries = 0;
+    for (const p of mappedRu) {
+      const locs = (p.region || '').split(',').map(s => s.trim()).filter(Boolean);
+      regionalEntries += Math.max(1, locs.length);
+    }
+
+    // Save to disk
+    const fallbackPath = path.resolve(__dirname, '../data/parks_fallback.json');
+    fs.writeFileSync(fallbackPath, JSON.stringify(combined, null, 2), 'utf8');
+
+    // Run matching with oopt_registry
+    const matchResult = syncPotaMatches();
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[OOPT Service] ✅ POTA sync complete in ${duration}s: ${mappedRu.length} RU parks (${regionalEntries} regional entries), ${matchResult.matched} mapped to OOPT registry!`);
+
+    return {
+      success: true,
+      ruCount: mappedRu.length,
+      regionalEntries,
+      totalCount: combined.length,
+      matched: matchResult.matched,
+      duration
+    };
+  } catch (err) {
+    console.error('[OOPT Service] ❌ Failed to sync POTA parks:', err.message);
+    throw err;
   }
 }
 
@@ -2087,6 +2157,7 @@ export function syncPotaMatches() {
 
 export default {
   syncOoptRegistry,
+  syncPotaParksWithApi,
   syncPotaMatches,
   getOoptList,
   getOoptStats,

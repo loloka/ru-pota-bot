@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
-import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi } from '../services/ooptService.js';
 import {
   auditPotaLinks,
   checkUrlOnline,
@@ -919,7 +919,8 @@ export const startAdminServer = (telegramClient) => {
                     </div>
                     <div class="d-flex gap-2">
                       <a href="/app" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-phone"></i> Открыть в Mini App</a>
-                      <button type="button" class="btn btn-sm btn-primary" id="btn-sync-oopt"><i class="bi bi-arrow-repeat"></i> Синхронизировать с карта.оцзк.рф</button>
+                      <button type="button" class="btn btn-sm btn-outline-primary" id="btn-sync-oopt"><i class="bi bi-arrow-repeat"></i> Синхронизировать с карта.оцзк.рф</button>
+                      <button type="button" class="btn btn-sm btn-success" id="btn-sync-pota-oopt" title="Обновить базу парков POTA с api.pota.app и привязать к ООПТ"><i class="bi bi-cloud-arrow-down-fill"></i> Синхронизировать парки POTA</button>
                     </div>
                   </div>
 
@@ -1014,6 +1015,9 @@ export const startAdminServer = (telegramClient) => {
                     <div class="d-flex gap-2">
                       <button type="button" class="btn btn-sm btn-outline-primary" id="btn-regions-refresh">
                         <i class="bi bi-arrow-clockwise"></i> Обновить
+                      </button>
+                      <button type="button" class="btn btn-sm btn-success" id="btn-regions-sync-pota" title="Скачать свежие парки с api.pota.app и обновить привязки">
+                        <i class="bi bi-cloud-arrow-down-fill"></i> Синхронизировать с POTA
                       </button>
                     </div>
                   </div>
@@ -2420,6 +2424,51 @@ export const startAdminServer = (telegramClient) => {
             });
           }
 
+          async function handleSyncPotaParks(btn, defaultHtml) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Синхронизация...';
+            try {
+              var res = await fetch('/api/admin/pota/sync', { method: 'POST' });
+              var data = await res.json();
+              if (res.ok && data.success) {
+                if (typeof Swal !== 'undefined') {
+                  Swal.fire({
+                    icon: 'success',
+                    title: 'Успешно!',
+                    html: 'Синхронизировано <b>' + data.ruCount + '</b> парков РФ (' + data.regionalEntries + ' с мультирегионами)!<br>Привязано к ООПТ: <b>' + data.matched + '</b> объектов.'
+                  });
+                } else {
+                  alert('✅ Синхронизировано ' + data.ruCount + ' парков РФ (' + data.regionalEntries + ' с мультирегионами)!');
+                }
+                if (typeof loadRegionsData === 'function') loadRegionsData();
+                if (typeof loadAdminOoptStats === 'function') loadAdminOoptStats();
+                if (typeof loadAdminOopt === 'function') loadAdminOopt(1);
+              } else {
+                if (typeof Swal !== 'undefined') {
+                  Swal.fire({ icon: 'error', title: 'Ошибка', text: data.error || 'Ошибка синхронизации' });
+                } else {
+                  alert('Ошибка: ' + (data.error || 'Ошибка синхронизации'));
+                }
+              }
+            } catch (e) {
+              if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Ошибка', text: e.message });
+              } else {
+                alert('Ошибка: ' + e.message);
+              }
+            } finally {
+              btn.disabled = false;
+              btn.innerHTML = defaultHtml;
+            }
+          }
+
+          var btnSyncPotaOopt = document.getElementById('btn-sync-pota-oopt');
+          if (btnSyncPotaOopt) {
+            btnSyncPotaOopt.addEventListener('click', function() {
+              handleSyncPotaParks(btnSyncPotaOopt, '<i class="bi bi-cloud-arrow-down-fill"></i> Синхронизировать парки POTA');
+            });
+          }
+
           // Smart Parser per Manu R2BBX's instruction
           var ruToEnMap = {
             'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
@@ -3676,6 +3725,12 @@ export const startAdminServer = (telegramClient) => {
           });
 
           document.getElementById('btn-regions-refresh')?.addEventListener('click', loadRegionsData);
+          var btnRegSync = document.getElementById('btn-regions-sync-pota');
+          if (btnRegSync) {
+            btnRegSync.addEventListener('click', function() {
+              handleSyncPotaParks(btnRegSync, '<i class="bi bi-cloud-arrow-down-fill"></i> Синхронизировать с POTA');
+            });
+          }
           document.getElementById('reg-search-input')?.addEventListener('input', renderRegionsTable);
           document.getElementById('reg-filter-select')?.addEventListener('change', function() {
             updateActiveRegCard();
@@ -4438,6 +4493,16 @@ export const startAdminServer = (telegramClient) => {
       res.json(result);
     } catch (err) {
       console.error('[Admin] OOPT sync error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/pota/sync', requireAuth, async (req, res) => {
+    try {
+      const result = await syncPotaParksWithApi();
+      res.json(result);
+    } catch (err) {
+      console.error('[Admin] POTA parks sync error:', err);
       res.status(500).json({ error: err.message });
     }
   });

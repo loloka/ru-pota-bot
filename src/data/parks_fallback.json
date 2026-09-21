@@ -28,7 +28,7 @@
     "lon": 137.217,
     "grid": "PN89og",
     "region": "RU-KH",
-    "website": "https://en.wikipedia.org/wiki/Anyuysky_National_Park",
+    "website": "https://ooptaari.nextgis.ru/node/6699",
     "activations": 0,
     "qsos": 0
   },
@@ -60,8 +60,8 @@
     "lat": 53.0362,
     "lon": 51.9352,
     "grid": "LO53xa",
-    "region": "RU-OB,RU-SA",
-    "website": "https://en.wikipedia.org/wiki/Buzuluksky_Bor_National_Park",
+    "region": "RU-SA",
+    "website": "https://ooptaari.nextgis.ru/node/6701",
     "activations": 0,
     "qsos": 0
   },
@@ -83,7 +83,7 @@
     "lon": 110.294,
     "grid": "ON59ds",
     "region": "RU-ZB",
-    "website": "",
+    "website": "https://ooptaari.nextgis.ru/node/6954",
     "activations": 0,
     "qsos": 0
   },
@@ -138,7 +138,7 @@
     "lon": 33.4739,
     "grid": "KP67rr",
     "region": "RU-MM",
-    "website": "https://en.wikipedia.org/wiki/Khibiny_National_Park",
+    "website": "https://ooptaari.nextgis.ru/node/5423",
     "activations": 0,
     "qsos": 0
   },
@@ -149,7 +149,7 @@
     "lon": 48.0256,
     "grid": "LO42ak",
     "region": "RU-SR",
-    "website": "https://en.wikipedia.org/wiki/Khvalynsky_National_Park",
+    "website": "https://ooptaari.nextgis.ru/node/6726",
     "activations": 0,
     "qsos": 0
   },
@@ -171,7 +171,7 @@
     "lon": 49.8324,
     "grid": "LO49vv",
     "region": "RU-KO",
-    "website": "https://en.wikipedia.org/wiki/Koygorodsky_National_Park",
+    "website": "https://ooptaari.nextgis.ru/node/6963",
     "activations": 0,
     "qsos": 0
   },
@@ -325,7 +325,7 @@
     "lon": 30.4518,
     "grid": "KP56fg",
     "region": "RU-KI",
-    "website": "https://en.wikipedia.org/wiki/Paanaj%C3%A4rvi_National_Park",
+    "website": "https://ooptaari.nextgis.ru/node/6713",
     "activations": 0,
     "qsos": 0
   },
@@ -600,7 +600,7 @@
     "lon": 109.214,
     "grid": "OO43or",
     "region": "RU-BU",
-    "website": "https://en.wikipedia.org/wiki/Zabaykalsky_National_Park",
+    "website": "https://ooptaari.nextgis.ru/node/6703",
     "activations": 0,
     "qsos": 0
   },
@@ -610,8 +610,8 @@
     "lat": 56.4215,
     "lon": 36.1343,
     "grid": "KO86bk",
-    "region": "RU-TV",
-    "website": "https://en.wikipedia.org/wiki/Zavidovo_National_Park",
+    "region": "RU-MS,RU-TV",
+    "website": "https://ooptaari.nextgis.ru/node/11912",
     "activations": 10,
     "qsos": 1416
   },
@@ -650,12 +650,12 @@
   },
   {
     "reference": "RU-0060",
-    "name": "Ильменский Ilmensky Nature Reserve",
+    "name": "Ilmensky State Natural Reserve",
     "lat": 55.12,
     "lon": 60.19,
     "grid": "MO05cc",
     "region": "RU-CL",
-    "website": "https://en.wikipedia.org/wiki/Ilmensky_Nature_Reserve",
+    "website": "https://ooptaari.nextgis.ru/node/6474",
     "activations": 0,
     "qsos": 0
   },
@@ -739,8 +739,8 @@
   {
     "reference": "RU-0068",
     "name": "Dudergof Heights Nature Monument",
-    "lat": 59.7024,
-    "lon": 30.1195,
+    "lat": 59.6984,
+    "lon": 30.1305,
     "grid": "KO59bq",
     "region": "RU-LN",
     "website": "https://oopt.spb.ru/protected_area/dudergofskiye-visoti/",
@@ -799,8 +799,8 @@
     "grid": "KO85ut",
     "region": "RU-MC",
     "website": "https://parksokolniki.mos.ru/",
-    "activations": 7,
-    "qsos": 553
+    "activations": 8,
+    "qsos": 615
   },
   {
     "reference": "RU-0074",
@@ -826,12 +826,12 @@
   },
   {
     "reference": "RU-0076",
-    "name": "Istoki Reki Oredezh V Urochishche Dontso Nature Reserve",
+    "name": "Istoki Reki Oredezh V Urochishche Dontso (The source of the Oredezh River in the Dontso tract) Nature Monument",
     "lat": 59.4119,
     "lon": 29.7912,
     "grid": "KO49vj",
     "region": "RU-LN",
-    "website": "",
+    "website": "https://ooptaari.nextgis.ru/node/7395",
     "activations": 1,
     "qsos": 10
   },
@@ -881,12 +881,12 @@
   },
   {
     "reference": "RU-0081",
-    "name": "Sobachiy Prud Park",
-    "lat": 55.5872,
-    "lon": 37.5812,
+    "name": "Rodnik V Kvartale 20 Bittsevsky Forest (Rodnik V Kvartale 20 Bittsevsky Lesa) Natural Monument",
+    "lat": 55.5932,
+    "lon": 37.5578,
     "grid": "KO85so",
     "region": "RU-MC",
-    "website": "",
+    "website": "https://ooptaari.nextgis.ru/node/23451",
     "activations": 0,
     "qsos": 0
   },
@@ -985,7 +985,7 @@
     "lon": 30.1199,
     "grid": "KO59bn",
     "region": "RU-LN",
-    "website": "",
+    "website": "https://parkilenreg.ru/istoriya-prioratskogo-parka/obekt-kulturnogo-naslediya-federalnogo-znacheniya-prioratskij-park/",
     "activations": 0,
     "qsos": 1
   },
@@ -996,29 +996,29 @@
     "lon": 30.0991,
     "grid": "KO59bn",
     "region": "RU-LN",
-    "website": "",
+    "website": "https://gatchinapalace.ru/park/zverinets/",
     "activations": 0,
     "qsos": 0
   },
   {
     "reference": "RU-0092",
-    "name": "Tosnenskiy Vodopad Nature Reserve",
+    "name": "Sablinsky Nature and Landscape Complex",
     "lat": 59.643,
     "lon": 30.8062,
     "grid": "KO59jp",
     "region": "RU-LN",
-    "website": "",
+    "website": "https://ooptaari.nextgis.ru/node/7401",
     "activations": 1,
     "qsos": 23
   },
   {
     "reference": "RU-0093",
-    "name": "Petrovskiy Park",
+    "name": "Petrovskiy State Historical Park",
     "lat": 59.9864,
     "lon": 29.7697,
     "grid": "KO49vx",
     "region": "RU-SP",
-    "website": "",
+    "website": "https://russpass.ru/place/64b18dd466e64fafc5d2834f",
     "activations": 0,
     "qsos": 0
   },
@@ -1442,12 +1442,12 @@
   },
   {
     "reference": "RU-0132",
-    "name": "Bibirevo Park",
+    "name": "Bibirevo Ethnographic Village Park",
     "lat": 55.8944,
     "lon": 37.6231,
     "grid": "KO85tv",
     "region": "RU-MC",
-    "website": "",
+    "website": "https://um.mos.ru/places/etnograficheskaya-derevnya-bibirevo/",
     "activations": 0,
     "qsos": 0
   },
@@ -1458,7 +1458,7 @@
     "lon": 37.6205,
     "grid": "KO85tv",
     "region": "RU-MC",
-    "website": "",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%94%D0%BE%D0%BB%D0%B8%D0%BD%D0%B0-%D1%80%D0%B5%D0%BA%D0%B8-%D0%A7%D0%B5%D1%80%D0%BC%D1%8F%D0%BD%D0%BA%D0%B8",
     "activations": 0,
     "qsos": 0
   },
@@ -1503,8 +1503,8 @@
     "grid": "KO85tv",
     "region": "RU-MC",
     "website": "https://park-yauza.info/park/skver-vdol-olonetskogo-proezda/",
-    "activations": 0,
-    "qsos": 0
+    "activations": 1,
+    "qsos": 20
   },
   {
     "reference": "RU-0138",
@@ -1530,12 +1530,12 @@
   },
   {
     "reference": "RU-0140",
-    "name": "Sviblovskiy Rodnik Park",
+    "name": "Sviblovskiy Rodnik Natural Monument",
     "lat": 55.8538,
     "lon": 37.6354,
     "grid": "KO85tu",
     "region": "RU-MC",
-    "website": "",
+    "website": "https://ooptaari.nextgis.ru/node/23409",
     "activations": 0,
     "qsos": 0
   },
@@ -1601,7 +1601,7 @@
     "lon": 37.6291,
     "grid": "KO85tu",
     "region": "RU-MC",
-    "website": "",
+    "website": "https://vtrip.ru/places/leonovskaya-roshcha/",
     "activations": 0,
     "qsos": 0
   },
@@ -1712,8 +1712,8 @@
     "grid": "KO85st",
     "region": "RU-MC",
     "website": "https://liveinmsk.ru/places/parki-i-usadby/yablonevy-sad",
-    "activations": 0,
-    "qsos": 0
+    "activations": 1,
+    "qsos": 20
   },
   {
     "reference": "RU-0157",
@@ -1728,12 +1728,12 @@
   },
   {
     "reference": "RU-0158",
-    "name": "Gorky Park",
+    "name": "A.M. Gorky City Park of Culture and Leisure Natural Monument",
     "lat": 51.5163,
     "lon": 46.0031,
     "grid": "LO31am",
     "region": "RU-SR",
-    "website": "",
+    "website": "https://ooptaari.nextgis.ru/node/40178",
     "activations": 0,
     "qsos": 0
   },
@@ -1805,12 +1805,12 @@
   },
   {
     "reference": "RU-0165",
-    "name": "Aleksandrovo-Gayskiye Kultyuki Nature Reserve",
+    "name": "Aleksandrovo-Gayskiye Kultyuki Nature Monument",
     "lat": 50.1084,
     "lon": 48.6643,
     "grid": "LO40hc",
     "region": "RU-SR",
-    "website": "",
+    "website": "https://ooptaari.nextgis.ru/node/39739",
     "activations": 0,
     "qsos": 0
   },
@@ -1827,12 +1827,12 @@
   },
   {
     "reference": "RU-0167",
-    "name": "Gluboky and Krutoy Limans National Monument",
+    "name": "Gluboky and Krutoy Limans Natural Monument",
     "lat": 50.0575,
     "lon": 48.2556,
     "grid": "LO40db",
     "region": "RU-SR",
-    "website": "",
+    "website": "https://ooptaari.nextgis.ru/node/39749",
     "activations": 0,
     "qsos": 0
   },
@@ -1959,12 +1959,12 @@
   },
   {
     "reference": "RU-0179",
-    "name": "Karasevsky Section of the Volga-Bolshoy Irgiz Floodplain Nature Reserve",
+    "name": "Karasevskiy Uchastok Volgo-Bolsheirgizskoy Poymy Nature Monument",
     "lat": 51.9898,
     "lon": 47.4674,
     "grid": "LO31rx",
     "region": "RU-SR",
-    "website": "",
+    "website": "https://ooptaari.nextgis.ru/node/39819",
     "activations": 0,
     "qsos": 0
   },
@@ -2064,8 +2064,8 @@
     "grid": "LN46ai",
     "region": "RU-AS",
     "website": "https://astrakhan3d.ru/raznoe/ostrov-gorodskoy",
-    "activations": 0,
-    "qsos": 0
+    "activations": 1,
+    "qsos": 18
   },
   {
     "reference": "RU-0189",
@@ -2108,8 +2108,8 @@
     "grid": "NO14lw",
     "region": "RU-NS",
     "website": "https://www.nso.ru/news/56205 ",
-    "activations": 27,
-    "qsos": 735
+    "activations": 31,
+    "qsos": 903
   },
   {
     "reference": "RU-0193",
@@ -2129,7 +2129,7 @@
     "lon": 82.9379,
     "grid": "NO14lx",
     "region": "RU-NS",
-    "website": "https://ru.wikipedia.org/wiki/%D0%91%D1%83%D0%B3%D1%80%D0%B8%D0%BD%D1%81%D0%BA%D0%B0%D1%8F_%D1%80%D0%BE%D1%89%D0%B0",
+    "website": "https://novosibirsk-history.ru/projects/territorii/park_kultury_i_otdykha_bugrinskaya_roshcha/",
     "activations": 1,
     "qsos": 12
   },
@@ -2482,8 +2482,8 @@
     "grid": "KO59du",
     "region": "RU-SP",
     "website": "https://peterburg.guide/parki/pulkovskij/",
-    "activations": 0,
-    "qsos": 0
+    "activations": 1,
+    "qsos": 14
   },
   {
     "reference": "RU-0227",
@@ -2636,8 +2636,8 @@
     "grid": "LO26st",
     "region": "RU-NZ",
     "website": "https://xcourse.me/nizhniy-novgorod/sight/prirodnyy-park-voskresenskoe-povetluzh-e",
-    "activations": 2,
-    "qsos": 44
+    "activations": 3,
+    "qsos": 59
   },
   {
     "reference": "RU-0241",
@@ -3537,7 +3537,7 @@
     "lon": 53.2469,
     "grid": "LO66ou",
     "region": "RU-UD",
-    "website": "",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9A%D0%B0%D1%80%D0%BB%D1%83%D1%82%D1%81%D0%BA%D0%B8%D0%B9-%D0%BB%D0%B5%D1%81",
     "activations": 0,
     "qsos": 0
   },
@@ -6057,6 +6057,600 @@
     "grid": "LO27aj",
     "region": "RU-NZ",
     "website": "https://eco.nobl.ru/upload/uf/327/uhiiw37c8tlxl3gt7vpmyhwibnd2bbik/%D0%BF%D0%BE%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D0%B5%20%D0%B8%20%D1%81%D1%85%D0%B5%D0%BC%D0%B0.pdf",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0552",
+    "name": "\"Koryta\" Spring Natural Area Natural Monument",
+    "lat": 45.0131,
+    "lon": 41.9536,
+    "grid": "LN05xa",
+    "region": "RU-ST",
+    "website": "https://stav-geo.ru/news/urochishhe_rodnika_koryta_prirodnyj_pamjatnik_stavropolja/2026-03-31-48035",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0553",
+    "name": "V.V. Skripchinsky Stavropol Botanical Gardens",
+    "lat": 45.0299,
+    "lon": 41.9067,
+    "grid": "LN05wa",
+    "region": "RU-ST",
+    "website": "https://fnac.center/istorija-i-strategija-razvitija-stavropolskogo-botanicheskogo-sada/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0554",
+    "name": "Central Park of Culture and Recreation Natural Area",
+    "lat": 45.0434,
+    "lon": 41.9762,
+    "grid": "LN05xb",
+    "region": "RU-ST",
+    "website": "https://stavropol-gov.ru/doc/55520",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0555",
+    "name": "Emmanuyelovskoye Tract Landscape Reserve",
+    "lat": 45.0543,
+    "lon": 41.9602,
+    "grid": "LN05xb",
+    "region": "RU-ST",
+    "website": "https://www.garant.ru/hotlaw/stav_real/1120645/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0556",
+    "name": "Mikhailovsky Spring Natural Monument",
+    "lat": 45.0526,
+    "lon": 41.93,
+    "grid": "LN05xb",
+    "region": "RU-ST",
+    "website": "https://stavropol-gov.ru/doc/55466",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0557",
+    "name": "Kerzhensky State Natural Reserve",
+    "lat": 56.5007,
+    "lon": 45.0333,
+    "grid": "LO26mm",
+    "region": "RU-NZ",
+    "website": "https://kerzhenskiy.ru/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0558",
+    "name": "Pustynskie Lakes Nature Reserve",
+    "lat": 55.6754,
+    "lon": 43.3589,
+    "grid": "LO15qq",
+    "region": "RU-NZ",
+    "website": "https://kerzhenskiy.ru/place/pustynskij/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0559",
+    "name": "Kama-Bakalda Marshes Nature Reserve",
+    "lat": 56.4602,
+    "lon": 45.3693,
+    "grid": "LO26ql",
+    "region": "RU-NZ",
+    "website": "https://kerzhenskiy.ru/place/kamsko-bakaldinsky/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0560",
+    "name": "Ichalkovsky Pine Forest Nature Reserve",
+    "lat": 55.4375,
+    "lon": 44.5679,
+    "grid": "LO25gk",
+    "region": "RU-NZ",
+    "website": "https://kerzhenskiy.ru/place/ichalkovsky/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0561",
+    "name": "Kilemary Taiga Nature Reserve",
+    "lat": 56.95,
+    "lon": 46.022,
+    "grid": "LO36aw",
+    "region": "RU-NZ",
+    "website": "https://kerzhenskiy.ru/place/kilemarsky/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0562",
+    "name": "Volga riverbank Nature Reserve",
+    "lat": 56.064,
+    "lon": 44.6696,
+    "grid": "LO26ib",
+    "region": "RU-NZ",
+    "website": "https://kerzhenskiy.ru/place/povolgsky/",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0563",
+    "name": "Sitnikovsky State Natural Reserve",
+    "lat": 56.4464,
+    "lon": 44.0885,
+    "grid": "LO26bk",
+    "region": "RU-NZ",
+    "website": "https://www.inaturalist.org/projects/oopt-nno-bor-zakaznik-sitnikovskiy",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0564",
+    "name": "Lake Svetloyar Natural Monument",
+    "lat": 56.8188,
+    "lon": 45.0931,
+    "grid": "LO26nt",
+    "region": "RU-NZ",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9E%D0%B7%D0%B5%D1%80%D0%BE-%D0%A1%D0%B2%D0%B5%D1%82%D0%BB%D0%BE%D1%8F%D1%80",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0565",
+    "name": "Ichalkovsky State Natural Reserve",
+    "lat": 55.4673,
+    "lon": 44.5523,
+    "grid": "LO25gl",
+    "region": "RU-NZ",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%98%D1%87%D0%B0%D0%BB%D0%BA%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D0%B9",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0566",
+    "name": "Zimenki Sanatorium Park Natural Monument",
+    "lat": 56.1583,
+    "lon": 44.2585,
+    "grid": "LO26dd",
+    "region": "RU-NZ",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%9F%D0%B0%D1%80%D0%BA-%D1%81%D0%B0%D0%BD%D0%B0%D1%82%D0%BE%D1%80%D0%B8%D1%8F-%D0%97%D0%B8%D0%BC%D0%B5%D0%BD%D0%BA%D0%B8",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0567",
+    "name": "Green City Natural Monument",
+    "lat": 56.1728,
+    "lon": 44.0692,
+    "grid": "LO26ae",
+    "region": "RU-NZ",
+    "website": "https://ooptaari.nextgis.ru/oopt/%D0%97%D0%B5%D0%BB%D0%B5%D0%BD%D1%8B%D0%B9-%D0%B3%D0%BE%D1%80%D0%BE%D0%B4",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0568",
+    "name": "Russian Forest State Natural Reserve",
+    "lat": 45.084,
+    "lon": 41.8968,
+    "grid": "LN05wc",
+    "region": "RU-ST",
+    "website": "https://ooptaari.nextgis.ru/node/16776",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0569",
+    "name": "Priozernyy (Lakeside) State Natural Reserve",
+    "lat": 45.0394,
+    "lon": 41.7958,
+    "grid": "LN05va",
+    "region": "RU-ST",
+    "website": "https://ooptaari.nextgis.ru/node/16600",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0570",
+    "name": "Molzhaninovskoe Verkhovoe Bog (Molzhaninovskoe Verkhovoe Boloto) Nature Monument",
+    "lat": 55.9367,
+    "lon": 37.3845,
+    "grid": "KO85qw",
+    "region": "RU-MS",
+    "website": "https://ooptaari.nextgis.ru/node/23497",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0571",
+    "name": "Tushinskiy Nature Park",
+    "lat": 55.871,
+    "lon": 37.4263,
+    "grid": "KO85ru",
+    "region": "RU-MC",
+    "website": "https://ooptaari.nextgis.ru/node/7099",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0572",
+    "name": "Khimkinskiy State Natural Reserve",
+    "lat": 55.8792,
+    "lon": 37.4734,
+    "grid": "KO85rv",
+    "region": "RU-MC",
+    "website": "https://ooptaari.nextgis.ru/node/23491",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0573",
+    "name": "A wooded ravine in Khimki Forest Park (Lesnaya Balka V Khimkinskom Lesoparke) Natural Monument",
+    "lat": 55.8814,
+    "lon": 37.468,
+    "grid": "KO85rv",
+    "region": "RU-MC",
+    "website": "https://ooptaari.nextgis.ru/node/23496",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0574",
+    "name": "Valley of the Skhodnya River in Kurkino (Dolina Reki Skhodni V Kurkino) Nature Monument",
+    "lat": 55.8918,
+    "lon": 37.3807,
+    "grid": "KO85qv",
+    "region": "RU-MC",
+    "website": "https://ooptaari.nextgis.ru/node/22769",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0575",
+    "name": "Tushino Bowl \\ Tushinskaya Chasha Nature Monument",
+    "lat": 55.8445,
+    "lon": 37.4115,
+    "grid": "KO85qu",
+    "region": "RU-MC",
+    "website": "https://ooptaari.nextgis.ru/node/23474",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0576",
+    "name": "Pokrovskoe-Streshnevo National Historical Park",
+    "lat": 55.8199,
+    "lon": 37.4765,
+    "grid": "KO85rt",
+    "region": "RU-MC",
+    "website": "https://ooptaari.nextgis.ru/node/7101",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0577",
+    "name": "The Khimka River valley in Pokrovskoye-Streshnevo Nature and History Park (Dolina Reki Khimki V Prirodno-istoricheskom Parke Pokrovskoe-Streshnevo) Nature Monument",
+    "lat": 55.8264,
+    "lon": 37.4701,
+    "grid": "KO85rt",
+    "region": "RU-MC",
+    "website": "https://ooptaari.nextgis.ru/node/23470",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0578",
+    "name": "Springs in the Khimka River valley within Pokrovskoye-Streshnevo Nature and History Park Natural Monument",
+    "lat": 55.8265,
+    "lon": 37.4723,
+    "grid": "KO85rt",
+    "region": "RU-MC",
+    "website": "https://ooptaari.nextgis.ru/node/23473",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0579",
+    "name": "Silver Pine Forest (Serebryanyy Bor) Nature Monument",
+    "lat": 55.7809,
+    "lon": 37.4237,
+    "grid": "KO85rs",
+    "region": "RU-MC",
+    "website": "https://ooptaari.nextgis.ru/node/22763",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0580",
+    "name": "Old linden grove with a spring in compartment 11 of the Fili-Kuntsevo Forest Park Natural Monument",
+    "lat": 55.7446,
+    "lon": 37.4766,
+    "grid": "KO85rr",
+    "region": "RU-MC",
+    "website": "https://ooptaari.nextgis.ru/node/57951",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0581",
+    "name": "Broad-leaved forests of the Podolsk Forestry District State Natural Reserve",
+    "lat": 55.4031,
+    "lon": 37.4912,
+    "grid": "KO85rj",
+    "region": "RU-MS",
+    "website": "https://ooptaari.nextgis.ru/node/33580",
+    "activations": 1,
+    "qsos": 113
+  },
+  {
+    "reference": "RU-0582",
+    "name": "Tarkhovskiy State Natural Reserve",
+    "lat": 60.0681,
+    "lon": 29.9593,
+    "grid": "KP40xb",
+    "region": "RU-SP",
+    "website": "https://ooptaari.nextgis.ru/node/66229",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0583",
+    "name": "Nizhne-Svirskiy State Natural Reserve",
+    "lat": 60.6384,
+    "lon": 33.0556,
+    "grid": "KP60mp",
+    "region": "RU-LN",
+    "website": "https://ooptaari.nextgis.ru/node/6325",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0584",
+    "name": "Adygeysky State University (Adygeyskogo Gosudarstvennogo Universiteta) Botanical Gardens",
+    "lat": 44.5346,
+    "lon": 40.1044,
+    "grid": "LN04bm",
+    "region": "RU-AD",
+    "website": "https://ooptaari.nextgis.ru/node/7023",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0585",
+    "name": "Ingushskiy State Natural Reserve",
+    "lat": 42.9077,
+    "lon": 44.9792,
+    "grid": "LN22lv",
+    "region": "RU-IN",
+    "website": "https://ooptaari.nextgis.ru/node/6875",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0586",
+    "name": "Erzi State Nature Preserve",
+    "lat": 42.8478,
+    "lon": 45.0203,
+    "grid": "LN22mu",
+    "region": "RU-IN",
+    "website": "https://ooptaari.nextgis.ru/node/6464",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0587",
+    "name": "Amurskiy Filial Botanical Garden-Institute Botanical Gardens",
+    "lat": 50.318,
+    "lon": 127.481,
+    "grid": "PO30rh",
+    "region": "RU-AM",
+    "website": "https://ooptaari.nextgis.ru/node/7059",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0588",
+    "name": "Zeyskiy State Nature Preserve",
+    "lat": 54.0614,
+    "lon": 127.11,
+    "grid": "PO34nb",
+    "region": "RU-AM",
+    "website": "https://ooptaari.nextgis.ru/node/6689",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0589",
+    "name": "Norskiy State Nature Preserve",
+    "lat": 52.6667,
+    "lon": 130.303,
+    "grid": "PO52dq",
+    "region": "RU-AM",
+    "website": "https://ooptaari.nextgis.ru/node/6691",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0590",
+    "name": "Orlovskiy State Natural Reserve",
+    "lat": 52.3013,
+    "lon": 129.125,
+    "grid": "PO42nh",
+    "region": "RU-AM",
+    "website": "https://ooptaari.nextgis.ru/node/6889",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0591",
+    "name": "Tokinsko-Stanovoy National Park",
+    "lat": 55.6202,
+    "lon": 130.575,
+    "grid": "PO55go",
+    "region": "RU-AM",
+    "website": "https://ooptaari.nextgis.ru/node/53401",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0592",
+    "name": "Khingano-Arkharinskiy State Natural Reserve",
+    "lat": 49.5492,
+    "lon": 130.805,
+    "grid": "PN59jn",
+    "region": "RU-AM",
+    "website": "https://ooptaari.nextgis.ru/node/6849",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0593",
+    "name": "Khinganskiy State Nature Preserve",
+    "lat": 49.1528,
+    "lon": 130.336,
+    "grid": "PN59ed",
+    "region": "RU-AM",
+    "website": "https://ooptaari.nextgis.ru/node/6696",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0594",
+    "name": "Azas State Nature Preserve",
+    "lat": 52.5175,
+    "lon": 97.4676,
+    "grid": "NO82rm",
+    "region": "RU-TU",
+    "website": "https://ooptaari.nextgis.ru/node/6659",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0595",
+    "name": "Ubsunurskaya Kotlovina State Nature Preserve",
+    "lat": 51.4139,
+    "lon": 90.9492,
+    "grid": "NO51lj",
+    "region": "RU-TU",
+    "website": "https://ooptaari.nextgis.ru/node/6695",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0596",
+    "name": "Tyva Nature Park",
+    "lat": 51.5685,
+    "lon": 96.2978,
+    "grid": "NO81dn",
+    "region": "RU-TU",
+    "website": "https://ooptaari.nextgis.ru/node/19812",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0597",
+    "name": "Khutinskiy State Natural Reserve",
+    "lat": 52.6153,
+    "lon": 94.6667,
+    "grid": "NO72io",
+    "region": "RU-TU",
+    "website": "https://ooptaari.nextgis.ru/node/19838",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0598",
+    "name": "Talsinskiy State Natural Reserve",
+    "lat": 51.9508,
+    "lon": 94.9872,
+    "grid": "NO71lw",
+    "region": "RU-TU",
+    "website": "https://ooptaari.nextgis.ru/node/19837",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0599",
+    "name": "Balgazynskiy State Natural Reserve",
+    "lat": 51.2087,
+    "lon": 95.1992,
+    "grid": "NO71of",
+    "region": "RU-TU",
+    "website": "https://ooptaari.nextgis.ru/node/19842",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0600",
+    "name": "Kuskovo National Historical Park",
+    "lat": 55.7337,
+    "lon": 37.7924,
+    "grid": "KO85vr",
+    "region": "RU-MC",
+    "website": "https://ooptaari.nextgis.ru/node/23548",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0601",
+    "name": "Lake Kezenoy-Am (Ozero Kezenoy-Am) Natural Monument",
+    "lat": 42.7721,
+    "lon": 46.1464,
+    "grid": "LN32bs",
+    "region": "RU-CN",
+    "website": "https://ooptaari.nextgis.ru/node/36608",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0602",
+    "name": "Argunskiy State Natural Reserve",
+    "lat": 43.3336,
+    "lon": 45.9392,
+    "grid": "LN23xi",
+    "region": "RU-CN",
+    "website": "https://ooptaari.nextgis.ru/node/36630",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0603",
+    "name": "Bragunskiy State Natural Reserve",
+    "lat": 43.4186,
+    "lon": 46.0279,
+    "grid": "LN33ak",
+    "region": "RU-CN",
+    "website": "https://ooptaari.nextgis.ru/node/36631",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0604",
+    "name": "Vedenskiy State Natural Reserve",
+    "lat": 42.7877,
+    "lon": 45.9867,
+    "grid": "LN22xs",
+    "region": "RU-CN",
+    "website": "https://ooptaari.nextgis.ru/node/36632",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0605",
+    "name": "The green zone of the city of Grozny (Zelenaya Zona Goroda Groznogo) State Natural Reserve",
+    "lat": 43.2873,
+    "lon": 45.6916,
+    "grid": "LN23ug",
+    "region": "RU-CN",
+    "website": "https://ooptaari.nextgis.ru/node/36637",
     "activations": 0,
     "qsos": 0
   },

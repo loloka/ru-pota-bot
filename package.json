@@ -1,6 +1,6 @@
 {
   "name": "ru-pota",
-  "version": "1.16.58",
+  "version": "1.16.59",
   "description": "Telegram Bot for RU-POTA (Parks on the Air) Community",
 
   "main": "src/bot/index.js",
@@ -9,6 +9,7 @@
     "dev": "node --watch src/bot/index.js",
     "start": "node src/bot/index.js",
     "test": "node test_shield.js && node test_links_audit.js && node test_notifications.js && node test_web_auth.js && node test_telegram_link.js && node test_oopt_search.js && node test_regions_stats.js && node test_location_service.js",
+    "sync:pota": "node -e \"import('./src/services/ooptService.js').then(m => m.syncPotaParksWithApi())\"",
     "update:oopt": "node src/scripts/downloadOopt.js",
     "webapp:dev": "vite src/webapp",
     "webapp:build": "vite build src/webapp",

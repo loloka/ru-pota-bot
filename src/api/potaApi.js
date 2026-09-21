@@ -10,12 +10,18 @@ const axiosConfig = {
   baseURL: BASE_URL,
   timeout: 35000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.49 (Telegram Bot; Node.js)'
+    'User-Agent': 'RU-POTA-Bot/1.16.50 (Telegram Bot; Node.js)'
   }
 };
 
 if (process.env.POTA_PROXY) {
-  const agent = new SocksProxyAgent(process.env.POTA_PROXY, { keepAlive: true, keepAliveMsecs: 10000 });
+  let proxyUrl = process.env.POTA_PROXY.trim();
+  if (proxyUrl.startsWith('socks5://')) {
+    proxyUrl = 'socks5h://' + proxyUrl.substring(9);
+  } else if (proxyUrl.startsWith('socks://')) {
+    proxyUrl = 'socks5h://' + proxyUrl.substring(8);
+  }
+  const agent = new SocksProxyAgent(proxyUrl);
   axiosConfig.httpAgent = agent;
   axiosConfig.httpsAgent = agent;
 }

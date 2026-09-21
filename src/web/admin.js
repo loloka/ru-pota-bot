@@ -314,12 +314,11 @@ export const startAdminServer = (telegramClient) => {
       userCache.set(id, info);
       res.json(info);
     } catch (e) {
-      console.warn('[Web Admin] Could not fetch Telegram info for', id, e.message);
-      // Fallback: check if DB has partial info, otherwise return empty without permanent cache
-      let fallbackInfo = { first_name: '', last_name: '', username: '', avatar: null };
+      console.warn(`[Web Admin] Could not fetch Telegram info for ${id}: ${e.message}`);
+      let fallbackInfo = { first_name: '', last_name: '', username: '', avatar: null, error: true };
       try {
         const row = db.prepare('SELECT first_name, last_name, username, avatar_url FROM users WHERE telegram_id = ?').get(numId);
-        if (row) {
+        if (row && (row.first_name || row.last_name || row.username)) {
           fallbackInfo = {
             first_name: row.first_name || '',
             last_name: row.last_name || '',
@@ -2040,8 +2039,13 @@ export const startAdminServer = (telegramClient) => {
                       if (data.first_name || data.last_name) {
                         text.push((data.first_name + ' ' + (data.last_name || '')).trim());
                       }
-                      if (data.username) text.push('@' + data.username);
-                      infoDiv.innerHTML = text.length > 0 ? text.join(' • ') : '<span class="text-muted">Нет данных Telegram</span>';
+                      if (text.length > 0) {
+                        infoDiv.innerHTML = text.join(' • ');
+                      } else if (data.error) {
+                        infoDiv.innerHTML = '<span class="text-warning small" title="Telegram Bot API временно недоступен (проверьте TG_PROXY)"><i class="bi bi-exclamation-triangle"></i> Ошибка связи с TG</span>';
+                      } else {
+                        infoDiv.innerHTML = '<span class="text-muted">Нет данных Telegram</span>';
+                      }
                     }
                     if (avatarImg && data.avatar) {
                       avatarImg.src = data.avatar;
@@ -2051,7 +2055,7 @@ export const startAdminServer = (telegramClient) => {
                   }
                 } catch(e) {
                   const infoDiv = document.getElementById('user-info-' + id);
-                  if (infoDiv) infoDiv.innerHTML = '<span class="text-muted">Нет данных Telegram</span>';
+                  if (infoDiv) infoDiv.innerHTML = '<span class="text-warning small" title="Ошибка связи с Telegram"><i class="bi bi-exclamation-triangle"></i> Ошибка связи с TG</span>';
                 }
               }));
             }

@@ -59,19 +59,30 @@ const telegrafOptions = {};
 
 // 1. HTTP Proxy via apiRoot (Cloudflare Worker)
 if (process.env.TG_API_ROOT) {
+  console.log(`\x1b[35m[Proxy]\x1b[0m 🌐 Использование Telegram API Root (Cloudflare Worker): ${process.env.TG_API_ROOT}`);
   telegrafOptions.telegram = { 
     apiRoot: process.env.TG_API_ROOT,
     agent: new https.Agent({ keepAlive: true }) // Reuse TCP connection to bypass provider SYN throttling!
   };
 } 
-// 2. SOCKS5 Proxy (VLESS / Tor)
+// 2. SOCKS5 Proxy (VLESS / Tor / Shadowsocks)
 else if (process.env.TG_PROXY) {
+  let proxyUrl = process.env.TG_PROXY.trim();
+  // Automatically upgrade socks5:// or socks:// to socks5h:// for remote DNS resolution on the proxy
+  if (proxyUrl.startsWith('socks5://')) {
+    proxyUrl = 'socks5h://' + proxyUrl.substring(9);
+  } else if (proxyUrl.startsWith('socks://')) {
+    proxyUrl = 'socks5h://' + proxyUrl.substring(8);
+  }
+  
+  const maskedProxy = proxyUrl.replace(/:([^@/]+)@/, ':****@');
+  console.log(`\x1b[35m[Proxy]\x1b[0m 🛡️ Использование SOCKS5-прокси (remote DNS): ${maskedProxy}`);
+
   telegrafOptions.telegram = { 
-    agent: new SocksProxyAgent(process.env.TG_PROXY, {
-      keepAlive: true,
-      keepAliveMsecs: 10000
-    }) 
+    agent: new SocksProxyAgent(proxyUrl) 
   };
+} else {
+  console.log(`\x1b[35m[Proxy]\x1b[0m ⚡ Прямое подключение к Telegram API (без прокси)`);
 }
 
 const bot = new Telegraf(BOT_TOKEN, telegrafOptions);
@@ -858,7 +869,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.49\x1b[0m 📡             \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.50\x1b[0m 📡             \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

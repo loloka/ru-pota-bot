@@ -1,5 +1,16 @@
 # История изменений (Changelog)
 
+## [1.16.50] - 2026-09-21 (Fix SOCKS5 Disconnections, Remote DNS, & Status Indicators)
+### Исправлено и улучшено
+- **Устранение обрывов SOCKS5 и поддержка удалённого резолвинга DNS (`index.js`, `potaApi.js`)**:
+  - Из `SocksProxyAgent` удалены параметры `{ keepAlive: true, keepAliveMsecs: 10000 }`, вызывавшие немедленный сброс сокетов (`Client network socket disconnected before secure TLS connection was established`) при работе через большинство современных SOCKS5/Xray/VLESS туннелей.
+  - Добавлена автоматическая трансформация протокола `socks5://` и `socks://` в `socks5h://` — теперь резолвинг доменного имени `api.telegram.org` происходит непосредственно на стороне прокси-сервера, что обходит блокировки DNS/SNI со стороны локальных провайдеров.
+  - Добавлено информативное логирование активного типа прокси на старте с маскированием учетных данных.
+- **Индикация доступности Telegram API в веб-панели (`admin.js`)**:
+  - Если Telegram API временно недоступен из-за проблем с прокси или сетью, в списке пользователей вместо вводящей в заблуждение надписи «Нет данных Telegram» теперь отображается явный индикатор `⚠️ Ошибка связи с TG` с подсказкой.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.50` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.49] - 2026-09-21 (Decouple POTA API from TG_PROXY & Add Group Chat Member Fallback)
 ### Исправлено и улучшено
 - **Разделение прокси POTA API и Telegram (`potaApi.js`)**:

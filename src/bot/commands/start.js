@@ -1,5 +1,7 @@
+import crypto from 'crypto';
 import { deleteUserMessage, replyWithAutoDelete } from '../utils.js';
 import db from '../../db/database.js';
+import { loginHandler } from './login.js';
 
 let lastGroupStartMsgId = null;
 
@@ -79,9 +81,65 @@ export const startHandler = async (ctx) => {
     resize_keyboard: true
   };
 
-  // Check startPayload for account linking (e.g. /start link_abc123)
+  // Check startPayload for account linking or web login (e.g. /start link_abc123 or /start auth_xyz789 or /start login)
   const text = ctx.message?.text || '';
   const payload = ctx.startPayload || (text.includes(' ') ? text.split(' ')[1] : '');
+
+  if (payload === 'login') {
+    return loginHandler(ctx);
+  }
+
+  if (payload && payload.startsWith('auth_')) {
+    const token = payload;
+    const session = db.prepare('SELECT * FROM telegram_login_sessions WHERE token = ?').get(token);
+
+    if (!session || Date.now() > session.expires_at) {
+      return ctx.reply(
+        '⚠️ <b>Срок действия сессии входа истёк или ссылка не найдена</b>\n\n' +
+        'Пожалуйста, вернитесь на сайт pota.r9o.ru и нажмите кнопку входа заново, либо запросите код командой /login.',
+        { parse_mode: 'HTML' }
+      );
+    }
+
+    const userId = ctx.from.id;
+    const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(userId);
+
+    if (!user || !user.callsign) {
+      return ctx.reply(
+        '⚠️ <b>Вы ещё не зарегистрировали позывной в боте</b>\n\n' +
+        'Чтобы войти на сайт под своим радиолюбительским профилем, сначала зарегистрируйтесь через /callsign.',
+        { parse_mode: 'HTML' }
+      );
+    }
+
+    // Generate 6-digit code as backup
+    const code = String(crypto.randomInt(100000, 999999));
+
+    db.prepare(`
+      UPDATE telegram_login_sessions 
+      SET telegram_id = ?, callsign = ?, code = ?, status = 'confirmed'
+      WHERE token = ?
+    `).run(userId, user.callsign, code, token);
+
+    console.log(`\x1b[32m[Telegram Auth]\x1b[0m ✅ Подтверждён вход на сайт для ${user.callsign} (TG: ${userId}) через deep-link ${token}`);
+
+    return ctx.reply(
+      `🎉 <b>Вход на сайт pota.r9o.ru подтверждён!</b>\n\n` +
+      `👤 Оператор: <b>${user.callsign}</b>\n` +
+      `🆔 Telegram ID: <code>${userId}</code>\n\n` +
+      `🌐 Страница в браузере обновится автоматически в течение пары секунд.\n` +
+      `Если авто-вход не сработал, вы можете ввести одноразовый код вручную:\n👉 <code>${code}</code> 👈\n\n` +
+      `73! До встречи в эфире 🌲📡`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🌐 Вернуться на сайт pota.r9o.ru', url: 'https://pota.r9o.ru' }]
+          ]
+        }
+      }
+    );
+  }
 
   if (payload && payload.startsWith('link_')) {
     const token = payload;

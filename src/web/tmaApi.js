@@ -476,6 +476,148 @@ export function createTmaRouter(telegramClient) {
     }
   });
 
+  // POST /api/tma/auth/telegram-init - Start 1-click web login via Telegram bot deep-link
+  router.post('/auth/telegram-init', (req, res) => {
+    try {
+      const token = `auth_${crypto.randomBytes(12).toString('hex')}`;
+      const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+      db.prepare(`
+        INSERT INTO telegram_login_sessions (token, status, expires_at)
+        VALUES (?, 'pending', ?)
+      `).run(token, expiresAt);
+
+      const botUsername = process.env.BOT_USERNAME || 'ru_pota_bot';
+      const botUrl = `https://t.me/${botUsername}?start=${token}`;
+
+      res.json({
+        success: true,
+        token,
+        botUrl,
+        expiresInSeconds: 600
+      });
+    } catch (err) {
+      console.error('[TMA API] Error in /auth/telegram-init:', err.message);
+      res.status(500).json({ error: 'Ошибка инициализации входа через Telegram' });
+    }
+  });
+
+  // GET /api/tma/auth/telegram-poll - Poll for Telegram 1-click confirmation
+  router.get('/auth/telegram-poll', (req, res) => {
+    try {
+      const token = req.query.token;
+      if (!token) {
+        return res.status(400).json({ error: 'Токен сессии обязателен' });
+      }
+
+      const session = db.prepare('SELECT * FROM telegram_login_sessions WHERE token = ?').get(token);
+      if (!session) {
+        return res.status(404).json({ error: 'Сессия не найдена' });
+      }
+
+      if (Date.now() > session.expires_at) {
+        return res.json({ status: 'expired', error: 'Срок действия сессии истёк' });
+      }
+
+      if (session.status === 'confirmed' && session.telegram_id) {
+        const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(session.telegram_id);
+        if (!user) {
+          return res.status(404).json({ error: 'Пользователь не найден в базе' });
+        }
+
+        // Generate persistent web token for this Telegram operator
+        const webToken = crypto.randomBytes(32).toString('hex');
+        db.prepare('UPDATE users SET web_token = ? WHERE telegram_id = ?').run(webToken, user.telegram_id);
+        db.prepare(`UPDATE telegram_login_sessions SET status = 'used' WHERE id = ?`).run(session.id);
+
+        console.log(`\x1b[32m[Telegram Auth]\x1b[0m 🌐 Авторизован через deep-link: ${user.callsign} (TG: ${user.telegram_id})`);
+
+        return res.json({
+          success: true,
+          status: 'confirmed',
+          token: webToken,
+          user: {
+            id: user.telegram_id,
+            telegram_id: user.telegram_id,
+            callsign: user.callsign,
+            status: user.status || 'approved',
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            username: user.username || '',
+            avatar_url: user.avatar_url || null,
+            email: user.email || null,
+            auth_type: 'telegram'
+          }
+        });
+      }
+
+      res.json({
+        success: true,
+        status: session.status || 'pending'
+      });
+    } catch (err) {
+      console.error('[TMA API] Error in /auth/telegram-poll:', err.message);
+      res.status(500).json({ error: 'Ошибка проверки сессии входа' });
+    }
+  });
+
+  // POST /api/tma/auth/telegram-code - Verify 6-digit code obtained via /login in Telegram bot
+  router.post('/auth/telegram-code', (req, res) => {
+    try {
+      const { code } = req.body || {};
+      if (!code) {
+        return res.status(400).json({ error: 'Укажите 6-значный проверочный код' });
+      }
+
+      const cleanCode = String(code).trim();
+      const now = Date.now();
+
+      const session = db.prepare(`
+        SELECT * FROM telegram_login_sessions 
+        WHERE code = ? AND status = 'confirmed' AND expires_at > ?
+        ORDER BY id DESC LIMIT 1
+      `).get(cleanCode, now);
+
+      if (!session || !session.telegram_id) {
+        return res.status(400).json({ 
+          error: 'Неверный или истекший код. Запросите свежий код командой /login в боте @ru_pota_bot.' 
+        });
+      }
+
+      const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(session.telegram_id);
+      if (!user) {
+        return res.status(404).json({ error: 'Пользователь не найден' });
+      }
+
+      // Generate persistent web token for this Telegram operator
+      const webToken = crypto.randomBytes(32).toString('hex');
+      db.prepare('UPDATE users SET web_token = ? WHERE telegram_id = ?').run(webToken, user.telegram_id);
+      db.prepare(`UPDATE telegram_login_sessions SET status = 'used' WHERE id = ?`).run(session.id);
+
+      console.log(`\x1b[32m[Telegram Auth]\x1b[0m 🌐 Авторизован по 6-значному коду ${cleanCode}: ${user.callsign} (TG: ${user.telegram_id})`);
+
+      res.json({
+        success: true,
+        token: webToken,
+        user: {
+          id: user.telegram_id,
+          telegram_id: user.telegram_id,
+          callsign: user.callsign,
+          status: user.status || 'approved',
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          username: user.username || '',
+          avatar_url: user.avatar_url || null,
+          email: user.email || null,
+          auth_type: 'telegram'
+        }
+      });
+    } catch (err) {
+      console.error('[TMA API] Error in /auth/telegram-code:', err.message);
+      res.status(500).json({ error: 'Внутренняя ошибка проверки кода' });
+    }
+  });
+
   // ==========================================
   // 1. GET /api/tma/me - Operator Profile
   // ==========================================

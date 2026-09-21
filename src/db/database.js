@@ -177,6 +177,19 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
   CREATE INDEX IF NOT EXISTS idx_tg_link_tokens_token ON telegram_link_tokens (token);
+
+  CREATE TABLE IF NOT EXISTS telegram_login_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT UNIQUE,
+    code TEXT,
+    telegram_id INTEGER,
+    callsign TEXT,
+    status TEXT DEFAULT 'pending',
+    expires_at INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_tg_login_token ON telegram_login_sessions (token);
+  CREATE INDEX IF NOT EXISTS idx_tg_login_code ON telegram_login_sessions (code);
 `);
 
 // Migration for existing tables

@@ -24,6 +24,7 @@ import { subHandler, getSubsKeyboard, getDeleteSubsKeyboard } from './commands/s
 import { banHandler, muteHandler, kickHandler } from './commands/mod.js';
 import { onairHandler, onairActionHandler } from './commands/onair.js';
 import { regionsHandler } from './commands/regions.js';
+import { loginHandler } from './commands/login.js';
 
 // Import scenes
 import { spotWizard } from './scenes/spotWizard.js';
@@ -502,6 +503,8 @@ bot.use(async (ctx, next) => {
 });
 
 bot.command('start', startHandler);
+bot.command('login', loginHandler);
+bot.command('web', loginHandler);
 bot.command('onair', onairHandler);
 bot.command('stats', statsHandler);
 bot.command('sub', subHandler);
@@ -881,7 +884,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.51\x1b[0m 📡             \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.52\x1b[0m 📡             \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

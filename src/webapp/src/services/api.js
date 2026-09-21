@@ -329,6 +329,42 @@ export const api = {
   },
 
   /**
+   * Initialize 1-click Telegram login session
+   */
+  async initTelegramLogin() {
+    return request('/auth/telegram-init', { method: 'POST' });
+  },
+
+  /**
+   * Poll Telegram 1-click login status
+   */
+  async pollTelegramLogin(token) {
+    const data = await request(`/auth/telegram-poll?token=${encodeURIComponent(token)}`);
+    if (data?.token) {
+      try {
+        localStorage.setItem('rupota_web_token', data.token);
+      } catch (e) {}
+    }
+    return data;
+  },
+
+  /**
+   * Verify 6-digit Telegram login code
+   */
+  async verifyTelegramCode(code) {
+    const data = await request('/auth/telegram-code', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+    if (data?.token) {
+      try {
+        localStorage.setItem('rupota_web_token', data.token);
+      } catch (e) {}
+    }
+    return data;
+  },
+
+  /**
    * Logout web session
    */
   async logoutWeb() {

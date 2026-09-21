@@ -331,6 +331,7 @@ export default function App() {
             title={authModal.title}
             reason={authModal.reason}
             onOpenWebAuth={handleOpenWebAuth}
+            onSuccess={() => loadProfile(false)}
             onClose={() => setAuthModal({ open: false, title: '', reason: '' })}
           />
         )}

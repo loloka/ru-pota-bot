@@ -1,5 +1,12 @@
 # История изменений (Changelog)
 
+## [1.16.54] - 2026-09-21 (Update OsmAnd Offline Maps Modal Attribution)
+### Исправлено и улучшено
+- **Картография и офлайн-карты OsmAnd (`OsmAndModal.jsx`)**:
+  - Из футера модального окна базы офлайн-карт OsmAnd удалена устаревшая подпись первоисточника статьи. Сохранено корректное указание геосервера: `Картографический геосервер: R1CF` (с мультиязычной поддержкой `Cartographic GeoServer: R1CF`).
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.54` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.53] - 2026-09-21 (Seamless Telegram Auth Return Flow & Upgraded Profile Auth)
 ### Исправлено и улучшено
 - **Бесшовный возврат из Telegram в веб-приложение (`start.js`, `login.js`, `App.jsx`, `tmaApi.js`)**:

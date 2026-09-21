@@ -311,7 +311,7 @@ export default function OsmAndModal({ onClose, language = 'RU' }) {
           </div>
 
           <div className="text-[10px] text-center text-slate-400 dark:text-slate-500 pt-1">
-            Автор оригинальной статьи: R3DFE (HamTop.ru) • Картографический геосервер: R1CF
+            {language === 'RU' ? 'Картографический геосервер: R1CF' : 'Cartographic GeoServer: R1CF'}
           </div>
         </div>
 

@@ -55,7 +55,7 @@ export const regionsHandler = async (ctx) => {
       const msg = 
         `🗺️ <b>Статистика покрытия: ${escapeHtml(region.name)} (${region.code})</b>\n\n` +
         `🌲 <b>Парков в POTA:</b> ${region.totalParks}\n` +
-        `   • Активировано (&ge;1 раз): ${region.activatedParks} (${region.activationRate}%)\n` +
+        `   • Активировано (≥1 раз): ${region.activatedParks} (${region.activationRate}%)\n` +
         `   • Ждут первой связи: ${region.unactivatedParks}\n` +
         `🏞️ <b>В реестре ООПТ РФ:</b> ${Number(region.ooptCandidates).toLocaleString('ru-RU')} кандидатов\n\n` +
         `${statusEmoji} <b>Покрытие POTA:</b> <code>${region.coverageRate}%</code>\n` +
@@ -84,7 +84,7 @@ export const regionsHandler = async (ctx) => {
       `• Всего парков POTA: <b>${summary.totalParks}</b> (активировано: ${summary.activatedParks})\n` +
       `• Кандидатов в реестре ООПТ: <b>${Number(summary.totalPotentialParks).toLocaleString('ru-RU')}</b>\n` +
       `• Среднее покрытие POTA: <b>${summary.overallCoverageRate}%</b>\n` +
-      `• Зрелых регионов (диплом &ge;70%): <b>${summary.matureRegionsCount}</b> из ${summary.totalRegions}\n\n` +
+      `• Зрелых регионов (диплом ≥70%): <b>${summary.matureRegionsCount}</b> из ${summary.totalRegions}\n\n` +
       `🏆 <b>Лидеры по зрелости диплома («Вся область»):</b>\n`;
 
     topLeaders.forEach((r, idx) => {

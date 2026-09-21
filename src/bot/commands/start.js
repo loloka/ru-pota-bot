@@ -96,7 +96,7 @@ export const startHandler = async (ctx) => {
     if (!session || Date.now() > session.expires_at) {
       return ctx.reply(
         '⚠️ <b>Срок действия сессии входа истёк или ссылка не найдена</b>\n\n' +
-        'Пожалуйста, вернитесь на сайт pota.r9o.ru и нажмите кнопку входа заново, либо запросите код командой /login.',
+        'Пожалуйста, вернитесь в приложение pota.r9o.ru/app и нажмите кнопку входа заново, либо запросите код командой /login.',
         { parse_mode: 'HTML' }
       );
     }
@@ -124,7 +124,7 @@ export const startHandler = async (ctx) => {
     console.log(`\x1b[32m[Telegram Auth]\x1b[0m ✅ Подтверждён вход на сайт для ${user.callsign} (TG: ${userId}) через deep-link ${token}`);
 
     return ctx.reply(
-      `🎉 <b>Вход на сайт pota.r9o.ru подтверждён!</b>\n\n` +
+      `🎉 <b>Вход в RU-POTA Hub подтверждён!</b>\n\n` +
       `👤 Оператор: <b>${user.callsign}</b>\n` +
       `🆔 Telegram ID: <code>${userId}</code>\n\n` +
       `🌐 Страница в браузере обновится автоматически в течение пары секунд.\n` +
@@ -134,7 +134,7 @@ export const startHandler = async (ctx) => {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🌐 Вернуться на сайт pota.r9o.ru', url: 'https://pota.r9o.ru' }]
+            [{ text: '🌐 Вернуться в RU-POTA Hub', url: 'https://pota.r9o.ru/app' }]
           ]
         }
       }
@@ -149,7 +149,7 @@ export const startHandler = async (ctx) => {
       if (Date.now() > linkRecord.expires_at) {
         db.prepare('DELETE FROM telegram_link_tokens WHERE token = ?').run(token);
         return ctx.reply(
-          '⚠️ <b>Срок действия ссылки истек</b>\n\nПожалуйста, запросите новую ссылку для привязки Telegram в личном кабинете на сайте <a href="https://pota.r9o.ru">pota.r9o.ru</a>.',
+          '⚠️ <b>Срок действия ссылки истек</b>\n\nПожалуйста, запросите новую ссылку для привязки Telegram в личном кабинете на сайте <a href="https://pota.r9o.ru/app">pota.r9o.ru/app</a>.',
           { parse_mode: 'HTML' }
         );
       }

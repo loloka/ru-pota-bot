@@ -352,7 +352,7 @@ export function createTmaRouter(telegramClient) {
         if (telegramClient && user.telegram_id > 0) {
           telegramClient.sendMessage(
             user.telegram_id,
-            `🌐 <b>Вход в личный кабинет на сайте pota.r9o.ru</b>\n\n` +
+            `🌐 <b>Вход в личный кабинет RU-POTA Hub (pota.r9o.ru/app)</b>\n\n` +
             `Пользователь с позывным <b>${user.callsign}</b> успешно вошёл по привязанной почте <code>${cleanEmail}</code>.\n` +
             `Если это были не вы, обратитесь к администратору сообщества. 73! 🌲📡`,
             { parse_mode: 'HTML' }
@@ -382,7 +382,7 @@ export function createTmaRouter(telegramClient) {
         if (telegramClient && adminId) {
           telegramClient.sendMessage(
             adminId,
-            `🌐 <b>Новая регистрация через сайт pota.r9o.ru!</b>\n\n` +
+            `🌐 <b>Новая регистрация через RU-POTA Hub (pota.r9o.ru/app)!</b>\n\n` +
             `📡 Позывной: <b>${targetCallsign}</b>\n` +
             `✉️ Email: <code>${cleanEmail}</code>\n` +
             `🆔 Web ID: <code>${nextId}</code>\n` +

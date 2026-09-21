@@ -68,12 +68,12 @@ export const loginHandler = async (ctx) => {
     `🔐 <b>Код авторизации на сайте:</b>\n\n` +
     `👉 <code>${code}</code> 👈 <i>(нажмите, чтобы скопировать)</i>\n\n` +
     `⏳ Код действителен <b>10 минут</b>.\n` +
-    `Введите его на сайте <a href="https://pota.r9o.ru">pota.r9o.ru</a> для мгновенного входа в профиль оператора <b>${user.callsign}</b>. 73! 🌲📡`,
+    `Введите его на сайте <a href="https://pota.r9o.ru/app">pota.r9o.ru/app</a> для мгновенного входа в профиль оператора <b>${user.callsign}</b>. 73! 🌲📡`,
     {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '🌐 Открыть сайт pota.r9o.ru', url: 'https://pota.r9o.ru' }]
+          [{ text: '🌐 Открыть RU-POTA Hub', url: 'https://pota.r9o.ru/app' }]
         ]
       }
     }

@@ -18,10 +18,10 @@ export const resendService = {
 
   /**
    * Send 6-digit verification code email to radio amateur
-   * @param {{ email: string, callsign: string, code: string, isTelegramLinked?: boolean }} param0 
+   * @param {{ email: string, callsign: string, code: string }} param0 
    * @returns {Promise<{ success: boolean, id?: string, error?: string }>}
    */
-  async sendVerificationCode({ email, callsign, code, isTelegramLinked = false }) {
+  async sendVerificationCode({ email, callsign, code }) {
     const apiKey = process.env.RESEND_API_KEY;
     const fromAddress = process.env.EMAIL_FROM || 'RU-POTA <noreply@pota.r9o.ru>';
 
@@ -33,9 +33,7 @@ export const resendService = {
     const cleanEmail = email.trim().toLowerCase();
     const cleanCallsign = callsign.trim().toUpperCase();
 
-    const subject = isTelegramLinked 
-      ? `Код подтверждения входа ${code} — RU-POTA Hub (${cleanCallsign} • Синхронизация Telegram)`
-      : `Код подтверждения входа ${code} — RU-POTA Hub (${cleanCallsign})`;
+    const subject = `Код подтверждения входа ${code} — RU-POTA Hub (${cleanCallsign})`;
 
     const html = `
 <!DOCTYPE html>

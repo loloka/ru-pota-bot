@@ -112,21 +112,23 @@ assert.strictEqual(validateBaseCallsign('ABCDEF'), false, 'No digits must be rej
 assert.strictEqual(validateBaseCallsign(''), false, 'Empty callsign must be rejected');
 console.log('✅ PASS: Base callsign validation strictly rejects slashes and accepts pure callsigns');
 
-// 9. Test Telegram account detection and linking (merge)
+// 9. Test Web login security: unknown email does NOT hijack Telegram account
 const testTgId = 999888777;
 const testTgCallsign = 'R9OTEST';
-const testTgEmail = 'tg_operator@pota.r9o.ru';
+const strangerEmail = 'stranger@gmail.com';
+const verifiedOwnerEmail = 'owner@pota.r9o.ru';
 const testTgToken = crypto.randomBytes(32).toString('hex');
 
 // Cleanup any old test records
 db.prepare('DELETE FROM users WHERE telegram_id = ?').run(testTgId);
 db.prepare('DELETE FROM subscriptions WHERE telegram_id = ?').run(testTgId);
+db.prepare('DELETE FROM users WHERE email IN (?, ?)').run(strangerEmail, verifiedOwnerEmail);
 
-// Insert existing Telegram user
+// Insert existing Telegram user with owner email already linked
 db.prepare(`
-  INSERT INTO users (telegram_id, callsign, status, auth_type)
-  VALUES (?, ?, 'approved', 'telegram')
-`).run(testTgId, testTgCallsign);
+  INSERT INTO users (telegram_id, callsign, status, email, auth_type)
+  VALUES (?, ?, 'approved', ?, 'telegram')
+`).run(testTgId, testTgCallsign, verifiedOwnerEmail);
 
 // Add a Telegram subscription
 db.prepare(`
@@ -134,41 +136,24 @@ db.prepare(`
   VALUES (?, 'park', 'RU-0065', 'Национальный парк Таганай')
 `).run(testTgId);
 
-// Check if existing Telegram user is detected by callsign
-const detectedTgUser = db.prepare(`
-  SELECT telegram_id, callsign, status 
-  FROM users 
-  WHERE callsign = ? AND telegram_id > 0
-`).get(testTgCallsign);
+// Verify that strangerEmail does NOT match the owner email and does NOT hijack Telegram ID
+const matchedOwner = db.prepare('SELECT * FROM users WHERE email = ?').get(strangerEmail);
+assert.strictEqual(matchedOwner, undefined, 'Stranger email must not match existing Telegram account');
+console.log('✅ PASS: Stranger email does not match unlinked Telegram account');
 
-assert.ok(detectedTgUser, 'Existing Telegram user must be detected');
-assert.strictEqual(detectedTgUser.telegram_id, testTgId, 'Detected ID must match testTgId');
-console.log('✅ PASS: Detected existing Telegram account by callsign');
-
-// Simulate account linking upon web verification
-db.prepare(`
-  UPDATE users 
-  SET email = ?, web_token = ? 
-  WHERE telegram_id = ?
-`).run(testTgEmail, testTgToken, testTgId);
-
-// Check that web token resolves to the Telegram user ID
-const resolvedUser = db.prepare(`
-  SELECT telegram_id, callsign, status, email, web_token 
-  FROM users 
-  WHERE web_token = ?
-`).get(testTgToken);
-
-assert.ok(resolvedUser, 'User must be resolvable by web_token');
-assert.strictEqual(resolvedUser.telegram_id, testTgId, 'telegram_id must be the positive Telegram ID');
-assert.strictEqual(resolvedUser.callsign, testTgCallsign, 'callsign must match');
-assert.strictEqual(resolvedUser.email, testTgEmail, 'email must match');
+// Legitimate owner with verifiedOwnerEmail logs in via web_token
+db.prepare('UPDATE users SET web_token = ? WHERE telegram_id = ?').run(testTgToken, testTgId);
+const authedOwner = db.prepare('SELECT * FROM users WHERE web_token = ?').get(testTgToken);
+assert.ok(authedOwner, 'Owner should be found by web_token');
+assert.strictEqual(authedOwner.telegram_id, testTgId, 'Owner telegram_id must match positive ID');
+assert.strictEqual(authedOwner.callsign, testTgCallsign, 'Callsign must match');
+assert.strictEqual(authedOwner.email, verifiedOwnerEmail, 'Email must match owner');
 
 // Check that original subscriptions are retained under the same positive telegram_id
 const subs = db.prepare('SELECT target FROM subscriptions WHERE telegram_id = ?').all(testTgId);
 assert.strictEqual(subs.length, 1, 'Must have 1 subscription');
 assert.strictEqual(subs[0].target, 'RU-0065', 'Target must be RU-0065');
-console.log('✅ PASS: Telegram account merged with web login, preserving subscriptions and ID');
+console.log('✅ PASS: Verified owner logs in securely, preserving subscriptions and Telegram ID');
 
 // Cleanup
 db.prepare('DELETE FROM users WHERE telegram_id = ?').run(testTgId);

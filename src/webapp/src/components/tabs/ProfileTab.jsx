@@ -49,6 +49,25 @@ export default function ProfileTab({
     user?.hasWebSession
   );
 
+  // Auto-refresh profile while telegramLinkModal is open to automatically detect when user pressed Start in Telegram
+  useEffect(() => {
+    if (!telegramLinkModal) return;
+    const interval = setInterval(async () => {
+      if (onRefreshProfile) {
+        await onRefreshProfile();
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [telegramLinkModal, onRefreshProfile]);
+
+  // If user becomes linked while modal is open, auto-close modal and notify success
+  useEffect(() => {
+    if (telegramLinkModal && user?.telegram_id && user.telegram_id > 0) {
+      telegram.haptic.notification('success');
+      setTelegramLinkModal(null);
+    }
+  }, [telegramLinkModal, user?.telegram_id]);
+
   const handleLinkTelegram = async () => {
     telegram.haptic.impact('medium');
     setLinkingTelegram(true);

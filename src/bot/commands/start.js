@@ -110,9 +110,10 @@ export const startHandler = async (ctx) => {
           UPDATE users 
           SET web_token = COALESCE(?, web_token),
               email = COALESCE(?, email),
-              callsign = ?
+              callsign = COALESCE(users.callsign, ?),
+              status = CASE WHEN users.status = 'approved' OR ? = 'approved' THEN 'approved' ELSE users.status END
           WHERE telegram_id = ?
-        `).run(webUser?.web_token || null, webUser?.email || null, callsign, currentTgId);
+        `).run(webUser?.web_token || null, webUser?.email || null, callsign, webUser?.status || 'pending', currentTgId);
 
         // Migrate subscriptions from webTgId to currentTgId
         if (webTgId !== currentTgId) {

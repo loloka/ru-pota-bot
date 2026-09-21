@@ -694,7 +694,13 @@ export function formatClarification(item) {
   const parts = [];
 
   // Non-standard status
-  if (item.status && item.status !== 'действующий') parts.push(`Статус: ${item.status}`);
+  if (item.status && item.status !== 'действующий') {
+    if (item.status === 'реорганизованный' || item.is_reorganized) {
+      parts.push(`⚠️ Реорганизован${item.parent_pota && item.parent_pota.reference ? ` (в составе ${item.parent_pota.reference})` : ''}`);
+    } else {
+      parts.push(`Статус: ${item.status}`);
+    }
+  }
 
   // 1. Nested OOPTs (Priority per Manu R2BBX: "Вместо площади")
   let nestedList = [];

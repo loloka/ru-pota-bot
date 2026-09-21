@@ -81,6 +81,7 @@ export async function syncPotaParksWithApi() {
       website: p.website || '',
       activations: p.activations || 0,
       qsos: p.qsos || 0,
+      notes: p.notes || '',
     });
 
     let updatedFromApi = false;
@@ -428,8 +429,15 @@ export function getOoptList({
   }
 
   if (status && status.trim()) {
-    baseConditions.push(`status = ?`);
-    baseParams.push(status.trim().toLowerCase());
+    const st = status.trim().toLowerCase();
+    if (st === 'active' || st === 'действующий') {
+      baseConditions.push(`status = 'действующий'`);
+    } else if (st === 'reorganized' || st === 'реорганизованный') {
+      baseConditions.push(`status = 'реорганизованный'`);
+    } else {
+      baseConditions.push(`status = ?`);
+      baseParams.push(st);
+    }
   }
 
   if (region && region.trim()) {
@@ -479,10 +487,16 @@ export function getOoptList({
     ? [...params, ...searchOrderParams, limitNum, offset]
     : [...params, limitNum, offset];
 
-  const rows = db.prepare(selectSql).all(...queryParams).map(r => ({
-    ...r,
-    pota_restricted: isPotaRestrictedAte(r.ate)
-  }));
+  const rows = db.prepare(selectSql).all(...queryParams).map(r => {
+    const isReorganized = r.status && r.status.toLowerCase() !== 'действующий';
+    const parentPota = isReorganized ? findParentPotaPark(r.title, r.ate) : null;
+    return {
+      ...r,
+      pota_restricted: isPotaRestrictedAte(r.ate),
+      is_reorganized: isReorganized,
+      parent_pota: parentPota
+    };
+  });
 
   // 3. Stats by significance (dynamic based on base filters)
   const globalStats = getOoptStats();
@@ -1639,7 +1653,13 @@ export function formatClarification(item) {
   const parts = [];
 
   // Non-standard status
-  if (item.status && item.status !== 'действующий') parts.push(`Статус: ${item.status}`);
+  if (item.status && item.status !== 'действующий') {
+    if (item.status === 'реорганизованный') {
+      parts.push(`⚠️ Реорганизован${item.parent_pota ? ` (в составе ${item.parent_pota.reference})` : ''}`);
+    } else {
+      parts.push(`Статус: ${item.status}`);
+    }
+  }
 
   // 1. Nested OOPTs (Priority per Manu R2BBX: "Вместо площади")
   let nestedList = [];
@@ -1768,6 +1788,49 @@ export function generateR2bbxTemplate(item) {
 }
 
 /**
+ * Detects if a reorganized or nested OOPT has become part of an existing POTA park
+ * (e.g. by checking POTA park notes, cluster descriptions, or nested relationships)
+ */
+export function findParentPotaPark(title, ate = '') {
+  if (!title) return null;
+  const clean = cleanOoptName(title).toLowerCase().replace(/['"«»]/g, '').trim();
+  if (clean.length < 3) return null;
+
+  const parks = getRussianPotaParks();
+  for (const p of parks) {
+    const notes = (p.notes || '').toLowerCase();
+    if (!notes) continue;
+    if (notes.includes(clean) || notes.includes(title.toLowerCase())) {
+      return {
+        reference: p.reference,
+        name: p.name,
+        notes: p.notes,
+        relationship: 'упомянут в примечаниях парка POTA'
+      };
+    }
+  }
+
+  try {
+    const foundParent = db.prepare(`
+      SELECT nid, title, pota_ref, pota_name 
+      FROM oopt_registry 
+      WHERE nested_oopt LIKE ? AND pota_ref IS NOT NULL 
+      LIMIT 1
+    `).get(`%${clean}%`);
+    if (foundParent) {
+      return {
+        reference: foundParent.pota_ref,
+        name: foundParent.pota_name || foundParent.title,
+        notes: `В границах ООПТ: ${foundParent.title} (${foundParent.pota_ref})`,
+        relationship: 'в границах ООПТ'
+      };
+    }
+  } catch (_) {}
+
+  return null;
+}
+
+/**
  * Fetches and caches full detail card for a specific ООПТ (coordinates, documents, legal acts)
  */
 export async function getOoptDetails(nid) {
@@ -1887,6 +1950,9 @@ export async function getOoptDetails(nid) {
   details.parsedBbox = parsedBbox;
 
   // Format R2BBX Coordinator Application Template and Submitter Fields
+  const isReorganized = details.status && details.status.toLowerCase() !== 'действующий';
+  details.is_reorganized = isReorganized;
+  details.parent_pota = isReorganized ? findParentPotaPark(details.title, details.ate) : null;
   details.submitterFields = parseSubmitterFields(details);
   details.applicationTemplate = generateR2bbxTemplate(details);
 
@@ -2343,4 +2409,5 @@ export default {
   formatDualParkName,
   translateOoptNameOnline,
   generateR2bbxTemplate,
+  findParentPotaPark,
 };

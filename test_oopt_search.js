@@ -89,4 +89,27 @@ assert.strictEqual(shukhiOopt.pota_ref, 'RU-0377', 'Шухи-Поктой must b
 assert.strictEqual(shukhiOopt.pota_name, 'Shukhi-Poktoy Nature Reserve');
 console.log('✅ PASS: RU-0377 (Shukhi-Poktoy) correctly matched and synced to "Шухи-Поктой" (nid 15909)');
 
+// 14. Test Reorganized OOPT status filtering and parent POTA park linking
+const reorgList = getOoptList({ status: 'reorganized', limit: 10 });
+assert.ok(reorgList.total > 0, 'Reorganized list must not be empty');
+assert.strictEqual(reorgList.rows[0].is_reorganized, true, 'Row must have is_reorganized = true');
+
+import { findParentPotaPark, getOoptDetails } from './src/services/ooptService.js';
+const zabelParent = findParentPotaPark('Забеловский');
+assert.ok(zabelParent, 'Забеловский must match a parent POTA park');
+assert.strictEqual(zabelParent.reference, 'RU-0378', 'Забеловский must map to Bastak RU-0378');
+
+const burkalParent = findParentPotaPark('Буркальский');
+assert.ok(burkalParent, 'Буркальский must match a parent POTA park');
+assert.strictEqual(burkalParent.reference, 'RU-0008', 'Буркальский must map to Chikoy RU-0008');
+
+const zabelDetails = await getOoptDetails(15915);
+assert.strictEqual(zabelDetails.is_reorganized, true);
+assert.ok(zabelDetails.parent_pota);
+assert.strictEqual(zabelDetails.parent_pota.reference, 'RU-0378');
+assert.ok(zabelDetails.submitterFields.clarification.includes('⚠️ Реорганизован'));
+assert.ok(zabelDetails.submitterFields.clarification.includes('RU-0378'));
+console.log('✅ PASS: Reorganized status filter & parent POTA linking (Забеловский -> RU-0378, Буркальский -> RU-0008) verified');
+
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');
+

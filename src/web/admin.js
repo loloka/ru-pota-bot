@@ -960,7 +960,7 @@ export const startAdminServer = (telegramClient) => {
 
                   <!-- OOPT Search and Filters -->
                   <div class="row g-2 mb-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                       <input type="text" class="form-control" id="oopt-search-input" placeholder="🔍 Поиск по названию или ключевым словам...">
                     </div>
                     <div class="col-md-3">
@@ -976,10 +976,17 @@ export const startAdminServer = (telegramClient) => {
                         <option value="local">🏡 Местные</option>
                       </select>
                     </div>
-                    <div class="col-md-3 d-flex justify-content-end align-items-center gap-2">
+                    <div class="col-md-2">
+                      <select class="form-select" id="oopt-status-select">
+                        <option value="">Все статусы</option>
+                        <option value="active">✅ Только действующие</option>
+                        <option value="reorganized">⚠️ Реорганизованные</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2 d-flex justify-content-end align-items-center gap-1">
                       <span class="small text-muted" id="oopt-pagination-info">Загрузка...</span>
-                      <button type="button" class="btn btn-sm btn-outline-secondary" id="oopt-prev-page" disabled>&laquo; Назад</button>
-                      <button type="button" class="btn btn-sm btn-outline-secondary" id="oopt-next-page" disabled>Вперед &raquo;</button>
+                      <button type="button" class="btn btn-sm btn-outline-secondary px-2" id="oopt-prev-page" disabled>&laquo;</button>
+                      <button type="button" class="btn btn-sm btn-outline-secondary px-2" id="oopt-next-page" disabled>&raquo;</button>
                     </div>
                   </div>
 
@@ -1247,6 +1254,7 @@ export const startAdminServer = (telegramClient) => {
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body p-3">
+                <div id="subm-reorganized-alert-container"></div>
                 <div class="alert alert-info py-2 px-3 small mb-3">
                   <i class="bi bi-info-circle-fill"></i> <strong>Правила подачи координатору POTA (Manu R2BBX):</strong> Название парка указывается чистым (без слов «Заказник», «Памятник природы»), а статус — в поле статуса. Если территория расположена на границе нескольких регионов — указываются все регионы через запятую.
                 </div>
@@ -2250,10 +2258,12 @@ export const startAdminServer = (telegramClient) => {
 
             const searchEl = document.getElementById('oopt-search-input');
             const sigEl = document.getElementById('oopt-sig-select');
+            const statusEl = document.getElementById('oopt-status-select');
             const regionEl = document.getElementById('oopt-region-select');
 
             const search = searchEl ? searchEl.value : '';
             const sig = sigEl ? sigEl.value : '';
+            const status = statusEl ? statusEl.value : '';
             const region = regionEl ? regionEl.value : '';
 
             const tbody = document.getElementById('oopt-table-body');
@@ -2269,6 +2279,7 @@ export const startAdminServer = (telegramClient) => {
                 limit: String(ooptLimit), 
                 search: search, 
                 sig: sig,
+                status: status,
                 region: region 
               });
               if (ooptPotaOnly) {
@@ -2296,22 +2307,33 @@ export const startAdminServer = (telegramClient) => {
                   ? '<span class="badge bg-success">🌲 Региональное</span>'
                   : '<span class="badge bg-warning text-dark">🏡 Местное</span>';
 
+                var isReorg = r.is_reorganized || (r.status && r.status.toLowerCase() !== 'действующий');
+                var reorgBadge = '';
+                if (isReorg) {
+                  reorgBadge = ' <span class="badge bg-warning text-dark border border-warning ms-1" title="Территория реорганизована или ликвидирована"><i class="bi bi-exclamation-triangle-fill"></i> Реорганизован</span>';
+                  if (r.parent_pota) {
+                    reorgBadge += ' <a href="https://next.pota.app/park/' + r.parent_pota.reference + '" target="_blank" class="badge bg-info text-dark text-decoration-none ms-1" title="' + escapeHtmlClient(r.parent_pota.notes || r.parent_pota.name) + '"><i class="bi bi-diagram-3"></i> В составе ' + r.parent_pota.reference + '</a>';
+                  }
+                }
+
                 var potaBadge = r.pota_ref
                   ? ' <a href="https://next.pota.app/park/' + r.pota_ref + '" target="_blank" class="badge bg-success text-decoration-none ms-1" title="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check-circle-fill"></i> В POTA: ' + r.pota_ref + '</a>'
                   : '';
+
+                var parentPotaJson = r.parent_pota ? escapeHtmlClient(JSON.stringify(r.parent_pota)) : '';
 
                 var submitterBtn;
                 if (r.pota_restricted) {
                   submitterBtn = '<button type="button" class="btn btn-sm btn-outline-secondary disabled" title="Приём заявок для данного региона временно приостановлен комитетом POTA"><i class="bi bi-slash-circle"></i> Недоступно для POTA</button>';
                 } else if (r.pota_ref) {
-                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>';
+                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-pota="' + parentPotaJson + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>';
                 } else {
-                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="" data-pota-name=""><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
+                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="" data-pota-name="" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-pota="' + parentPotaJson + '"><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
                 }
 
                 return '<tr>' +
                   '<td><code>' + r.nid + '</code></td>' +
-                  '<td><strong>' + escapeHtmlClient(r.title) + '</strong>' + potaBadge + '</td>' +
+                  '<td><strong>' + escapeHtmlClient(r.title) + '</strong>' + reorgBadge + potaBadge + '</td>' +
                   '<td>' + sigBadge + '</td>' +
                   '<td><small>' + escapeHtmlClient(r.category || '') + '</small></td>' +
                   '<td><small class="text-muted">' + escapeHtmlClient(r.ate || '') + '</small></td>' +
@@ -2367,6 +2389,13 @@ export const startAdminServer = (telegramClient) => {
           var ooptSigEl = document.getElementById('oopt-sig-select');
           if (ooptSigEl) {
             ooptSigEl.addEventListener('change', function() {
+              loadAdminOopt(1);
+            });
+          }
+
+          var ooptStatusEl = document.getElementById('oopt-status-select');
+          if (ooptStatusEl) {
+            ooptStatusEl.addEventListener('change', function() {
               loadAdminOopt(1);
             });
           }
@@ -3133,9 +3162,15 @@ export const startAdminServer = (telegramClient) => {
             return translated || transliterated || '';
           }
 
-          function formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid) {
+          function formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota) {
             var parts = [];
-            if (status && status !== 'действующий') parts.push('Статус: ' + status);
+            if (status && status !== 'действующий') {
+              if (status === 'реорганизованный') {
+                parts.push('⚠️ Реорганизован' + (parentPota && parentPota.reference ? (' (в составе ' + parentPota.reference + ')') : ''));
+              } else {
+                parts.push('Статус: ' + status);
+              }
+            }
 
             var nestedList = [];
             if (Array.isArray(nestedOopt)) {
@@ -3176,7 +3211,7 @@ export const startAdminServer = (telegramClient) => {
             return text;
           }
 
-          function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid, area, status, profile, nestedOopt) {
+          function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid, area, status, profile, nestedOopt, parentPota) {
             var detectedCategory = deduceOoptCategoryClient(rawTitle, category);
             var cleanName = cleanOoptNameClient(rawTitle, detectedCategory);
             var nameEn = formatDualParkNameClient(cleanName, detectedCategory);
@@ -3195,7 +3230,7 @@ export const startAdminServer = (telegramClient) => {
             var latVal = (lat !== null && lat !== undefined && lat !== '' && !isNaN(Number(lat))) ? Number(lat).toFixed(4) : '';
             var lonVal = (lon !== null && lon !== undefined && lon !== '' && !isNaN(Number(lon))) ? Number(lon).toFixed(4) : '';
 
-            var clarifyText = formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid);
+            var clarifyText = formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota);
 
             return {
               name: cleanName,
@@ -3322,9 +3357,14 @@ export const startAdminServer = (telegramClient) => {
               var nid = btn.getAttribute('data-nid') || '';
               var area = btn.getAttribute('data-area') || '';
               var status = btn.getAttribute('data-status') || '';
-              var profile = btn.getAttribute('data-profile') || '';
+              var isReorg = btn.getAttribute('data-is-reorganized') === 'true' || (status && status.toLowerCase() !== 'действующий');
+              var parentPotaJson = btn.getAttribute('data-parent-pota');
+              var parentPota = null;
+              if (parentPotaJson) {
+                try { parentPota = JSON.parse(parentPotaJson); } catch(_) {}
+              }
 
-              var parsed = parseOoptForSubmitter(title, category, sig, ate, lat, lon, nid, area, status, profile);
+              var parsed = parseOoptForSubmitter(title, category, sig, ate, lat, lon, nid, area, status, profile, null, parentPota);
 
               document.getElementById('subm-nid').value = nid;
               document.getElementById('subm-name').value = parsed.name;
@@ -3348,6 +3388,42 @@ export const startAdminServer = (telegramClient) => {
               document.getElementById('subm-region').value = parsed.region;
               document.getElementById('subm-site').value = parsed.site;
               document.getElementById('subm-clarify').value = parsed.clarification || '';
+
+              var reorgBox = document.getElementById('subm-reorganized-alert-container');
+              function renderReorgAlertClient(isReorganized, parent) {
+                if (!reorgBox) return;
+                if (isReorganized) {
+                  var parentInfoHtml = '';
+                  var parentBtnHtml = '';
+                  if (parent && parent.reference) {
+                    parentInfoHtml = '<div class="mt-2 p-2 bg-white rounded border border-warning small text-dark">' +
+                      '<strong>🌲 Территория вошла в состав парка POTA:</strong> ' +
+                      '<span class="badge bg-success fs-6">' + escapeHtmlClient(parent.reference) + '</span> ' +
+                      '<strong>' + escapeHtmlClient(parent.name || '') + '</strong>' +
+                      (parent.notes ? ('<div class="text-muted mt-1 small"><em>' + escapeHtmlClient(parent.notes) + '</em></div>') : '') +
+                      '</div>';
+                    parentBtnHtml = '<a href="https://next.pota.app/park/' + parent.reference + '" target="_blank" class="btn btn-sm btn-success text-nowrap ms-3 align-self-center shadow-sm"><i class="bi bi-box-arrow-up-right"></i> Открыть ' + parent.reference + '</a>';
+                  } else {
+                    parentInfoHtml = '<div class="small text-muted mt-1">Внимание: данный объект имеет статус «реорганизованный» (упразднён). Проверьте, не вошёл ли он в состав другого заповедника или нацпарка.</div>';
+                  }
+
+                  reorgBox.innerHTML = '<div class="alert alert-warning border border-2 border-warning d-flex align-items-start justify-content-between p-3 mb-3 shadow-sm" style="background-color: #fff3cd; color: #664d03;">' +
+                    '<div class="d-flex align-items-start gap-2">' +
+                      '<i class="bi bi-exclamation-triangle-fill fs-3 text-warning flex-shrink-0 mt-0"></i>' +
+                      '<div>' +
+                        '<div class="fs-6 fw-bold mb-1 text-danger">⚠️ ВНИМАНИЕ: Территория РЕОРГАНИЗОВАНА (упразднена)</div>' +
+                        '<div class="small">По официальным данным реестра ООПТ объект реорганизован. В текущем виде как отдельная единица он больше не существует.</div>' +
+                        parentInfoHtml +
+                      '</div>' +
+                    '</div>' +
+                    parentBtnHtml +
+                  '</div>';
+                } else {
+                  reorgBox.innerHTML = '';
+                }
+              }
+              renderReorgAlertClient(isReorg, parentPota);
+
               var potaRef = btn.getAttribute('data-pota-ref') || '';
               var potaName = btn.getAttribute('data-pota-name') || '';
               var potaBox = document.getElementById('subm-pota-badge-container');
@@ -3394,6 +3470,10 @@ export const startAdminServer = (telegramClient) => {
                       document.getElementById('subm-coords-status').textContent = 'Координаты отсутствуют';
                     }
 
+                    if (details.is_reorganized || details.parent_pota) {
+                      renderReorgAlertClient(true, details.parent_pota || parentPota);
+                    }
+
                     // Dynamically update clarification if details contain nested OOPTs!
                     var updatedClarify = formatClarificationClient(
                       details.profile || profile,
@@ -3402,7 +3482,8 @@ export const startAdminServer = (telegramClient) => {
                       details.parsedNestedOopt || details.nested_oopt,
                       title,
                       parsed.name,
-                      nid
+                      nid,
+                      details.parent_pota || parentPota
                     );
                     if (updatedClarify) {
                       document.getElementById('subm-clarify').value = updatedClarify;
@@ -4520,8 +4601,8 @@ export const startAdminServer = (telegramClient) => {
 
   app.get('/api/admin/oopt', requireAuth, (req, res) => {
     try {
-      const { page, limit, search, sig, category, region, pota } = req.query;
-      const data = getOoptList({ page, limit, search, sig, category, region, pota });
+      const { page, limit, search, sig, category, status, region, pota } = req.query;
+      const data = getOoptList({ page, limit, search, sig, category, status, region, pota });
       res.json(data);
     } catch (err) {
       res.status(500).json({ error: err.message });

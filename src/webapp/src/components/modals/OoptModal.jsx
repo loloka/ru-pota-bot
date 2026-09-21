@@ -114,6 +114,8 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
   if (!oopt) return null;
 
   const current = details || oopt;
+  const isReorganized = Boolean(current.is_reorganized || (current.status && current.status.toLowerCase() !== 'действующий'));
+  const parentPota = current.parent_pota;
   const isRestricted = Boolean(current.pota_restricted || isPotaRestrictedAte(current.ate || current.rf_subjects || form.region));
   const previewText = formatR2bbxTemplate(form);
   const yandexInfo = getYandexMapsUrl(form.lat, form.lon, form.name, form.region);
@@ -214,9 +216,24 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                 </span>
               )}
               {current.status && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  ● {current.status}
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium ${
+                  isReorganized
+                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-semibold'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                }`}>
+                  {isReorganized ? '⚠️ ' : '● '}
+                  {current.status}
                 </span>
+              )}
+              {parentPota && (
+                <a
+                  href={`https://next.pota.app/park/${parentPota.reference}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-cyan-500/15 text-cyan-800 dark:text-cyan-200 border border-cyan-500/30 hover:underline"
+                >
+                  В составе {parentPota.reference}
+                </a>
               )}
               {current.pota_ref && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
@@ -273,6 +290,55 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
           {activeTab === 'submitter' ? (
             /* POTA Park Submitter (spec by Manu R2BBX) */
             <div className="space-y-3.5">
+              {/* Reorganized Warning Banner (Top & Bright) */}
+              {isReorganized && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/15 dark:bg-amber-500/20 border-2 border-amber-500/40 text-amber-950 dark:text-amber-200 text-xs shadow-sm space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-sm text-red-600 dark:text-red-400">
+                          ⚠️ ВНИМАНИЕ: Территория РЕОРГАНИЗОВАНА (упразднена)
+                        </div>
+                        <div className="text-[11px] leading-relaxed text-amber-900 dark:text-amber-300 mt-0.5">
+                          По официальным данным реестра ООПТ данный объект имеет статус: <span className="font-bold text-red-600 dark:text-red-400">«реорганизованный»</span>. В текущем виде как отдельная единица он больше не существует.
+                        </div>
+                      </div>
+                    </div>
+                    {parentPota && (
+                      <a
+                        href={`https://next.pota.app/park/${parentPota.reference}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 shrink-0 shadow-sm"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        {parentPota.reference}
+                      </a>
+                    )}
+                  </div>
+
+                  {parentPota ? (
+                    <div className="p-2.5 bg-white/80 dark:bg-slate-900/70 rounded-xl border border-amber-500/30 text-[11px] text-slate-800 dark:text-slate-200">
+                      <div className="font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                        <Trees className="w-3.5 h-3.5" />
+                        <span>Вошёл в состав парка POTA:</span>
+                        <span className="font-bold font-mono">{parentPota.reference}</span> — {parentPota.name}
+                      </div>
+                      {parentPota.notes && (
+                        <div className="text-slate-600 dark:text-slate-400 mt-1 text-[10px] italic">
+                          {parentPota.notes}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-amber-800/90 dark:text-amber-300/90">
+                      ℹ️ Проверьте, не вошла ли эта территория в состав соседнего заповедника или нацпарка перед подачей заявки.
+                    </div>
+                  )}
+                </div>
+              )}
+
               {current.pota_ref && (
                 <div className="p-3 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-between gap-2.5 text-xs shadow-xs">
                   <div className="flex items-start gap-2">

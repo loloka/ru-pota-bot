@@ -1288,6 +1288,9 @@ export function getRegionalPotaStats() {
       totalActivations: 0,
       totalQsos: 0,
       ooptCandidates: 0,
+      coverageRate: 0,
+      diplomaStatus: 'zero',
+      diplomaStatusText: '0% (нет парков)',
       isRestricted
     });
   }
@@ -1315,26 +1318,83 @@ export function getRegionalPotaStats() {
     }
   }
 
+  // Exact territorial matching against oopt_registry ATE
   for (const row of ooptRows) {
-    const ateLower = (row.ate || '').toLowerCase();
+    const a = (row.ate || '').toLowerCase();
     for (const [code, item] of regionMap.entries()) {
       if (item.isRestricted) continue;
-      const kw = item.name.toLowerCase().replace(/(республика|край|область|автономный|округ|город|федерального значения)/g, '').trim();
-      if (kw.length >= 3 && ateLower.includes(kw)) {
+
+      let matches = false;
+      if (code === 'RU-MC') {
+        matches = a.startsWith('москва') && !a.includes('московская');
+      } else if (code === 'RU-MS') {
+        matches = a.includes('московская');
+      } else if (code === 'RU-SP') {
+        matches = a.includes('санкт-петербург') && !a.includes('ленинградская');
+      } else if (code === 'RU-LN') {
+        matches = a.includes('ленинградская');
+      } else if (code === 'RU-KM') {
+        matches = a.includes('ханты-мансийский');
+      } else if (code === 'RU-FJ') {
+        matches = a.includes('русская арктика') || a.includes('франц');
+      } else {
+        matches = a.includes(item.name.toLowerCase());
+      }
+
+      if (matches) {
         item.ooptCandidates += row.cnt;
       }
     }
   }
 
+  // Special case: Franz Josef Land (RU-FJ) is covered by 1 mega-reserve (RU-0065 Russian Arctic)
+  if (regionMap.has('RU-FJ')) {
+    const fj = regionMap.get('RU-FJ');
+    if (fj.ooptCandidates === 0) fj.ooptCandidates = 1;
+  }
+
   const regionsList = [];
   let zeroParkCount = 0;
+  let totalPotentialParks = 0;
+  let matureRegionsCount = 0;
+  let lowCoverageCount = 0;
 
   for (const item of regionMap.values()) {
     item.unactivatedParks = item.totalParks - item.activatedParks;
     item.activationRate = item.totalParks > 0 ? Math.round((item.activatedParks / item.totalParks) * 100) : 0;
-    if (!item.isRestricted && item.totalParks === 0) {
-      zeroParkCount++;
+    
+    // POTA Coverage of Region's Nature Reserves
+    const totalPotential = Math.max(item.totalParks, item.ooptCandidates);
+    item.coverageRate = totalPotential > 0 ? Number(Math.min(100, Math.round((item.totalParks / totalPotential) * 100))) : 0;
+
+    // Diploma Maturity / Completeness Status (per coordinator Manu R2BBX)
+    if (item.isRestricted) {
+      item.diplomaStatus = 'restricted';
+      item.diplomaStatusText = 'Недоступно';
+    } else if (item.totalParks === 0) {
+      item.diplomaStatus = 'zero';
+      item.diplomaStatusText = '0 парков (требует создания)';
+    } else if (item.coverageRate >= 80) {
+      item.diplomaStatus = 'mature';
+      item.diplomaStatusText = 'Зрелый диплом (≥80% ООПТ)';
+    } else if (item.coverageRate >= 40) {
+      item.diplomaStatus = 'medium';
+      item.diplomaStatusText = 'Среднее покрытие (40–79%)';
+    } else if (item.coverageRate >= 10) {
+      item.diplomaStatus = 'growing';
+      item.diplomaStatusText = 'Начальное покрытие (10–39%)';
+    } else {
+      item.diplomaStatus = 'initial';
+      item.diplomaStatusText = 'Слабое (<10%) — ранняя стадия';
     }
+
+    if (!item.isRestricted) {
+      totalPotentialParks += totalPotential;
+      if (item.totalParks === 0) zeroParkCount++;
+      if (item.coverageRate >= 70) matureRegionsCount++;
+      if (item.totalParks > 0 && item.coverageRate < 20) lowCoverageCount++;
+    }
+
     regionsList.push(item);
   }
 
@@ -1343,6 +1403,8 @@ export function getRegionalPotaStats() {
     if (a.totalParks !== b.totalParks) return a.totalParks - b.totalParks;
     return a.name.localeCompare(b.name, 'ru');
   });
+
+  const overallCoverageRate = totalPotentialParks > 0 ? Number(((parks.length / totalPotentialParks) * 100).toFixed(1)) : 0;
 
   return {
     summary: {
@@ -1353,7 +1415,11 @@ export function getRegionalPotaStats() {
       totalActivations: overallActivations,
       totalQsos: overallQsos,
       zeroParkCount,
-      totalRegions: regionsList.filter(r => !r.isRestricted).length
+      totalRegions: regionsList.filter(r => !r.isRestricted).length,
+      totalPotentialParks,
+      overallCoverageRate,
+      matureRegionsCount,
+      lowCoverageCount
     },
     regions: regionsList
   };

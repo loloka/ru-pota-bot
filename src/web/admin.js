@@ -915,9 +915,16 @@ export const startAdminServer = (telegramClient) => {
                       </div>
                     </div>
                     <div class="col-6 col-md-2">
-                      <div class="card bg-success border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="active" title="Фильтр: активные регионы (&ge;1 активации)">
+                      <div class="card bg-success border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="mature" title="Фильтр: регионы с высоким покрытием (≥70% ООПТ — зрелый диплом)">
+                        <div class="small opacity-75"><i class="bi bi-award-fill"></i> Покрытие ООПТ (РФ)</div>
+                        <div class="fs-4 fw-bold text-white" id="reg-stat-coverage">...</div>
+                        <div class="small opacity-75" style="font-size:11px;" id="reg-stat-mature-count">...</div>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                      <div class="card bg-info border-0 shadow-sm h-100 p-2 text-center text-dark reg-kpi-card" data-filter="active" title="Фильтр: активные регионы (&ge;1 активации)">
                         <div class="small opacity-75"><i class="bi bi-broadcast-pin"></i> Активировано &ge;1 раз</div>
-                        <div class="fs-4 fw-bold text-white" id="reg-stat-activated">...</div>
+                        <div class="fs-4 fw-bold text-dark" id="reg-stat-activated">...</div>
                         <div class="small opacity-75" style="font-size:11px;" id="reg-stat-rate">...</div>
                       </div>
                     </div>
@@ -936,17 +943,10 @@ export const startAdminServer = (telegramClient) => {
                       </div>
                     </div>
                     <div class="col-6 col-md-2">
-                      <div class="card bg-info border-0 shadow-sm h-100 p-2 text-center text-dark reg-kpi-card" data-filter="active" data-sort="activations_desc" title="Сортировка: активные регионы по числу выездов операторов">
-                        <div class="small opacity-75"><i class="bi bi-people-fill"></i> Всего активаций</div>
-                        <div class="fs-4 fw-bold text-dark" id="reg-stat-activations">...</div>
-                        <div class="small opacity-75" style="font-size:11px;">выездов операторов</div>
-                      </div>
-                    </div>
-                    <div class="col-6 col-md-2">
                       <div class="card bg-warning border-0 shadow-sm h-100 p-2 text-center text-dark reg-kpi-card" data-filter="all" data-sort="qsos_desc" title="Сортировка: регионы по общему числу QSO в эфире">
                         <div class="small opacity-75"><i class="bi bi-activity"></i> Всего связей (QSO)</div>
                         <div class="fs-4 fw-bold text-dark" id="reg-stat-qsos">...</div>
-                        <div class="small opacity-75" style="font-size:11px;">в радиоэфире РФ</div>
+                        <div class="small opacity-75" style="font-size:11px;" id="reg-stat-activations-subtitle">...</div>
                       </div>
                     </div>
                   </div>
@@ -961,7 +961,9 @@ export const startAdminServer = (telegramClient) => {
                         <div class="col-md-4">
                           <select class="form-select form-select-sm" id="reg-filter-select">
                             <option value="all">Все регионы РФ</option>
-                            <option value="zero">⚠️ Без парков (0 POTA — срочно добавить)</option>
+                            <option value="mature">🏆 Зрелый диплом (≥70% покрытия ООПТ)</option>
+                            <option value="low_coverage">⚠️ Низкое покрытие (&lt;20% ООПТ — «авансовый» диплом)</option>
+                            <option value="zero">🔴 Без парков (0 POTA — срочно добавить)</option>
                             <option value="low">🟡 Мало парков (1–3 POTA)</option>
                             <option value="unactivated">⚪ Без активаций (0% связей)</option>
                             <option value="active">🟢 Активные регионы (&ge;1 активации)</option>
@@ -969,10 +971,12 @@ export const startAdminServer = (telegramClient) => {
                         </div>
                         <div class="col-md-4">
                           <select class="form-select form-select-sm" id="reg-sort-select">
-                            <option value="parks_asc">Сортировка: Меньше парков (приоритет создания)</option>
-                            <option value="parks_desc">Сортировка: Больше парков</option>
+                            <option value="coverage_desc">Сортировка: Покрытие POTA (высокое &rarr; низкое, зрелые)</option>
+                            <option value="coverage_asc">Сортировка: Покрытие POTA (низкое &rarr; высокое, потенциал)</option>
+                            <option value="parks_desc">Сортировка: Больше парков POTA</option>
+                            <option value="parks_asc">Сортировка: Меньше парков POTA</option>
+                            <option value="oopt_desc">Сортировка: Больше ООПТ в регионе</option>
                             <option value="rate_desc">Сортировка: По % активности (высокий &rarr; низкий)</option>
-                            <option value="rate_asc">Сортировка: По % активности (низкий &rarr; высокий)</option>
                             <option value="activations_desc">Сортировка: По числу активаций</option>
                             <option value="qsos_desc">Сортировка: По числу связей QSO</option>
                             <option value="name_asc">Сортировка: По названию (А &rarr; Я)</option>
@@ -987,16 +991,16 @@ export const startAdminServer = (telegramClient) => {
                     <table class="table table-hover table-striped mb-0 align-middle">
                       <thead class="table-light">
                         <tr>
-                          <th style="width: 90px;">Код POTA</th>
+                          <th style="width: 85px;">Код POTA</th>
                           <th>Регион РФ</th>
-                          <th class="text-center" style="width: 100px;">Всего парков</th>
-                          <th class="text-center" style="width: 110px;">Активировано (&ge;1)</th>
-                          <th class="text-center" style="width: 100px;">Не активно</th>
-                          <th style="width: 170px;">Заинтересованность</th>
-                          <th class="text-center" style="width: 100px;">Активаций</th>
-                          <th class="text-center" style="width: 110px;">Связей (QSO)</th>
-                          <th class="text-center" style="width: 130px;">В реестре ООПТ</th>
-                          <th class="text-end" style="width: 120px;">Действие</th>
+                          <th class="text-center" style="width: 95px;">В POTA</th>
+                          <th class="text-center" style="width: 95px;">В ООПТ</th>
+                          <th style="width: 175px;">Покрытие POTA (Зрелость)</th>
+                          <th class="text-center" style="width: 90px;">Активировано</th>
+                          <th style="width: 140px;">Активность парков</th>
+                          <th class="text-center" style="width: 85px;">Выездов</th>
+                          <th class="text-center" style="width: 95px;">QSO</th>
+                          <th class="text-end" style="width: 105px;">Действие</th>
                         </tr>
                       </thead>
                       <tbody id="regions-table-body">
@@ -3347,11 +3351,13 @@ export const startAdminServer = (telegramClient) => {
               if (data && data.summary && data.regions) {
                 var s = data.summary;
                 if (document.getElementById('reg-stat-total')) document.getElementById('reg-stat-total').textContent = s.totalParks;
+                if (document.getElementById('reg-stat-coverage')) document.getElementById('reg-stat-coverage').textContent = (s.overallCoverageRate || 0) + '%';
+                if (document.getElementById('reg-stat-mature-count')) document.getElementById('reg-stat-mature-count').textContent = (s.matureRegionsCount || 0) + ' зрелых регионов (≥70%)';
                 if (document.getElementById('reg-stat-activated')) document.getElementById('reg-stat-activated').textContent = s.activatedParks;
                 if (document.getElementById('reg-stat-rate')) document.getElementById('reg-stat-rate').textContent = s.activationRate + '% от всех парков';
                 if (document.getElementById('reg-stat-unactivated')) document.getElementById('reg-stat-unactivated').textContent = s.unactivatedParks;
                 if (document.getElementById('reg-stat-zero')) document.getElementById('reg-stat-zero').textContent = s.zeroParkCount;
-                if (document.getElementById('reg-stat-activations')) document.getElementById('reg-stat-activations').textContent = Number(s.totalActivations).toLocaleString('ru-RU');
+                if (document.getElementById('reg-stat-activations-subtitle')) document.getElementById('reg-stat-activations-subtitle').textContent = Number(s.totalActivations).toLocaleString('ru-RU') + ' выездов';
                 if (document.getElementById('reg-stat-qsos')) document.getElementById('reg-stat-qsos').textContent = Number(s.totalQsos).toLocaleString('ru-RU');
 
                 allRegionsData = data.regions || [];
@@ -3379,6 +3385,8 @@ export const startAdminServer = (telegramClient) => {
                 if (!matchName && !matchCode) return false;
               }
 
+              if (filter === 'mature') return !r.isRestricted && r.coverageRate >= 70;
+              if (filter === 'low_coverage') return !r.isRestricted && r.totalParks > 0 && r.coverageRate < 20;
               if (filter === 'zero') return !r.isRestricted && r.totalParks === 0;
               if (filter === 'low') return !r.isRestricted && r.totalParks > 0 && r.totalParks <= 3;
               if (filter === 'unactivated') return !r.isRestricted && r.totalParks > 0 && r.activatedParks === 0;
@@ -3389,8 +3397,11 @@ export const startAdminServer = (telegramClient) => {
             // Sorting
             list.sort(function(a, b) {
               if (a.isRestricted !== b.isRestricted) return a.isRestricted ? 1 : -1;
+              if (sort === 'coverage_desc') return b.coverageRate - a.coverageRate || b.totalParks - a.totalParks;
+              if (sort === 'coverage_asc') return a.coverageRate - b.coverageRate || a.totalParks - b.totalParks;
               if (sort === 'parks_asc') return a.totalParks - b.totalParks || a.name.localeCompare(b.name, 'ru');
               if (sort === 'parks_desc') return b.totalParks - a.totalParks || a.name.localeCompare(b.name, 'ru');
+              if (sort === 'oopt_desc') return b.ooptCandidates - a.ooptCandidates || b.totalParks - a.totalParks;
               if (sort === 'rate_desc') return b.activationRate - a.activationRate || b.totalParks - a.totalParks;
               if (sort === 'rate_asc') return a.activationRate - b.activationRate || a.totalParks - b.totalParks;
               if (sort === 'activations_desc') return b.totalActivations - a.totalActivations || b.totalQsos - a.totalQsos;
@@ -3412,6 +3423,12 @@ export const startAdminServer = (telegramClient) => {
               else if (r.activationRate > 0) badgeClass = 'bg-warning text-dark';
               else badgeClass = 'bg-secondary';
 
+              var covBadgeClass = 'bg-danger';
+              if (r.coverageRate >= 70) covBadgeClass = 'bg-success';
+              else if (r.coverageRate >= 40) covBadgeClass = 'bg-primary';
+              else if (r.coverageRate >= 20) covBadgeClass = 'bg-info';
+              else if (r.coverageRate >= 5) covBadgeClass = 'bg-warning text-dark';
+
               var parksBadge = r.totalParks === 0
                 ? '<span class="badge bg-danger">0 POTA</span>'
                 : '<strong>' + r.totalParks + '</strong>';
@@ -3419,30 +3436,42 @@ export const startAdminServer = (telegramClient) => {
               var restrictedBadge = r.isRestricted ? '<span class="badge bg-danger ms-1" style="font-size:10px;">недоступно</span>' : '';
 
               var ooptBadge = r.ooptCandidates > 0
-                ? '<span class="badge bg-light text-dark border">' + Number(r.ooptCandidates).toLocaleString('ru-RU') + ' ООПТ</span>'
+                ? '<span class="badge bg-light text-dark border">' + Number(r.ooptCandidates).toLocaleString('ru-RU') + '</span>'
                 : '<span class="text-muted">—</span>';
 
               var actionBtn = (!r.isRestricted && r.ooptCandidates > 0)
                 ? '<button type="button" class="btn btn-xs btn-outline-success py-1 px-2 btn-goto-oopt" data-region="' + escapeHtmlClient(r.name) + '" title="Открыть кандидаты в реестре ООПТ"><i class="bi bi-tree"></i> Кандидаты</button>'
                 : '<span class="text-muted small">—</span>';
 
+              var coverageCell = '<td>' +
+                '<div class="d-flex align-items-center gap-2">' +
+                  '<div class="progress flex-grow-1" style="height: 6px;" title="Покрытие ООПТ: ' + r.coverageRate + '%">' +
+                    '<div class="progress-bar ' + covBadgeClass + '" role="progressbar" style="width: ' + Math.min(100, r.coverageRate) + '%"></div>' +
+                  '</div>' +
+                  '<span class="small fw-bold" style="min-width: 38px;">' + r.coverageRate + '%</span>' +
+                '</div>' +
+                '<div class="text-muted" style="font-size: 10px; line-height: 1.1;">' + escapeHtmlClient(r.diplomaStatusText || '') + '</div>' +
+              '</td>';
+
+              var actCell = '<td>' +
+                '<div class="d-flex align-items-center gap-2">' +
+                  '<div class="progress flex-grow-1" style="height: 6px;">' +
+                    '<div class="progress-bar ' + badgeClass + '" role="progressbar" style="width: ' + r.activationRate + '%" aria-valuenow="' + r.activationRate + '" aria-valuemin="0" aria-valuemax="100"></div>' +
+                  '</div>' +
+                  '<span class="small fw-bold" style="min-width: 38px;">' + r.activationRate + '%</span>' +
+                '</div>' +
+              '</td>';
+
               html += '<tr>' +
                 '<td><span class="badge bg-secondary font-monospace">' + r.code + '</span></td>' +
                 '<td><strong>' + escapeHtmlClient(r.name) + '</strong>' + restrictedBadge + '</td>' +
                 '<td class="text-center">' + parksBadge + '</td>' +
+                '<td class="text-center">' + ooptBadge + '</td>' +
+                coverageCell +
                 '<td class="text-center"><span class="text-success fw-bold">' + r.activatedParks + '</span></td>' +
-                '<td class="text-center"><span class="text-muted">' + r.unactivatedParks + '</span></td>' +
-                '<td>' +
-                  '<div class="d-flex align-items-center gap-2">' +
-                    '<div class="progress flex-grow-1" style="height: 6px;">' +
-                      '<div class="progress-bar ' + badgeClass + '" role="progressbar" style="width: ' + r.activationRate + '%" aria-valuenow="' + r.activationRate + '" aria-valuemin="0" aria-valuemax="100"></div>' +
-                    '</div>' +
-                    '<span class="small fw-bold" style="min-width: 38px;">' + r.activationRate + '%</span>' +
-                  '</div>' +
-                '</td>' +
+                actCell +
                 '<td class="text-center">' + Number(r.totalActivations).toLocaleString('ru-RU') + '</td>' +
                 '<td class="text-center fw-bold">' + Number(r.totalQsos).toLocaleString('ru-RU') + '</td>' +
-                '<td class="text-center">' + ooptBadge + '</td>' +
                 '<td class="text-end">' + actionBtn + '</td>' +
               '</tr>';
             });

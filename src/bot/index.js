@@ -21,6 +21,7 @@ import { statsHandler } from './commands/stats.js';
 import { subHandler, getSubsKeyboard, getDeleteSubsKeyboard } from './commands/sub.js';
 import { banHandler, muteHandler, kickHandler } from './commands/mod.js';
 import { onairHandler, onairActionHandler } from './commands/onair.js';
+import { regionsHandler } from './commands/regions.js';
 
 // Import scenes
 import { spotWizard } from './scenes/spotWizard.js';
@@ -430,6 +431,8 @@ bot.command('start', startHandler);
 bot.command('onair', onairHandler);
 bot.command('stats', statsHandler);
 bot.command('sub', subHandler);
+bot.command('regions', regionsHandler);
+bot.command('region', regionsHandler);
 bot.command('ban', banHandler);
 bot.command('kick', kickHandler);
 bot.command('mute', muteHandler);
@@ -720,6 +723,7 @@ bot.hears('🏞 Инфо по парку', (ctx) => { ctx.message.text='/park'; 
 bot.hears('🔍 Поиск позывного', (ctx) => { return ctx.scene.enter('STATS_WIZARD'); });
 bot.hears('🔔 Мои подписки', (ctx) => { ctx.message.text='/sub'; return import('./commands/sub.js').then(m=>m.subHandler(ctx)); });
 bot.hears('📝 Регистрация', (ctx) => { ctx.message.text='/callsign'; return ctx.scene.enter('CALLSIGN_WIZARD'); });
+bot.hears(/^(🗺️?\s*регионы|статистика\s+регионов|\/regions|\/region)$/i, regionsHandler);
 
 // Help handlers
 const helpText = `📚 *Справка по боту RU-POTA*
@@ -733,6 +737,8 @@ const helpText = `📚 *Справка по боту RU-POTA*
 /sub — Открыть меню управления подписками\n/sub [ПОЗЫВНОЙ] — Быстрая подписка/отписка на позывной\n/sub [ПАРК] — Быстрая подписка/отписка на парк (напр. /sub RU-0065)
 /callsign — Сменить или зарегистрировать позывной (при необходимости)
 /onair — Кто в эфире прямо сейчас (активные активаторы)
+/regions — Статистика покрытия регионов РФ и готовность дипломов «Вся область»
+/regions [КОД/НАЗВАНИЕ] — Покрытие конкретного региона (напр. /regions RU-NZ)
 
 *Как отправить спот?*
 1. Пройдите регистрацию (кнопка в меню).
@@ -801,7 +807,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.31\x1b[0m 📡             \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.32\x1b[0m 📡             \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

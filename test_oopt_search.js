@@ -60,4 +60,19 @@ assert(!enEsenin.includes('with.'), 'Initial С. must not be translated as with.
 assert(enEsenin.includes('named after S. A. Esenin'), 'Must contain "named after S. A. Esenin"');
 console.log('✅ PASS: Initial "С." is preserved and "им. С. А. Есенина" translates to "named after S. A. Esenin"');
 
+// 10. Test "Дикое поле" translates to "Wild Field" and dual name "Wild Field (Dikoe Pole)"
+const enWildField = translateNameToEnglish('Дикое поле', 'памятник природы');
+assert(enWildField.includes('Wild Field'), `Expected "Wild Field", got "${enWildField}"`);
+import { formatDualParkName } from './src/services/ooptService.js';
+const dualWildField = formatDualParkName('Дикое поле', 'памятник природы');
+assert.strictEqual(dualWildField, 'Wild Field (Dikoe Pole)');
+console.log('✅ PASS: "Дикое поле" correctly translates to "Wild Field (Dikoe Pole)"');
+
+// 11. Test RU-0261 (Neprec Beam Nature Monument) matches "Балка Непрец" (nid 32793) in Orel oblast
+const neprecOopt = db.prepare('SELECT nid, title, ate, pota_ref, pota_name FROM oopt_registry WHERE nid = 32793').get();
+assert.ok(neprecOopt, 'OOPT nid 32793 must exist');
+assert.strictEqual(neprecOopt.pota_ref, 'RU-0261', 'Балка Непрец must be synced with RU-0261');
+assert.strictEqual(neprecOopt.pota_name, 'Neprec Beam Nature Monument');
+console.log('✅ PASS: RU-0261 (Neprec Beam) correctly matched and synced to "Балка Непрец" (nid 32793)');
+
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');

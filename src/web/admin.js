@@ -2593,6 +2593,7 @@ export const startAdminServer = (telegramClient) => {
             ['святой источник', 'Holy Spring'],
             ['русский лес', 'Russian Forest'],
             ['три брата', 'Three Brothers'],
+            ['дикое поле', 'Wild Field'],
 
             // 2. Prepositional phrases with settlements & locations
             ['у села|у с\\.', 'near the Village of'],
@@ -2730,8 +2731,10 @@ export const startAdminServer = (telegramClient) => {
             ['песк(и|ов|ам)', 'Sands'],
             ['урочищ(е|а|ем)', 'Tract'],
             ['участок|участка', 'Site'],
+            ['пол(е|я|ем|ях|ей)', 'Field'],
 
             // 9. Common adjectives
+            ['дик(ий|ая|ое|ие|ом|их)', 'Wild'],
             ['лесной|лесная|лесное|лесные|лесном', 'Forest'],
             ['горный|горная|горное|горные|горном', 'Mountain'],
             ['степной|степная|степное|степные|степном', 'Steppe'],

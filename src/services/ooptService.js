@@ -656,6 +656,7 @@ const RAW_GEOGRAPHIC_TERMS = [
   ['святой источник', 'Holy Spring'],
   ['русский лес', 'Russian Forest'],
   ['три брата', 'Three Brothers'],
+  ['дикое поле', 'Wild Field'],
 
   // 2. Prepositional phrases with settlements & locations
   ['у села|у с\\.', 'near the Village of'],
@@ -793,8 +794,10 @@ const RAW_GEOGRAPHIC_TERMS = [
   ['песк(и|ов|ам)', 'Sands'],
   ['урочищ(е|а|ем)', 'Tract'],
   ['участок|участка', 'Site'],
+  ['пол(е|я|ем|ях|ей)', 'Field'],
 
   // 9. Common adjectives
+  ['дик(ий|ая|ое|ие|ом|их)', 'Wild'],
   ['лесной|лесная|лесное|лесные|лесном', 'Forest'],
   ['горный|горная|горное|горные|горном', 'Mountain'],
   ['степной|степная|степное|степные|степном', 'Steppe'],
@@ -1059,37 +1062,59 @@ export async function translateOoptNameOnline(cleanName, category) {
              .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(лесная балка)(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'лесной овраг')
              .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(степная балка)(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'степной овраг')
              .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(каменная балка)(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'каменистый овраг')
-             .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(балк[аиеу])(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'овраг');
+             .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])(балк[аиеу])(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'овраг')
+             .replace(/(?<![а-яёА-ЯЁa-zA-Z0-9])дикое поле(?![а-яёА-ЯЁa-zA-Z0-9])/gi, 'Wild Field');
 
+  let rawTrans = null;
+
+  // 1. Google Translate API (client=gtx)
   try {
     const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=ru&tl=en&dt=t&q=' + encodeURIComponent(prep);
-    const res = await axios.get(url, { timeout: 4000 });
+    const res = await axios.get(url, {
+      timeout: 3000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
     if (res.data && Array.isArray(res.data[0])) {
-      const rawTrans = res.data[0].map(item => item[0]).join('').trim();
-      if (rawTrans) {
-        const words = rawTrans.split(/\s+/).map((w, idx) => {
-          if (!w) return '';
-          const lower = w.toLowerCase();
-          if (idx > 0 && ['in', 'on', 'near', 'at', 'with', 'between', 'around', 'of', 'the', 'and', 'a', 'an', 'named', 'after'].includes(lower)) {
-            return lower;
-          }
-          return w.charAt(0).toUpperCase() + w.slice(1);
-        });
-        const cleanTranslated = words.join(' ').replace(/\s+/g, ' ').trim();
-        const transliterated = transliterateOnly(cleanName);
-        if (cleanTranslated && transliterated && cleanTranslated.toLowerCase() !== transliterated.toLowerCase()) {
-          const transWords = cleanTranslated.trim().split(/\s+/).filter(Boolean);
-          // Per Manu R2BBX: if translated name is long (> 3 words or > 30 characters), use translation only
-          if (transWords.length > 3 || cleanTranslated.length > 30) {
-            return cleanTranslated;
-          }
-          return `${cleanTranslated} (${transliterated})`;
+      rawTrans = res.data[0].map(item => item[0]).join('').trim();
+    }
+  } catch (_) {}
+
+  // 2. Fallback to MyMemory translation API
+  if (!rawTrans) {
+    try {
+      const myMemoryUrl = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(prep) + '&langpair=ru|en';
+      const mmRes = await axios.get(myMemoryUrl, { timeout: 3500 });
+      if (mmRes.data?.responseData?.translatedText) {
+        const mmText = mmRes.data.responseData.translatedText.trim();
+        if (!mmText.toLowerCase().includes('mymemory') && !mmText.toLowerCase().includes('quota')) {
+          rawTrans = mmText;
         }
+      }
+    } catch (_) {}
+  }
+
+  if (rawTrans) {
+    const words = rawTrans.split(/\s+/).map((w, idx) => {
+      if (!w) return '';
+      const lower = w.toLowerCase();
+      if (idx > 0 && ['in', 'on', 'near', 'at', 'with', 'between', 'around', 'of', 'the', 'and', 'a', 'an', 'named', 'after'].includes(lower)) {
+        return lower;
+      }
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    });
+    const cleanTranslated = words.join(' ').replace(/\s+/g, ' ').trim();
+    const transliterated = transliterateOnly(cleanName);
+    if (cleanTranslated && transliterated && cleanTranslated.toLowerCase() !== transliterated.toLowerCase()) {
+      const transWords = cleanTranslated.trim().split(/\s+/).filter(Boolean);
+      // Per Manu R2BBX: if translated name is long (> 3 words or > 30 characters), use translation only
+      if (transWords.length > 3 || cleanTranslated.length > 30) {
         return cleanTranslated;
       }
+      return `${cleanTranslated} (${transliterated})`;
     }
-  } catch (_) {
-    // Network / timeout fallback to smart local translation
+    return cleanTranslated;
   }
 
   return formatDualParkName(cleanName, category);
@@ -1900,6 +1925,12 @@ const EN_TO_RU_WORDS = {
   'technical': ['техническ', 'лесотехническ'],
   'academy': ['академи'],
   'forestry': ['лесничеств', 'лесотехн'],
+  'beam': ['балк'],
+  'field': ['пол'],
+  'wild': ['дик'],
+  'steppe': ['степ'],
+  'ravine': ['овраг', 'балк'],
+  'gully': ['балк', 'овраг'],
 };
 
 const STOP_WORDS = new Set([
@@ -1917,10 +1948,10 @@ const DESCRIPTOR_WORDS = new Set([
   'bereg', 'berega', 'gora', 'gory', 'kamen', 'kamni', 'mys', 'kosa', 'balka', 'balki', 'yar', 'log',
   'ruchey', 'ruchi', 'istok', 'ustye', 'vodopad', 'klyuch', 'rodnik', 'rodniki', 'kholm', 'sopka', 'sopki',
   'lesopark', 'dacha', 'lesnichestvo', 'leskhoz', 'les', 'lesa', 'bor', 'bora', 'roshcha', 'dubrava',
-  'sad', 'peski', 'boloto', 'bolota', 'urochishche', 'urochishcha',
+  'sad', 'peski', 'boloto', 'bolota', 'urochishche', 'urochishcha', 'pole', 'polya',
   'river', 'lake', 'pond', 'island', 'shore', 'coast', 'valley', 'bog', 'marsh', 'swamp',
   'bay', 'gulf', 'spring', 'forest', 'wood', 'woods', 'grove', 'mountain', 'mount', 'hill', 'heights',
-  'cape', 'spit', 'waterfall', 'cave', 'tract', 'creek', 'brook'
+  'cape', 'spit', 'waterfall', 'cave', 'tract', 'creek', 'brook', 'beam', 'field', 'wild', 'gully', 'ravine', 'steppe'
 ]);
 
 function normalizeStem(token) {
@@ -1928,6 +1959,7 @@ function normalizeStem(token) {
   let s = token.toLowerCase();
   s = s.replace(/^y(?=[aeou])/i, '');
   s = s.replace(/yy|iy/g, 'y').replace(/i/g, 'y');
+  s = s.replace(/ts|tz|cz/g, 'c');
   s = s.replace(/(skiy|sky|skoy|skaya|skoe|nyy|naya|noe|nyn|ov|ev|in|ye|oe|aya|ogo|omu|ey|oy|a|e|o|u|y)$/, '');
   return s;
 }
@@ -1972,18 +2004,22 @@ export function syncPotaMatches() {
   const ruPota = fallback.filter(p => p.reference && p.reference.startsWith('RU-'));
   const ooptRows = db.prepare('SELECT nid, title, category, sig, ate, lat, lon FROM oopt_registry').all();
 
-  const ooptPrepared = ooptRows.map(o => ({
-    nid: o.nid,
-    title: o.title,
-    category: o.category,
-    sig: o.sig,
-    lat: o.lat ? parseFloat(o.lat) : null,
-    lon: o.lon ? parseFloat(o.lon) : null,
-    tokens: cleanTokens(o.title),
-    titleLower: (o.title || '').toLowerCase(),
-    catLower: (o.category || '').toLowerCase(),
-    ateLower: (o.ate || '').toLowerCase(),
-  }));
+  const ooptPrepared = ooptRows.map(o => {
+    const titleLower = (o.title || '').toLowerCase().trim();
+    return {
+      nid: o.nid,
+      title: o.title,
+      category: o.category,
+      sig: o.sig,
+      lat: o.lat ? parseFloat(o.lat) : null,
+      lon: o.lon ? parseFloat(o.lon) : null,
+      tokens: cleanTokens(o.title),
+      titleLower,
+      titleSlug: titleLower.replace(/[-_]/g, ' ').trim(),
+      catLower: (o.category || '').toLowerCase(),
+      ateLower: (o.ate || '').toLowerCase(),
+    };
+  });
 
   const potentialMatches = [];
 
@@ -1992,6 +2028,23 @@ export function syncPotaMatches() {
     const pNameLower = (p.name || '').toLowerCase();
     const pLat = parseFloat(p.lat);
     const pLon = parseFloat(p.lon);
+
+    // Direct URL hints from POTA website (NextGIS node or slug)
+    let targetNid = null;
+    let targetSlug = null;
+    if (p.website) {
+      try {
+        const decoded = decodeURIComponent(p.website);
+        const nodeM = decoded.match(/node\/(\d+)/);
+        if (nodeM) {
+          targetNid = parseInt(nodeM[1], 10);
+        }
+        const slugM = decoded.match(/\/oopt\/([^/?#]+)/);
+        if (slugM) {
+          targetSlug = slugM[1].replace(/[-_]/g, ' ').toLowerCase().trim();
+        }
+      } catch (_) {}
+    }
 
     // Region hints
     const regionHints = [];
@@ -2022,6 +2075,15 @@ export function syncPotaMatches() {
     for (const o of candidates) {
       let score = 0;
       let properNameMatch = false;
+
+      // Direct NextGIS URL / Node ID or OOPT Slug match
+      if (targetNid && o.nid === targetNid) {
+        score += 120;
+        properNameMatch = true;
+      } else if (targetSlug && (o.titleLower === targetSlug || o.titleSlug === targetSlug || o.titleLower.includes(targetSlug) || targetSlug.includes(o.titleLower))) {
+        score += 100;
+        properNameMatch = true;
+      }
 
       // Coordinate distance check
       if (pLat && pLon && o.lat && o.lon) {

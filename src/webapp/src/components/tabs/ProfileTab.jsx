@@ -41,6 +41,14 @@ export default function ProfileTab({
   const [linkingTelegram, setLinkingTelegram] = useState(false);
   const [telegramLinkModal, setTelegramLinkModal] = useState(null);
 
+  const hasWebSession = Boolean(
+    (typeof window !== 'undefined' && localStorage.getItem('rupota_web_token')) ||
+    !telegram.isAvailable ||
+    user?.isWeb ||
+    user?.auth_type === 'web' ||
+    user?.hasWebSession
+  );
+
   const handleLinkTelegram = async () => {
     telegram.haptic.impact('medium');
     setLinkingTelegram(true);
@@ -231,7 +239,7 @@ export default function ProfileTab({
               <h2 className="text-base font-bold text-slate-900 dark:text-white truncate">
                 {user.first_name} {user.last_name || ''}
               </h2>
-              {(user.isWeb || user.auth_type === 'web') && (
+              {(hasWebSession || user.isWeb || user.auth_type === 'web') && (
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0 flex items-center gap-1">
                   <Globe className="w-3 h-3" />
                   <span>WEB</span>
@@ -267,6 +275,18 @@ export default function ProfileTab({
               )}
             </div>
           </div>
+
+          {hasWebSession && onWebLogout && (
+            <button
+              type="button"
+              onClick={onWebLogout}
+              title={language === 'RU' ? 'Выйти из аккаунта' : 'Sign Out'}
+              aria-label={language === 'RU' ? 'Выйти из аккаунта' : 'Sign Out'}
+              className="p-2 rounded-xl text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition cursor-pointer active:scale-95 shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Pending Approval Notice Banner with live refresh */}
@@ -580,8 +600,8 @@ export default function ProfileTab({
         </div>
       </div>
 
-      {/* Logout button for Web users */}
-      {(user.isWeb || user.auth_type === 'web') && onWebLogout && (
+      {/* Logout button for Web / Standalone sessions */}
+      {hasWebSession && onWebLogout && (
         <div className="pt-1">
           <button
             type="button"
@@ -589,7 +609,7 @@ export default function ProfileTab({
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition active:scale-95 cursor-pointer shadow-sm"
           >
             <LogOut className="w-4 h-4" />
-            <span>{language === 'RU' ? 'Выйти из веб-аккаунта' : 'Sign Out of Web Account'}</span>
+            <span>{language === 'RU' ? 'Выйти из аккаунта' : 'Sign Out'}</span>
           </button>
         </div>
       )}

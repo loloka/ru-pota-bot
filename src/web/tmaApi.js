@@ -509,6 +509,7 @@ export function createTmaRouter(telegramClient) {
           status: user.status,
           auth_type: user.auth_type,
           isWeb: user.telegram_id < 0,
+          hasWebSession: true,
           notifications_enabled: user.notifications_enabled,
         },
       });
@@ -660,6 +661,7 @@ export function createTmaRouter(telegramClient) {
           email: dbUser.email || tgUser.email || null,
           auth_type: dbUser.auth_type || (dbUser.telegram_id < 0 ? 'web' : 'telegram'),
           isWeb: dbUser.telegram_id < 0,
+          hasWebSession: Boolean(req.headers['x-web-token'] || (req.headers['authorization']?.startsWith('Bearer ')) || tgUser?.hasWebSession),
           status: dbUser.status,
           reject_reason: dbUser.reject_reason || null,
           notifications_enabled: dbUser.notifications_enabled !== 0,

@@ -131,6 +131,7 @@ export function tmaUserMiddleware(req, res, next) {
         email: dbUser.email,
         auth_type: dbUser.auth_type || (dbUser.telegram_id < 0 ? 'web' : 'telegram'),
         isWeb: dbUser.telegram_id < 0,
+        hasWebSession: true,
       };
       return next();
     }

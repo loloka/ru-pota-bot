@@ -1,5 +1,17 @@
 # История изменений (Changelog)
 
+## [1.16.43] - 2026-09-21 (Make Logout Button Universally Visible in Profile for All Web Sessions)
+### Добавлено и исправлено
+- **Кнопка «Выйти из аккаунта» в Профиле (`ProfileTab.jsx`)**:
+  - Устранена проблема, из-за которой кнопка выхода не отображалась для пользователей сайта, чей профиль связан с Telegram-аккаунтом (`user.telegram_id > 0`), поскольку условие `(user.isWeb || user.auth_type === 'web')` оценивалось как `false`.
+  - Добавлено вычисление `hasWebSession`, проверяющее наличие токена в `localStorage`, флаг `!telegram.isAvailable` (авторизованная сессия в обычном браузере на сайте `pota.r9o.ru`), флаги `isWeb`, `auth_type === 'web'` и `hasWebSession`.
+  - Добавлена аккуратная кнопка быстрого выхода в шапку карточки профиля (рядом с именем и позывным) с подсказкой «Выйти из аккаунта».
+  - Основная кнопка внизу переименована в лаконичное и привычное «Выйти из аккаунта» (вместо «Выйти из веб-аккаунта»).
+- **Бэкенд (`tmaAuth.js` и `tmaApi.js`)**:
+  - В объектах ответов эндпоинтов `/api/tma/me` и `/api/tma/auth/verify-code`, а также в `req.telegramUser` добавлен явный флаг `hasWebSession: true` при авторизации по Web Token.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.43` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.42] - 2026-09-21 (Fix Syntax Error in Web Auth DM Notification Block)
 ### Исправлено
 - **Критический синтаксический фикс в `src/web/tmaApi.js`**:

@@ -84,8 +84,8 @@ export const regionsHandler = async (ctx) => {
       `• Всего парков POTA: <b>${summary.totalParks}</b> (активировано: ${summary.activatedParks})\n` +
       `• Кандидатов в реестре ООПТ: <b>${Number(summary.totalPotentialParks).toLocaleString('ru-RU')}</b>\n` +
       `• Среднее покрытие POTA: <b>${summary.overallCoverageRate}%</b>\n` +
-      `• Зрелых регионов (диплом ≥70%): <b>${summary.matureRegionsCount}</b> из ${summary.totalRegions}\n\n` +
-      `🏆 <b>Лидеры по зрелости диплома («Вся область»):</b>\n`;
+      `• Зрелых регионов (≥70% ООПТ): <b>${summary.matureRegionsCount}</b> из ${summary.totalRegions}\n\n` +
+      `🏆 <b>Лидеры по зрелости региона («Вся область»):</b>\n`;
 
     topLeaders.forEach((r, idx) => {
       msg += `${idx + 1}. <b>${r.name}</b> (<code>${r.code}</code>): <b>${r.coverageRate}%</b> (${r.totalParks} POTA / ${r.ooptCandidates} ООПТ)\n`;

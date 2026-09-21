@@ -915,7 +915,7 @@ export const startAdminServer = (telegramClient) => {
                       </div>
                     </div>
                     <div class="col-6 col-md-2">
-                      <div class="card bg-success border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="mature" title="Фильтр: регионы с высоким покрытием (≥70% ООПТ — зрелый диплом)">
+                      <div class="card bg-success border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="mature" title="Фильтр: регионы с высоким покрытием (≥70% ООПТ — зрелый регион)">
                         <div class="small opacity-75"><i class="bi bi-award-fill"></i> Покрытие ООПТ (РФ)</div>
                         <div class="fs-4 fw-bold text-white" id="reg-stat-coverage">...</div>
                         <div class="small opacity-75" style="font-size:11px;" id="reg-stat-mature-count">...</div>
@@ -961,8 +961,8 @@ export const startAdminServer = (telegramClient) => {
                         <div class="col-md-4">
                           <select class="form-select form-select-sm" id="reg-filter-select">
                             <option value="all">Все регионы РФ</option>
-                            <option value="mature">🏆 Зрелый диплом (≥70% покрытия ООПТ)</option>
-                            <option value="low_coverage">⚠️ Низкое покрытие (&lt;20% ООПТ — «авансовый» диплом)</option>
+                            <option value="mature">🏆 Зрелый регион (≥70% покрытия ООПТ)</option>
+                            <option value="low_coverage">⚠️ Низкое покрытие (&lt;20% ООПТ — молодой регион)</option>
                             <option value="zero">🔴 Без парков (0 POTA — срочно добавить)</option>
                             <option value="low">🟡 Мало парков (1–3 POTA)</option>
                             <option value="unactivated">⚪ Без активаций (0% связей)</option>
@@ -971,7 +971,7 @@ export const startAdminServer = (telegramClient) => {
                         </div>
                         <div class="col-md-4">
                           <select class="form-select form-select-sm" id="reg-sort-select">
-                            <option value="coverage_desc">Сортировка: Покрытие POTA (высокое &rarr; низкое, зрелые)</option>
+                            <option value="coverage_desc">Сортировка: Покрытие POTA (высокое &rarr; низкое, зрелые регионы)</option>
                             <option value="coverage_asc">Сортировка: Покрытие POTA (низкое &rarr; высокое, потенциал)</option>
                             <option value="parks_desc">Сортировка: Больше парков POTA</option>
                             <option value="parks_asc">Сортировка: Меньше парков POTA</option>

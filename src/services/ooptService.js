@@ -1376,7 +1376,7 @@ export function getRegionalPotaStats() {
       item.diplomaStatusText = '0 парков (требует создания)';
     } else if (item.coverageRate >= 80) {
       item.diplomaStatus = 'mature';
-      item.diplomaStatusText = 'Зрелый диплом (≥80% ООПТ)';
+      item.diplomaStatusText = 'Зрелый регион (≥80% ООПТ)';
     } else if (item.coverageRate >= 40) {
       item.diplomaStatus = 'medium';
       item.diplomaStatusText = 'Среднее покрытие (40–79%)';

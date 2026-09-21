@@ -90,15 +90,27 @@ export const startAdminServer = (telegramClient) => {
       const unpopulated = db.prepare('SELECT telegram_id FROM users WHERE telegram_id > 0 AND (first_name IS NULL AND username IS NULL) LIMIT 25').all();
       for (const u of unpopulated) {
         try {
-          const chat = await telegramClient.getChat(u.telegram_id);
-          if (chat) {
+          let userObj = null;
+          try {
+            const chat = await telegramClient.getChat(u.telegram_id);
+            if (chat) userObj = chat;
+          } catch (chatErr) {
+            const mainChatId = process.env.MAIN_CHAT_ID;
+            if (mainChatId && typeof telegramClient.getChatMember === 'function') {
+              try {
+                const member = await telegramClient.getChatMember(mainChatId, u.telegram_id);
+                if (member && member.user) userObj = member.user;
+              } catch (mErr) {}
+            }
+          }
+          if (userObj) {
             db.prepare(`
               UPDATE users 
               SET first_name = COALESCE(?, first_name),
                   last_name = COALESCE(?, last_name),
                   username = COALESCE(?, username)
               WHERE telegram_id = ?
-            `).run(chat.first_name || null, chat.last_name || null, chat.username || null, u.telegram_id);
+            `).run(userObj.first_name || null, userObj.last_name || null, userObj.username || null, u.telegram_id);
           }
         } catch (e) {}
         await new Promise(r => setTimeout(r, 1000));
@@ -236,11 +248,34 @@ export const startAdminServer = (telegramClient) => {
     // 2. Fetch from Telegram Bot API with 10s timeout
     try {
       const getChatTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('getChat Timeout (10s)')), 10000));
-      const chat = await Promise.race([
-        telegramClient.getChat(id),
-        getChatTimeout
-      ]);
-      
+      let userObj = null;
+      try {
+        const chat = await Promise.race([
+          telegramClient.getChat(id),
+          getChatTimeout
+        ]);
+        if (chat) userObj = chat;
+      } catch (chatErr) {
+        // Fallback: If direct chat not found, lookup member in main community chat
+        const mainChatId = process.env.MAIN_CHAT_ID;
+        if (mainChatId) {
+          try {
+            const memberTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('member Timeout (5s)')), 5000));
+            const member = await Promise.race([
+              telegramClient.getChatMember(mainChatId, numId),
+              memberTimeout
+            ]);
+            if (member && member.user) {
+              userObj = member.user;
+            }
+          } catch (memErr) {}
+        }
+      }
+
+      if (!userObj) {
+        throw new Error('Chat and member lookup not found');
+      }
+
       let avatarUrl = null;
       try {
         const photoTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('photo Timeout (5s)')), 5000));
@@ -258,9 +293,9 @@ export const startAdminServer = (telegramClient) => {
       }
 
       const info = {
-        first_name: chat.first_name || '',
-        last_name: chat.last_name || '',
-        username: chat.username || '',
+        first_name: userObj.first_name || '',
+        last_name: userObj.last_name || '',
+        username: userObj.username || '',
         avatar: avatarUrl
       };
 

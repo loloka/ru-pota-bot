@@ -1,5 +1,15 @@
 # История изменений (Changelog)
 
+## [1.16.49] - 2026-09-21 (Decouple POTA API from TG_PROXY & Add Group Chat Member Fallback)
+### Исправлено и улучшено
+- **Разделение прокси POTA API и Telegram (`potaApi.js`)**:
+  - `potaApi` больше не привязан к `TG_PROXY`. Запросы к `api.pota.app` теперь идут напрямую через HTTPS (либо через отдельную переменную `POTA_PROXY`, если она задана). Сбои прокси Telegram больше никогда не ломают загрузку спотов кластера!
+- **Резервный поиск профилей операторов через групповой чат (`admin.js`)**:
+  - Если прямой диалог 1-на-1 с ботом ещё не был открыт (`getChat` вернул `chat not found`), бот автоматически запрашивает профиль пользователя из закрытой группы сообщества через `telegramClient.getChatMember(MAIN_CHAT_ID, userId)`.
+  - Успешно полученные данные сразу сохраняются в SQLite.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.49` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.48] - 2026-09-21 (Instant Telegram User Profile Rendering & SQLite Caching in Admin)
 ### Исправлено и улучшено
 - **Мгновенное отображение Telegram-аккаунтов в панели управления (`admin.js`)**:

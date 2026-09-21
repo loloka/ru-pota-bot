@@ -1429,7 +1429,19 @@ export function createTmaRouter(telegramClient) {
         });
       }
 
-      const callsign = dbUser.callsign.toUpperCase().trim();
+      const registeredCallsign = dbUser.callsign.toUpperCase().trim();
+      let reqCall = (req.body?.callsign || '').trim().toUpperCase();
+      let activatorCall = registeredCallsign;
+      let isThirdPartySpot = false;
+
+      if (reqCall && reqCall !== registeredCallsign) {
+        if (!baseCallsignRegex.test(reqCall) || !hasLetterRegex.test(reqCall)) {
+          return res.status(400).json({ error: 'Неверный формат позывного оператора. Пример: R9OGL, RA3ABC, R9OGL/P' });
+        }
+        activatorCall = reqCall;
+        isThirdPartySpot = true;
+      }
+
       const spotSource = tgUser?.isWeb ? 'webapp' : (tgUser?.username ? `tma (@${tgUser.username})` : 'tma');
 
       const clientIp = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || '').toString().split(',')[0].trim();
@@ -1485,7 +1497,7 @@ export function createTmaRouter(telegramClient) {
       let fullComment = commentParts.length > 0 ? commentParts.join(' | ') : comment;
 
       const spotData = {
-        callsign,
+        callsign: activatorCall,
         reference,
         parkName,
         freq: String(freqNum),
@@ -1503,25 +1515,25 @@ export function createTmaRouter(telegramClient) {
         startedAt: new Date().toISOString(),
       };
 
-      console.log(`\x1b[36m[TMA API Spot]\x1b[0m 📻 \x1b[1m${callsign}\x1b[0m -> ${reference} (${freqMHz} MHz, ${mode}) | Источник: \x1b[33m${spotSource}\x1b[0m | IP: \x1b[90m${clientIp || 'unknown'}\x1b[0m`);
+      console.log(`\x1b[36m[TMA API Spot]\x1b[0m 📻 \x1b[1m${activatorCall}\x1b[0m -> ${reference} (${freqMHz} MHz, ${mode}) | Споттер: \x1b[32m${registeredCallsign}\x1b[0m | Источник: \x1b[33m${spotSource}\x1b[0m | IP: \x1b[90m${clientIp || 'unknown'}\x1b[0m`);
 
       // 1. Save in SQLite
       const insertResult = db.prepare(`
         INSERT INTO spots (callsign, reference, frequency, mode, comment, source, ip_address)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(callsign, reference, String(freqNum), mode, fullComment, spotSource, clientIp);
+      `).run(activatorCall, reference, String(freqNum), mode, fullComment, spotSource, clientIp);
 
       // 2. Broadcast to Telegram Activity Channel if available
       let channelMsgId = null;
-      if (telegramClient && ACTIVITY_CHANNEL_ID && !isBroadcastMutedCallsign(callsign)) {
+      if (telegramClient && ACTIVITY_CHANNEL_ID && !isBroadcastMutedCallsign(activatorCall)) {
         try {
           let channelId = ACTIVITY_CHANNEL_ID;
           if (channelId.includes('t.me/')) {
             channelId = '@' + channelId.split('t.me/')[1].replace('/', '');
           }
 
-          // If user had a previous spot, unpin it in channel and delete from discussion group!
-          if (tgUser && tgUser.id) {
+          // If user had a previous spot and is self-spotting, unpin it in channel and delete from discussion group
+          if (tgUser && tgUser.id && !isThirdPartySpot) {
             const prevUser = db.prepare('SELECT last_spot_msg_id FROM users WHERE telegram_id = ?').get(tgUser.id);
             if (prevUser && prevUser.last_spot_msg_id) {
               try {
@@ -1535,12 +1547,14 @@ export function createTmaRouter(telegramClient) {
           const timeQrtStr = timeStr ? ` (до ${timeStr.replace(/^до\s*/i, '')})` : '';
           const dateStr = new Date().toLocaleDateString('ru-RU');
 
-          const baseCall = getBaseCallsign(callsign);
-          const actLink = `<a href="https://next.pota.app/profile/${encodeURIComponent(baseCall)}">${callsign}</a>`;
+          const baseCall = getBaseCallsign(activatorCall);
+          const actLink = `<a href="https://next.pota.app/profile/${encodeURIComponent(baseCall)}">${activatorCall}</a>`;
           const refLink = `<a href="https://next.pota.app/park/${reference}">${reference}</a>`;
-          const sourceFooter = spotSource.includes('guest') 
-            ? '🌐 <i>Отправлено через RU-POTA Web</i>' 
-            : '📱 <i>Отправлено через RU-POTA Hub</i>';
+          const sourceFooter = isThirdPartySpot
+            ? `🌐 <i>Заспотил: <b>${registeredCallsign}</b> через RU-POTA Hub</i>`
+            : (spotSource.includes('guest') 
+                ? '🌐 <i>Отправлено через RU-POTA Web</i>' 
+                : '📱 <i>Отправлено через RU-POTA Hub</i>');
 
           const msg = `📅 <b>${dateStr} [СЕЙЧАС НА СВЯЗИ]${timeQrtStr}</b>\n` +
                       `📻 <b>${actLink}</b>\n` +
@@ -1565,8 +1579,8 @@ export function createTmaRouter(telegramClient) {
         }
       }
 
-      // 3. Update user's active spot in users table (if authenticated user)
-      if (dbUser && tgUser) {
+      // 3. Update user's active spot in users table (if self-spotting)
+      if (dbUser && tgUser && !isThirdPartySpot) {
         db.prepare(`
           UPDATE users 
           SET last_spot_data = ?, last_spot_msg_id = ? 
@@ -1577,12 +1591,14 @@ export function createTmaRouter(telegramClient) {
       // 4. Send to official POTA cluster (if not mocked)
       try {
         const postedSpotId = await potaApi.postSpot({
-          activator: callsign,
-          spotter: callsign,
+          activator: activatorCall,
+          spotter: registeredCallsign,
           reference,
           frequency: String(freqNum),
           mode,
-          comments: comment,
+          comments: isThirdPartySpot
+            ? (comment ? `${comment} (spot via ${registeredCallsign})` : `Spot via ${registeredCallsign}`)
+            : comment,
         });
         if (postedSpotId && postedSpotId > 0) {
           db.prepare('UPDATE spots SET spot_id = ? WHERE id = ?').run(postedSpotId, insertResult.lastInsertRowid);
@@ -1594,7 +1610,7 @@ export function createTmaRouter(telegramClient) {
       // 5. Notify Subscribers of this operator and park
       if (telegramClient) {
         try {
-          const cleanCall = callsign.split('/')[0].toUpperCase();
+          const cleanCall = activatorCall.split('/')[0].toUpperCase();
           const subscribers = db.prepare(`
             SELECT DISTINCT telegram_id FROM subscriptions 
             WHERE (type = 'callsign' AND UPPER(target) = ?)
@@ -1603,11 +1619,13 @@ export function createTmaRouter(telegramClient) {
 
           for (const sub of subscribers) {
             if (tgUser && sub.telegram_id === tgUser.id) continue;
+            const spotterNote = isThirdPartySpot ? `\n👤 Споттер: <b>${registeredCallsign}</b>` : '';
             const alertMsg = `🚨 <b>Спот по вашей подписке!</b>\n\n` +
-                             `📻 Оператор: <b>${callsign}</b>\n` +
+                             `📻 Оператор: <b>${activatorCall}</b>\n` +
                              `🏞️ Парк: <b>${reference}</b> (${parkName})\n` +
                              `⚙️ Частота: <b>${freqMHz} MHz</b> (${mode})\n` +
-                             (comment ? `📝 ${comment}\n` : '');
+                             (comment ? `📝 ${comment}\n` : '') +
+                             spotterNote;
             telegramClient.sendMessage(sub.telegram_id, alertMsg, { parse_mode: 'HTML' }).catch(() => {});
           }
         } catch (e) {
@@ -1617,8 +1635,11 @@ export function createTmaRouter(telegramClient) {
 
       res.json({
         success: true,
-        message: 'Спот успешно опубликован!',
-        activeSpot: spotData,
+        message: isThirdPartySpot
+          ? `Спот на оператора ${activatorCall} успешно опубликован!`
+          : 'Спот успешно опубликован!',
+        activeSpot: isThirdPartySpot ? null : spotData,
+        isThirdPartySpot
       });
     } catch (err) {
       console.error('[TMA API] Error publishing spot:', err.message);

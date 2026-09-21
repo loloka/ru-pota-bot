@@ -111,6 +111,7 @@ export default function DashboardTab({
   };
 
   // Modal form fields
+  const [operatorCallsign, setOperatorCallsign] = useState('');
   const [parkRef, setParkRef] = useState('RU-0073');
   const [freq, setFreq] = useState('14144');
   const [mode, setMode] = useState('SSB');
@@ -163,6 +164,7 @@ export default function DashboardTab({
   const handleOpenEditSpot = () => {
     telegram.haptic.impact('light');
     if (effectiveActiveSpot) {
+      setOperatorCallsign(effectiveActiveSpot.callsign || user?.callsign || '');
       setParkRef(effectiveActiveSpot.reference || 'RU-0073');
       const curFreq = effectiveActiveSpot.freqMHz || (effectiveActiveSpot.frequency ? (parseFloat(effectiveActiveSpot.frequency) > 1000 ? (parseFloat(effectiveActiveSpot.frequency) / 1000).toFixed(3) : effectiveActiveSpot.frequency) : effectiveActiveSpot.freq) || '14144';
       setFreq(curFreq);
@@ -179,13 +181,14 @@ export default function DashboardTab({
   const handleOpenNewSpot = () => {
     telegram.haptic.impact('medium');
     setIsEditingActiveSpot(false);
+    setOperatorCallsign(user?.callsign || '');
     setErrorMessage('');
     setSpotModalOpen(true);
   };
 
   const handleSpotSubmit = async (e) => {
     e.preventDefault();
-    let finalCallsign = user?.callsign;
+    const finalCallsign = (operatorCallsign || user?.callsign || '').trim().toUpperCase();
     if (!finalCallsign) {
       telegram.haptic.notification('error');
       setErrorMessage(
@@ -195,6 +198,8 @@ export default function DashboardTab({
       );
       return;
     }
+
+    const isThirdParty = Boolean(user?.callsign && finalCallsign !== user.callsign.toUpperCase());
 
     setErrorMessage('');
     setSubmitting(true);
@@ -221,9 +226,11 @@ export default function DashboardTab({
       telegram.haptic.notification('success');
       setSpotModalOpen(false);
       alert(
-        isEditingActiveSpot
-          ? (language === 'RU' ? 'Спот успешно обновлен и опубликован!' : 'Spot successfully updated!')
-          : (language === 'RU' ? 'Спот успешно опубликован в эфире!' : 'Spot successfully posted!')
+        isThirdParty
+          ? (language === 'RU' ? `Спот на оператора ${finalCallsign} успешно опубликован в эфире!` : `Spot for operator ${finalCallsign} successfully posted!`)
+          : (isEditingActiveSpot
+              ? (language === 'RU' ? 'Спот успешно обновлен и опубликован!' : 'Spot successfully updated!')
+              : (language === 'RU' ? 'Спот успешно опубликован в эфире!' : 'Spot successfully posted!'))
       );
       if (onRefreshProfile) await onRefreshProfile();
     } catch (err) {
@@ -799,9 +806,37 @@ export default function DashboardTab({
             )}
 
             <form onSubmit={handleSpotSubmit} className="space-y-3 text-xs">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                <span className="text-slate-500 dark:text-slate-400 font-medium">{language === 'RU' ? 'Оператор' : 'Operator'}:</span>
-                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">{user?.callsign}</span>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-600 dark:text-slate-400 font-medium">
+                    {language === 'RU' ? 'Позывной оператора' : 'Operator Callsign'}:
+                  </label>
+                  {user?.callsign && operatorCallsign && operatorCallsign.toUpperCase().trim() !== user.callsign && (
+                    <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      {language === 'RU' ? `(споттер: ${user.callsign})` : `(spotter: ${user.callsign})`}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input 
+                    type="text" 
+                    value={operatorCallsign}
+                    onChange={(e) => setOperatorCallsign(e.target.value.toUpperCase())}
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:border-emerald-500 outline-none text-sm font-bold tracking-wider"
+                    placeholder={user?.callsign || "R9OGL"}
+                    required
+                  />
+                  {user?.callsign && operatorCallsign && operatorCallsign.toUpperCase().trim() !== user.callsign && (
+                    <button
+                      type="button"
+                      onClick={() => setOperatorCallsign(user.callsign)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-semibold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-emerald-500 px-2 py-0.5 rounded-md transition-all active:scale-95 cursor-pointer shadow-2xs"
+                      title={language === 'RU' ? 'Вернуть свой позывной' : 'Reset to my callsign'}
+                    >
+                      {language === 'RU' ? 'Мой' : 'Reset'}
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-slate-600 dark:text-slate-400 mb-1 font-medium">{t('modal_park_label')}</label>

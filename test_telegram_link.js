@@ -123,6 +123,34 @@ const qrzUrl = `https://www.qrz.ru/db/${testCallsign}`;
 assert.strictEqual(qrzUrl, 'https://www.qrz.ru/db/R2TEST');
 console.log('✅ PASS: Admin approval regex supports negative web IDs and generates correct QRZ.ru link');
 
+// 6. Test Third-party Spotting Operator Resolution
+const baseCallsignRegex = /^([A-Z0-9]{1,4}\/)?([A-Z0-9]{1,3}[0-9][A-Z0-9]{1,5})(\/[A-Z0-9]{1,4})?$/;
+const hasLetterRegex = /[A-Z]/;
+function resolveSpotCallsign(dbUserCall, requestedCall) {
+  const registeredCall = dbUserCall.toUpperCase().trim();
+  const reqCall = (requestedCall || '').trim().toUpperCase();
+  if (reqCall && reqCall !== registeredCall) {
+    if (!baseCallsignRegex.test(reqCall) || !hasLetterRegex.test(reqCall)) {
+      throw new Error('INVALID_CALLSIGN');
+    }
+    return { activator: reqCall, spotter: registeredCall, isThirdParty: true };
+  }
+  return { activator: registeredCall, spotter: registeredCall, isThirdParty: false };
+}
+
+const selfSpot = resolveSpotCallsign('R9OGL', 'R9OGL');
+assert.strictEqual(selfSpot.activator, 'R9OGL');
+assert.strictEqual(selfSpot.spotter, 'R9OGL');
+assert.strictEqual(selfSpot.isThirdParty, false);
+
+const friendSpot = resolveSpotCallsign('R9OGL', 'UB3DAA/P');
+assert.strictEqual(friendSpot.activator, 'UB3DAA/P');
+assert.strictEqual(friendSpot.spotter, 'R9OGL');
+assert.strictEqual(friendSpot.isThirdParty, true);
+
+assert.throws(() => resolveSpotCallsign('R9OGL', '12345'), /INVALID_CALLSIGN/);
+console.log('✅ PASS: Third-party spot operator resolution correctly separates activator from registered spotter');
+
 // Cleanup
 db.prepare('DELETE FROM subscriptions WHERE telegram_id = ?').run(realTgId);
 db.prepare('DELETE FROM users WHERE telegram_id = ?').run(realTgId);

@@ -344,32 +344,32 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        2. Название для POTA (EN) <span className="text-emerald-500">*</span>
-                      </label>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      2. Название для POTA (EN) <span className="text-emerald-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={form.nameEn || ''}
+                        onChange={(e) => handleInputChange('nameEn', e.target.value)}
+                        placeholder="напр. Lakeside (Priozernyy)"
+                        className="w-full pl-3 pr-28 py-2 text-xs font-medium text-emerald-700 dark:text-emerald-300 rounded-xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      />
                       <button
                         type="button"
                         onClick={handleAiTranslate}
                         disabled={translating || !form.name}
-                        title="Улучшить перевод с помощью онлайн-нейропереводчика"
-                        className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                        title="Сгенерировать перевод названия на английский через нейросеть"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 transition-all disabled:opacity-40 cursor-pointer shadow-2xs whitespace-nowrap"
                       >
                         {translating ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <Loader2 className="w-3 h-3 animate-spin text-emerald-500" />
                         ) : (
-                          <Sparkles className="w-3 h-3" />
+                          <Sparkles className="w-3 h-3 text-emerald-500" />
                         )}
                         <span>{translating ? 'Перевод...' : 'AI перевод'}</span>
                       </button>
                     </div>
-                    <input
-                      type="text"
-                      value={form.nameEn || ''}
-                      onChange={(e) => handleInputChange('nameEn', e.target.value)}
-                      placeholder="напр. Lakeside (Priozernyy)"
-                      className="w-full px-3 py-2 text-xs font-medium text-emerald-700 dark:text-emerald-300 rounded-xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-                    />
                   </div>
                 </div>
 

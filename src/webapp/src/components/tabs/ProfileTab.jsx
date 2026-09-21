@@ -16,7 +16,8 @@ import {
   RefreshCw,
   Mail,
   LogOut,
-  Globe
+  Globe,
+  Shield
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -36,6 +37,29 @@ export default function ProfileTab({
   const [requestedCallsign, setRequestedCallsign] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState('');
+  const [linkingTelegram, setLinkingTelegram] = useState(false);
+  const [telegramLinkModal, setTelegramLinkModal] = useState(null);
+
+  const handleLinkTelegram = async () => {
+    telegram.haptic.impact('medium');
+    setLinkingTelegram(true);
+    try {
+      const res = await api.getTelegramLinkToken();
+      if (res?.botUrl) {
+        setTelegramLinkModal(res);
+        if (typeof window !== 'undefined' && window.Telegram?.WebApp?.openTelegramLink) {
+          window.Telegram.WebApp.openTelegramLink(res.botUrl);
+        } else {
+          window.open(res.botUrl, '_blank');
+        }
+      }
+    } catch (err) {
+      telegram.haptic.notification('error');
+      alert(err.message || 'Ошибка генерации ссылки');
+    } finally {
+      setLinkingTelegram(false);
+    }
+  };
 
   const handleToggleHaptics = () => {
     if (!hapticsEnabled) {
@@ -294,7 +318,135 @@ export default function ProfileTab({
         )}
       </div>
 
-      {/* 2. POTA Statistics Overview */}
+      {/* 2. Account Linking & Security (Telegram & Email) */}
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-1.5 px-1">
+          <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+            {language === 'RU' ? 'Связка аккаунтов и безопасность' : 'Account Linking & Security'}
+          </span>
+        </div>
+
+        {/* Telegram Linking Card */}
+        {user.telegram_id > 0 ? (
+          <div className="p-3.5 rounded-2xl glass-card border border-sky-500/20 bg-sky-500/5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 rounded-xl bg-sky-500/15 text-sky-500 shrink-0">
+                <Send className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">Telegram-аккаунт</h4>
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+                    {language === 'RU' ? 'Привязан ✅' : 'Connected ✅'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                  ID: <span className="font-mono">{user.telegram_id}</span>
+                  {user.username ? ` (@${user.username})` : ''} • {language === 'RU' ? 'Оповещения приходят в ЛС бота' : 'Alerts delivered via DM'}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-3.5 rounded-2xl glass-card border border-sky-500/30 bg-gradient-to-r from-sky-500/10 via-slate-800/30 to-emerald-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2.5 rounded-2xl bg-sky-500/20 text-sky-500 shrink-0">
+                <Send className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                  {language === 'RU' ? 'Привязать Telegram-аккаунт' : 'Connect Telegram Account'}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                  {language === 'RU' 
+                    ? 'Свяжите профиль с ботом @ru_pota_bot, чтобы получать уведомления по подпискам прямо в Telegram!' 
+                    : 'Connect with @ru_pota_bot to receive personal alerts on activators in Telegram!'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleLinkTelegram}
+              disabled={linkingTelegram}
+              className="shrink-0 flex items-center justify-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-md shadow-sky-500/20 transition active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>{linkingTelegram ? (language === 'RU' ? 'Связка...' : 'Linking...') : (language === 'RU' ? 'Привязать Telegram' : 'Link Telegram')}</span>
+              <ExternalLink className="w-3 h-3 opacity-80" />
+            </button>
+          </div>
+        )}
+
+        {/* Email Linking Card */}
+        {user.email ? (
+          <div className="p-3.5 rounded-2xl glass-card border border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <Mail className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white font-mono truncate">{user.email}</span>
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+                    {language === 'RU' ? 'Подтверждён ✅' : 'Verified ✅'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                  {language === 'RU'
+                    ? 'Используется для прямого входа на сайт, восстановления доступа и защиты подписок.'
+                    : 'Used for direct website login, account recovery and subscription backup.'}
+                </p>
+              </div>
+            </div>
+            {onOpenWebAuth && (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('light');
+                  onOpenWebAuth();
+                }}
+                className="shrink-0 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition"
+              >
+                {language === 'RU' ? 'Изменить' : 'Change'}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="p-3.5 rounded-2xl glass-card border border-emerald-500/25 bg-gradient-to-r from-emerald-500/10 via-slate-800/20 to-sky-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                  {language === 'RU' ? 'Привязать Email для сайта' : 'Link Email for Website'}
+                </h4>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                  {language === 'RU'
+                    ? 'Укажите Email, чтобы входить на сайт pota.r9o.ru напрямую без Telegram, восстановить доступ и не потерять подписки.'
+                    : 'Link an Email to sign in directly on pota.r9o.ru without Telegram and protect your subscriptions.'}
+                </p>
+              </div>
+            </div>
+            {onOpenWebAuth && (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('light');
+                  onOpenWebAuth();
+                }}
+                className="shrink-0 flex items-center justify-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-md shadow-emerald-500/20 transition active:scale-95 cursor-pointer"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>{language === 'RU' ? 'Привязать Email' : 'Link Email'}</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 3. POTA Statistics Overview */}
       <div className="space-y-2">
         <div className="flex items-center gap-1.5 px-1">
           <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -471,6 +623,71 @@ export default function ProfileTab({
                 {submitting ? (language === 'RU' ? 'Отправка...' : 'Sending...') : (language === 'RU' ? 'Отправить заявку' : 'Submit Request')}
               </button>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Telegram Link Modal */}
+      {telegramLinkModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setTelegramLinkModal(null)} />
+          <div className="relative w-full max-w-sm glass-card rounded-2xl p-5 shadow-2xl space-y-4 animate-slide-up">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Send className="w-5 h-5 text-sky-500" />
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  {language === 'RU' ? 'Привязка Telegram' : 'Connect Telegram'}
+                </h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setTelegramLinkModal(null)} 
+                className="text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-xs text-slate-700 dark:text-slate-300 space-y-2">
+              <p>
+                {language === 'RU' 
+                  ? `Ссылка для привязки позывного ${user.callsign} к боту готова!`
+                  : `Link for connecting callsign ${user.callsign} to the bot is ready!`}
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                {language === 'RU'
+                  ? 'Перейдите в бота по кнопке ниже и нажмите кнопку Start внизу диалога. Аккаунты объединятся автоматически.'
+                  : 'Open the bot using the button below and tap Start. The accounts will merge automatically.'}
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <a
+                href={telegramLinkModal.botUrl}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => telegram.haptic.impact('medium')}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-md shadow-sky-500/25 transition active:scale-95 text-center"
+              >
+                <Send className="w-4 h-4" />
+                <span>{language === 'RU' ? 'Открыть @ru_pota_bot' : 'Open @ru_pota_bot'}</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+              </a>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  telegram.haptic.impact('light');
+                  if (onRefreshProfile) await onRefreshProfile();
+                  setTelegramLinkModal(null);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 transition"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>{language === 'RU' ? 'Я привязал, обновить профиль' : 'Done, refresh profile'}</span>
+              </button>
+            </div>
           </div>
         </div>,
         document.body

@@ -308,6 +308,13 @@ export const api = {
   },
 
   /**
+   * Request deep-link token to connect Telegram account for a web user
+   */
+  async getTelegramLinkToken() {
+    return request('/link/telegram-token', { method: 'POST' });
+  },
+
+  /**
    * Logout web session
    */
   async logoutWeb() {

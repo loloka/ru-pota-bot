@@ -17,7 +17,8 @@ import {
   Radio,
   Clock,
   Sparkles,
-  Mail
+  Mail,
+  ChevronRight
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -592,32 +593,63 @@ export default function SubscriptionsTab({
       {/* ========================================================================= */}
       {activeSection === 'manage' && (
         <div className="space-y-4">
-          {/* 1. Master Toggle for DM notifications in Telegram */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl glass-card">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <Bell className="w-5 h-5" />
+          {/* 1. Master Toggle for DM notifications in Telegram OR Link Telegram prompt */}
+          {user?.telegram_id > 0 ? (
+            <div className="flex items-center justify-between p-3.5 rounded-2xl glass-card">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white">{t('subs_dm_title')}</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('subs_dm_desc')}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-xs font-bold text-slate-900 dark:text-white">{t('subs_dm_title')}</h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('subs_dm_desc')}</p>
-              </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={handleToggleDmAlerts}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                enableDmAlerts ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  enableDmAlerts ? 'translate-x-6' : 'translate-x-1'
+              <button
+                type="button"
+                onClick={handleToggleDmAlerts}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  enableDmAlerts ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
                 }`}
-              />
-            </button>
-          </div>
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    enableDmAlerts ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl glass-card border border-sky-500/25 bg-gradient-to-r from-sky-500/10 via-slate-800/30 to-emerald-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-xl bg-sky-500/15 text-sky-500 shrink-0">
+                  <Send className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white">
+                    {language === 'RU' ? 'Оповещения в Telegram' : 'Telegram Notifications'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    {language === 'RU' 
+                      ? 'Привяжите Telegram-аккаунт в Профиле, чтобы бот присылал персональные уведомления о выходе в эфир в ЛС.' 
+                      : 'Link your Telegram in Profile to receive instant bot notifications in direct messages.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('light');
+                  if (onNavigate) onNavigate('profile');
+                }}
+                className="shrink-0 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white bg-sky-500 hover:bg-sky-400 shadow-md shadow-sky-500/20 transition active:scale-95 cursor-pointer"
+              >
+                <span>{language === 'RU' ? 'Привязать Telegram' : 'Link Telegram'}</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* 2. Subscriptions Segment Switcher */}
           <div className="flex p-1 rounded-xl bg-slate-200/80 dark:bg-slate-900 border border-slate-300 dark:border-slate-800">

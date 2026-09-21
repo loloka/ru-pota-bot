@@ -471,6 +471,37 @@ export function createTmaRouter(telegramClient) {
     }
   });
 
+  // POST /api/tma/link/telegram-token - Generate deep-link token to connect Telegram account
+  router.post('/link/telegram-token', (req, res) => {
+    try {
+      const user = req.dbUser;
+      if (!user || !user.callsign) {
+        return res.status(401).json({ error: 'Требуется авторизация для привязки Telegram' });
+      }
+
+      const token = `link_${crypto.randomBytes(6).toString('hex')}`;
+      const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+      db.prepare(`
+        INSERT INTO telegram_link_tokens (token, callsign, web_telegram_id, expires_at)
+        VALUES (?, ?, ?, ?)
+      `).run(token, user.callsign, user.telegram_id, expiresAt);
+
+      const botUsername = process.env.BOT_USERNAME || 'ru_pota_bot';
+      const botUrl = `https://t.me/${botUsername}?start=${token}`;
+
+      res.json({
+        success: true,
+        token,
+        botUrl,
+        expiresInSeconds: 900
+      });
+    } catch (err) {
+      console.error('[TMA API] Error in /link/telegram-token:', err.message);
+      res.status(500).json({ error: 'Ошибка генерации ссылки привязки' });
+    }
+  });
+
   // ==========================================
   // 1. GET /api/tma/me - Operator Profile
   // ==========================================
@@ -1241,36 +1272,39 @@ export function createTmaRouter(telegramClient) {
 
 
   // ==========================================
-  // 3. POST /api/tma/spots - Publish / Respot (Supports both auth users & guests)
+  // 3. POST /api/tma/spots - Publish / Respot (Registered & Approved Operators Only)
   // ==========================================
   router.post('/spots', async (req, res) => {
     try {
       const tgUser = req.telegramUser;
-      let dbUser = null;
-      if (tgUser && tgUser.id) {
+      let dbUser = req.dbUser;
+      if (!dbUser && tgUser && tgUser.id) {
         dbUser = db.prepare('SELECT telegram_id, callsign, status FROM users WHERE telegram_id = ?').get(tgUser.id);
       }
 
-      let callsign = '';
-      let spotSource = 'webapp_guest';
-
-      if (dbUser && dbUser.status === 'approved' && dbUser.callsign) {
-        callsign = dbUser.callsign.toUpperCase().trim();
-        spotSource = tgUser?.username ? `tma (@${tgUser.username})` : 'tma';
-      } else {
-        // Guest or unapproved user posting via Web / TMA
-        callsign = (req.body?.callsign || '').toUpperCase().trim();
-        const baseCallsignRegex = /^([A-Z0-9]{1,4}\/)?([A-Z0-9]{1,3}[0-9][A-Z0-9]{1,5})(\/[A-Z0-9]{1,4})?$/;
-        const hasLetterRegex = /[A-Z]/;
-
-        if (!callsign || !baseCallsignRegex.test(callsign) || !hasLetterRegex.test(callsign)) {
-          return res.status(400).json({
-            error: 'Укажите корректный радиолюбительский позывной (например, R1ABC, RA/UA3ABC, R1ABC/P).',
-            code: 'INVALID_CALLSIGN'
-          });
-        }
-        spotSource = tgUser ? `tma_guest (@${tgUser.username || tgUser.id})` : 'webapp_guest';
+      if (!dbUser || !dbUser.callsign) {
+        return res.status(401).json({
+          error: 'Публикация спотов в эфире доступна только зарегистрированным операторам. Пожалуйста, войдите в аккаунт.',
+          code: 'AUTH_REQUIRED'
+        });
       }
+
+      if (dbUser.status === 'pending') {
+        return res.status(403).json({
+          error: 'Ваш позывной находится на проверке администратором. Публикация спотов станет доступна сразу после одобрения заявки.',
+          code: 'APPROVAL_PENDING'
+        });
+      }
+
+      if (dbUser.status !== 'approved') {
+        return res.status(403).json({
+          error: 'У вашего аккаунта нет прав для отправки спотов.',
+          code: 'FORBIDDEN'
+        });
+      }
+
+      const callsign = dbUser.callsign.toUpperCase().trim();
+      const spotSource = tgUser?.isWeb ? 'webapp' : (tgUser?.username ? `tma (@${tgUser.username})` : 'tma');
 
       const clientIp = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || '').toString().split(',')[0].trim();
 

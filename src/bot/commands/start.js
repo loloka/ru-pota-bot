@@ -1,4 +1,5 @@
 import { deleteUserMessage, replyWithAutoDelete } from '../utils.js';
+import db from '../../db/database.js';
 
 let lastGroupStartMsgId = null;
 
@@ -77,6 +78,85 @@ export const startHandler = async (ctx) => {
     ],
     resize_keyboard: true
   };
+
+  // Check startPayload for account linking (e.g. /start link_abc123)
+  const text = ctx.message?.text || '';
+  const payload = ctx.startPayload || (text.includes(' ') ? text.split(' ')[1] : '');
+
+  if (payload && payload.startsWith('link_')) {
+    const token = payload;
+    const linkRecord = db.prepare('SELECT * FROM telegram_link_tokens WHERE token = ?').get(token);
+
+    if (linkRecord) {
+      if (Date.now() > linkRecord.expires_at) {
+        db.prepare('DELETE FROM telegram_link_tokens WHERE token = ?').run(token);
+        return ctx.reply(
+          '⚠️ <b>Срок действия ссылки истек</b>\n\nПожалуйста, запросите новую ссылку для привязки Telegram в личном кабинете на сайте <a href="https://pota.r9o.ru">pota.r9o.ru</a>.',
+          { parse_mode: 'HTML' }
+        );
+      }
+
+      const currentTgId = ctx.from.id;
+      const webTgId = linkRecord.web_telegram_id;
+      const callsign = linkRecord.callsign;
+
+      // Check if currentTgId already exists in users
+      const existingTgUser = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(currentTgId);
+      const webUser = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(webTgId);
+
+      if (existingTgUser) {
+        // Link web user credentials to existing Telegram user
+        db.prepare(`
+          UPDATE users 
+          SET web_token = COALESCE(?, web_token),
+              email = COALESCE(?, email),
+              callsign = ?
+          WHERE telegram_id = ?
+        `).run(webUser?.web_token || null, webUser?.email || null, callsign, currentTgId);
+
+        // Migrate subscriptions from webTgId to currentTgId
+        if (webTgId !== currentTgId) {
+          const webSubs = db.prepare('SELECT type, target, target_name FROM subscriptions WHERE telegram_id = ?').all(webTgId);
+          for (const s of webSubs) {
+            db.prepare(`
+              INSERT INTO subscriptions (telegram_id, type, target, target_name)
+              VALUES (?, ?, ?, ?)
+              ON CONFLICT(telegram_id, type, target) DO NOTHING
+            `).run(currentTgId, s.type, s.target, s.target_name);
+          }
+          // Migrate user notifications
+          db.prepare('UPDATE user_notifications SET user_id = ? WHERE user_id = ?').run(currentTgId, webTgId);
+          // Clean up old temporary web user
+          db.prepare('DELETE FROM users WHERE telegram_id = ?').run(webTgId);
+        }
+      } else {
+        // Update web user row to the real telegram_id
+        db.prepare(`
+          UPDATE users
+          SET telegram_id = ?
+          WHERE telegram_id = ?
+        `).run(currentTgId, webTgId);
+
+        db.prepare('UPDATE subscriptions SET telegram_id = ? WHERE telegram_id = ?').run(currentTgId, webTgId);
+        db.prepare('UPDATE user_notifications SET user_id = ? WHERE user_id = ?').run(currentTgId, webTgId);
+      }
+
+      // Delete token
+      db.prepare('DELETE FROM telegram_link_tokens WHERE token = ?').run(token);
+
+      console.log(`\x1b[32m[Telegram Link]\x1b[0m 🔗 Привязан Telegram ID ${currentTgId} к позывному ${callsign}`);
+
+      return ctx.reply(
+        `🎉 <b>Telegram успешно привязан!</b>\n\n` +
+        `Ваш Telegram-аккаунт успешно связан с позывным <b>${callsign}</b>.\n` +
+        `Теперь все персональные оповещения по подпискам на операторов и парки будут приходить сюда в ЛС!\n\n` +
+        `Вы также можете управлять спотами и подписками через меню бота. 73! 🌲📡`,
+        { parse_mode: 'HTML', reply_markup: mainMenu }
+      );
+    } else {
+      return ctx.reply('⚠️ Ссылка привязки не найдена или уже была использована.', { parse_mode: 'HTML' });
+    }
+  }
 
   // Если это личные сообщения
   if (ctx.state.user) {

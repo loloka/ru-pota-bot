@@ -168,6 +168,15 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_email_verif_lookup ON email_verifications (email, code);
   CREATE INDEX IF NOT EXISTS idx_email_verif_email ON email_verifications (email);
+
+  CREATE TABLE IF NOT EXISTS telegram_link_tokens (
+    token TEXT PRIMARY KEY,
+    callsign TEXT NOT NULL,
+    web_telegram_id INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_tg_link_tokens_token ON telegram_link_tokens (token);
 `);
 
 // Migration for existing tables

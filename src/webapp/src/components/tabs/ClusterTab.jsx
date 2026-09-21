@@ -119,8 +119,8 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
         onRequireAuth(
           language === 'RU' ? 'Подписка на позывной' : 'Follow Callsign',
           language === 'RU'
-            ? `Чтобы бот присылал вам в ЛС уведомления о спотах оператора ${callsign}, откройте приложение через Telegram-бота @ru_pota_bot.`
-            : `To get DM alerts whenever ${callsign} spots from a park, please open this app inside @ru_pota_bot.`
+            ? `Чтобы получать в ЛС уведомления о спотах оператора ${callsign}, авторизуйтесь через Telegram-бота @ru_pota_bot.`
+            : `To get DM alerts whenever ${callsign} spots from a park, please sign in via @ru_pota_bot.`
         );
       } else {
         telegram.openTelegramBot('hub');

@@ -519,18 +519,22 @@ export function createTmaRouter(telegramClient) {
         return res.json({ status: 'expired', error: 'Срок действия сессии истёк' });
       }
 
-      if (session.status === 'confirmed' && session.telegram_id) {
+      if ((session.status === 'confirmed' || session.status === 'used') && session.telegram_id) {
         const user = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(session.telegram_id);
         if (!user) {
           return res.status(404).json({ error: 'Пользователь не найден в базе' });
         }
 
-        // Generate persistent web token for this Telegram operator
-        const webToken = crypto.randomBytes(32).toString('hex');
-        db.prepare('UPDATE users SET web_token = ? WHERE telegram_id = ?').run(webToken, user.telegram_id);
-        db.prepare(`UPDATE telegram_login_sessions SET status = 'used' WHERE id = ?`).run(session.id);
-
-        console.log(`\x1b[32m[Telegram Auth]\x1b[0m 🌐 Авторизован через deep-link: ${user.callsign} (TG: ${user.telegram_id})`);
+        // Generate persistent web token if not present, or use existing user.web_token
+        let webToken = user.web_token;
+        if (!webToken) {
+          webToken = crypto.randomBytes(32).toString('hex');
+          db.prepare('UPDATE users SET web_token = ? WHERE telegram_id = ?').run(webToken, user.telegram_id);
+        }
+        if (session.status !== 'used') {
+          db.prepare(`UPDATE telegram_login_sessions SET status = 'used' WHERE id = ?`).run(session.id);
+          console.log(`\x1b[32m[Telegram Auth]\x1b[0m 🌐 Авторизован через deep-link: ${user.callsign} (TG: ${user.telegram_id})`);
+        }
 
         return res.json({
           success: true,
@@ -574,7 +578,7 @@ export function createTmaRouter(telegramClient) {
 
       const session = db.prepare(`
         SELECT * FROM telegram_login_sessions 
-        WHERE code = ? AND status = 'confirmed' AND expires_at > ?
+        WHERE code = ? AND (status = 'confirmed' OR status = 'used') AND expires_at > ?
         ORDER BY id DESC LIMIT 1
       `).get(cleanCode, now);
 
@@ -589,12 +593,16 @@ export function createTmaRouter(telegramClient) {
         return res.status(404).json({ error: 'Пользователь не найден' });
       }
 
-      // Generate persistent web token for this Telegram operator
-      const webToken = crypto.randomBytes(32).toString('hex');
-      db.prepare('UPDATE users SET web_token = ? WHERE telegram_id = ?').run(webToken, user.telegram_id);
-      db.prepare(`UPDATE telegram_login_sessions SET status = 'used' WHERE id = ?`).run(session.id);
-
-      console.log(`\x1b[32m[Telegram Auth]\x1b[0m 🌐 Авторизован по 6-значному коду ${cleanCode}: ${user.callsign} (TG: ${user.telegram_id})`);
+      // Generate persistent web token if not present, or use existing user.web_token
+      let webToken = user.web_token;
+      if (!webToken) {
+        webToken = crypto.randomBytes(32).toString('hex');
+        db.prepare('UPDATE users SET web_token = ? WHERE telegram_id = ?').run(webToken, user.telegram_id);
+      }
+      if (session.status !== 'used') {
+        db.prepare(`UPDATE telegram_login_sessions SET status = 'used' WHERE id = ?`).run(session.id);
+        console.log(`\x1b[32m[Telegram Auth]\x1b[0m 🌐 Авторизован по 6-значному коду ${cleanCode}: ${user.callsign} (TG: ${user.telegram_id})`);
+      }
 
       res.json({
         success: true,

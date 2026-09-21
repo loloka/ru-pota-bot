@@ -139,8 +139,38 @@ export default function App() {
   // 1. Initial load
   useEffect(() => {
     telegram.init();
-    loadProfile();
+
+    // Check for auth_token query parameter (e.g. returning from Telegram bot 1-click login or /login)
+    const urlParams = new URLSearchParams(window.location.search);
+    const authToken = urlParams.get('auth_token');
+
+    if (authToken) {
+      setLoadingProfile(true);
+      api.pollTelegramLogin(authToken)
+        .then((res) => {
+          if (res?.status === 'confirmed' && res?.token) {
+            telegram.haptic.notification('success');
+            urlParams.delete('auth_token');
+            const newSearch = urlParams.toString();
+            const cleanUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash;
+            window.history.replaceState({}, document.title, cleanUrl);
+          }
+          loadProfile(false);
+        })
+        .catch(() => {
+          loadProfile(false);
+        });
+    } else {
+      loadProfile();
+    }
   }, [loadProfile]);
+
+  // Auto-close auth modal if user profile becomes authenticated
+  useEffect(() => {
+    if (user && authModal.open) {
+      setAuthModal({ open: false, title: '', reason: '' });
+    }
+  }, [user, authModal.open]);
 
   // 2. Refresh on app focus or visibility change (e.g. returning after checking Telegram chat)
   useEffect(() => {

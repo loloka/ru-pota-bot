@@ -73,7 +73,7 @@ export const loginHandler = async (ctx) => {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '🌐 Открыть RU-POTA Hub', url: 'https://pota.r9o.ru/app' }]
+          [{ text: '🌐 Открыть RU-POTA Hub', url: `https://pota.r9o.ru/app?auth_token=${token}` }]
         ]
       }
     }

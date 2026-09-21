@@ -134,7 +134,7 @@ export const startHandler = async (ctx) => {
         parse_mode: 'HTML',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🌐 Вернуться в RU-POTA Hub', url: 'https://pota.r9o.ru/app' }]
+            [{ text: '🌐 Вернуться в RU-POTA Hub', url: `https://pota.r9o.ru/app?auth_token=${token}` }]
           ]
         }
       }

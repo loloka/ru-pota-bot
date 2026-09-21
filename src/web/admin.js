@@ -83,6 +83,29 @@ export const startAdminServer = (telegramClient) => {
     res.sendFile(path.join(webappDist, 'index.html'));
   });
 
+  // Gentle background warm-up of Telegram user profiles for existing users
+  setTimeout(async () => {
+    try {
+      if (!telegramClient || typeof telegramClient.getChat !== 'function') return;
+      const unpopulated = db.prepare('SELECT telegram_id FROM users WHERE telegram_id > 0 AND (first_name IS NULL AND username IS NULL) LIMIT 25').all();
+      for (const u of unpopulated) {
+        try {
+          const chat = await telegramClient.getChat(u.telegram_id);
+          if (chat) {
+            db.prepare(`
+              UPDATE users 
+              SET first_name = COALESCE(?, first_name),
+                  last_name = COALESCE(?, last_name),
+                  username = COALESCE(?, username)
+              WHERE telegram_id = ?
+            `).run(chat.first_name || null, chat.last_name || null, chat.username || null, u.telegram_id);
+          }
+        } catch (e) {}
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    } catch (e) {}
+  }, 15000);
+
   // Telegram Mini App REST API
   app.use('/api/tma', createTmaRouter(telegramClient));
 
@@ -190,25 +213,40 @@ export const startAdminServer = (telegramClient) => {
         return res.json({ first_name: 'Web User', last_name: '', username: '', avatar: null, isWeb: true });
       }
     }
-    console.log('[Web Admin] Fetching user info for ID:', id);
+
     if (userCache.has(id)) {
-      console.log('[Web Admin] Returning cached info for', id);
       return res.json(userCache.get(id));
     }
+
+    // 1. Check if SQLite already has profile info stored
     try {
-      // Create a timeout promise
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000));
-      
+      const dbUser = db.prepare('SELECT first_name, last_name, username, avatar_url FROM users WHERE telegram_id = ?').get(numId);
+      if (dbUser && (dbUser.first_name || dbUser.last_name || dbUser.username)) {
+        const info = {
+          first_name: dbUser.first_name || '',
+          last_name: dbUser.last_name || '',
+          username: dbUser.username || '',
+          avatar: dbUser.avatar_url || null
+        };
+        userCache.set(id, info);
+        return res.json(info);
+      }
+    } catch (dbErr) {}
+
+    // 2. Fetch from Telegram Bot API with 10s timeout
+    try {
+      const getChatTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('getChat Timeout (10s)')), 10000));
       const chat = await Promise.race([
         telegramClient.getChat(id),
-        timeout
+        getChatTimeout
       ]);
       
       let avatarUrl = null;
       try {
+        const photoTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('photo Timeout (5s)')), 5000));
         const photos = await Promise.race([
           telegramClient.getUserProfilePhotos(id, 0, 1),
-          timeout
+          photoTimeout
         ]);
         if (photos && photos.total_count > 0) {
           const fileId = photos.photos[0][0].file_id;
@@ -216,26 +254,45 @@ export const startAdminServer = (telegramClient) => {
           avatarUrl = link.toString();
         }
       } catch (e) {
-        console.log('[Web Admin] Failed to fetch avatar for', id, e.message);
+        // Avatar fetch error is non-fatal
       }
+
       const info = {
         first_name: chat.first_name || '',
         last_name: chat.last_name || '',
         username: chat.username || '',
         avatar: avatarUrl
       };
+
+      // Persist to SQLite so future visits need 0 API calls
+      try {
+        db.prepare(`
+          UPDATE users 
+          SET first_name = COALESCE(?, first_name),
+              last_name = COALESCE(?, last_name),
+              username = COALESCE(?, username),
+              avatar_url = COALESCE(?, avatar_url)
+          WHERE telegram_id = ?
+        `).run(info.first_name || null, info.last_name || null, info.username || null, info.avatar || null, numId);
+      } catch (e) {}
+
       userCache.set(id, info);
-      console.log('[Web Admin] Fetched info successfully for', id);
       res.json(info);
     } catch (e) {
-      console.error('[Web Admin] Failed to fetch user info for', id, e.message);
-      const fallbackInfo = {
-        first_name: '',
-        last_name: '',
-        username: '',
-        avatar: null
-      };
-      userCache.set(id, fallbackInfo);
+      console.warn('[Web Admin] Could not fetch Telegram info for', id, e.message);
+      // Fallback: check if DB has partial info, otherwise return empty without permanent cache
+      let fallbackInfo = { first_name: '', last_name: '', username: '', avatar: null };
+      try {
+        const row = db.prepare('SELECT first_name, last_name, username, avatar_url FROM users WHERE telegram_id = ?').get(numId);
+        if (row) {
+          fallbackInfo = {
+            first_name: row.first_name || '',
+            last_name: row.last_name || '',
+            username: row.username || '',
+            avatar: row.avatar_url || null
+          };
+        }
+      } catch (err) {}
       res.json(fallbackInfo);
     }
   });
@@ -247,7 +304,7 @@ export const startAdminServer = (telegramClient) => {
     res.setHeader('Expires', '0');
 
     // 1. Users
-    const usersStmt = db.prepare("SELECT telegram_id, callsign, status, email, auth_type, created_at FROM users ORDER BY created_at DESC");
+    const usersStmt = db.prepare("SELECT telegram_id, callsign, status, email, auth_type, first_name, last_name, username, avatar_url, created_at FROM users ORDER BY created_at DESC");
     const allUsers = usersStmt.all();
     const pending = allUsers.filter(u => u.status === 'pending');
     const approved = allUsers.filter(u => u.status === 'approved');
@@ -301,11 +358,27 @@ export const startAdminServer = (telegramClient) => {
         : '';
       const emailDisplay = u.email ? `<div class="small text-muted"><i class="bi bi-envelope"></i> ${escapeHtmlServer(u.email)}</div>` : '';
 
+      let tgText = '';
+      if (u.first_name || u.last_name || u.username) {
+        const parts = [];
+        if (u.first_name || u.last_name) {
+          parts.push(escapeHtmlServer(`${u.first_name || ''} ${u.last_name || ''}`.trim()));
+        }
+        if (u.username) {
+          parts.push(`@${escapeHtmlServer(u.username)}`);
+        }
+        tgText = parts.join(' • ');
+      }
+
+      const avatarSrc = u.avatar_url 
+        ? escapeHtmlServer(u.avatar_url) 
+        : `https://ui-avatars.com/api/?name=${escapeHtmlServer(u.callsign)}&background=random`;
+
       return `
       <tr id="user-row-${u.telegram_id}">
         <td>
           <div class="d-flex align-items-center">
-            <img src="https://ui-avatars.com/api/?name=${escapeHtmlServer(u.callsign)}&background=random" id="avatar-${u.telegram_id}" class="rounded-circle me-3" width="45" height="45" alt="Avatar">
+            <img src="${avatarSrc}" id="avatar-${u.telegram_id}" class="rounded-circle me-3" width="45" height="45" alt="Avatar">
             <div>
               <div class="d-flex align-items-center">
                 <strong>${escapeHtmlServer(u.callsign)}</strong>
@@ -314,7 +387,9 @@ export const startAdminServer = (telegramClient) => {
               </div>
               ${emailDisplay}
               <div class="small text-muted" id="user-info-${u.telegram_id}">
-                ${isWeb ? '<span class="text-muted">Веб-пользователь (Email)</span>' : '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 10px; height: 10px;"></span> Загрузка...'}
+                ${isWeb 
+                  ? '<span class="text-muted">Веб-пользователь (Email)</span>' 
+                  : (tgText ? tgText : '<span class="spinner-border spinner-border-sm text-secondary me-1" role="status" aria-hidden="true" style="width: 10px; height: 10px;"></span>⟳ Загрузка...')}
               </div>
             </div>
           </div>
@@ -1902,33 +1977,48 @@ export const startAdminServer = (telegramClient) => {
           // Load user infos
           async function loadUserInfos() {
             const rows = document.querySelectorAll('tr[id^="user-row-"]');
+            const toFetch = [];
             for (const row of rows) {
               const id = row.id.replace('user-row-', '');
               if (parseInt(id, 10) < 0) continue; // Skip web users
-              try {
-                const res = await fetch('/api/user-info/' + id);
-                if (res.ok) {
-                  const data = await res.json();
-                  const infoDiv = document.getElementById('user-info-' + id);
-                  const avatarImg = document.getElementById('avatar-' + id);
-                  if (infoDiv) {
-                     let text = [];
-                     if (data.first_name || data.last_name) {
-                       text.push((data.first_name + ' ' + (data.last_name || '')).trim());
-                     }
-                     if (data.username) text.push('@' + data.username);
-                     infoDiv.innerHTML = text.length > 0 ? text.join(' • ') : 'Нет данных Telegram';
-                  }
-                  if (avatarImg && data.avatar) {
-                     avatarImg.src = data.avatar;
-                  }
-                } else {
-                  throw new Error('Bad response');
-                }
-              } catch(e) {
-                const infoDiv = document.getElementById('user-info-' + id);
-                if (infoDiv) infoDiv.innerHTML = '<span class="text-danger">Ошибка загрузки</span>';
+              const infoDiv = document.getElementById('user-info-' + id);
+              if (infoDiv && infoDiv.innerHTML.includes('spinner-border')) {
+                toFetch.push(id);
               }
+            }
+
+            if (toFetch.length === 0) return;
+
+            // Fetch missing user infos in parallel batches of 4
+            const batchSize = 4;
+            for (let i = 0; i < toFetch.length; i += batchSize) {
+              const batch = toFetch.slice(i, i + batchSize);
+              await Promise.all(batch.map(async (id) => {
+                try {
+                  const res = await fetch('/api/user-info/' + id);
+                  if (res.ok) {
+                    const data = await res.json();
+                    const infoDiv = document.getElementById('user-info-' + id);
+                    const avatarImg = document.getElementById('avatar-' + id);
+                    if (infoDiv) {
+                      let text = [];
+                      if (data.first_name || data.last_name) {
+                        text.push((data.first_name + ' ' + (data.last_name || '')).trim());
+                      }
+                      if (data.username) text.push('@' + data.username);
+                      infoDiv.innerHTML = text.length > 0 ? text.join(' • ') : '<span class="text-muted">Нет данных Telegram</span>';
+                    }
+                    if (avatarImg && data.avatar) {
+                      avatarImg.src = data.avatar;
+                    }
+                  } else {
+                    throw new Error('Bad response');
+                  }
+                } catch(e) {
+                  const infoDiv = document.getElementById('user-info-' + id);
+                  if (infoDiv) infoDiv.innerHTML = '<span class="text-muted">Нет данных Telegram</span>';
+                }
+              }));
             }
           }
 

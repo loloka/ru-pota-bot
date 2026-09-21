@@ -226,6 +226,30 @@ try {
   }
   db.exec(`CREATE INDEX IF NOT EXISTS idx_users_web_token ON users (web_token)`);
 
+  const hasFirstName = userColumns.some(col => col.name === 'first_name');
+  if (!hasFirstName) {
+    db.exec(`ALTER TABLE users ADD COLUMN first_name TEXT`);
+    console.log('[DB] Migrated users table: added first_name column');
+  }
+
+  const hasLastName = userColumns.some(col => col.name === 'last_name');
+  if (!hasLastName) {
+    db.exec(`ALTER TABLE users ADD COLUMN last_name TEXT`);
+    console.log('[DB] Migrated users table: added last_name column');
+  }
+
+  const hasUsername = userColumns.some(col => col.name === 'username');
+  if (!hasUsername) {
+    db.exec(`ALTER TABLE users ADD COLUMN username TEXT`);
+    console.log('[DB] Migrated users table: added username column');
+  }
+
+  const hasAvatarUrl = userColumns.some(col => col.name === 'avatar_url');
+  if (!hasAvatarUrl) {
+    db.exec(`ALTER TABLE users ADD COLUMN avatar_url TEXT`);
+    console.log('[DB] Migrated users table: added avatar_url column');
+  }
+
 
   const subColumns = db.pragma('table_info(subscriptions)');
   const hasTargetCallsign = subColumns.some(col => col.name === 'target_callsign');

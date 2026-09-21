@@ -64,11 +64,16 @@ export const callsignHandler = async (ctx) => {
 
   try {
     const stmt = db.prepare(`
-      INSERT INTO users (telegram_id, callsign, status)
-      VALUES (?, ?, 'pending')
-      ON CONFLICT(telegram_id) DO UPDATE SET callsign=excluded.callsign, status='pending'
+      INSERT INTO users (telegram_id, callsign, status, first_name, last_name, username)
+      VALUES (?, ?, 'pending', ?, ?, ?)
+      ON CONFLICT(telegram_id) DO UPDATE SET 
+        callsign=excluded.callsign, 
+        status='pending',
+        first_name=COALESCE(excluded.first_name, users.first_name),
+        last_name=COALESCE(excluded.last_name, users.last_name),
+        username=COALESCE(excluded.username, users.username)
     `);
-    stmt.run(userId, callsign);
+    stmt.run(userId, callsign, ctx.from?.first_name || null, ctx.from?.last_name || null, ctx.from?.username || null);
 
     await ctx.reply(`✅ Ваш позывной ${callsign} успешно зарегистрирован! Ждём одобрения модерации.`);
 

@@ -171,6 +171,20 @@ export function tmaUserMiddleware(req, res, next) {
   }
 
   req.dbUser = dbUser;
+
+  // Keep user name and username synchronized with Telegram data
+  if (dbUser && dbUser.status !== 'guest' && verification.user) {
+    try {
+      db.prepare(`
+        UPDATE users 
+        SET first_name = COALESCE(?, first_name),
+            last_name = COALESCE(?, last_name),
+            username = COALESCE(?, username)
+        WHERE telegram_id = ?
+      `).run(verification.user.first_name || null, verification.user.last_name || null, verification.user.username || null, verification.user.id);
+    } catch (e) {}
+  }
+
   next();
 }
 

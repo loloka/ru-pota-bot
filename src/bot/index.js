@@ -116,6 +116,27 @@ bot.telegram.callApi = async function (method, payload = {}, options) {
 bot.use(chatFilter);
 bot.use(deleteSystemMessages);
 bot.use(shieldMessageGuard);
+
+// Sync user profile info (name, username) with SQLite
+bot.use((ctx, next) => {
+  if (ctx.from && ctx.from.id) {
+    const userId = ctx.from.id;
+    const fn = ctx.from.first_name || null;
+    const ln = ctx.from.last_name || null;
+    const un = ctx.from.username || null;
+    try {
+      db.prepare(`
+        UPDATE users 
+        SET first_name = COALESCE(?, first_name),
+            last_name = COALESCE(?, last_name),
+            username = COALESCE(?, username)
+        WHERE telegram_id = ?
+      `).run(fn, ln, un, userId);
+    } catch (e) {}
+  }
+  return next();
+});
+
 bot.use(requireRegistration);
 
 // Configure scenes and sessions
@@ -837,7 +858,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.47\x1b[0m 📡             \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.48\x1b[0m 📡             \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

@@ -1,5 +1,13 @@
 # История изменений (Changelog)
 
+## [1.16.62] - 2026-09-22 (Automatic Proxy Routing for POTA API via TG_PROXY)
+### Исправлено и улучшено
+- **Маршрутизация запросов POTA API через прокси (`potaApi.js`)**:
+  - `potaApi` теперь автоматически использует рабочий туннель из переменной `TG_PROXY` (если явно не задан `POTA_PROXY` или `POTA_NO_PROXY=true`).
+  - Все запросы к `api.pota.app` (включая скачивание реестра парков и опрос спотов кластера) на сервере теперь проходят через рабочий VLESS/HTTP/SOCKS5-прокси, обходя геоблокировки и сбои Cloudflare (`ERR_BAD_RESPONSE`).
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.62` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.61] - 2026-09-22 (Resilient Single-Flight POTA Sync & Real-time Matching for 406 Parks)
 ### Исправлено и улучшено
 - **Отказоустойчивая синхронизация парков POTA (`syncPotaParksWithApi`, `ooptService.js`)**:

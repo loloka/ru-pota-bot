@@ -12,12 +12,14 @@ const axiosConfig = {
   baseURL: BASE_URL,
   timeout: 35000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.61 (Telegram Bot; Node.js)'
+    'User-Agent': 'RU-POTA-Bot/1.16.62 (Telegram Bot; Node.js)'
   }
 };
 
-if (process.env.POTA_PROXY) {
-  let proxyUrl = process.env.POTA_PROXY.trim();
+const potaProxySetting = process.env.POTA_NO_PROXY !== 'true' && (process.env.POTA_PROXY || process.env.TG_PROXY);
+
+if (potaProxySetting) {
+  let proxyUrl = potaProxySetting.trim();
   proxyUrl = proxyUrl.replace('://localhost:', '://127.0.0.1:').replace('@localhost:', '@127.0.0.1:');
   
   let agent;
@@ -33,6 +35,8 @@ if (process.env.POTA_PROXY) {
   }
   axiosConfig.httpAgent = agent;
   axiosConfig.httpsAgent = agent;
+  const safeProxyUrl = proxyUrl.replace(/:[^:@]+@/, ':****@');
+  console.log(`\x1b[36m[POTA API]\x1b[0m 🌐 Маршрутизация запросов POTA через прокси: ${safeProxyUrl}`);
 }
 
 const apiClient = axios.create(axiosConfig);

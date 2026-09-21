@@ -44,11 +44,14 @@ const parksByProgram = {
   KZ: [],
 };
 
-// 1. Initial load from local fallback dataset so map NEVER starts empty or missing countries
+const FALLBACK_PARKS_PATH = path.resolve(__dirname, '../data/parks_fallback.json');
+const RUNTIME_PARKS_CACHE_PATH = path.resolve(__dirname, '../../data/parks_cache.json');
+
+// 1. Initial load from runtime cache or local fallback dataset so map NEVER starts empty or missing countries
 try {
-  const fallbackPath = path.resolve(__dirname, '../data/parks_fallback.json');
-  if (fs.existsSync(fallbackPath)) {
-    const rawFallback = JSON.parse(fs.readFileSync(fallbackPath, 'utf8'));
+  const targetPath = fs.existsSync(RUNTIME_PARKS_CACHE_PATH) ? RUNTIME_PARKS_CACHE_PATH : FALLBACK_PARKS_PATH;
+  if (fs.existsSync(targetPath)) {
+    const rawFallback = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
     if (Array.isArray(rawFallback) && rawFallback.length > 0) {
       cachedParks = rawFallback;
       for (const p of rawFallback) {
@@ -57,11 +60,11 @@ try {
         else if (prefix === 'BY-') parksByProgram.BY.push(p);
         else if (prefix === 'KZ-') parksByProgram.KZ.push(p);
       }
-      console.log(`[TMA API] 🗺️ Initialized ${cachedParks.length} POTA parks from fallback (RU: ${parksByProgram.RU.length}, BY: ${parksByProgram.BY.length}, KZ: ${parksByProgram.KZ.length})`);
+      console.log(`[TMA API] 🗺️ Initialized ${cachedParks.length} POTA parks from ${targetPath === RUNTIME_PARKS_CACHE_PATH ? 'runtime cache' : 'fallback'} (RU: ${parksByProgram.RU.length}, BY: ${parksByProgram.BY.length}, KZ: ${parksByProgram.KZ.length})`);
     }
   }
 } catch (err) {
-  console.warn('[TMA API] ⚠️ Could not load fallback parks:', err.message);
+  console.warn('[TMA API] ⚠️ Could not load initial parks dataset:', err.message);
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -120,10 +123,13 @@ async function refreshParksFromApi() {
       lastParksFetchTime = Date.now();
       console.log(`[TMA API] 🗺️ Total cached POTA parks: ${cachedParks.length}`);
 
-      // Try updating fallback file on disk asynchronously
+      // Save updated parks to gitignored runtime cache in data/
       try {
-        const fallbackPath = path.resolve(__dirname, '../data/parks_fallback.json');
-        fs.writeFileSync(fallbackPath, JSON.stringify(cachedParks, null, 2), 'utf8');
+        const cacheDir = path.dirname(RUNTIME_PARKS_CACHE_PATH);
+        if (!fs.existsSync(cacheDir)) {
+          fs.mkdirSync(cacheDir, { recursive: true });
+        }
+        fs.writeFileSync(RUNTIME_PARKS_CACHE_PATH, JSON.stringify(cachedParks, null, 2), 'utf8');
       } catch (saveErr) {
         // Non-critical if filesystem is read-only
       }

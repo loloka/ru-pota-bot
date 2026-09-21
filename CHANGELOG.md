@@ -1,5 +1,16 @@
 # История изменений (Changelog)
 
+## [1.16.64] - 2026-09-22 (Isolate Runtime POTA Cache to Gitignored data/parks_cache.json)
+### Исправлено и улучшено
+- **Изоляция runtime-кэша парков (`ooptService.js`, `tmaApi.js`, `potaAuditService.js`)**:
+  - Ранее бот при синхронизации с POTA API перезаписывал `src/data/parks_fallback.json`, отслеживаемый в Git, из-за чего последующие вызовы `git pull` и команды `potaupd` блокировались сообщением `error: Your local changes to the following files would be overwritten by merge`.
+  - Все динамические обновления парков из API теперь сохраняются в изолированный файл `data/parks_cache.json` в каталоге `data/`, который изначально находится в `.gitignore`.
+  - Статический файл `src/data/parks_fallback.json` остается эталонным неизменяемым датасетом при первом развертывании.
+  - При запуске и работе бот автоматически проверяет наличие `data/parks_cache.json` и использует его, а при его отсутствии мягко переключается на базовый `src/data/parks_fallback.json`.
+  - Теперь `git pull` и скрипт `potaupd` никогда не будут конфликтовать с локально сохраненным кэшем парков.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.64` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.63] - 2026-09-22 (Dynamic Region POTA Counters, Oryol Oblast 14/14 Mature Region, & 617 POTA Parks)
 ### Исправлено и улучшено
 - **Динамическое обновление счетчиков регионов в Web Admin (`admin.js`)**:

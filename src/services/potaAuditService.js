@@ -7,8 +7,9 @@ import db from '../db/database.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Path to fallback parks dataset
+// Path to fallback parks dataset and runtime cache
 const FALLBACK_PATH = path.resolve(__dirname, '../data/parks_fallback.json');
+const RUNTIME_CACHE_PATH = path.resolve(__dirname, '../../data/parks_cache.json');
 
 /**
  * Normalizes URL string
@@ -44,16 +45,17 @@ export function categorizeLink(url) {
 }
 
 /**
- * Loads Russian POTA parks from fallback dataset
+ * Loads Russian POTA parks from runtime cache or fallback dataset
  */
 export function getRussianPotaParks() {
+  const targetPath = fs.existsSync(RUNTIME_CACHE_PATH) ? RUNTIME_CACHE_PATH : FALLBACK_PATH;
   try {
-    if (!fs.existsSync(FALLBACK_PATH)) return [];
-    const content = fs.readFileSync(FALLBACK_PATH, 'utf-8');
+    if (!fs.existsSync(targetPath)) return [];
+    const content = fs.readFileSync(targetPath, 'utf-8');
     const parks = JSON.parse(content);
     return parks.filter(p => p.reference && p.reference.startsWith('RU-'));
   } catch (err) {
-    console.error('[POTA Audit] Failed to load parks fallback:', err.message);
+    console.error('[POTA Audit] Failed to load parks dataset:', err.message);
     return [];
   }
 }

@@ -20,25 +20,35 @@ const client = axios.create({
   },
 });
 
+const FALLBACK_PARKS_PATH = path.resolve(__dirname, '../data/parks_fallback.json');
+const RUNTIME_PARKS_CACHE_PATH = path.resolve(__dirname, '../../data/parks_cache.json');
+
+function getParksDatasetPath() {
+  if (fs.existsSync(RUNTIME_PARKS_CACHE_PATH)) {
+    return RUNTIME_PARKS_CACHE_PATH;
+  }
+  return FALLBACK_PARKS_PATH;
+}
+
 /**
- * Loads Russian POTA parks from fallback dataset
+ * Loads Russian POTA parks from runtime cache or fallback dataset
  */
 export function getRussianPotaParks() {
-  const fallbackPath = path.resolve(__dirname, '../data/parks_fallback.json');
+  const targetPath = getParksDatasetPath();
   try {
-    if (!fs.existsSync(fallbackPath)) return [];
-    const content = fs.readFileSync(fallbackPath, 'utf8');
+    if (!fs.existsSync(targetPath)) return [];
+    const content = fs.readFileSync(targetPath, 'utf8');
     const parks = JSON.parse(content);
     return parks.filter(p => p.reference && p.reference.startsWith('RU-'));
   } catch (err) {
-    console.warn('[OOPT Service] ⚠️ Failed to load parks fallback:', err.message);
+    console.warn('[OOPT Service] ⚠️ Failed to load parks dataset:', err.message);
     return [];
   }
 }
 
 /**
  * Synchronizes POTA parks from official API (RU, BY, KZ),
- * updates local parks_fallback.json, and re-matches with oopt_registry
+ * updates gitignored data/parks_cache.json, and re-matches with oopt_registry
  * @returns {Promise<{ success: boolean, ruCount: number, totalCount: number, regionalEntries: number, matched: number, duration: string }>}
  */
 let activeSyncPromise = null;
@@ -52,12 +62,12 @@ export async function syncPotaParksWithApi() {
   activeSyncPromise = (async () => {
     console.log('[OOPT Service] 🔄 Fetching latest POTA parks from official API...');
     const startTime = Date.now();
-    const fallbackPath = path.resolve(__dirname, '../data/parks_fallback.json');
+    const sourcePath = getParksDatasetPath();
 
     let existingFallback = [];
-    if (fs.existsSync(fallbackPath)) {
+    if (fs.existsSync(sourcePath)) {
       try {
-        existingFallback = JSON.parse(fs.readFileSync(fallbackPath, 'utf8'));
+        existingFallback = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
       } catch (_) {}
     }
 
@@ -132,12 +142,16 @@ export async function syncPotaParksWithApi() {
       regionalEntries += Math.max(1, locs.length);
     }
 
-    // If updated from API, save to disk
+    // If updated from API, save to gitignored runtime cache file in data/
     if (updatedFromApi && combined.length > 0) {
       try {
-        fs.writeFileSync(fallbackPath, JSON.stringify(combined, null, 2), 'utf8');
+        const cacheDir = path.dirname(RUNTIME_PARKS_CACHE_PATH);
+        if (!fs.existsSync(cacheDir)) {
+          fs.mkdirSync(cacheDir, { recursive: true });
+        }
+        fs.writeFileSync(RUNTIME_PARKS_CACHE_PATH, JSON.stringify(combined, null, 2), 'utf8');
       } catch (fsErr) {
-        console.warn('[OOPT Service] ⚠️ Could not write fallback file:', fsErr.message);
+        console.warn('[OOPT Service] ⚠️ Could not write parks cache file:', fsErr.message);
       }
     }
 
@@ -2075,13 +2089,13 @@ function getDistanceKm(lat1, lon1, lat2, lon2) {
  * Matches OOPT records with existing POTA database (RU-0001+)
  */
 export function syncPotaMatches() {
-  const fallbackPath = path.resolve(__dirname, '../data/parks_fallback.json');
-  if (!fs.existsSync(fallbackPath)) {
-    console.warn('[OOPT Service] ⚠️ Fallback file not found at:', fallbackPath);
+  const targetPath = getParksDatasetPath();
+  if (!fs.existsSync(targetPath)) {
+    console.warn('[OOPT Service] ⚠️ Parks dataset not found at:', targetPath);
     return { matched: 0 };
   }
 
-  const fallback = JSON.parse(fs.readFileSync(fallbackPath, 'utf8'));
+  const fallback = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
   const ruPota = fallback.filter(p => p.reference && p.reference.startsWith('RU-'));
   const ooptRows = db.prepare('SELECT nid, title, category, sig, ate, lat, lon FROM oopt_registry').all();
 

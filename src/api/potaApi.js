@@ -12,7 +12,7 @@ const axiosConfig = {
   baseURL: BASE_URL,
   timeout: 35000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.64 (Telegram Bot; Node.js)'
+    'User-Agent': 'RU-POTA-Bot/1.16.65 (Telegram Bot; Node.js)'
   }
 };
 

@@ -75,4 +75,18 @@ assert.strictEqual(neprecOopt.pota_ref, 'RU-0261', 'Балка Непрец must
 assert.strictEqual(neprecOopt.pota_name, 'Neprec Beam Nature Monument');
 console.log('✅ PASS: RU-0261 (Neprec Beam) correctly matched and synced to "Балка Непрец" (nid 32793)');
 
+// 12. Test RU-0378 (Bastak) matches "Бастак" (nid 6663) in Jewish Autonomous Oblast (RU-YV)
+const bastakOopt = db.prepare('SELECT nid, title, ate, pota_ref, pota_name FROM oopt_registry WHERE nid = 6663').get();
+assert.ok(bastakOopt, 'OOPT nid 6663 must exist');
+assert.strictEqual(bastakOopt.pota_ref, 'RU-0378', 'Бастак must be synced with RU-0378');
+assert.strictEqual(bastakOopt.pota_name, 'Bastak State Natural Reserve');
+console.log('✅ PASS: RU-0378 (Bastak) correctly matched and synced to "Бастак" (nid 6663)');
+
+// 13. Test RU-0377 (Shukhi-Poktoy) matches "Шухи-Поктой" (nid 15909) in Jewish Autonomous Oblast (RU-YV)
+const shukhiOopt = db.prepare('SELECT nid, title, ate, pota_ref, pota_name FROM oopt_registry WHERE nid = 15909').get();
+assert.ok(shukhiOopt, 'OOPT nid 15909 must exist');
+assert.strictEqual(shukhiOopt.pota_ref, 'RU-0377', 'Шухи-Поктой must be synced with RU-0377');
+assert.strictEqual(shukhiOopt.pota_name, 'Shukhi-Poktoy Nature Reserve');
+console.log('✅ PASS: RU-0377 (Shukhi-Poktoy) correctly matched and synced to "Шухи-Поктой" (nid 15909)');
+
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');

@@ -1,6 +1,7 @@
 import { potaApi } from '../../api/potaApi.js';
 import { deleteUserMessage, getBaseCallsign } from '../utils.js';
 import db from '../../db/database.js';
+import { locationService } from '../../services/locationService.js';
 
 // Supported filter options
 export const AVAILABLE_BANDS = [
@@ -189,9 +190,14 @@ function renderSpotItem(s) {
   const actLink = `<b><a href="https://next.pota.app/profile/${encodeURIComponent(s.baseCall)}">${escapeHtml(s.activator)}</a></b>`;
   const parkLink = `<b><a href="https://next.pota.app/park/${encodeURIComponent(s.reference)}">${escapeHtml(s.reference)}</a></b>`;
   let loc = '';
-  if (s.locationDesc) {
-    const primaryLoc = s.locationDesc.split(',')[0].trim();
-    if (primaryLoc) loc = ` (${escapeHtml(primaryLoc)})`;
+  const locResolved = locationService.resolveLocation(s.locationDesc || '', s.reference || '');
+  const locParts = [];
+  if (locResolved.flag && locResolved.flag !== '🌐') locParts.push(locResolved.flag);
+  if (locResolved.countryName) locParts.push(locResolved.countryName);
+  if (locResolved.regionName) locParts.push(locResolved.regionName);
+  else if (s.locationDesc) locParts.push(s.locationDesc.split(',')[0].trim());
+  if (locParts.length > 0) {
+    loc = ` (${escapeHtml(locParts.join(' • '))})`;
   }
   const freq = formatFrequency(s.frequency);
   const band = getBandFromKHz(s.frequency);

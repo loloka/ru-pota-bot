@@ -3,6 +3,7 @@ import db from '../db/database.js';
 import { pinManager } from './pinManager.js';
 import { getBandFromKHz } from '../bot/commands/onair.js';
 import { getBaseCallsign, isBroadcastMutedCallsign, getMutedBroadcastCallsigns } from '../bot/utils.js';
+import { locationService } from './locationService.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -302,8 +303,16 @@ export const startClusterWorker = (telegramClient) => {
         // 5. Format and Broadcast to Activity Channel
         const actLink = `<a href="https://next.pota.app/profile/${encodeURIComponent(baseCall)}">${spot.activator}</a>`;
         const refLink = `<a href="https://next.pota.app/park/${ref}">${ref}</a>`;
+        const locResolved = locationService.resolveLocation(spot.locationDesc || '', ref);
+        const locParts = [];
+        if (locResolved.flag && locResolved.flag !== '🌐') locParts.push(locResolved.flag);
+        if (locResolved.countryName) locParts.push(locResolved.countryName);
+        if (locResolved.regionName) locParts.push(locResolved.regionName);
+        const locLine = locParts.length > 0 ? `\n📍 <b>${locParts.join(' • ')}</b>` : '';
+        const parkTitle = spot.name ? ` — <i>${spot.name}</i>` : '';
+
         const msg = `🌐 <b>POTA Cluster Spot</b>\n` +
-                    `📻 <b>${actLink}</b> @ 🏞️ <b>${refLink}</b>\n` +
+                    `📻 <b>${actLink}</b> @ 🏞️ <b>${refLink}</b>${parkTitle}${locLine}\n` +
                     `⚙️ Freq: ${spot.frequency} kHz | ${mode}\n` +
                     (spot.comments ? `📝 ${spot.comments}` : '');
 

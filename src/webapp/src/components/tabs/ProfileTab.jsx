@@ -982,7 +982,7 @@ export default function ProfileTab({
 
           {/* Telegram Community Link */}
           <a
-            href="https://t.me/ru_pota"
+            href="https://t.me/POTA_RU"
             target="_blank"
             rel="noreferrer"
             onClick={() => telegram.haptic.impact('light')}

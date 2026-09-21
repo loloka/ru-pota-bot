@@ -346,7 +346,12 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
                 {/* Header: Call, Flag, Mode, Freq */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-base select-none">{spot.country}</span>
+                    <span 
+                      className="text-base select-none" 
+                      title={language === 'RU' ? (spot.countryName || spot.entityName) : (spot.countryNameEn || spot.countryName || spot.entityName)}
+                    >
+                      {spot.country}
+                    </span>
                     <span className="font-mono font-extrabold text-base text-slate-900 dark:text-white tracking-wide">
                       {spot.callsign}
                     </span>
@@ -379,18 +384,47 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
                     ? 'bg-emerald-100/70 dark:bg-slate-900/80 border-emerald-300 dark:border-emerald-500/40 shadow-sm' 
                     : 'bg-slate-100 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800/80'
                 }`}>
-                  <div className="flex items-center gap-1 text-xs font-mono font-bold text-emerald-800 dark:text-emerald-300">
+                  <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-800 dark:text-emerald-300">
                     <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>{spot.park}</span>
+                    <span className="bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                      {spot.park}
+                    </span>
                     {spot.parkName && (
-                      <span className="font-sans font-normal text-slate-700 dark:text-slate-200 ml-1 truncate">
-                        — {spot.parkName}
+                      <span className="font-sans font-medium text-slate-800 dark:text-slate-100 truncate">
+                        {spot.parkName}
                       </span>
                     )}
                   </div>
-                  {spot.location && (
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400 pl-4 mt-0.5 truncate">{spot.location}</p>
-                  )}
+                  
+                  {/* Geographical Location (Country, Region/City, Grid) */}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-600 dark:text-slate-400 pl-5 mt-1.5">
+                    {(spot.countryName || spot.country) && (
+                      <span className="inline-flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200 shrink-0">
+                        <span>{spot.country}</span>
+                        <span>{language === 'RU' ? (spot.countryName || spot.entityName) : (spot.countryNameEn || spot.countryName || spot.entityName)}</span>
+                      </span>
+                    )}
+
+                    {(spot.regionName || spot.location) && (
+                      <>
+                        <span className="text-slate-300 dark:text-slate-600 select-none">•</span>
+                        <span className="text-slate-700 dark:text-slate-300 truncate max-w-[220px]">
+                          {spot.regionName 
+                            ? `${spot.regionName}${spot.location && spot.location !== spot.regionName ? ` (${spot.location})` : ''}` 
+                            : spot.location}
+                        </span>
+                      </>
+                    )}
+
+                    {spot.grid && (
+                      <>
+                        <span className="text-slate-300 dark:text-slate-600 select-none">•</span>
+                        <span className="inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300/80 dark:border-slate-700 shrink-0">
+                          🧭 {spot.grid}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Comment & Spotter */}

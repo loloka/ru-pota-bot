@@ -70,7 +70,7 @@ export const translations = {
     // Cluster
     cluster_ru_only: '🇷🇺 Только RU / СНГ',
     cluster_world: '🌐 Весь мир',
-    cluster_search_ph: 'Поиск по позывному, парку (RU-0073)...',
+    cluster_search_ph: 'Поиск по позывному, парку, стране, региону...',
     cluster_all: 'Все',
     cluster_found: 'Найдено спотов:',
     cluster_autorefresh: 'Автообновление: 20с',
@@ -216,7 +216,7 @@ export const translations = {
     // Cluster
     cluster_ru_only: '🇷🇺 RU / CIS Only',
     cluster_world: '🌐 Whole World',
-    cluster_search_ph: 'Search by callsign, park (RU-0073)...',
+    cluster_search_ph: 'Search by callsign, park, country, city...',
     cluster_all: 'All',
     cluster_found: 'Spots found:',
     cluster_autorefresh: 'Auto-refresh: 20s',

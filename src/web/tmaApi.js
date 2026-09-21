@@ -12,6 +12,7 @@ import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry, translateO
 import crypto from 'crypto';
 import { renderPotaTile, parseWmsBbox, tileToBbox, generatePotaGpx, getEmptyPng } from '../services/potaTileService.js';
 import { resendService } from '../services/resendService.js';
+import { locationService } from '../services/locationService.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -846,22 +847,26 @@ export function createTmaRouter(telegramClient) {
         const freqMHz = (freqKHz / 1000).toFixed(3);
         const calculatedBand = getBandFromKHz(freqKHz);
 
-        let flag = '🌐';
-        if (ref.startsWith('RU-')) flag = '🇷🇺';
-        else if (ref.startsWith('BY-')) flag = '🇧🇾';
-        else if (ref.startsWith('KZ-')) flag = '🇰🇿';
-        else if (ref.startsWith('UA-')) flag = '🇺🇦';
-        else if (ref.startsWith('DE-')) flag = '🇩🇪';
-        else if (ref.startsWith('US-') || ref.startsWith('K-')) flag = '🇺🇸';
+        const locResolved = locationService.resolveLocation(s.locationDesc || '', ref);
+        const grid = s.grid6 || s.grid4 || '';
+        const lat = s.latitude || null;
+        const lon = s.longitude || null;
 
         return {
           id: s.spotId || `pota-${idx}`,
           spotId: s.spotId,
           callsign: s.activator || '',
-          country: flag,
+          country: locResolved.flag || '🌐',
+          countryName: locResolved.countryName || '',
+          countryNameEn: locResolved.countryNameEn || '',
+          entityName: locResolved.entityName || '',
+          regionName: locResolved.regionName || '',
           park: ref,
           parkName: s.name || '',
-          location: s.locationDesc || '',
+          location: s.locationDesc || locResolved.location || '',
+          grid,
+          lat,
+          lon,
           freq: freqMHz,
           freqKHz,
           mode: s.mode || 'SSB',
@@ -883,14 +888,40 @@ export function createTmaRouter(telegramClient) {
         const calculatedBand = getBandFromKHz(freqKHz > 1000 ? freqKHz : freqKHz * 1000);
         const isRu = ALLOWED_PREFIXES.some(prefix => s.reference.startsWith(prefix));
 
+        const locResolved = locationService.resolveLocation('', s.reference);
+        let parkName = 'Локальный спот';
+        let grid = '';
+        let lat = null;
+        let lon = null;
+        try {
+          const fallback = cachedParks.find(p => p.reference && p.reference.toUpperCase() === s.reference.toUpperCase());
+          if (fallback) {
+            parkName = fallback.name || parkName;
+            grid = fallback.grid || '';
+            lat = fallback.lat || null;
+            lon = fallback.lon || null;
+            if (fallback.region && !locResolved.regionName) {
+              const resLoc = locationService.resolveLocation(fallback.region, s.reference);
+              if (resLoc.regionName) locResolved.regionName = resLoc.regionName;
+            }
+          }
+        } catch (e) {}
+
         return {
           id: `local-${s.id}`,
           spotId: null,
           callsign: s.callsign,
-          country: '🇷🇺',
+          country: locResolved.flag || '🇷🇺',
+          countryName: locResolved.countryName || 'Россия',
+          countryNameEn: locResolved.countryNameEn || 'Russia',
+          entityName: locResolved.entityName || 'Russia',
+          regionName: locResolved.regionName || '',
           park: s.reference,
-          parkName: 'Локальный спот',
-          location: 'RU-POTA Bot',
+          parkName,
+          location: locResolved.location || s.reference.split('-')[0],
+          grid,
+          lat,
+          lon,
           freq: freqMHz,
           freqKHz: freqKHz > 1000 ? freqKHz : freqKHz * 1000,
           mode: s.mode || 'SSB',
@@ -920,7 +951,6 @@ export function createTmaRouter(telegramClient) {
         }
       }
 
-
       // Filter
       const filtered = allSpots.filter(s => {
         if (scope === 'ru' && !s.isRu) return false;
@@ -930,8 +960,13 @@ export function createTmaRouter(telegramClient) {
           return (
             s.callsign.toUpperCase().includes(search) ||
             s.park.toUpperCase().includes(search) ||
-            s.spotter.toUpperCase().includes(search) ||
-            s.parkName.toUpperCase().includes(search)
+            (s.parkName && s.parkName.toUpperCase().includes(search)) ||
+            (s.countryName && s.countryName.toUpperCase().includes(search)) ||
+            (s.countryNameEn && s.countryNameEn.toUpperCase().includes(search)) ||
+            (s.regionName && s.regionName.toUpperCase().includes(search)) ||
+            (s.location && s.location.toUpperCase().includes(search)) ||
+            (s.grid && s.grid.toUpperCase().includes(search)) ||
+            (s.spotter && s.spotter.toUpperCase().includes(search))
           );
         }
         return true;

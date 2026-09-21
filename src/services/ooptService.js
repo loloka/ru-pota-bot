@@ -41,19 +41,24 @@ export function getRussianPotaParks() {
  * updates local parks_fallback.json, and re-matches with oopt_registry
  * @returns {Promise<{ success: boolean, ruCount: number, totalCount: number, regionalEntries: number, matched: number, duration: string }>}
  */
+let activeSyncPromise = null;
+
 export async function syncPotaParksWithApi() {
-  console.log('[OOPT Service] 🔄 Fetching latest POTA parks from official API...');
-  const startTime = Date.now();
+  if (activeSyncPromise) {
+    console.log('[OOPT Service] ⏳ Sync already in progress, attaching to active operation...');
+    return activeSyncPromise;
+  }
 
-  try {
-    const [ru, by, kz] = await Promise.all([
-      potaApi.getProgramParks('RU'),
-      potaApi.getProgramParks('BY'),
-      potaApi.getProgramParks('KZ'),
-    ]);
+  activeSyncPromise = (async () => {
+    console.log('[OOPT Service] 🔄 Fetching latest POTA parks from official API...');
+    const startTime = Date.now();
+    const fallbackPath = path.resolve(__dirname, '../data/parks_fallback.json');
 
-    if (!Array.isArray(ru) || ru.length === 0) {
-      throw new Error('Received empty parks list for RU from POTA API');
+    let existingFallback = [];
+    if (fs.existsSync(fallbackPath)) {
+      try {
+        existingFallback = JSON.parse(fs.readFileSync(fallbackPath, 'utf8'));
+      } catch (_) {}
     }
 
     const mapPark = (p) => ({
@@ -68,11 +73,57 @@ export async function syncPotaParksWithApi() {
       qsos: p.qsos || 0,
     });
 
-    const mappedRu = ru.map(mapPark);
-    const mappedBy = Array.isArray(by) ? by.map(mapPark) : [];
-    const mappedKz = Array.isArray(kz) ? kz.map(mapPark) : [];
+    let updatedFromApi = false;
+    let mappedRu = [];
+    let mappedBy = [];
+    let mappedKz = [];
+
+    try {
+      // 1. Fetch RU parks (with sequential non-blocking fallback)
+      const ru = await potaApi.getProgramParks('RU').catch((err) => {
+        console.warn('[OOPT Service] ⚠️ Could not fetch RU parks from API, using fallback:', err.message);
+        return null;
+      });
+      if (Array.isArray(ru) && ru.length > 0) {
+        mappedRu = ru.map(mapPark);
+        updatedFromApi = true;
+      }
+    } catch (_) {}
+
+    // Fallback for RU if network or API error
+    if (mappedRu.length === 0) {
+      mappedRu = existingFallback.filter(p => p.reference?.startsWith('RU-'));
+    }
+
+    try {
+      // 2. Fetch BY parks
+      const by = await potaApi.getProgramParks('BY').catch(() => null);
+      if (Array.isArray(by) && by.length > 0) {
+        mappedBy = by.map(mapPark);
+      } else {
+        mappedBy = existingFallback.filter(p => p.reference?.startsWith('BY-'));
+      }
+    } catch (_) {
+      mappedBy = existingFallback.filter(p => p.reference?.startsWith('BY-'));
+    }
+
+    try {
+      // 3. Fetch KZ parks
+      const kz = await potaApi.getProgramParks('KZ').catch(() => null);
+      if (Array.isArray(kz) && kz.length > 0) {
+        mappedKz = kz.map(mapPark);
+      } else {
+        mappedKz = existingFallback.filter(p => p.reference?.startsWith('KZ-'));
+      }
+    } catch (_) {
+      mappedKz = existingFallback.filter(p => p.reference?.startsWith('KZ-'));
+    }
 
     const combined = [...mappedRu, ...mappedBy, ...mappedKz];
+
+    if (combined.length === 0) {
+      throw new Error('No POTA parks available in API or fallback file');
+    }
 
     // Count regional entries (accounting for multi-region parks)
     let regionalEntries = 0;
@@ -81,9 +132,14 @@ export async function syncPotaParksWithApi() {
       regionalEntries += Math.max(1, locs.length);
     }
 
-    // Save to disk
-    const fallbackPath = path.resolve(__dirname, '../data/parks_fallback.json');
-    fs.writeFileSync(fallbackPath, JSON.stringify(combined, null, 2), 'utf8');
+    // If updated from API, save to disk
+    if (updatedFromApi && combined.length > 0) {
+      try {
+        fs.writeFileSync(fallbackPath, JSON.stringify(combined, null, 2), 'utf8');
+      } catch (fsErr) {
+        console.warn('[OOPT Service] ⚠️ Could not write fallback file:', fsErr.message);
+      }
+    }
 
     // Run matching with oopt_registry
     const matchResult = syncPotaMatches();
@@ -97,11 +153,15 @@ export async function syncPotaParksWithApi() {
       regionalEntries,
       totalCount: combined.length,
       matched: matchResult.matched,
-      duration
+      duration,
+      updatedFromApi
     };
-  } catch (err) {
-    console.error('[OOPT Service] ❌ Failed to sync POTA parks:', err.message);
-    throw err;
+  })();
+
+  try {
+    return await activeSyncPromise;
+  } finally {
+    activeSyncPromise = null;
   }
 }
 

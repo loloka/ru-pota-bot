@@ -6655,6 +6655,39 @@
     "qsos": 0
   },
   {
+    "reference": "RU-0606",
+    "name": "The Wild Fields (Dikoe Pole) Natural Monument",
+    "lat": 52.6258,
+    "lon": 37.7169,
+    "grid": "KO82up",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/32787",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0607",
+    "name": "Headwaters River Oka (Istok Reki Oki) Natural Monument",
+    "lat": 52.3643,
+    "lon": 36.2169,
+    "grid": "KO82ci",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/32783",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
+    "reference": "RU-0608",
+    "name": "Korsunskiy State Natural Reserve",
+    "lat": 52.7254,
+    "lon": 36.9623,
+    "grid": "KO82lr",
+    "region": "RU-OL",
+    "website": "https://ooptaari.nextgis.ru/node/62852",
+    "activations": 0,
+    "qsos": 0
+  },
+  {
     "reference": "BY-0001",
     "name": "Белавежская пушча National Park",
     "lat": 52.5855,

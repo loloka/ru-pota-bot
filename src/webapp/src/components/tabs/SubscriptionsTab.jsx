@@ -278,11 +278,14 @@ export default function SubscriptionsTab({
             <Bell className="w-8 h-8" />
           </div>
 
-          <div className="space-y-1">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-sky-400 bg-sky-500/10 px-2.5 py-0.5 rounded-full border border-sky-500/20">
-              {t('guest_badge')}
-            </span>
-            <h2 className="text-lg font-extrabold text-slate-900 dark:text-white mt-1">
+          <div className="space-y-1.5">
+            <div className="flex justify-center">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {t('guest_badge')}
+              </span>
+            </div>
+            <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
               {t('guest_subs_title')}
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">
@@ -300,7 +303,7 @@ export default function SubscriptionsTab({
               className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-lg shadow-sky-500/25 transition active:scale-95 cursor-pointer"
             >
               <Send className="w-4 h-4 -translate-x-0.5 translate-y-0.5" />
-              <span>{language === 'RU' ? 'Подключить подписки в Telegram' : 'Manage Subscriptions in Telegram'}</span>
+              <span>{language === 'RU' ? 'Войти через Telegram-бота' : 'Sign in via Telegram Bot'}</span>
               <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-80" />
             </button>
 
@@ -314,7 +317,7 @@ export default function SubscriptionsTab({
                 className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm text-slate-900 dark:text-white bg-slate-200/90 dark:bg-slate-800/90 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 shadow-sm transition active:scale-95 cursor-pointer"
               >
                 <Mail className="w-4 h-4 text-emerald-500" />
-                <span>{language === 'RU' ? 'Войти по позывному и Email' : 'Sign In with Callsign & Email'}</span>
+                <span>{language === 'RU' ? 'Войти напрямую через сайт' : 'Sign In via Website'}</span>
               </button>
             )}
           </div>
@@ -323,17 +326,17 @@ export default function SubscriptionsTab({
         {/* How alerts work */}
         <div className="p-4 rounded-2xl glass-card space-y-3">
           <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-            {language === 'RU' ? 'Как работают оповещения в боте?' : 'How bot alerts work'}
+            {language === 'RU' ? 'Как работают персональные оповещения?' : 'How personal alerts work'}
           </h3>
           <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
             <p>
-              1. 👤 <b>{language === 'RU' ? 'Подписка на позывные:' : 'Callsign alerts:'}</b> {language === 'RU' ? 'Добавьте позывной друга (например, UA9OTW или R2BBX) — бот напишет вам в ЛС, как только он появится в эфире.' : 'Follow a friend callsign to get instant notifications when they go on air.'}
+              1. 👤 <b>{language === 'RU' ? 'Подписка на позывные:' : 'Callsign alerts:'}</b> {language === 'RU' ? 'Добавьте позывной друга (например, UA9OTW или R2BBX) — бот напишет вам в Telegram, а сайт покажет спот во вкладке со звуковым сигналом.' : 'Follow a friend callsign to get instant notifications in Telegram and live web feed.'}
             </p>
             <p>
-              2. 🌲 <b>{language === 'RU' ? 'Подписка на парки:' : 'Park alerts:'}</b> {language === 'RU' ? 'Добавьте редкий заповедник (RU-0001, RU-0073) — бот пришлёт спот любого оператора, работающего из этого парка.' : 'Follow rare parks to be alerted as soon as an activator spots from there.'}
+              2. 🌲 <b>{language === 'RU' ? 'Подписка на парки:' : 'Park alerts:'}</b> {language === 'RU' ? 'Добавьте редкий заповедник (RU-0001, RU-0073) — получайте уведомление о любом операторе, выходящем в эфир из этого парка.' : 'Follow rare parks to be alerted as soon as an activator spots from there.'}
             </p>
             <p>
-              3. 🔕 <b>{language === 'RU' ? 'Режим сна:' : 'Mute anytime:'}</b> {language === 'RU' ? 'В любой момент можно выключить оповещения одной кнопкой без потери подписок.' : 'Toggle alerts on or off anytime with a single tap without losing your list.'}
+              3. 🔕 <b>{language === 'RU' ? 'Гибкое управление:' : 'Flexible controls:'}</b> {language === 'RU' ? 'В любой момент включайте или отключайте персональные алерты без потери сохранённого списка подписок.' : 'Toggle alerts on or off anytime with a single tap without losing your list.'}
             </p>
           </div>
         </div>

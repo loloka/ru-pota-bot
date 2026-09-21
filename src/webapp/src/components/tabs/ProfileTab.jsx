@@ -17,7 +17,8 @@ import {
   Mail,
   LogOut,
   Globe,
-  Shield
+  Shield,
+  TreePine
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -96,18 +97,21 @@ export default function ProfileTab({
     return (
       <div className="space-y-4 pb-tab-bottom animate-fade-in">
         {/* Guest Profile Banner */}
-        <div className="p-6 rounded-3xl glass-card border border-sky-500/30 text-center space-y-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="p-6 rounded-3xl glass-card border border-emerald-500/25 text-center space-y-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
           
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white shadow-xl shadow-sky-500/20">
-            <Send className="w-8 h-8 -translate-x-0.5 translate-y-0.5" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-xl shadow-emerald-500/20">
+            <TreePine className="w-8 h-8" />
           </div>
 
-          <div className="space-y-1">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-sky-400 bg-sky-500/10 px-2.5 py-0.5 rounded-full border border-sky-500/20">
-              {t('guest_badge')}
-            </span>
-            <h2 className="text-lg font-extrabold text-slate-900 dark:text-white mt-1">
+          <div className="space-y-1.5">
+            <div className="flex justify-center">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {t('guest_badge')}
+              </span>
+            </div>
+            <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
               {t('guest_profile_title')}
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm mx-auto leading-relaxed">
@@ -125,7 +129,7 @@ export default function ProfileTab({
               className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-lg shadow-sky-500/25 transition active:scale-95 cursor-pointer"
             >
               <Send className="w-4 h-4 -translate-x-0.5 translate-y-0.5" />
-              <span>{language === 'RU' ? 'Открыть в Telegram (@ru_pota_bot)' : 'Open in Telegram (@ru_pota_bot)'}</span>
+              <span>{language === 'RU' ? 'Войти через Telegram-бота' : 'Sign in via Telegram Bot'}</span>
               <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-80" />
             </button>
 
@@ -139,7 +143,7 @@ export default function ProfileTab({
                 className="w-full flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm text-slate-900 dark:text-white bg-slate-200/90 dark:bg-slate-800/90 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 shadow-sm transition active:scale-95 cursor-pointer"
               >
                 <Mail className="w-4 h-4 text-emerald-500" />
-                <span>{language === 'RU' ? 'Войти по позывному и Email' : 'Sign In with Callsign & Email'}</span>
+                <span>{language === 'RU' ? 'Войти напрямую через сайт' : 'Sign In via Website'}</span>
               </button>
             )}
           </div>
@@ -148,7 +152,7 @@ export default function ProfileTab({
         {/* Benefits List */}
         <div className="p-4 rounded-2xl glass-card space-y-3">
           <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-            {language === 'RU' ? 'Что доступно после входа в Telegram?' : 'Benefits of Telegram Login'}
+            {language === 'RU' ? 'Что доступно после авторизации?' : 'What Unlocks After Authorization'}
           </h3>
 
           <div className="space-y-2.5 text-xs">
@@ -159,7 +163,7 @@ export default function ProfileTab({
                   {language === 'RU' ? 'Публикация спотов из парка' : 'One-tap Spotting'}
                 </b>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  {language === 'RU' ? 'Мгновенно оповещайте охотников о вашей частоте и модуляции прямо с телефона.' : 'Instantly inform hunters of your frequency and mode from the field.'}
+                  {language === 'RU' ? 'Мгновенно оповещайте охотников о вашей частоте и модуляции прямо с телефона или компьютера.' : 'Instantly inform hunters of your frequency and mode right from your device.'}
                 </p>
               </div>
             </div>
@@ -168,10 +172,10 @@ export default function ProfileTab({
               <Bell className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <div>
                 <b className="text-slate-900 dark:text-white font-semibold">
-                  {language === 'RU' ? 'Личные push-уведомления' : 'Personal Push Alerts'}
+                  {language === 'RU' ? 'Личные уведомления и подписки' : 'Personal Alerts & Subscriptions'}
                 </b>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  {language === 'RU' ? 'Подписка на позывные друзей и нужные парки с отправкой уведомлений в ЛС.' : 'Follow favourite callsigns and parks with direct bot notifications.'}
+                  {language === 'RU' ? 'Алерты в Telegram и веб-лента со звуковым сигналом при выходе любимых активаторов и парков в эфир.' : 'Instant alerts in Telegram and live web feed with audio notifications when favorite stations go on air.'}
                 </p>
               </div>
             </div>
@@ -180,10 +184,22 @@ export default function ProfileTab({
               <Award className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
               <div>
                 <b className="text-slate-900 dark:text-white font-semibold">
-                  {language === 'RU' ? 'Учёт дипломов и активаций' : 'Awards & Stats Tracking'}
+                  {language === 'RU' ? 'Учёт дипломов и статистика' : 'Awards & Stats Tracking'}
                 </b>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  {language === 'RU' ? 'Синхронизация статистики POTA активатора и охотника в реальном времени.' : 'Real-time sync of your POTA activator and hunter stats.'}
+                  {language === 'RU' ? 'Синхронизация статистики POTA активатора и охотника в реальном времени, история спотов и поиск парков.' : 'Real-time sync of your POTA activator and hunter stats, spot history and park search.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+              <Shield className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+              <div>
+                <b className="text-slate-900 dark:text-white font-semibold">
+                  {language === 'RU' ? 'Связка аккаунтов и безопасность' : 'Account Linking & Security'}
+                </b>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {language === 'RU' ? 'Вход с любых устройств: объединяйте Telegram и Email в единый профиль без потери подписок и истории.' : 'Multi-device access: link Telegram and Email seamlessly without losing subscriptions or history.'}
                 </p>
               </div>
             </div>

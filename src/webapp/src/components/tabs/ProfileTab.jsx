@@ -18,7 +18,15 @@ import {
   LogOut,
   Globe,
   Shield,
-  TreePine
+  TreePine,
+  MapPin,
+  Compass,
+  Trophy,
+  Sparkles,
+  Zap,
+  Activity,
+  ChevronDown,
+  CheckCircle2
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -26,10 +34,12 @@ import { api } from '../../services/api.js';
 export default function ProfileTab({ 
   user, 
   stats, 
+  subscriptionsCount = 0,
   onRefreshProfile, 
   onRequireAuth, 
   onOpenWebAuth, 
   onWebLogout, 
+  onNavigate,
   language = 'RU', 
   t = (k) => k 
 }) {
@@ -40,6 +50,9 @@ export default function ProfileTab({
   const [modalError, setModalError] = useState('');
   const [linkingTelegram, setLinkingTelegram] = useState(false);
   const [telegramLinkModal, setTelegramLinkModal] = useState(null);
+  const [showAllActivations, setShowAllActivations] = useState(false);
+  const [showAllHunts, setShowAllHunts] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   const hasWebSession = Boolean(
     (typeof window !== 'undefined' && localStorage.getItem('rupota_web_token')) ||
@@ -254,35 +267,63 @@ export default function ProfileTab({
         {/* Ambient glow decoration */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="flex items-center gap-4 relative">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-700 border border-slate-300 dark:border-slate-600 flex items-center justify-center font-bold text-xl text-emerald-700 dark:text-emerald-400 font-mono shadow-md">
-              {user.callsign ? user.callsign.substring(0, 2) : 'RU'}
-            </div>
+        <div className="flex items-start sm:items-center gap-3.5 relative">
+          <div className="relative shrink-0">
+            {stats?.gravatar && !avatarError ? (
+              <img 
+                src={`https://www.gravatar.com/avatar/${stats.gravatar}?s=128&d=mp`} 
+                alt={user.callsign} 
+                onError={() => setAvatarError(true)}
+                className="w-16 h-16 rounded-2xl object-cover border border-slate-300 dark:border-slate-600 shadow-md bg-slate-200 dark:bg-slate-800"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-700 border border-slate-300 dark:border-slate-600 flex items-center justify-center font-bold text-xl text-emerald-700 dark:text-emerald-400 font-mono shadow-md">
+                {user.callsign ? user.callsign.substring(0, 2) : 'RU'}
+              </div>
+            )}
             <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 border border-emerald-500">
               <span className={`h-2 w-2 rounded-full ${user.status === 'approved' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             </span>
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base font-bold text-slate-900 dark:text-white truncate">
-                {user.first_name} {user.last_name || ''}
+                {stats?.name || (user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.callsign)}
               </h2>
               {(hasWebSession || user.isWeb || user.auth_type === 'web') && (
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0 flex items-center gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0 flex items-center gap-1">
                   <Globe className="w-3 h-3" />
                   <span>WEB</span>
                 </span>
               )}
             </div>
+
+            {/* QTH & Grid Locator */}
+            {(stats?.qth || stats?.grid) && (
+              <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-600 dark:text-slate-300 flex-wrap">
+                {stats?.qth && (
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                    <span>{stats.qth}</span>
+                  </span>
+                )}
+                {stats?.grid && (
+                  <span className="inline-flex items-center gap-1 font-mono font-bold px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-[10px]">
+                    <Compass className="w-2.5 h-2.5" />
+                    <span>{stats.grid}</span>
+                  </span>
+                )}
+              </div>
+            )}
+
             {user.email ? (
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">{user.email}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate mt-0.5">{user.email}</p>
             ) : user.username ? (
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">@{user.username}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">@{user.username}</p>
             ) : null}
 
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span className={`font-mono text-xs font-extrabold px-2.5 py-0.5 rounded-lg border ${
                 user.status === 'approved'
                   ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
@@ -290,6 +331,14 @@ export default function ProfileTab({
               }`}>
                 {user.callsign || t('dash_no_callsign')}
               </span>
+
+              {/* Other/Slash Callsigns */}
+              {Array.isArray(stats?.otherCallsigns) && stats.otherCallsigns.filter(c => c !== user.callsign).map(c => (
+                <span key={c} className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
+                  {c}
+                </span>
+              ))}
+
               {!user.isWeb && user.auth_type !== 'web' && (
                 <button
                   type="button"
@@ -302,6 +351,20 @@ export default function ProfileTab({
                   <Edit className="w-3 h-3" />
                   <span>{user.callsign ? t('profile_change_callsign') : t('profile_set_callsign')}</span>
                 </button>
+              )}
+
+              {user.callsign && (
+                <a
+                  href={`https://next.pota.app/profile/${encodeURIComponent(user.callsign)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => telegram.haptic.impact('light')}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline ml-auto"
+                  title="Открыть профиль на pota.app"
+                >
+                  <span>POTA.app</span>
+                  <ExternalLink className="w-3 h-3 opacity-80" />
+                </a>
               )}
             </div>
           </div>
@@ -523,23 +586,41 @@ export default function ProfileTab({
 
       {/* 3. POTA Statistics Overview */}
       <div className="space-y-2">
-        <div className="flex items-center gap-1.5 px-1">
-          <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
-            {t('profile_stat_title')}
-          </span>
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-1.5">
+            <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+              {t('profile_stat_title')}
+            </span>
+          </div>
+          {stats?.awardsCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+              <Trophy className="w-3 h-3 text-amber-500" />
+              <span>{stats.awardsCount} {language === 'RU' ? 'наград' : 'awards'}</span>
+            </span>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">
           {/* Activator Stats */}
-          <div className="p-3.5 rounded-2xl glass-card space-y-2">
-            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-              {t('profile_activator_title')}
-            </span>
-            <div className="space-y-1 text-xs">
+          <div className="p-3.5 rounded-2xl glass-card space-y-2 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                <TreePine className="w-3.5 h-3.5" />
+                <span>{t('profile_activator_title')}</span>
+              </span>
+            </div>
+            <div className="space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('dash_activations')}</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">{stats?.activations || 0}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                  {stats?.activations || 0}
+                  {stats?.attempts?.activations && stats.attempts.activations > (stats.activations || 0) && (
+                    <span className="text-[10px] text-slate-400 font-normal ml-1">
+                      (из {stats.attempts.activations})
+                    </span>
+                  )}
+                </span>
               </div>
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('dash_unique_parks')}</span>
@@ -549,27 +630,316 @@ export default function ProfileTab({
                 <span>{t('dash_qsos')}</span>
                 <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{stats?.qsos || 0}</span>
               </div>
+              {stats?.activations > 0 && stats?.qsos > 0 && (
+                <div className="flex justify-between text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[11px]">
+                  <span>{language === 'RU' ? 'Среднее/выезд:' : 'Avg QSO/act:'}</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                    {((stats.qsos || 0) / Math.max(stats.activations || 1, 1)).toFixed(1)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Hunter Stats */}
-          <div className="p-3.5 rounded-2xl glass-card space-y-2">
-            <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
-              {t('profile_hunter_title')}
-            </span>
-            <div className="space-y-1 text-xs">
+          <div className="p-3.5 rounded-2xl glass-card space-y-2 relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                <Radio className="w-3.5 h-3.5" />
+                <span>{t('profile_hunter_title')}</span>
+              </span>
+            </div>
+            <div className="space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('profile_hunted_parks')}</span>
                 <span className="font-mono font-bold text-slate-900 dark:text-white">{stats?.workedParks || 0}</span>
               </div>
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                <span>{t('profile_dxcc_count')}</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">{stats?.dxcc || 0}</span>
+                <span>{language === 'RU' ? 'Связей (QSO):' : 'Hunter QSOs:'}</span>
+                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{stats?.dxcc || 0}</span>
               </div>
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
-                <span>{t('profile_confirmed_qsos')}</span>
-                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{stats?.confirmed || 0}</span>
+                <span>{language === 'RU' ? 'Дипломов POTA:' : 'POTA Awards:'}</span>
+                <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{stats?.awardsCount || stats?.confirmed || 0}</span>
               </div>
+              {stats?.endorsementsCount > 0 && (
+                <div className="flex justify-between text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[11px]">
+                  <span>{language === 'RU' ? 'Подтверждений:' : 'Endorsements:'}</span>
+                  <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
+                    {stats.endorsementsCount}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. POTA Awards Showcase */}
+      {Array.isArray(stats?.awards) && stats.awards.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5">
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                {language === 'RU' ? 'Награды и сертификаты POTA' : 'POTA Awards & Honors'} ({stats.awards.length})
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {stats.awards.map((award, idx) => (
+              <div 
+                key={`${award.name}-${idx}`}
+                className="p-3 rounded-2xl glass-card border border-amber-500/20 bg-gradient-to-r from-amber-500/5 via-transparent to-emerald-500/5 flex items-start gap-2.5"
+              >
+                <div className="p-2 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                  <Award className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                    {award.name}
+                  </h4>
+                  {award.granted && (
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      {language === 'RU' ? 'Присвоено:' : 'Granted:'} {award.granted.split('T')[0]}
+                    </p>
+                  )}
+                  {Array.isArray(award.endorsements) && award.endorsements.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {award.endorsements.map(end => (
+                        <span 
+                          key={end} 
+                          className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25"
+                        >
+                          <Sparkles className="w-2.5 h-2.5 text-emerald-500" />
+                          <span>{end}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 5. Recent Activations Log (Экспедиции оператора) */}
+      {Array.isArray(stats?.recentActivations) && stats.recentActivations.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5">
+              <TreePine className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                {language === 'RU' ? 'Недавние активации' : 'Recent Activations'} ({stats.recentActivations.length})
+              </span>
+            </div>
+            {stats.recentActivations.length > 4 && (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('light');
+                  setShowAllActivations(!showAllActivations);
+                }}
+                className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+              >
+                <span>{showAllActivations ? (language === 'RU' ? 'Свернуть' : 'Show less') : (language === 'RU' ? 'Все выезды' : 'Show all')}</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${showAllActivations ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            {(showAllActivations ? stats.recentActivations : stats.recentActivations.slice(0, 4)).map((act, idx) => (
+              <div 
+                key={`${act.reference}-${act.date}-${idx}`}
+                className="p-3 rounded-2xl glass-card border border-slate-200 dark:border-slate-800 hover:border-emerald-500/40 transition flex flex-col gap-2"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onNavigate) {
+                            telegram.haptic.impact('light');
+                            onNavigate('map', { focusParkRef: act.reference });
+                          }
+                        }}
+                        className="font-mono font-extrabold text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                        title={language === 'RU' ? 'Показать на карте' : 'View on map'}
+                      >
+                        <span>{act.reference}</span>
+                      </button>
+                      {act.location && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
+                          {act.location}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-slate-400">•</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{act.date}</span>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5">
+                      {act.park || act.reference}
+                    </p>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span className="inline-flex items-center font-mono font-bold text-xs px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
+                      {act.total} QSO
+                    </span>
+                  </div>
+                </div>
+
+                {/* Modes Breakdown Badges */}
+                <div className="flex items-center gap-1.5 text-[10px] font-mono flex-wrap pt-1.5 border-t border-slate-100 dark:border-slate-800/60">
+                  {act.phone > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-semibold">
+                      🎙️ SSB: {act.phone}
+                    </span>
+                  )}
+                  {act.data > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-semibold">
+                      💻 FT8/DIGI: {act.data}
+                    </span>
+                  )}
+                  {act.cw > 0 && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-semibold">
+                      ⚡ CW: {act.cw}
+                    </span>
+                  )}
+                  {act.phone === 0 && act.data === 0 && act.cw === 0 && (
+                    <span className="text-slate-400 text-[10px]">
+                      {act.total} QSO проведено
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 6. Recent Hunter QSOs (Журнал связей охотника) */}
+      {Array.isArray(stats?.recentHunts) && stats.recentHunts.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5">
+              <Radio className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                {language === 'RU' ? 'Связи охотника (Hunter Log)' : 'Recent Hunter QSOs'} ({stats.recentHunts.length})
+              </span>
+            </div>
+            {stats.recentHunts.length > 4 && (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('light');
+                  setShowAllHunts(!showAllHunts);
+                }}
+                className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+              >
+                <span>{showAllHunts ? (language === 'RU' ? 'Свернуть' : 'Show less') : (language === 'RU' ? 'Все связи' : 'Show all')}</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${showAllHunts ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            {(showAllHunts ? stats.recentHunts : stats.recentHunts.slice(0, 4)).map((hunt, idx) => (
+              <div 
+                key={`${hunt.callsign}-${hunt.reference}-${hunt.date}-${idx}`}
+                className="p-2.5 rounded-xl glass-card border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 text-xs"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      {hunt.callsign}
+                    </span>
+                    <span className="text-[10px] text-slate-400">в</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onNavigate && hunt.reference) {
+                          telegram.haptic.impact('light');
+                          onNavigate('map', { focusParkRef: hunt.reference });
+                        }
+                      }}
+                      className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                    >
+                      {hunt.reference}
+                    </button>
+                  </div>
+                  {hunt.park && (
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                      {hunt.park}
+                    </p>
+                  )}
+                </div>
+
+                <div className="text-right shrink-0 flex items-center gap-1.5">
+                  {(hunt.band || hunt.mode) && (
+                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                      {[hunt.band, hunt.mode].filter(Boolean).join(' • ')}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {hunt.date}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 7. RU-POTA Hub Activity */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1.5 px-1">
+          <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+            {language === 'RU' ? 'Активность в RU-POTA Hub' : 'RU-POTA Hub Activity'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="p-3.5 rounded-2xl glass-card flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-amber-500/15 text-amber-500">
+                <Bell className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium block">
+                  {language === 'RU' ? 'Подписки' : 'Subscriptions'}
+                </span>
+                <span className="text-sm font-extrabold font-mono text-slate-900 dark:text-white">
+                  {subscriptionsCount || 0}
+                </span>
+              </div>
+            </div>
+            {onNavigate && (
+              <button
+                type="button"
+                onClick={() => onNavigate('subscriptions')}
+                className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+              >
+                {language === 'RU' ? 'Открыть' : 'View'} →
+              </button>
+            )}
+          </div>
+
+          <div className="p-3.5 rounded-2xl glass-card flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+              <Radio className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium block">
+                {language === 'RU' ? 'Спотов через Hub' : 'Spots via Hub'}
+              </span>
+              <span className="text-sm font-extrabold font-mono text-slate-900 dark:text-white">
+                {user.spots_count || 0}
+              </span>
             </div>
           </div>
         </div>

@@ -670,6 +670,15 @@ export function createTmaRouter(telegramClient) {
         }
       }
 
+      // Count user published spots from local DB
+      let userSpotsCount = 0;
+      if (dbUser.callsign) {
+        const cleanCall = getBaseCallsign(dbUser.callsign);
+        try {
+          userSpotsCount = db.prepare('SELECT COUNT(*) as count FROM spots WHERE UPPER(callsign) = ? OR UPPER(callsign) LIKE ?').get(cleanCall, `${cleanCall}/%`)?.count || 0;
+        } catch (_) {}
+      }
+
       // Fetch or retrieve cached POTA stats
       let stats = {
         activations: 0,
@@ -678,6 +687,17 @@ export function createTmaRouter(telegramClient) {
         workedParks: 0,
         dxcc: 0,
         confirmed: 0,
+        name: '',
+        qth: '',
+        grid: '',
+        gravatar: null,
+        otherCallsigns: [],
+        attempts: null,
+        awardsCount: 0,
+        endorsementsCount: 0,
+        awards: [],
+        recentActivations: [],
+        recentHunts: [],
       };
 
       if (dbUser.callsign && dbUser.status === 'approved') {
@@ -685,20 +705,59 @@ export function createTmaRouter(telegramClient) {
         const cached = statsCache.get(cleanCall);
         const now = Date.now();
 
-        if (cached && (now - cached.timestamp) < STATS_CACHE_TTL_MS) {
+        if (cached && (now - cached.timestamp) < STATS_CACHE_TTL_MS && cached.data?.recentActivations !== undefined) {
           stats = cached.data;
         } else {
           try {
             const remoteStats = await potaApi.getStats(cleanCall);
-              stats = {
-                activations: remoteStats.stats?.activator?.activations || remoteStats.total_activations || 0,
-                uniqueParks: remoteStats.stats?.activator?.parks || remoteStats.unique_parks_activated || 0,
-                qsos: remoteStats.stats?.activator?.qsos || remoteStats.total_qsos || 0,
-                workedParks: remoteStats.stats?.hunter?.parks || remoteStats.unique_parks_hunted || 0,
-                dxcc: remoteStats.stats?.hunter?.qsos || remoteStats.dxcc_count || 0,
-                confirmed: remoteStats.stats?.awards || remoteStats.confirmed_qsos || 0,
-              };
-              statsCache.set(cleanCall, { data: stats, timestamp: now });
+            stats = {
+              // Core metrics
+              activations: remoteStats.stats?.activator?.activations || remoteStats.total_activations || 0,
+              uniqueParks: remoteStats.stats?.activator?.parks || remoteStats.unique_parks_activated || 0,
+              qsos: remoteStats.stats?.activator?.qsos || remoteStats.total_qsos || 0,
+              workedParks: remoteStats.stats?.hunter?.parks || remoteStats.unique_parks_hunted || 0,
+              dxcc: remoteStats.stats?.hunter?.qsos || remoteStats.dxcc_count || 0,
+              confirmed: remoteStats.stats?.awards || remoteStats.confirmed_qsos || 0,
+
+              // Rich operator bio and locations
+              name: remoteStats.name || '',
+              qth: remoteStats.qth || '',
+              grid: remoteStats.grid || '',
+              gravatar: remoteStats.gravatar || null,
+              otherCallsigns: Array.isArray(remoteStats.other_callsigns) ? remoteStats.other_callsigns : [],
+              attempts: remoteStats.stats?.attempts || null,
+              awardsCount: remoteStats.stats?.awards || (Array.isArray(remoteStats.awards) ? remoteStats.awards.length : 0),
+              endorsementsCount: remoteStats.stats?.endorsements || 0,
+
+              // Full awards array
+              awards: Array.isArray(remoteStats.awards) ? remoteStats.awards : [],
+
+              // Recent activations & hunter activity
+              recentActivations: Array.isArray(remoteStats.recent_activity?.activations)
+                ? remoteStats.recent_activity.activations.map(act => ({
+                    date: act.date || '',
+                    reference: act.reference || '',
+                    park: act.park || '',
+                    location: act.location || '',
+                    cw: act.cw || 0,
+                    data: act.data || 0,
+                    phone: act.phone || 0,
+                    total: act.total || 0,
+                  }))
+                : [],
+              recentHunts: Array.isArray(remoteStats.recent_activity?.hunter_qsos)
+                ? remoteStats.recent_activity.hunter_qsos.map(h => ({
+                    date: h.date ? h.date.split('T')[0] : '',
+                    callsign: h.callsign || '',
+                    band: h.band || '',
+                    mode: h.mode || '',
+                    reference: h.reference || '',
+                    park: h.park || '',
+                    location: h.location || '',
+                  }))
+                : [],
+            };
+            statsCache.set(cleanCall, { data: stats, timestamp: now });
           } catch (e) {
             // Stats fetch warning - fallback to default
           }
@@ -726,6 +785,8 @@ export function createTmaRouter(telegramClient) {
           reject_reason: dbUser.reject_reason || null,
           notifications_enabled: dbUser.notifications_enabled !== 0,
           isMock: Boolean(tgUser.isMock),
+          registered_at: dbUser.created_at || null,
+          spots_count: userSpotsCount,
         },
         activeSpot,
         stats,

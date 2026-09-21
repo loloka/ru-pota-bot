@@ -326,10 +326,12 @@ export default function App() {
               <ProfileTab 
                 user={user} 
                 stats={stats}
+                subscriptionsCount={subscriptionsCount}
                 onRefreshProfile={loadProfile}
                 onRequireAuth={handleRequireAuth}
                 onOpenWebAuth={handleOpenWebAuth}
                 onWebLogout={handleWebLogout}
+                onNavigate={handleNavigate}
                 language={language}
                 t={t}
               />

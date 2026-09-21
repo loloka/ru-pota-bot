@@ -15,7 +15,8 @@ import {
   AlertCircle,
   Lock,
   Clock,
-  Globe
+  Globe,
+  TreePine
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -346,17 +347,17 @@ export default function DashboardTab({
           </button>
         </div>
       ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl glass-card border border-sky-500/30 bg-gradient-to-r from-sky-500/10 via-slate-800/30 to-emerald-500/10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl glass-card border border-emerald-500/25 dark:border-emerald-500/35 bg-gradient-to-r from-emerald-500/10 via-slate-800/30 to-sky-500/10">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-500/20 shrink-0">
-              <Send className="w-5 h-5 -translate-x-0.5 translate-y-0.5" />
+            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 shrink-0">
+              <TreePine className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">
                   {t('guest_welcome')}
                 </h1>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                   {t('guest_badge')}
                 </span>
               </div>

@@ -1,5 +1,13 @@
 # История изменений (Changelog)
 
+## [1.16.46] - 2026-09-21 (Fix Undefined isTelegramLinked in Resend Email Template)
+### Исправлено
+- **Устранена ошибка 500 при отправке кода подтверждения на почту (`resendService.js`)**:
+  - Удалён остаточный фрагмент условия `${isTelegramLinked ? ... : ''}` из HTML-шаблона письма, вызывавший `ReferenceError: isTelegramLinked is not defined` в эндпоинте `/auth/send-code`.
+  - Отправка email-кодов авторизации через Resend API теперь работает безотказно.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.46` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.45] - 2026-09-21 (Fix Missing useEffect Import in ProfileTab & Add ErrorBoundary)
 ### Исправлено
 - **Исправление чёрного экрана в гостевом режиме в Профиле (`ProfileTab.jsx`)**:

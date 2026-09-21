@@ -157,13 +157,6 @@ export const resendService = {
         </p>
       </div>
 
-      ${isTelegramLinked ? `
-      <div style="background-color: rgba(14, 165, 233, 0.12); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 12px; padding: 12px 16px; margin: 16px 0; font-size: 13px; color: #bae6fd; text-align: center; line-height: 1.5;">
-        📱 <b>Обнаружен Telegram-аккаунт для ${cleanCallsign}</b><br>
-        После ввода кода на сайте ваш веб-сеанс будет объединён с Telegram: подтянутся подписки, текущий спот и статус в эфире!
-      </div>
-      ` : ''}
-
       <div class="code-container">
         <div class="code-label">Ваш одноразовый код:</div>
         <div class="code-number">${code}</div>

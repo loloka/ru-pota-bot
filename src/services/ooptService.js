@@ -190,6 +190,24 @@ export function isPotaRestrictedAte(ate = '') {
   return /крым|севастопол|донецк|луганск|запорож|херсон/i.test(ate);
 }
 
+const GENERIC_DESCRIPTORS = new Set([
+  'заповедник', 'заказник', 'нацпарк', 'парк', 'памятник', 'природы', 'оопт',
+  'природный', 'государственный', 'биосферный', 'комплексный', 'биологический',
+  'лесопарк', 'урочище', 'ботанический', 'дендрологический'
+]);
+
+function getSearchStem(word) {
+  const w = word.trim().toLowerCase();
+  if (w.length <= 3) return w;
+  return w
+    .replace(/(ск(ий|ого|ому|им|ом|ая|ой|ую|ое|ие|их|ими)?)$/i, 'ск')
+    .replace(/(н(ый|ого|ому|ым|ом|ая|ой|ую|ое|ые|ых|ыми)?)$/i, 'н')
+    .replace(/(ов(ый|ого|ому|ым|ом|ая|ой|ую|ое|ые|ых|ыми)?)$/i, 'ов')
+    .replace(/(ев(ый|ого|ому|ым|ом|ая|ой|ую|ое|ые|ых|ыми)?)$/i, 'ев')
+    .replace(/(ин(ый|ого|ому|ым|ом|ая|ой|ую|ое|ые|ых|ыми)?)$/i, 'ин')
+    .replace(/(ий|ый|ой|ей|ай|яя|ее|ое|ые|ие|ая|у|ю|е|о|а|я|ы|и|ом|ем|ам|ям|ами|ями|ах|ях)$/i, '');
+}
+
 /**
  * Paginated query for Russian Protected Areas
  */
@@ -209,11 +227,55 @@ export function getOoptList({
 
   const baseConditions = [];
   const baseParams = [];
+  let searchOrderParams = [];
+  let isSearchActive = false;
 
   if (search && search.trim()) {
-    const term = `%${search.trim()}%`;
-    baseConditions.push(`(title LIKE ? OR ate LIKE ? OR agency LIKE ? OR category LIKE ? OR pota_ref LIKE ? OR pota_name LIKE ?)`);
-    baseParams.push(term, term, term, term, term, term);
+    isSearchActive = true;
+    const rawTokens = search.trim().split(/\s+/).filter(Boolean);
+    const tokensInfo = rawTokens.map(t => {
+      const isNum = /^\d+$/.test(t);
+      const stem = getSearchStem(t);
+      const isGeneric = GENERIC_DESCRIPTORS.has(t.toLowerCase()) || GENERIC_DESCRIPTORS.has(stem);
+      return { token: t, stem, isNum, isGeneric };
+    });
+
+    const buildTokenConditions = (tokensList) => {
+      const conds = [];
+      const parms = [];
+      for (const info of tokensList) {
+        const term = `%${info.stem}%`;
+        if (info.isNum) {
+          conds.push(`(nid = ? OR title LIKE ? OR ate LIKE ? OR agency LIKE ? OR category LIKE ? OR pota_ref LIKE ? OR pota_name LIKE ?)`);
+          parms.push(parseInt(info.token, 10), term, term, term, term, term, term);
+        } else {
+          conds.push(`(title LIKE ? OR ate LIKE ? OR agency LIKE ? OR category LIKE ? OR pota_ref LIKE ? OR pota_name LIKE ?)`);
+          parms.push(term, term, term, term, term, term);
+        }
+      }
+      return { conds, parms };
+    };
+
+    const { conds: allConds, parms: allParms } = buildTokenConditions(tokensInfo);
+    let chosenConds = allConds;
+    let chosenParms = allParms;
+
+    if (tokensInfo.length > 1) {
+      const testSql = `SELECT 1 FROM oopt_registry WHERE ${allConds.join(' AND ')} LIMIT 1`;
+      const testMatch = db.prepare(testSql).get(...allParms);
+      if (!testMatch) {
+        const distinctTokens = tokensInfo.filter(t => !t.isGeneric);
+        if (distinctTokens.length > 0) {
+          const { conds: fallbackConds, parms: fallbackParms } = buildTokenConditions(distinctTokens);
+          chosenConds = fallbackConds;
+          chosenParms = fallbackParms;
+        }
+      }
+    }
+
+    baseConditions.push(...chosenConds);
+    baseParams.push(...chosenParms);
+    searchOrderParams = [`${search.trim()}%`, `%${search.trim()}%`];
   }
 
   if (category && category.trim()) {
@@ -264,11 +326,16 @@ export function getOoptList({
     FROM oopt_registry
     ${whereClause}
     ORDER BY 
+      ${isSearchActive ? `CASE WHEN title LIKE ? THEN 1 WHEN title LIKE ? THEN 2 ELSE 3 END,` : ''}
       CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END,
       title ASC
     LIMIT ? OFFSET ?
   `;
-  const rows = db.prepare(selectSql).all(...params, limitNum, offset).map(r => ({
+  const queryParams = isSearchActive
+    ? [...params, ...searchOrderParams, limitNum, offset]
+    : [...params, limitNum, offset];
+
+  const rows = db.prepare(selectSql).all(...queryParams).map(r => ({
     ...r,
     pota_restricted: isPotaRestrictedAte(r.ate)
   }));

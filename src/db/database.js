@@ -15,6 +15,65 @@ if (!fs.existsSync(dbDir)) {
 const db = new Database(path.join(dbDir, 'pota.db'));
 db.pragma('journal_mode = WAL');
 
+// Register Unicode-aware lowercase, uppercase, and LIKE functions for SQLite.
+// Default SQLite LIKE / lower / upper only support ASCII, which breaks Cyrillic / case-insensitive search.
+db.function('lower', { deterministic: true }, (str) => {
+  return typeof str === 'string' ? str.toLowerCase() : str;
+});
+
+db.function('upper', { deterministic: true }, (str) => {
+  return typeof str === 'string' ? str.toUpperCase() : str;
+});
+
+db.function('like', { deterministic: true, varargs: true }, (pattern, str, escapeChar) => {
+  if (typeof pattern !== 'string' || typeof str !== 'string') return 0;
+  const p = pattern.toLowerCase();
+  const s = str.toLowerCase();
+
+  // Fast paths for standard wildcards without escape character
+  if (!escapeChar) {
+    // 1. %substr% (most common)
+    if (p.startsWith('%') && p.endsWith('%') && !p.slice(1, -1).includes('%') && !p.includes('_')) {
+      return s.includes(p.slice(1, -1)) ? 1 : 0;
+    }
+    // 2. prefix%
+    if (p.endsWith('%') && !p.startsWith('%') && !p.slice(0, -1).includes('%') && !p.includes('_')) {
+      return s.startsWith(p.slice(0, -1)) ? 1 : 0;
+    }
+    // 3. %suffix
+    if (p.startsWith('%') && !p.endsWith('%') && !p.slice(1).includes('%') && !p.includes('_')) {
+      return s.endsWith(p.slice(1)) ? 1 : 0;
+    }
+    // 4. exact match
+    if (!p.includes('%') && !p.includes('_')) {
+      return s === p ? 1 : 0;
+    }
+  }
+
+  // Regex fallback for complex patterns (% and _) and ESCAPE clause
+  try {
+    const esc = escapeChar ? escapeChar.toLowerCase() : null;
+    let rx = '^';
+    for (let i = 0; i < p.length; i++) {
+      const ch = p[i];
+      if (esc && ch === esc && i + 1 < p.length) {
+        i++;
+        rx += p[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      } else if (ch === '%') {
+        rx += '.*';
+      } else if (ch === '_') {
+        rx += '.';
+      } else {
+        rx += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      }
+    }
+    rx += '$';
+    return new RegExp(rx, 's').test(s) ? 1 : 0;
+  } catch {
+    return 0;
+  }
+});
+
 // Initialize tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (

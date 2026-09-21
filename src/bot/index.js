@@ -1,6 +1,8 @@
 import { Telegraf, Scenes, session } from 'telegraf';
 import dotenv from 'dotenv';
 import { SocksProxyAgent } from 'socks-proxy-agent';
+import pkgHttpsProxyAgent from 'https-proxy-agent';
+const HttpsProxyAgent = pkgHttpsProxyAgent.HttpsProxyAgent || pkgHttpsProxyAgent;
 import https from 'https';
 import db from '../db/database.js';
 
@@ -65,22 +67,32 @@ if (process.env.TG_API_ROOT) {
     agent: new https.Agent({ keepAlive: true }) // Reuse TCP connection to bypass provider SYN throttling!
   };
 } 
-// 2. SOCKS5 Proxy (VLESS / Tor / Shadowsocks)
+// 2. HTTP / HTTPS / SOCKS5 Proxy (v2rayA / Xray / VLESS / Tor / Shadowsocks)
 else if (process.env.TG_PROXY) {
   let proxyUrl = process.env.TG_PROXY.trim();
-  // Automatically upgrade socks5:// or socks:// to socks5h:// for remote DNS resolution on the proxy
-  if (proxyUrl.startsWith('socks5://')) {
-    proxyUrl = 'socks5h://' + proxyUrl.substring(9);
-  } else if (proxyUrl.startsWith('socks://')) {
-    proxyUrl = 'socks5h://' + proxyUrl.substring(8);
-  }
-  
-  const maskedProxy = proxyUrl.replace(/:([^@/]+)@/, ':****@');
-  console.log(`\x1b[35m[Proxy]\x1b[0m 🛡️ Использование SOCKS5-прокси (remote DNS): ${maskedProxy}`);
+  // Normalize localhost to 127.0.0.1 to prevent IPv6 (::1) connection drops on Node.js 18+
+  proxyUrl = proxyUrl.replace('://localhost:', '://127.0.0.1:').replace('@localhost:', '@127.0.0.1:');
 
-  telegrafOptions.telegram = { 
-    agent: new SocksProxyAgent(proxyUrl) 
-  };
+  const maskedProxy = proxyUrl.replace(/:([^@/]+)@/, ':****@');
+
+  if (proxyUrl.startsWith('http://') || proxyUrl.startsWith('https://')) {
+    console.log(`\x1b[35m[Proxy]\x1b[0m 🛡️ Использование HTTP-прокси: ${maskedProxy}`);
+    telegrafOptions.telegram = { 
+      agent: new HttpsProxyAgent(proxyUrl) 
+    };
+  } else {
+    // Automatically upgrade socks5:// or socks:// to socks5h:// for remote DNS resolution on the proxy
+    if (proxyUrl.startsWith('socks5://')) {
+      proxyUrl = 'socks5h://' + proxyUrl.substring(9);
+    } else if (proxyUrl.startsWith('socks://')) {
+      proxyUrl = 'socks5h://' + proxyUrl.substring(8);
+    }
+    console.log(`\x1b[35m[Proxy]\x1b[0m 🛡️ Использование SOCKS5-прокси (remote DNS): ${maskedProxy}`);
+
+    telegrafOptions.telegram = { 
+      agent: new SocksProxyAgent(proxyUrl) 
+    };
+  }
 } else {
   console.log(`\x1b[35m[Proxy]\x1b[0m ⚡ Прямое подключение к Telegram API (без прокси)`);
 }
@@ -869,7 +881,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.50\x1b[0m 📡             \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.51\x1b[0m 📡             \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

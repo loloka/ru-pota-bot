@@ -1,5 +1,13 @@
 # История изменений (Changelog)
 
+## [1.16.51] - 2026-09-21 (Support HTTP Proxies in TG_PROXY & IPv4 Localhost Normalization)
+### Исправлено и улучшено
+- **Поддержка HTTP/HTTPS-прокси для Telegram Bot (`index.js`, `potaApi.js`, `package.json`)**:
+  - Добавлен `HttpsProxyAgent` для работы с HTTP-прокси (например, порт 20171 в v2rayA / Xray / Squid). Ранее при передаче `http://` в `TG_PROXY` вызывался `SocksProxyAgent`, что приводило к сбою соединения.
+  - Добавлена автоматическая нормализация `localhost` в `127.0.0.1`, предотвращающая разрыв соединений из-за IPv6 `::1` в Node.js 18+.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.51` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.50] - 2026-09-21 (Fix SOCKS5 Disconnections, Remote DNS, & Status Indicators)
 ### Исправлено и улучшено
 - **Устранение обрывов SOCKS5 и поддержка удалённого резолвинга DNS (`index.js`, `potaApi.js`)**:

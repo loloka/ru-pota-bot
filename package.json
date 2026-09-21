@@ -1,6 +1,6 @@
 {
   "name": "ru-pota",
-  "version": "1.16.50",
+  "version": "1.16.51",
   "description": "Telegram Bot for RU-POTA (Parks on the Air) Community",
 
   "main": "src/bot/index.js",
@@ -20,6 +20,7 @@
     "cookie-session": "^2.1.0",
     "dotenv": "^16.4.5",
     "express": "^5.2.1",
+    "https-proxy-agent": "^7.0.6",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.16.0",
     "react": "^18.3.1",

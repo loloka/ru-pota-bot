@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { SocksProxyAgent } from 'socks-proxy-agent';
+import pkgHttpsProxyAgent from 'https-proxy-agent';
+const HttpsProxyAgent = pkgHttpsProxyAgent.HttpsProxyAgent || pkgHttpsProxyAgent;
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -10,18 +12,25 @@ const axiosConfig = {
   baseURL: BASE_URL,
   timeout: 35000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.50 (Telegram Bot; Node.js)'
+    'User-Agent': 'RU-POTA-Bot/1.16.51 (Telegram Bot; Node.js)'
   }
 };
 
 if (process.env.POTA_PROXY) {
   let proxyUrl = process.env.POTA_PROXY.trim();
-  if (proxyUrl.startsWith('socks5://')) {
-    proxyUrl = 'socks5h://' + proxyUrl.substring(9);
-  } else if (proxyUrl.startsWith('socks://')) {
-    proxyUrl = 'socks5h://' + proxyUrl.substring(8);
+  proxyUrl = proxyUrl.replace('://localhost:', '://127.0.0.1:').replace('@localhost:', '@127.0.0.1:');
+  
+  let agent;
+  if (proxyUrl.startsWith('http://') || proxyUrl.startsWith('https://')) {
+    agent = new HttpsProxyAgent(proxyUrl);
+  } else {
+    if (proxyUrl.startsWith('socks5://')) {
+      proxyUrl = 'socks5h://' + proxyUrl.substring(9);
+    } else if (proxyUrl.startsWith('socks://')) {
+      proxyUrl = 'socks5h://' + proxyUrl.substring(8);
+    }
+    agent = new SocksProxyAgent(proxyUrl);
   }
-  const agent = new SocksProxyAgent(proxyUrl);
   axiosConfig.httpAgent = agent;
   axiosConfig.httpsAgent = agent;
 }

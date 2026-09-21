@@ -81,6 +81,37 @@ const loggedOutUser = db.prepare('SELECT web_token FROM users WHERE telegram_id 
 assert.strictEqual(loggedOutUser.web_token, null, 'web_token should be null after logout');
 console.log('✅ PASS: Web logout clears web_token');
 
+// 8. Test pure callsign validation (base callsign only, no slashes)
+const pureCallsignRegex = /^[A-Z0-9]{1,3}[0-9][A-Z0-9]{1,5}$/;
+const hasLetterRegex = /[A-Z]/;
+
+function validateBaseCallsign(call) {
+  if (!call) return false;
+  const clean = String(call).trim().toUpperCase();
+  if (clean.includes('/') || clean.includes('\\')) return false;
+  return pureCallsignRegex.test(clean) && hasLetterRegex.test(clean);
+}
+
+// Valid base callsigns
+assert.strictEqual(validateBaseCallsign('R9OGL'), true, 'R9OGL must be valid');
+assert.strictEqual(validateBaseCallsign('RA9ODW'), true, 'RA9ODW must be valid');
+assert.strictEqual(validateBaseCallsign('UB3AAA'), true, 'UB3AAA must be valid');
+assert.strictEqual(validateBaseCallsign('W1AW'), true, 'W1AW must be valid');
+assert.strictEqual(validateBaseCallsign('DL1ABC'), true, 'DL1ABC must be valid');
+
+// Invalid: slashes must be rejected
+assert.strictEqual(validateBaseCallsign('RA9ODW/P'), false, 'RA9ODW/P must be rejected (no slashes)');
+assert.strictEqual(validateBaseCallsign('R1/RA9ODW'), false, 'R1/RA9ODW must be rejected (no slashes)');
+assert.strictEqual(validateBaseCallsign('R9OGL/M'), false, 'R9OGL/M must be rejected (no slashes)');
+assert.strictEqual(validateBaseCallsign('UB3AAA/1'), false, 'UB3AAA/1 must be rejected (no slashes)');
+assert.strictEqual(validateBaseCallsign('R9OGL\\P'), false, 'Backslash must be rejected');
+
+// Invalid: bad format
+assert.strictEqual(validateBaseCallsign('12345'), false, 'No letters must be rejected');
+assert.strictEqual(validateBaseCallsign('ABCDEF'), false, 'No digits must be rejected');
+assert.strictEqual(validateBaseCallsign(''), false, 'Empty callsign must be rejected');
+console.log('✅ PASS: Base callsign validation strictly rejects slashes and accepts pure callsigns');
+
 // Cleanup test user
 db.prepare('DELETE FROM users WHERE telegram_id = ?').run(nextWebId);
 console.log('✅ PASS: Cleanup test web user\n');

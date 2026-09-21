@@ -296,6 +296,9 @@ export const startAdminServer = (telegramClient) => {
       const authBadge = isWeb 
         ? '<span class="badge bg-info text-dark ms-1" style="font-size: 0.75rem;"><i class="bi bi-globe"></i> Web</span>'
         : '<span class="badge bg-primary ms-1" style="font-size: 0.75rem;"><i class="bi bi-telegram"></i> TG</span>';
+      const qrzLink = u.callsign 
+        ? `<a href="https://www.qrz.ru/db/${encodeURIComponent(u.callsign)}" target="_blank" rel="noopener noreferrer" class="badge bg-light text-secondary border text-decoration-none ms-1" title="Проверить позывной в базе QRZ.ru" style="font-size: 0.7rem;"><i class="bi bi-box-arrow-up-right"></i> qrz.ru</a>`
+        : '';
       const emailDisplay = u.email ? `<div class="small text-muted"><i class="bi bi-envelope"></i> ${escapeHtmlServer(u.email)}</div>` : '';
 
       return `
@@ -307,6 +310,7 @@ export const startAdminServer = (telegramClient) => {
               <div class="d-flex align-items-center">
                 <strong>${escapeHtmlServer(u.callsign)}</strong>
                 ${authBadge}
+                ${qrzLink}
               </div>
               ${emailDisplay}
               <div class="small text-muted" id="user-info-${u.telegram_id}">

@@ -14,7 +14,8 @@ import {
   MapPin,
   AlertCircle,
   Lock,
-  Clock
+  Clock,
+  Globe
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -40,6 +41,7 @@ export default function DashboardTab({
   onRefreshProfile,
   onNavigate,
   onRequireAuth,
+  onOpenWebAuth,
   language = 'RU',
   t = (k) => k
 }) {
@@ -344,7 +346,7 @@ export default function DashboardTab({
           </button>
         </div>
       ) : (
-        <div className="flex items-center justify-between p-4 rounded-2xl glass-card border border-sky-500/30 bg-gradient-to-r from-sky-500/10 via-slate-800/30 to-emerald-500/10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl glass-card border border-sky-500/30 bg-gradient-to-r from-sky-500/10 via-slate-800/30 to-emerald-500/10">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white shadow-lg shadow-sky-500/20 shrink-0">
               <Send className="w-5 h-5 -translate-x-0.5 translate-y-0.5" />
@@ -364,26 +366,46 @@ export default function DashboardTab({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              telegram.haptic.impact('light');
-              if (onRequireAuth) {
-                onRequireAuth(
-                  language === 'RU' ? 'Вход через Telegram' : 'Login via Telegram',
-                  language === 'RU' 
-                    ? 'Откройте RU-POTA Hub внутри Telegram-бота @ru_pota_bot для автоматической авторизации вашего позывного.' 
-                    : 'Open RU-POTA Hub inside @ru_pota_bot to automatically authorize your callsign.'
-                );
-              } else {
-                telegram.openTelegramBot('hub');
-              }
-            }}
-            className="flex items-center gap-1 text-xs font-bold text-white px-2.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 shadow-md shadow-sky-500/20 transition active:scale-95 shrink-0"
-          >
-            <Send className="w-3 h-3" />
-            <span>{t('guest_login_btn')}</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Кнопка 1: Войти через Telegram-бота */}
+            <button
+              type="button"
+              onClick={() => {
+                telegram.haptic.impact('light');
+                if (onRequireAuth) {
+                  onRequireAuth(
+                    language === 'RU' ? 'Вход через Telegram' : 'Login via Telegram',
+                    language === 'RU' 
+                      ? 'Откройте RU-POTA Hub внутри Telegram-бота @ru_pota_bot для автоматической авторизации вашего позывного.' 
+                      : 'Open RU-POTA Hub inside @ru_pota_bot to automatically authorize your callsign.'
+                  );
+                } else {
+                  telegram.openTelegramBot('hub');
+                }
+              }}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-bold text-white px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 shadow-md shadow-sky-500/20 transition active:scale-95 cursor-pointer"
+              title={language === 'RU' ? 'Войти через Telegram-бота' : 'Login via Telegram Bot'}
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>{language === 'RU' ? 'Через бота' : 'Via Bot'}</span>
+            </button>
+
+            {/* Кнопка 2: Войти напрямую через сайт */}
+            <button
+              type="button"
+              onClick={() => {
+                telegram.haptic.impact('light');
+                if (onOpenWebAuth) {
+                  onOpenWebAuth();
+                }
+              }}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 text-xs font-bold text-slate-950 px-3 py-2 rounded-xl bg-emerald-400 hover:bg-emerald-300 shadow-md shadow-emerald-500/20 transition active:scale-95 cursor-pointer"
+              title={language === 'RU' ? 'Войти напрямую по позывному и Email' : 'Sign in directly with Callsign & Email'}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>{language === 'RU' ? 'Через сайт' : 'Via Website'}</span>
+            </button>
+          </div>
         </div>
       )}
 

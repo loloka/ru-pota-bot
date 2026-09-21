@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mail, KeyRound, X, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Radio } from 'lucide-react';
+import { Mail, KeyRound, X, ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Radio, ShieldCheck } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
 
@@ -41,7 +41,26 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
   // Step 1: Send verification code
   const handleSendCode = async (e) => {
     e?.preventDefault();
-    if (!callsign.trim() || !email.trim()) return;
+    const cleanCall = callsign.trim().toUpperCase();
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanCall || !cleanEmail) return;
+
+    // Check for slashes (base callsign only)
+    if (cleanCall.includes('/') || cleanCall.includes('\\')) {
+      setError(isRu 
+        ? 'Укажите только основной позывной без дробей (/P, /M, /1 и т.д.)' 
+        : 'Please enter base callsign only, without slashes (/P, /M, etc.)');
+      return;
+    }
+
+    // Validate format (letters + digits, no slashes)
+    const pureCallsignRegex = /^[A-Z0-9]{1,3}[0-9][A-Z0-9]{1,5}$/;
+    if (!pureCallsignRegex.test(cleanCall) || !/[A-Z]/.test(cleanCall)) {
+      setError(isRu 
+        ? 'Некорректный формат позывного (например: R9OGL, RA9ODW, UB3AAA)' 
+        : 'Invalid callsign format (e.g. R9OGL, RA9ODW, UB3AAA)');
+      return;
+    }
 
     setError('');
     setLoading(true);
@@ -49,8 +68,8 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
 
     try {
       const res = await api.sendEmailCode({
-        callsign: callsign.trim().toUpperCase(),
-        email: email.trim().toLowerCase(),
+        callsign: cleanCall,
+        email: cleanEmail,
       });
 
       telegram.haptic.notification('success');
@@ -146,15 +165,15 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
             <div className="space-y-2">
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wide">
-                  {isRu ? 'Позывной (Callsign)' : 'Callsign'}
+                  {isRu ? 'Основной позывной (без дробей)' : 'Base Callsign (no slashes)'}
                 </label>
                 <div className="relative">
                   <Radio className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
                     value={callsign}
-                    onChange={(e) => setCallsign(e.target.value.toUpperCase().trim())}
-                    placeholder="R9OGL / RA9ODW/P"
+                    onChange={(e) => setCallsign(e.target.value.toUpperCase().replace(/[\/\\ ]/g, ''))}
+                    placeholder="R9OGL"
                     className="w-full bg-slate-200/60 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 font-mono font-bold uppercase focus:border-emerald-500/60 outline-none"
                     required
                     autoFocus
@@ -176,6 +195,37 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
                     className="w-full bg-slate-200/60 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:border-emerald-500/60 outline-none font-sans"
                     required
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Info callout: Email verification & QRZ.ru tip */}
+            <div className="p-3.5 rounded-2xl bg-sky-500/10 dark:bg-slate-900/80 border border-sky-500/30 text-xs space-y-2">
+              <div className="flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-sky-500 dark:text-sky-400 shrink-0 mt-0.5" />
+                <div className="space-y-1.5 leading-relaxed text-slate-700 dark:text-slate-300">
+                  <p className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>{isRu ? 'Верификация позывного' : 'Callsign Verification'}</span>
+                  </p>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                    {isRu 
+                      ? 'Вход через сайт требует обязательного подтверждения Email. Для защиты от несанкционированного доступа администратор может запросить Свидетельство об образовании позывного (СИС).'
+                      : 'Sign-in requires email verification. Community admins may request official proof of callsign ownership.'}
+                  </p>
+                  <div className="pt-1.5 border-t border-sky-500/20 text-[11px] text-slate-700 dark:text-slate-300 flex items-start gap-1.5">
+                    <span className="text-amber-400 text-xs shrink-0">💡</span>
+                    <span>
+                      {isRu ? (
+                        <>
+                          <b className="text-slate-900 dark:text-white">Автоматическая проверка:</b> укажите тот же Email, что привязан к вашему позывному на <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">qrz.ru</span> — тогда проверка пройдёт автоматически и без отправки документов!
+                        </>
+                      ) : (
+                        <>
+                          <b className="text-slate-900 dark:text-white">Fast-track:</b> use the same Email as in your <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">qrz.ru</span> / QRZ.com profile for automatic verification without paperwork!
+                        </>
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

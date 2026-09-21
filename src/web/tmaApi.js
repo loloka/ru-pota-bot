@@ -229,9 +229,17 @@ export function createTmaRouter(telegramClient) {
       const cleanCallsign = String(callsign).trim().toUpperCase();
       const cleanEmail = String(email).trim().toLowerCase();
 
-      // Validate callsign format per rule 2.4
-      if (!baseCallsignRegex.test(cleanCallsign) || !hasLetterRegex.test(cleanCallsign)) {
-        return res.status(400).json({ error: 'Некорректный формат позывного (например: R9OGL, RA9ODW/P)' });
+      // Reject slashes - base callsign only
+      if (cleanCallsign.includes('/') || cleanCallsign.includes('\\')) {
+        return res.status(400).json({ 
+          error: 'Пожалуйста, укажите только основной позывной без дробей (например, R9OGL или RA9ODW, без /P, /M, /1)' 
+        });
+      }
+
+      // Validate base callsign format (pure callsign with letters and digits, no slashes)
+      const pureCallsignRegex = /^[A-Z0-9]{1,3}[0-9][A-Z0-9]{1,5}$/;
+      if (!pureCallsignRegex.test(cleanCallsign) || !hasLetterRegex.test(cleanCallsign)) {
+        return res.status(400).json({ error: 'Некорректный формат позывного (например: R9OGL, RA9ODW, UB3AAA)' });
       }
 
       // Validate email format
@@ -305,6 +313,9 @@ export function createTmaRouter(telegramClient) {
       const cleanEmail = String(email).trim().toLowerCase();
       const cleanCode = String(code).trim();
       const cleanCallsign = callsign ? String(callsign).trim().toUpperCase() : null;
+      if (cleanCallsign && (cleanCallsign.includes('/') || cleanCallsign.includes('\\'))) {
+        return res.status(400).json({ error: 'Пожалуйста, укажите только основной позывной без дробей' });
+      }
 
       const now = Date.now();
       const verification = db.prepare(`

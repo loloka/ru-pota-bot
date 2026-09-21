@@ -399,6 +399,8 @@ export function createTmaRouter(telegramClient) {
           } catch (tgNotifyErr) {
             console.warn('[Web Auth] Failed to send Telegram DM security alert:', tgNotifyErr.message);
           }
+        }
+
         // 4. Send notification to admin
         const adminId = process.env.ADMIN_ID;
         if (telegramClient && adminId) {

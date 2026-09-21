@@ -1,6 +1,13 @@
 # История изменений (Changelog)
 
-## [1.16.41] - 2026-09-21 (Dashboard Auth Hints, Profile TG Linking Fix & Web Moderation)
+## [1.16.42] - 2026-09-21 (Fix Syntax Error in Web Auth DM Notification Block)
+### Исправлено
+- **Критический синтаксический фикс в `src/web/tmaApi.js`**:
+  - Устранена опечатка с пропущенной закрывающей фигурной скобкой `}` в блоке `if (telegramClient && user.telegram_id > 0)` эндпоинта `/auth/verify-code`, приводившая к `SyntaxError: Unexpected token 'catch'` при компиляции ESM-модуля сервером.
+  - Проведена проверка всех файлов проекта утилитой `node --check`. Все модули компилируются корректно.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.42` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ### Добавлено и исправлено
 - **Актуализация подсказок на главной (Dashboard)**:
   - В карточках «Моя статистика» и «Мои подписки» устаревший текст `«Доступно в Telegram-боте»` заменён на универсальный `«Доступно после авторизации»`.

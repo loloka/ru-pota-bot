@@ -144,10 +144,124 @@ async function refreshParksFromApi() {
 let cachedRaza = null;
 let lastRazaFetchTime = 0;
 
+let isFetchingSpots = false;
 
+/**
+ * Non-blocking background refresher for POTA spots.
+ * Ensures the TMA never waits synchronously on external network latency.
+ */
+async function refreshSpotsInBackground() {
+  if (isFetchingSpots) return cachedSpots;
+  isFetchingSpots = true;
+  try {
+    const rawSpots = await potaApi.getSpots();
+    if (Array.isArray(rawSpots)) {
+      cachedSpots = rawSpots;
+      lastSpotsFetchTime = Date.now();
+    }
+  } catch (e) {
+    console.warn('[TMA API] Background spots refresh failed:', e.message);
+  } finally {
+    isFetchingSpots = false;
+  }
+  return cachedSpots;
+}
+
+/**
+ * Returns spots instantly if cached, otherwise waits at most 2s on cold start.
+ */
+async function getSpotsWithFastFallback() {
+  const now = Date.now();
+  if (cachedSpots && cachedSpots.length > 0) {
+    if (now - lastSpotsFetchTime > SPOTS_CACHE_TTL_MS) {
+      refreshSpotsInBackground().catch(() => {});
+    }
+    return cachedSpots;
+  }
+
+  // Cold start: wait at most 2000ms, otherwise return whatever we have
+  try {
+    const fresh = await Promise.race([
+      refreshSpotsInBackground(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+    ]);
+    return fresh || [];
+  } catch (_) {
+    return cachedSpots || [];
+  }
+}
 
 const statsCache = new Map();
 const STATS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache for stats
+const activeStatsFetches = new Map();
+
+/**
+ * Asynchronously fetch and cache POTA stats for callsign with deduplication
+ */
+async function fetchAndCacheStats(cleanCall) {
+  if (!cleanCall) return null;
+  if (activeStatsFetches.has(cleanCall)) {
+    return activeStatsFetches.get(cleanCall);
+  }
+
+  const fetchPromise = (async () => {
+    try {
+      const remoteStats = await potaApi.getStats(cleanCall);
+      const mapped = {
+        activations: remoteStats.stats?.activator?.activations || remoteStats.total_activations || 0,
+        uniqueParks: remoteStats.stats?.activator?.parks || remoteStats.unique_parks_activated || 0,
+        qsos: remoteStats.stats?.activator?.qsos || remoteStats.total_qsos || 0,
+        workedParks: remoteStats.stats?.hunter?.parks || remoteStats.unique_parks_hunted || 0,
+        dxcc: remoteStats.stats?.hunter?.qsos || remoteStats.dxcc_count || 0,
+        confirmed: remoteStats.stats?.awards || remoteStats.confirmed_qsos || 0,
+
+        name: remoteStats.name || '',
+        qth: remoteStats.qth || '',
+        grid: remoteStats.grid || '',
+        gravatar: remoteStats.gravatar || null,
+        otherCallsigns: Array.isArray(remoteStats.other_callsigns) ? remoteStats.other_callsigns : [],
+        attempts: remoteStats.stats?.attempts || null,
+        awardsCount: remoteStats.stats?.awards || (Array.isArray(remoteStats.awards) ? remoteStats.awards.length : 0),
+        endorsementsCount: remoteStats.stats?.endorsements || 0,
+
+        awards: Array.isArray(remoteStats.awards) ? remoteStats.awards : [],
+
+        recentActivations: Array.isArray(remoteStats.recent_activity?.activations)
+          ? remoteStats.recent_activity.activations.map(act => ({
+              date: act.date || '',
+              reference: act.reference || '',
+              park: act.park || '',
+              location: act.location || '',
+              cw: act.cw || 0,
+              data: act.data || 0,
+              phone: act.phone || 0,
+              total: act.total || 0,
+            }))
+          : [],
+        recentHunts: Array.isArray(remoteStats.recent_activity?.hunter_qsos)
+          ? remoteStats.recent_activity.hunter_qsos.map(h => ({
+              date: h.date ? h.date.split('T')[0] : '',
+              callsign: h.callsign || '',
+              band: h.band || '',
+              mode: h.mode || '',
+              reference: h.reference || '',
+              park: h.park || '',
+              location: h.location || '',
+            }))
+          : [],
+      };
+      statsCache.set(cleanCall, { data: mapped, timestamp: Date.now() });
+      return mapped;
+    } catch (e) {
+      return null;
+    } finally {
+      activeStatsFetches.delete(cleanCall);
+    }
+  })();
+
+  activeStatsFetches.set(cleanCall, fetchPromise);
+  return fetchPromise;
+}
 
 const parkDetailsCache = new Map();
 const PARK_DETAILS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache for full park info, leaderboards, activations
@@ -211,6 +325,9 @@ function formatTimeAgo(dateString) {
  */
 export function createTmaRouter(telegramClient) {
   const router = Router();
+
+  // Prime spots cache immediately on startup in background
+  refreshSpotsInBackground().catch(() => {});
 
   // Background refresh of POTA parks list (delayed by 10 minutes to allow clean bot startup)
   setTimeout(() => {
@@ -712,61 +829,22 @@ export function createTmaRouter(telegramClient) {
         const cached = statsCache.get(cleanCall);
         const now = Date.now();
 
-        if (cached && (now - cached.timestamp) < STATS_CACHE_TTL_MS && cached.data?.recentActivations !== undefined) {
+        if (cached && cached.data) {
           stats = cached.data;
+          // Background revalidation if stale
+          if (now - cached.timestamp >= STATS_CACHE_TTL_MS) {
+            fetchAndCacheStats(cleanCall).catch(() => {});
+          }
         } else {
+          // Cold start: wait at most 2000ms so the initial UI load never freezes
           try {
-            const remoteStats = await potaApi.getStats(cleanCall);
-            stats = {
-              // Core metrics
-              activations: remoteStats.stats?.activator?.activations || remoteStats.total_activations || 0,
-              uniqueParks: remoteStats.stats?.activator?.parks || remoteStats.unique_parks_activated || 0,
-              qsos: remoteStats.stats?.activator?.qsos || remoteStats.total_qsos || 0,
-              workedParks: remoteStats.stats?.hunter?.parks || remoteStats.unique_parks_hunted || 0,
-              dxcc: remoteStats.stats?.hunter?.qsos || remoteStats.dxcc_count || 0,
-              confirmed: remoteStats.stats?.awards || remoteStats.confirmed_qsos || 0,
-
-              // Rich operator bio and locations
-              name: remoteStats.name || '',
-              qth: remoteStats.qth || '',
-              grid: remoteStats.grid || '',
-              gravatar: remoteStats.gravatar || null,
-              otherCallsigns: Array.isArray(remoteStats.other_callsigns) ? remoteStats.other_callsigns : [],
-              attempts: remoteStats.stats?.attempts || null,
-              awardsCount: remoteStats.stats?.awards || (Array.isArray(remoteStats.awards) ? remoteStats.awards.length : 0),
-              endorsementsCount: remoteStats.stats?.endorsements || 0,
-
-              // Full awards array
-              awards: Array.isArray(remoteStats.awards) ? remoteStats.awards : [],
-
-              // Recent activations & hunter activity
-              recentActivations: Array.isArray(remoteStats.recent_activity?.activations)
-                ? remoteStats.recent_activity.activations.map(act => ({
-                    date: act.date || '',
-                    reference: act.reference || '',
-                    park: act.park || '',
-                    location: act.location || '',
-                    cw: act.cw || 0,
-                    data: act.data || 0,
-                    phone: act.phone || 0,
-                    total: act.total || 0,
-                  }))
-                : [],
-              recentHunts: Array.isArray(remoteStats.recent_activity?.hunter_qsos)
-                ? remoteStats.recent_activity.hunter_qsos.map(h => ({
-                    date: h.date ? h.date.split('T')[0] : '',
-                    callsign: h.callsign || '',
-                    band: h.band || '',
-                    mode: h.mode || '',
-                    reference: h.reference || '',
-                    park: h.park || '',
-                    location: h.location || '',
-                  }))
-                : [],
-            };
-            statsCache.set(cleanCall, { data: stats, timestamp: now });
-          } catch (e) {
-            // Stats fetch warning - fallback to default
+            const freshStats = await Promise.race([
+              fetchAndCacheStats(cleanCall),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+            ]);
+            if (freshStats) stats = freshStats;
+          } catch (_) {
+            // Keep default stats, background fetch continues
           }
         }
       }
@@ -822,19 +900,8 @@ export function createTmaRouter(telegramClient) {
       const search = (req.query.search || '').toUpperCase().trim();
 
 
-      const now = Date.now();
-      if (!cachedSpots.length || (now - lastSpotsFetchTime) > SPOTS_CACHE_TTL_MS) {
-        try {
-          const rawSpots = await potaApi.getSpots();
-          if (Array.isArray(rawSpots)) {
-            cachedSpots = rawSpots;
-            lastSpotsFetchTime = now;
-          }
-        } catch (e) {
-          console.warn('[TMA API] Could not refresh POTA spots, using existing cache:', e.message);
-        }
-      }
-      // console.log(`[TMA API /spots] scope=${scope}, cachedSpots=${cachedSpots.length}`);
+      // Fast non-blocking spots retrieval (Stale-While-Revalidate)
+      await getSpotsWithFastFallback();
 
 
       // Also get recent local spots from SQLite (past 45 minutes)
@@ -1005,16 +1072,8 @@ export function createTmaRouter(telegramClient) {
 
       const allParks = cachedParks || [];
 
-      // Ensure cachedSpots is refreshed
-      if (!cachedSpots.length || (now - lastSpotsFetchTime) > SPOTS_CACHE_TTL_MS) {
-        try {
-          const rawSpots = await potaApi.getSpots();
-          if (Array.isArray(rawSpots)) {
-            cachedSpots = rawSpots;
-            lastSpotsFetchTime = now;
-          }
-        } catch (e) {}
-      }
+      // Ensure cachedSpots is refreshed non-blocking
+      await getSpotsWithFastFallback();
 
       // Cross reference active spots from memory and SQLite (only active within 45 minutes)
       const activeSpotsMap = new Map();

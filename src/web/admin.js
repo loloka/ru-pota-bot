@@ -2217,10 +2217,8 @@ export const startAdminServer = (telegramClient) => {
                 if (regionEl && stats.regions) {
                   window.__adminRegionPotaCounts = stats.regionPotaCounts || {};
                   const currentSelected = regionEl.value;
-                  // Preserve default first option ("Все регионы") and rebuild the rest with fresh counts
-                  while (regionEl.options.length > 1) {
-                    regionEl.remove(1);
-                  }
+                  // Clear everything cleanly so optgroups never stack up
+                  regionEl.innerHTML = '<option value="">Все регионы России (89)</option>';
                   stats.regions.forEach(function(r) {
                     const opt = document.createElement('option');
                     opt.value = r;

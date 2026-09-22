@@ -111,5 +111,12 @@ assert.ok(zabelDetails.submitterFields.clarification.includes('⚠️ Реорг
 assert.ok(zabelDetails.submitterFields.clarification.includes('RU-0378'));
 console.log('✅ PASS: Reorganized status filter & parent POTA linking (Забеловский -> RU-0378, Буркальский -> RU-0008) verified');
 
+// 15. Test Nenets Autonomous Okrug isolation from Yamalo-Nenets AO
+const nenetsList = getOoptList({ region: 'Ненецкий автономный округ' });
+assert.strictEqual(nenetsList.total, 14, `Nenets AO should have 14 OOPTs, got ${nenetsList.total}`);
+const hasYamalInNenets = nenetsList.rows.some(r => (r.ate || '').includes('Ямало-Ненецк'));
+assert.strictEqual(hasYamalInNenets, false, 'Nenets AO list must not contain any Yamalo-Nenets AO objects');
+console.log('✅ PASS: Nenets AO strictly isolated from Yamalo-Nenets AO (14 OOPTs, 0 Yamal objects)');
+
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');
 

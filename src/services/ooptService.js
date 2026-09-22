@@ -441,8 +441,15 @@ export function getOoptList({
   }
 
   if (region && region.trim()) {
-    baseConditions.push(`ate LIKE ?`);
-    baseParams.push(`%${region.trim()}%`);
+    const regTrim = region.trim();
+    const regLower = regTrim.toLowerCase();
+    if (regLower.includes('ненецк') && !regLower.includes('ямал')) {
+      baseConditions.push(`(ate LIKE ? AND ate NOT LIKE '%Ямало-Ненецк%')`);
+      baseParams.push(`%${regTrim}%`);
+    } else {
+      baseConditions.push(`ate LIKE ?`);
+      baseParams.push(`%${regTrim}%`);
+    }
   } else if (!search || !search.trim()) {
     // When browsing the general POTA candidates pool (no specific search/region),
     // exclude conflict regions where POTA submissions are not accepted per coordinator request.
@@ -1558,6 +1565,10 @@ export function getRegionalPotaStats() {
         matches = a.includes('ленинградская');
       } else if (code === 'RU-KM') {
         matches = a.includes('ханты-мансийский');
+      } else if (code === 'RU-NN') {
+        matches = a.includes('ненецкий') && !a.includes('ямало-ненецкий');
+      } else if (code === 'RU-YN') {
+        matches = a.includes('ямало-ненецкий') || a.includes('ямал');
       } else if (code === 'RU-FJ') {
         matches = a.includes('русская арктика') || a.includes('франц');
       } else {

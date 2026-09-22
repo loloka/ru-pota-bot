@@ -1060,10 +1060,10 @@ export const startAdminServer = (telegramClient) => {
                       </div>
                     </div>
                     <div class="col-6 col-md-2">
-                      <div class="card bg-danger border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="zero" title="Фильтр: регионы без единого парка POTA (высший приоритет)">
-                        <div class="small opacity-75"><i class="bi bi-exclamation-triangle-fill"></i> Без парков (0 POTA)</div>
-                        <div class="fs-4 fw-bold text-white" id="reg-stat-zero">...</div>
-                        <div class="small opacity-75" style="font-size:11px;">высший приоритет</div>
+                      <div class="card bg-danger border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="under10" title="Фильтр: регионы где менее 10 парков POTA (приоритет развития)">
+                        <div class="small opacity-75"><i class="bi bi-exclamation-triangle-fill"></i> Менее 10 POTA</div>
+                        <div class="fs-4 fw-bold text-white" id="reg-stat-under10">...</div>
+                        <div class="small opacity-75" style="font-size:11px;">приоритет развития</div>
                       </div>
                     </div>
                     <div class="col-6 col-md-2">
@@ -1087,7 +1087,8 @@ export const startAdminServer = (telegramClient) => {
                             <option value="all">Все регионы РФ</option>
                             <option value="mature">🏆 Зрелый регион (≥70% покрытия ООПТ)</option>
                             <option value="low_coverage">⚠️ Низкое покрытие (&lt;20% ООПТ — молодой регион)</option>
-                            <option value="zero">🔴 Без парков (0 POTA — срочно добавить)</option>
+                            <option value="under10">🔴 Менее 10 POTA (&lt;10 парков — приоритет)</option>
+                            <option value="zero">⚪ Без парков (0 POTA)</option>
                             <option value="low">🟡 Мало парков (1–3 POTA)</option>
                             <option value="unactivated">⚪ Без активаций (0% связей)</option>
                             <option value="active">🟢 Активные регионы (&ge;1 активации)</option>
@@ -3644,6 +3645,7 @@ export const startAdminServer = (telegramClient) => {
                 if (document.getElementById('reg-stat-activated')) document.getElementById('reg-stat-activated').textContent = s.activatedParks;
                 if (document.getElementById('reg-stat-rate')) document.getElementById('reg-stat-rate').textContent = s.activationRate + '% от всех парков';
                 if (document.getElementById('reg-stat-unactivated')) document.getElementById('reg-stat-unactivated').textContent = s.unactivatedParks;
+                if (document.getElementById('reg-stat-under10')) document.getElementById('reg-stat-under10').textContent = s.under10ParksCount !== undefined ? s.under10ParksCount : (s.zeroParkCount || 0);
                 if (document.getElementById('reg-stat-zero')) document.getElementById('reg-stat-zero').textContent = s.zeroParkCount;
                 if (document.getElementById('reg-stat-activations-subtitle')) document.getElementById('reg-stat-activations-subtitle').textContent = Number(s.totalActivations).toLocaleString('ru-RU') + ' выездов';
                 if (document.getElementById('reg-stat-qsos')) document.getElementById('reg-stat-qsos').textContent = Number(s.totalQsos).toLocaleString('ru-RU');
@@ -3675,6 +3677,7 @@ export const startAdminServer = (telegramClient) => {
 
               if (filter === 'mature') return !r.isRestricted && r.coverageRate >= 70;
               if (filter === 'low_coverage') return !r.isRestricted && r.totalParks > 0 && r.coverageRate < 20;
+              if (filter === 'under10') return !r.isRestricted && r.totalParks < 10;
               if (filter === 'zero') return !r.isRestricted && r.totalParks === 0;
               if (filter === 'low') return !r.isRestricted && r.totalParks > 0 && r.totalParks <= 3;
               if (filter === 'unactivated') return !r.isRestricted && r.totalParks > 0 && r.activatedParks === 0;

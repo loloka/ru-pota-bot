@@ -1589,6 +1589,7 @@ export function getRegionalPotaStats() {
 
   const regionsList = [];
   let zeroParkCount = 0;
+  let under10ParksCount = 0;
   let totalPotentialParks = 0;
   let matureRegionsCount = 0;
   let lowCoverageCount = 0;
@@ -1625,6 +1626,7 @@ export function getRegionalPotaStats() {
     if (!item.isRestricted) {
       totalPotentialParks += totalPotential;
       if (item.totalParks === 0) zeroParkCount++;
+      if (item.totalParks < 10) under10ParksCount++;
       if (item.coverageRate >= 70) matureRegionsCount++;
       if (item.totalParks > 0 && item.coverageRate < 20) lowCoverageCount++;
     }
@@ -1649,6 +1651,7 @@ export function getRegionalPotaStats() {
       totalActivations: overallActivations,
       totalQsos: overallQsos,
       zeroParkCount,
+      under10ParksCount,
       totalRegions: regionsList.filter(r => !r.isRestricted).length,
       totalPotentialParks,
       overallCoverageRate,

@@ -1060,7 +1060,7 @@ export const startAdminServer = (telegramClient) => {
                       </div>
                     </div>
                     <div class="col-6 col-md-2">
-                      <div class="card bg-danger border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="under10" title="Фильтр: регионы где менее 10 парков POTA (приоритет развития)">
+                      <div class="card bg-danger border-0 shadow-sm h-100 p-2 text-center text-white reg-kpi-card" data-filter="under10" title="Фильтр: регионы где менее 10 парков POTA (исключены ЗФИ и Ингушетия — 100% покрытия)">
                         <div class="small opacity-75"><i class="bi bi-exclamation-triangle-fill"></i> Менее 10 POTA</div>
                         <div class="fs-4 fw-bold text-white" id="reg-stat-under10">...</div>
                         <div class="small opacity-75" style="font-size:11px;">приоритет развития</div>
@@ -3677,7 +3677,7 @@ export const startAdminServer = (telegramClient) => {
 
               if (filter === 'mature') return !r.isRestricted && r.coverageRate >= 70;
               if (filter === 'low_coverage') return !r.isRestricted && r.totalParks > 0 && r.coverageRate < 20;
-              if (filter === 'under10') return !r.isRestricted && r.totalParks < 10;
+              if (filter === 'under10') return r.isUnder10 !== undefined ? r.isUnder10 : (!r.isRestricted && r.totalParks < 10 && !['RU-FJ', 'RU-IN'].includes(r.code) && r.coverageRate < 100);
               if (filter === 'zero') return !r.isRestricted && r.totalParks === 0;
               if (filter === 'low') return !r.isRestricted && r.totalParks > 0 && r.totalParks <= 3;
               if (filter === 'unactivated') return !r.isRestricted && r.totalParks > 0 && r.activatedParks === 0;

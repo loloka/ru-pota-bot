@@ -8,8 +8,10 @@ const stats = getRegionalPotaStats();
 // 1. Check summary structure
 assert(stats.summary, 'Summary object must exist');
 assert(stats.summary.totalPotentialParks > 10000, `Potential parks must be > 10000, got ${stats.summary.totalPotentialParks}`);
-assert(stats.summary.matureRegionsCount >= 4, `Mature regions (≥70%) must be >= 4, got ${stats.summary.matureRegionsCount}`);
-assert(stats.summary.under10ParksCount > 50, `Under 10 parks count must be > 50, got ${stats.summary.under10ParksCount}`);
+assert.strictEqual(stats.summary.under10ParksCount, 67, `Under 10 parks count must be 67 (excluding RU-FJ and RU-IN), got ${stats.summary.under10ParksCount}`);
+const under10Codes = stats.regions.filter(r => r.isUnder10).map(r => r.code);
+assert.strictEqual(under10Codes.includes('RU-FJ'), false, 'RU-FJ (ZFI) must be excluded from under10 list');
+assert.strictEqual(under10Codes.includes('RU-IN'), false, 'RU-IN (Ingushetia) must be excluded from under10 list');
 assert(stats.summary.overallCoverageRate > 4 && stats.summary.overallCoverageRate < 10, `Overall coverage rate should be around 4.9%, got ${stats.summary.overallCoverageRate}`);
 console.log(`✅ PASS: Summary stats verified (Total potential: ${stats.summary.totalPotentialParks}, Mature regions: ${stats.summary.matureRegionsCount}, Under 10 parks: ${stats.summary.under10ParksCount}, Overall coverage: ${stats.summary.overallCoverageRate}%)`);
 console.log('Mature regions list:', stats.regions.filter(r => r.coverageRate >= 70).map(r => ({ code: r.code, name: r.name, coverageRate: r.coverageRate, pota: r.totalParks, oopt: r.ooptCandidates })));

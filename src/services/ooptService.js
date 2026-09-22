@@ -1496,6 +1496,13 @@ export const POTA_LOCATION_CANONICAL = {
  * activation percentage ('заинтересованность'), total QSOs and activations,
  * candidate OOPT count from oopt_registry.
  */
+/**
+ * Regions excluded from "Under 10 POTA" target list because their nature reserve
+ * inventory is fully exhausted / 100% covered (e.g. Franz Josef Land RU-FJ and Ingushetia RU-IN)
+ * as requested by POTA coordinator Manu R2BBX.
+ */
+export const EXCLUDED_UNDER10_REGIONS = ['RU-FJ', 'RU-IN'];
+
 export function getRegionalPotaStats() {
   const parks = getRussianPotaParks();
   let ooptRows = [];
@@ -1623,10 +1630,13 @@ export function getRegionalPotaStats() {
       item.diplomaStatusText = 'Слабое (<10%) — ранняя стадия';
     }
 
+    const isUnder10 = !item.isRestricted && item.totalParks < 10 && !EXCLUDED_UNDER10_REGIONS.includes(item.code) && item.coverageRate < 100;
+    item.isUnder10 = isUnder10;
+
     if (!item.isRestricted) {
       totalPotentialParks += totalPotential;
       if (item.totalParks === 0) zeroParkCount++;
-      if (item.totalParks < 10) under10ParksCount++;
+      if (isUnder10) under10ParksCount++;
       if (item.coverageRate >= 70) matureRegionsCount++;
       if (item.totalParks > 0 && item.coverageRate < 20) lowCoverageCount++;
     }

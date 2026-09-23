@@ -118,5 +118,26 @@ const hasYamalInNenets = nenetsList.rows.some(r => (r.ate || '').includes('Ям�
 assert.strictEqual(hasYamalInNenets, false, 'Nenets AO list must not contain any Yamalo-Nenets AO objects');
 console.log('✅ PASS: Nenets AO strictly isolated from Yamalo-Nenets AO (14 OOPTs, 0 Yamal objects)');
 
+// 16. Test RU-0035 (Russian North) matches "Русский Север" (nid 6718) in Vologda Oblast
+const russkySeverOopt = db.prepare('SELECT nid, title, ate, pota_ref, pota_name, lat, lon, area FROM oopt_registry WHERE nid = 6718').get();
+assert.ok(russkySeverOopt, 'OOPT nid 6718 must exist');
+assert.strictEqual(russkySeverOopt.pota_ref, 'RU-0035', 'Русский Север must be synced with RU-0035');
+assert.strictEqual(russkySeverOopt.pota_name, 'Russian North National Park');
+assert.ok(russkySeverOopt.lat > 59 && russkySeverOopt.lat < 61, 'Coordinates must be valid');
+console.log('✅ PASS: RU-0035 (Russian North) correctly matched and synced to "Русский Север" (nid 6718)');
+
+// 17. Test OOPT sorting by area (area_desc, area_asc) and min_area filter
+const amurDesc = getOoptList({ region: 'Амурская область', sort: 'area_desc', limit: 5 });
+assert.ok(amurDesc.rows.length >= 2, 'Must have rows');
+assert.ok(amurDesc.rows[0].area >= amurDesc.rows[1].area, 'Row 0 area must be >= Row 1 area in area_desc');
+assert.strictEqual(amurDesc.rows[0].title, 'Олекминский', 'Largest OOPT in Amur oblast should be Олекминский (369 000 ha)');
+
+const amurAsc = getOoptList({ region: 'Амурская область', sort: 'area_asc', limit: 5 });
+assert.ok(amurAsc.rows[0].area > 0 && amurAsc.rows[0].area <= amurAsc.rows[1].area, 'Row 0 area must be <= Row 1 area in area_asc');
+
+const minAreaList = getOoptList({ region: 'Амурская область', min_area: 100000 });
+assert.ok(minAreaList.rows.every(r => r.area >= 100000), 'All rows must have area >= 100,000 ha');
+console.log('✅ PASS: OOPT area sorting (desc/asc) and min_area filter functioning properly');
+
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');
 

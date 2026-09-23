@@ -2257,8 +2257,8 @@ export function createTmaRouter(telegramClient) {
   // ==========================================
   router.get('/oopt', (req, res) => {
     try {
-      const { page, limit, search, sig, category, status, region, pota } = req.query;
-      const result = getOoptList({ page, limit, search, sig, category, status, region, pota });
+      const { page, limit, search, sig, category, status, region, pota, sort, min_area } = req.query;
+      const result = getOoptList({ page, limit, search, sig, category, status, region, pota, sort, min_area });
       res.json(result);
     } catch (err) {
       console.error('[TMA API] Error fetching OOPT list:', err.message);

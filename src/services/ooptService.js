@@ -365,6 +365,8 @@ export function getOoptList({
   status = '',
   region = '',
   pota = '',
+  sort = '',
+  min_area = '',
 } = {}) {
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
@@ -470,12 +472,40 @@ export function getOoptList({
     conditions.push(`pota_ref IS NULL`);
   }
 
+  if (min_area && !isNaN(parseFloat(min_area))) {
+    conditions.push(`area >= ?`);
+    params.push(parseFloat(min_area));
+  }
+
   const baseWhereClause = baseConditions.length > 0 ? `WHERE ${baseConditions.join(' AND ')}` : '';
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   // 1. Total count matching criteria
   const countSql = `SELECT COUNT(*) as total FROM oopt_registry ${whereClause}`;
   const total = db.prepare(countSql).get(...params).total;
+
+  // Dynamic sorting (area_desc, area_asc, name_asc, name_desc, default)
+  let orderByClause = '';
+  let useSearchOrder = false;
+
+  if (sort === 'area_desc' || sort === 'area') {
+    orderByClause = 'ORDER BY (area IS NULL OR area <= 0), area DESC, title ASC';
+  } else if (sort === 'area_asc') {
+    orderByClause = 'ORDER BY (area IS NULL OR area <= 0), area ASC, title ASC';
+  } else if (sort === 'name_desc' || sort === 'title_desc') {
+    orderByClause = 'ORDER BY title DESC';
+  } else if (sort === 'name_asc' || sort === 'title_asc') {
+    orderByClause = 'ORDER BY title ASC';
+  } else {
+    // Default order: search relevance (if active), then federal/regional significance, then title
+    useSearchOrder = isSearchActive;
+    orderByClause = `
+      ORDER BY 
+        ${isSearchActive ? `CASE WHEN title LIKE ? THEN 1 WHEN title LIKE ? THEN 2 ELSE 3 END,` : ''}
+        CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END,
+        title ASC
+    `;
+  }
 
   // 2. Paginated rows
   const selectSql = `
@@ -484,13 +514,10 @@ export function getOoptList({
       lat, lon, profile, pota_ref, pota_name
     FROM oopt_registry
     ${whereClause}
-    ORDER BY 
-      ${isSearchActive ? `CASE WHEN title LIKE ? THEN 1 WHEN title LIKE ? THEN 2 ELSE 3 END,` : ''}
-      CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END,
-      title ASC
+    ${orderByClause}
     LIMIT ? OFFSET ?
   `;
-  const queryParams = isSearchActive
+  const queryParams = useSearchOrder
     ? [...params, ...searchOrderParams, limitNum, offset]
     : [...params, limitNum, offset];
 
@@ -2135,6 +2162,21 @@ const EN_TO_RU_WORDS = {
   'steppe': ['степ'],
   'ravine': ['овраг', 'балк'],
   'gully': ['балк', 'овраг'],
+  'north': ['север'],
+  'northern': ['север'],
+  'south': ['юг', 'южн'],
+  'southern': ['юг', 'южн'],
+  'east': ['восток', 'восточн'],
+  'eastern': ['восток', 'восточн'],
+  'west': ['запад', 'западн'],
+  'western': ['запад', 'западн'],
+  'central': ['центральн'],
+  'russian': ['русск'],
+  'great': ['велик'],
+  'white': ['бел'],
+  'black': ['черн'],
+  'red': ['красн'],
+  'blue': ['син', 'голуб'],
 };
 
 const STOP_WORDS = new Set([
@@ -2329,7 +2371,7 @@ export function syncPotaMatches() {
               }
               break;
             } else if (pStem.startsWith(oStem) || oStem.startsWith(pStem)) {
-              if (pStem.length >= 4 && oStem.length >= 4) {
+              if (pStem.length >= 3 && oStem.length >= 3) {
                 if (isDesc || oIsDesc) {
                   score += 8;
                 } else {
@@ -2346,7 +2388,8 @@ export function syncPotaMatches() {
       // Check English translation dictionary
       for (const root of matchingRuRoots) {
         if (o.titleLower.includes(root)) {
-          score += 20;
+          score += 25;
+          properNameMatch = true;
         }
       }
 

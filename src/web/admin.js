@@ -963,7 +963,7 @@ export const startAdminServer = (telegramClient) => {
                     <div class="col-md-3">
                       <input type="text" class="form-control" id="oopt-search-input" placeholder="🔍 Поиск по названию или ключевым словам...">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                       <select class="form-select" id="oopt-region-select">
                         <option value="">Все регионы России (89)</option>
                       </select>
@@ -983,10 +983,18 @@ export const startAdminServer = (telegramClient) => {
                         <option value="reorganized">⚠️ Реорганизованные</option>
                       </select>
                     </div>
-                    <div class="col-md-2 d-flex justify-content-end align-items-center gap-1">
-                      <span class="small text-muted" id="oopt-pagination-info">Загрузка...</span>
-                      <button type="button" class="btn btn-sm btn-outline-secondary px-2" id="oopt-prev-page" disabled>&laquo;</button>
-                      <button type="button" class="btn btn-sm btn-outline-secondary px-2" id="oopt-next-page" disabled>&raquo;</button>
+                    <div class="col-md-3 d-flex justify-content-between align-items-center gap-2">
+                      <select class="form-select form-select-sm" id="oopt-sort-select" title="Сортировка объектов ООПТ">
+                        <option value="default">Сортировка: По умолчанию</option>
+                        <option value="area_desc">🌲 Сначала большие (по площади ↓)</option>
+                        <option value="area_asc">🌿 Сначала малые (по площади ↑)</option>
+                        <option value="name_asc">По названию (А → Я)</option>
+                      </select>
+                      <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-2" id="oopt-prev-page" disabled>&laquo;</button>
+                        <span class="small text-muted text-nowrap" id="oopt-pagination-info">...</span>
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-2" id="oopt-next-page" disabled>&raquo;</button>
+                      </div>
                     </div>
                   </div>
 
@@ -999,7 +1007,7 @@ export const startAdminServer = (telegramClient) => {
                           <th>Уровень</th>
                           <th>Категория</th>
                           <th>Регион</th>
-                          <th>Площадь</th>
+                          <th style="width: 140px; cursor: pointer; user-select: none;" id="th-oopt-area" title="Нажмите для сортировки по площади">Площадь <i class="bi bi-arrow-down-up small text-muted" id="th-oopt-area-icon"></i></th>
                           <th>Действия</th>
                         </tr>
                       </thead>
@@ -2259,11 +2267,24 @@ export const startAdminServer = (telegramClient) => {
             const sigEl = document.getElementById('oopt-sig-select');
             const statusEl = document.getElementById('oopt-status-select');
             const regionEl = document.getElementById('oopt-region-select');
+            const sortEl = document.getElementById('oopt-sort-select');
 
             const search = searchEl ? searchEl.value : '';
             const sig = sigEl ? sigEl.value : '';
             const status = statusEl ? statusEl.value : '';
             const region = regionEl ? regionEl.value : '';
+            const sort = sortEl ? sortEl.value : 'default';
+
+            const areaIcon = document.getElementById('th-oopt-area-icon');
+            if (areaIcon) {
+              if (sort === 'area_desc') {
+                areaIcon.className = 'bi bi-sort-numeric-down-alt text-primary fw-bold';
+              } else if (sort === 'area_asc') {
+                areaIcon.className = 'bi bi-sort-numeric-up text-primary fw-bold';
+              } else {
+                areaIcon.className = 'bi bi-arrow-down-up small text-muted';
+              }
+            }
 
             const tbody = document.getElementById('oopt-table-body');
             const info = document.getElementById('oopt-pagination-info');
@@ -2281,6 +2302,9 @@ export const startAdminServer = (telegramClient) => {
                 status: status,
                 region: region 
               });
+              if (sort && sort !== 'default') {
+                query.set('sort', sort);
+              }
               if (ooptPotaOnly) {
                 query.set('pota', 'in_pota');
               }
@@ -2404,6 +2428,29 @@ export const startAdminServer = (telegramClient) => {
           var ooptRegionEl = document.getElementById('oopt-region-select');
           if (ooptRegionEl) {
             ooptRegionEl.addEventListener('change', function() {
+              loadAdminOopt(1);
+            });
+          }
+
+          var ooptSortEl = document.getElementById('oopt-sort-select');
+          if (ooptSortEl) {
+            ooptSortEl.addEventListener('change', function() {
+              loadAdminOopt(1);
+            });
+          }
+
+          var thOoptArea = document.getElementById('th-oopt-area');
+          if (thOoptArea) {
+            thOoptArea.addEventListener('click', function() {
+              var sortSelect = document.getElementById('oopt-sort-select');
+              if (!sortSelect) return;
+              if (sortSelect.value === 'area_desc') {
+                sortSelect.value = 'area_asc';
+              } else if (sortSelect.value === 'area_asc') {
+                sortSelect.value = 'default';
+              } else {
+                sortSelect.value = 'area_desc';
+              }
               loadAdminOopt(1);
             });
           }
@@ -4604,8 +4651,8 @@ export const startAdminServer = (telegramClient) => {
 
   app.get('/api/admin/oopt', requireAuth, (req, res) => {
     try {
-      const { page, limit, search, sig, category, status, region, pota } = req.query;
-      const data = getOoptList({ page, limit, search, sig, category, status, region, pota });
+      const { page, limit, search, sig, category, status, region, pota, sort, min_area } = req.query;
+      const data = getOoptList({ page, limit, search, sig, category, status, region, pota, sort, min_area });
       res.json(data);
     } catch (err) {
       res.status(500).json({ error: err.message });

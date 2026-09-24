@@ -1325,12 +1325,24 @@ export const startAdminServer = (telegramClient) => {
 
                   <div class="row g-2 mb-2">
                     <div class="col-md-3">
-                      <label class="form-label small fw-bold mb-1">7. Широта (Lat):</label>
-                      <input type="text" class="form-control form-control-sm font-monospace" id="subm-lat" placeholder="55.8821">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-bold mb-0">7. Широта (Lat):</label>
+                        <button type="button" class="btn btn-link p-0 text-decoration-none text-muted small btn-copy-coord" data-target="subm-lat" title="Скопировать широту"><i class="bi bi-clipboard"></i></button>
+                      </div>
+                      <div class="input-group input-group-sm">
+                        <input type="text" class="form-control font-monospace" id="subm-lat" placeholder="например: 55.8821" onclick="this.select()" onfocus="this.select()" style="user-select: text !important; -webkit-user-select: text !important;">
+                        <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-lat" title="Скопировать широту"><i class="bi bi-clipboard"></i></button>
+                      </div>
                     </div>
                     <div class="col-md-3">
-                      <label class="form-label small fw-bold mb-1">8. Долгота (Lon):</label>
-                      <input type="text" class="form-control form-control-sm font-monospace" id="subm-lon" placeholder="37.7812">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-bold mb-0">8. Долгота (Lon):</label>
+                        <button type="button" class="btn btn-link p-0 text-decoration-none text-muted small btn-copy-coord" data-target="subm-lon" title="Скопировать долготу"><i class="bi bi-clipboard"></i></button>
+                      </div>
+                      <div class="input-group input-group-sm">
+                        <input type="text" class="form-control font-monospace" id="subm-lon" placeholder="например: 37.7812" onclick="this.select()" onfocus="this.select()" style="user-select: text !important; -webkit-user-select: text !important;">
+                        <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-lon" title="Скопировать долготу"><i class="bi bi-clipboard"></i></button>
+                      </div>
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
                       <button type="button" id="btn-subm-open-map" class="btn btn-sm btn-outline-primary w-100" title="Интерактивный выбор и уточнение координат на карте">
@@ -1407,7 +1419,10 @@ export const startAdminServer = (telegramClient) => {
               <div class="modal-body p-2">
                 <div class="d-flex justify-content-between align-items-center mb-2 px-1">
                   <small class="text-muted"><i class="bi bi-info-circle"></i> Перетащите маркер 📍 или кликните по карте в нужную точку парка (въезд, парковка, поляна для антенны).</small>
-                  <div class="badge bg-dark font-monospace fs-6" id="picker-coords-display">Широта: 0.0000 | Долгота: 0.0000</div>
+                  <div class="d-flex align-items-center gap-1.5 flex-shrink-0">
+                    <div class="badge bg-dark font-monospace fs-6 px-2.5 py-1.5" id="picker-coords-display" style="user-select: text !important; -webkit-user-select: text !important; cursor: text;">Широта: 0.0000 | Долгота: 0.0000</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" id="btn-copy-picker-coords" title="Скопировать координаты"><i class="bi bi-clipboard"></i></button>
+                  </div>
                 </div>
                   <style>
                     #coord-picker-map .leaflet-control-attribution,
@@ -3675,6 +3690,34 @@ export const startAdminServer = (telegramClient) => {
             if (modal) modal.hide();
             if (Toast) {
               Toast.fire({ icon: 'success', title: '✅ Координаты (' + currentPickerLat.toFixed(4) + ', ' + currentPickerLon.toFixed(4) + ') применены к заявке!' });
+            }
+          });
+
+          // One-Click Coordinate Copy Handlers
+          document.addEventListener('click', function(e) {
+            var copyCoordBtn = e.target.closest('.btn-copy-coord');
+            if (copyCoordBtn) {
+              var targetId = copyCoordBtn.getAttribute('data-target');
+              var input = document.getElementById(targetId);
+              if (input && input.value && input.value.trim()) {
+                navigator.clipboard.writeText(input.value.trim()).then(function() {
+                  if (Toast) Toast.fire({ icon: 'success', title: '📋 ' + input.value.trim() + ' скопировано!' });
+                }).catch(function() {
+                  input.select();
+                  document.execCommand('copy');
+                  if (Toast) Toast.fire({ icon: 'success', title: '📋 ' + input.value.trim() + ' скопировано!' });
+                });
+              } else {
+                if (Toast) Toast.fire({ icon: 'info', title: 'Координата пока не заполнена' });
+              }
+            }
+
+            var copyPickerBtn = e.target.closest('#btn-copy-picker-coords');
+            if (copyPickerBtn) {
+              var coordsText = currentPickerLat.toFixed(4) + ', ' + currentPickerLon.toFixed(4);
+              navigator.clipboard.writeText(coordsText).then(function() {
+                if (Toast) Toast.fire({ icon: 'success', title: '📋 ' + coordsText + ' скопировано в буфер!' });
+              });
             }
           });
 

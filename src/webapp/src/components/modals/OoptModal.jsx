@@ -509,8 +509,10 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                       type="text"
                       value={form.lat}
                       onChange={(e) => handleInputChange('lat', e.target.value)}
+                      onClick={(e) => e.target.select()}
+                      onFocus={(e) => e.target.select()}
                       placeholder="55.8772"
-                      className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 select-text"
                     />
                   </div>
                   <div>
@@ -521,8 +523,10 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                       type="text"
                       value={form.lon}
                       onChange={(e) => handleInputChange('lon', e.target.value)}
+                      onClick={(e) => e.target.select()}
+                      onFocus={(e) => e.target.select()}
                       placeholder="37.7818"
-                      className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                      className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 select-text"
                     />
                   </div>
                 </div>

@@ -1,5 +1,12 @@
 # История изменений (Changelog)
 
+## [1.16.80] - 2026-09-24 (Transparent Offline Backup Indication in OOPT Sync Alert)
+### Улучшено и исправлено
+- **Индикация источника синхронизации ООПТ (`src/web/admin.js`)**:
+  - При ручном запуске синхронизации реестра ООПТ по кнопке «Синхронизировать с карта.оцзк.рф» в диалоговом окне SweetAlert2 теперь явно отображается источник данных: с живого сервера Минприроды либо из локального оффлайн-снапшота (`data/oopt_registry_backup.json`), если сетевой доступ с дата-центра заблокирован.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.80` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.79] - 2026-09-24 (Direct HTTPS Agent & Clarified Datacenter Block Diagnosis for OOPT Health Check)
 ### Улучшено и оптимизировано
 - **Настройка HTTPS Agent (`src/services/serviceHealth.js`)**:

@@ -2597,7 +2597,14 @@ export const startAdminServer = (telegramClient) => {
                 var res = await fetch('/api/admin/oopt/sync', { method: 'POST' });
                 var data = await res.json();
                 if (res.ok && data.success) {
-                  Swal.fire({ icon: 'success', title: 'Успешно!', text: 'Синхронизировано ' + data.count + ' объектов ООПТ РФ!' });
+                  var sourceNote = data.fromBackup
+                    ? ' (восстановлено из локального оффлайн-снапшота, т.к. внешний сервер Минприроды заблокирован для ДЦ)'
+                    : ' (напрямую с официального сервера карта.оцзк.рф)';
+                  Swal.fire({ 
+                    icon: data.fromBackup ? 'info' : 'success', 
+                    title: data.fromBackup ? 'Оффлайн-синхронизация!' : 'Успешно!', 
+                    text: 'Синхронизировано ' + Number(data.count).toLocaleString('ru-RU') + ' объектов ООПТ РФ' + sourceNote + '!' 
+                  });
                   loadAdminOoptStats();
                   loadAdminOopt(1);
                 } else {

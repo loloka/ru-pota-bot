@@ -957,25 +957,31 @@ export const startAdminServer = (telegramClient) => {
                         <div class="fs-5 fw-bold text-dark" id="stat-oopt-total">11 342</div>
                       </div>
                     </div>
-                    <div class="col-md-3 col-6">
+                    <div class="col-md-2 col-6">
                       <div class="card border-0 shadow-sm h-100 p-2 text-center" style="background:#f3e8ff;">
-                        <div class="small fw-semibold" style="color:#6f42c1;">🏛️ Федерального значения</div>
+                        <div class="small fw-semibold" style="color:#6f42c1;">🏛️ Федеральные</div>
                         <div class="fs-5 fw-bold" style="color:#5a2d9c;" id="stat-oopt-fed">361</div>
                       </div>
                     </div>
-                    <div class="col-md-3 col-6">
+                    <div class="col-md-2 col-6">
                       <div class="card bg-success-subtle border-0 shadow-sm h-100 p-2 text-center">
-                        <div class="small fw-semibold text-success">🌲 Регионального значения</div>
+                        <div class="small fw-semibold text-success">🌲 Региональные</div>
                         <div class="fs-5 fw-bold text-success" id="stat-oopt-reg">10 432</div>
                       </div>
                     </div>
                     <div class="col-md-2 col-6">
-                      <div class="card bg-warning-subtle border-0 shadow-sm h-100 p-2 text-center">
-                        <div class="small fw-semibold text-warning-emphasis">🏡 Местного значения</div>
+                      <div class="card bg-info-subtle border-0 shadow-sm h-100 p-2 text-center">
+                        <div class="small fw-semibold text-info-emphasis">🏡 Местные</div>
                         <div class="fs-5 fw-bold text-dark" id="stat-oopt-loc">549</div>
                       </div>
                     </div>
-                    <div class="col-md-2 col-12">
+                    <div class="col-md-2 col-6">
+                      <div class="card bg-warning-subtle border-0 shadow-sm h-100 p-2 text-center" id="card-filter-reorg" style="cursor: pointer;" title="Нажмите для фильтрации: только реорганизованные и утерянные ООПТ (для координатора)">
+                        <div class="small fw-semibold text-warning-emphasis"><i class="bi bi-exclamation-triangle"></i> Реорганизованные</div>
+                        <div class="fs-5 fw-bold text-warning-emphasis"><span id="stat-oopt-reorg">141</span> <small class="fw-normal fs-6 text-muted" id="reorg-filter-label">(все)</small></div>
+                      </div>
+                    </div>
+                    <div class="col-md-2 col-6">
                       <div class="card bg-success border-0 shadow-sm h-100 p-2 text-center text-white" id="card-filter-pota" style="cursor: pointer;" title="Нажмите для фильтрации: только объекты в базе POTA">
                         <div class="small fw-semibold text-white-50"><i class="bi bi-funnel"></i> В базе POTA</div>
                         <div class="fs-5 fw-bold text-white"><span id="stat-oopt-pota">304</span> <small class="fw-normal fs-6" id="pota-filter-label">(все)</small></div>
@@ -1005,7 +1011,8 @@ export const startAdminServer = (telegramClient) => {
                       <select class="form-select" id="oopt-status-select">
                         <option value="">Все статусы</option>
                         <option value="active">✅ Только действующие</option>
-                        <option value="reorganized">⚠️ Реорганизованные</option>
+                        <option value="reorganized">⚠️ Реорганизованные / утерянные</option>
+                        <option value="planned">🔮 Проектируемые / перспективные</option>
                       </select>
                     </div>
                     <div class="col-md-3 d-flex justify-content-between align-items-center gap-2">
@@ -2279,12 +2286,14 @@ export const startAdminServer = (telegramClient) => {
                 const fedEl = document.getElementById('stat-oopt-fed');
                 const regEl = document.getElementById('stat-oopt-reg');
                 const locEl = document.getElementById('stat-oopt-loc');
+                const reorgEl = document.getElementById('stat-oopt-reorg');
                 const potaEl = document.getElementById('stat-oopt-pota');
 
                 if (totalEl && stats.total) totalEl.textContent = Number(stats.total).toLocaleString('ru-RU');
                 if (fedEl && stats.federal) fedEl.textContent = Number(stats.federal).toLocaleString('ru-RU');
                 if (regEl && stats.regional) regEl.textContent = Number(stats.regional).toLocaleString('ru-RU');
                 if (locEl && stats.local) locEl.textContent = Number(stats.local).toLocaleString('ru-RU');
+                if (reorgEl && stats.reorganized) reorgEl.textContent = Number(stats.reorganized).toLocaleString('ru-RU');
                 if (potaEl && stats.inPota) potaEl.textContent = Number(stats.inPota).toLocaleString('ru-RU');
 
                 const regionEl = document.getElementById('oopt-region-select');
@@ -2395,7 +2404,8 @@ export const startAdminServer = (telegramClient) => {
                   ? '<span class="badge bg-success">🌲 Региональное</span>'
                   : '<span class="badge bg-warning text-dark">🏡 Местное</span>';
 
-                var isReorg = r.is_reorganized || (r.status && r.status.toLowerCase() !== 'действующий');
+                var isReorg = r.is_reorganized || (r.status && r.status.toLowerCase().includes('реорганизован'));
+                var isPlanned = r.status && (r.status.toLowerCase().includes('перспектив') || r.status.toLowerCase().includes('проектируем'));
                 var reorgBadge = '';
                 if (isReorg) {
                   reorgBadge = ' <span class="badge bg-warning text-dark border border-warning ms-1" title="Территория реорганизована или ликвидирована"><i class="bi bi-exclamation-triangle-fill"></i> Реорганизован</span>';
@@ -2403,6 +2413,9 @@ export const startAdminServer = (telegramClient) => {
                     reorgBadge += ' <a href="https://next.pota.app/park/' + r.parent_pota.reference + '" target="_blank" class="badge bg-info text-dark text-decoration-none ms-1" title="' + escapeHtmlClient(r.parent_pota.notes || r.parent_pota.name) + '"><i class="bi bi-diagram-3"></i> В составе ' + r.parent_pota.reference + '</a>';
                   }
                 }
+                var plannedBadge = isPlanned
+                  ? ' <span class="badge bg-info text-dark border border-info ms-1" title="Проектируемая / перспективная ООПТ"><i class="bi bi-clock-history"></i> Проектируемый</span>'
+                  : '';
 
                 var potaBadge = r.pota_ref
                   ? ' <a href="https://next.pota.app/park/' + r.pota_ref + '" target="_blank" class="badge bg-success text-decoration-none ms-1" title="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check-circle-fill"></i> В POTA: ' + r.pota_ref + '</a>'
@@ -2423,7 +2436,7 @@ export const startAdminServer = (telegramClient) => {
 
                 return '<tr>' +
                   '<td><code>' + r.nid + '</code></td>' +
-                  '<td><strong>' + escapeHtmlClient(r.title) + '</strong>' + reorgBadge + potaBadge + '</td>' +
+                  '<td><strong>' + escapeHtmlClient(r.title) + '</strong>' + reorgBadge + plannedBadge + potaBadge + '</td>' +
                   '<td>' + sigBadge + '</td>' +
                   '<td><small>' + escapeHtmlClient(r.category || '') + '</small></td>' +
                   '<td><small class="text-muted">' + escapeHtmlClient(r.ate || '') + '</small></td>' +
@@ -2486,7 +2499,32 @@ export const startAdminServer = (telegramClient) => {
           var ooptStatusEl = document.getElementById('oopt-status-select');
           if (ooptStatusEl) {
             ooptStatusEl.addEventListener('change', function() {
+              var cardReorg = document.getElementById('card-filter-reorg');
+              var reorgLabel = document.getElementById('reorg-filter-label');
+              if (cardReorg) {
+                if (ooptStatusEl.value === 'reorganized') {
+                  cardReorg.classList.add('border', 'border-3', 'border-warning', 'shadow');
+                  if (reorgLabel) reorgLabel.textContent = '(вкл)';
+                } else {
+                  cardReorg.classList.remove('border', 'border-3', 'border-warning', 'shadow');
+                  if (reorgLabel) reorgLabel.textContent = '(все)';
+                }
+              }
               loadAdminOopt(1);
+            });
+          }
+
+          var cardFilterReorg = document.getElementById('card-filter-reorg');
+          if (cardFilterReorg) {
+            cardFilterReorg.addEventListener('click', function() {
+              var statusSelect = document.getElementById('oopt-status-select');
+              if (!statusSelect) return;
+              if (statusSelect.value === 'reorganized') {
+                statusSelect.value = '';
+              } else {
+                statusSelect.value = 'reorganized';
+              }
+              statusSelect.dispatchEvent(new Event('change'));
             });
           }
 

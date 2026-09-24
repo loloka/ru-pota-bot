@@ -436,6 +436,8 @@ export function getOoptList({
       baseConditions.push(`status = 'действующий'`);
     } else if (st === 'reorganized' || st === 'реорганизованный') {
       baseConditions.push(`status = 'реорганизованный'`);
+    } else if (st === 'planned' || st === 'перспективный' || st === 'проектируемый') {
+      baseConditions.push(`(status = 'перспективный' OR status = 'проектируемый')`);
     } else {
       baseConditions.push(`status = ?`);
       baseParams.push(st);
@@ -588,6 +590,7 @@ export function getOoptStats() {
   const regional = db.prepare(`SELECT COUNT(*) as count FROM oopt_registry WHERE sig = 'regional' AND ${restrictedCondition}`).get()?.count || 0;
   const local = db.prepare(`SELECT COUNT(*) as count FROM oopt_registry WHERE sig = 'local' AND ${restrictedCondition}`).get()?.count || 0;
   const inPota = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE pota_ref IS NOT NULL").get()?.count || 0;
+  const reorganized = db.prepare(`SELECT COUNT(*) as count FROM oopt_registry WHERE status = 'реорганизованный' AND ${restrictedCondition}`).get()?.count || 0;
   const restrictedCount = totalAll - total;
 
   const categories = db.prepare(`
@@ -667,6 +670,7 @@ export function getOoptStats() {
     regional,
     local,
     inPota,
+    reorganized,
     categories,
     regions,
     restrictedRegions,

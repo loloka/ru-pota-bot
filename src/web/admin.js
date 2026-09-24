@@ -1325,20 +1325,14 @@ export const startAdminServer = (telegramClient) => {
 
                   <div class="row g-2 mb-2">
                     <div class="col-md-3">
-                      <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="form-label small fw-bold mb-0">7. Широта (Lat):</label>
-                        <button type="button" class="btn btn-link p-0 text-decoration-none text-muted small btn-copy-coord" data-target="subm-lat" title="Скопировать широту"><i class="bi bi-clipboard"></i></button>
-                      </div>
+                      <label class="form-label small fw-bold mb-1">7. Широта (Lat):</label>
                       <div class="input-group input-group-sm">
                         <input type="text" class="form-control font-monospace" id="subm-lat" placeholder="например: 55.8821" onclick="this.select()" onfocus="this.select()" style="user-select: text !important; -webkit-user-select: text !important;">
                         <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-lat" title="Скопировать широту"><i class="bi bi-clipboard"></i></button>
                       </div>
                     </div>
                     <div class="col-md-3">
-                      <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="form-label small fw-bold mb-0">8. Долгота (Lon):</label>
-                        <button type="button" class="btn btn-link p-0 text-decoration-none text-muted small btn-copy-coord" data-target="subm-lon" title="Скопировать долготу"><i class="bi bi-clipboard"></i></button>
-                      </div>
+                      <label class="form-label small fw-bold mb-1">8. Долгота (Lon):</label>
                       <div class="input-group input-group-sm">
                         <input type="text" class="form-control font-monospace" id="subm-lon" placeholder="например: 37.7812" onclick="this.select()" onfocus="this.select()" style="user-select: text !important; -webkit-user-select: text !important;">
                         <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-lon" title="Скопировать долготу"><i class="bi bi-clipboard"></i></button>

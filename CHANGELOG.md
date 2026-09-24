@@ -1,5 +1,12 @@
 # История изменений (Changelog)
 
+## [1.16.73] - 2026-09-24 (Remove Duplicate Copy Button in Coordinate Header)
+### Исправлено и улучшено
+- **Удалена дублирующаяся кнопка копирования в заголовке координат (`admin.js`)**:
+  - Убран лишний дубликат иконки копирования рядом с текстом `7. Широта (Lat):` и `8. Долгота (Lon):`, оставлена одна аккуратная кнопка внутри поля ввода (`input-group`).
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.73` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.72] - 2026-09-24 (One-Click Coordinate Copying & Text Selection in Web Admin & Mini App)
 ### Исправлено и улучшено
 - **Улучшение копирования и выделения координат (`admin.js`, `OoptModal.jsx`)**:

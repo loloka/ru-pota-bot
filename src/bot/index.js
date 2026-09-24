@@ -34,10 +34,9 @@ import { editSpotWizard } from './scenes/editSpotWizard.js';
 import { subWizard } from './scenes/subWizard.js';
 import { statsWizard } from './scenes/statsWizard.js';
 
-// Import background workers
 import { startClusterWorker } from '../services/clusterWorker.js';
 import { pinManager, isChannelChat } from '../services/pinManager.js';
-import { syncPotaParksWithApi } from '../services/ooptService.js';
+import { syncPotaParksWithApi, ensureOoptRegistryPopulated } from '../services/ooptService.js';
 
 // Import admin server
 import { startAdminServer } from '../web/admin.js';
@@ -885,7 +884,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.82\x1b[0m 📡             \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.83\x1b[0m 📡             \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);
@@ -938,6 +937,13 @@ pinManager.startPinWorker(bot.telegram);
 
 // Ensure permanent welcome/navigation message (msg 25) is pinned in channel on startup
 pinManager.ensurePermanentChannelPin(bot.telegram).catch(() => {});
+
+// Ensure OOPT registry has complete dataset (11 348 records) on startup
+try {
+  ensureOoptRegistryPopulated();
+} catch (e) {
+  console.warn('[OOPT Service] ⚠️ Initial OOPT population error:', e.message);
+}
 
 // Start the admin web panel
 startAdminServer(bot.telegram);

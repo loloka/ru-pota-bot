@@ -920,7 +920,7 @@ export const startAdminServer = (telegramClient) => {
                   <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                       <h3 class="mb-1"><i class="bi bi-tree text-success"></i> Реестр ООПТ России</h3>
-                      <p class="text-muted small mb-0">Официальная база данных охраняемых природных территорий (11 341 объект) с генерацией заявок для координатора POTA (R2BBX)</p>
+                      <p class="text-muted small mb-0">Официальная база данных охраняемых природных территорий (<span id="oopt-header-total-count">11 348 объектов</span>) с генерацией заявок для координатора POTA (R2BBX)</p>
                     </div>
                     <div class="d-flex gap-2">
                       <a href="/app" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-phone"></i> Открыть в Mini App</a>
@@ -2295,6 +2295,11 @@ export const startAdminServer = (telegramClient) => {
                 if (locEl && stats.local) locEl.textContent = Number(stats.local).toLocaleString('ru-RU');
                 if (reorgEl && stats.reorganized) reorgEl.textContent = Number(stats.reorganized).toLocaleString('ru-RU');
                 if (potaEl && stats.inPota) potaEl.textContent = Number(stats.inPota).toLocaleString('ru-RU');
+
+                const headerTotalEl = document.getElementById('oopt-header-total-count');
+                if (headerTotalEl && (stats.totalAll || stats.total)) {
+                  headerTotalEl.textContent = Number(stats.totalAll || stats.total).toLocaleString('ru-RU') + ' объектов';
+                }
 
                 const regionEl = document.getElementById('oopt-region-select');
                 if (regionEl && stats.regions) {

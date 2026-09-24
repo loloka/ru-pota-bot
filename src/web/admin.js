@@ -4487,7 +4487,7 @@ export const startAdminServer = (telegramClient) => {
                     '</div>' +
 
                     '<div class="d-flex justify-content-between align-items-center pt-2 mt-2 border-top">' +
-                      '<button class="btn btn-xs btn-outline-primary py-1 px-2.5 small" id="btn-check-' + s.id + '" onclick="checkSingleServiceUI(\'' + s.id + '\')">' +
+                      '<button class="btn btn-xs btn-outline-primary py-1 px-2.5 small check-single-service-btn" id="btn-check-' + s.id + '" data-id="' + s.id + '">' +
                         '<i class="bi bi-arrow-clockwise"></i> Проверить' +
                       '</button>' +
                       '<a href="' + escapeHtmlClient(s.url) + '" target="_blank" class="small text-muted text-decoration-none" style="font-size: 11px;">' +
@@ -4575,6 +4575,14 @@ export const startAdminServer = (telegramClient) => {
               }
             }
           }
+
+          document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.check-single-service-btn');
+            if (btn) {
+              var id = btn.getAttribute('data-id');
+              if (id) checkSingleServiceUI(id);
+            }
+          });
 
           // Open and load services on tab click or hash
           document.getElementById('list-services-list')?.addEventListener('shown.bs.tab', function() {

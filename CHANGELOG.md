@@ -1,5 +1,13 @@
 # История изменений (Changelog)
 
+## [1.16.79] - 2026-09-24 (Direct HTTPS Agent & Clarified Datacenter Block Diagnosis for OOPT Health Check)
+### Улучшено и оптимизировано
+- **Настройка HTTPS Agent (`src/services/serviceHealth.js`)**:
+  - Добавлен `directHttpsAgent` с параметрами `family: 4` и отключенным `autoSelectFamily: false`, что исключает ошибочный сброс соединения на резервный DNS IP при сетевых задержках.
+  - Добавлена понятная диагностика на карточке сервиса Минприроды при блокировке Ростелекомом дата-центров (с пояснением, что доступ ограничен для хостингов, но открыт для домашних провайдеров РФ, и локальная база ООПТ работает автономно).
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.79` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.78] - 2026-09-24 (Bypass Proxy for Russian OOPT Services and Lightweight Health Check)
 ### Улучшено и оптимизировано
 - **Прямое соединение без прокси (`src/services/serviceHealth.js`, `src/services/ooptService.js`)**:

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import https from 'https';
 import { potaApi } from '../api/potaApi.js';
 
 let cachedResults = null;
@@ -130,6 +131,7 @@ export async function checkSingleService(serviceDef) {
       const res = await axios.get(serviceDef.checkUrl || serviceDef.url, {
         timeout: 10000,
         proxy: false,
+        httpsAgent: new https.Agent({ family: 4, autoSelectFamily: false, keepAlive: false }),
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': '*/*'
@@ -148,7 +150,9 @@ export async function checkSingleService(serviceDef) {
     result.status = 'down';
     result.code = err.response?.status || null;
 
-    if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+    if (serviceDef.id === 'oopt_registry' && (err.code === 'ECONNABORTED' || err.message?.includes('timeout') || err.message?.includes('ECONNREFUSED'))) {
+      result.error = 'Блокировка дата-центров (Ростелеком): доступ с хостингов ограничен (работает только с домашних/мобильных провайдеров РФ). Локальная база ООПТ (11 342 объекта) в боте работает автономно.';
+    } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
       result.error = 'Таймаут соединения (>10 сек): сервер перегружен или не отвечает';
     } else if (err.code === 'ECONNREFUSED') {
       result.error = 'Отказ в соединении (ECONNREFUSED): порт закрыт или сервис выключен';

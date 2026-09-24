@@ -14,8 +14,9 @@ const OOPT_BASE_URL = 'https://xn--80aa2azak.xn--g1agk6a.xn--p1ai'; // карт�
 const client = axios.create({
   baseURL: OOPT_BASE_URL,
   timeout: 25000,
+  proxy: false,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.18 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.78 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });

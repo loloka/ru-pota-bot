@@ -50,7 +50,7 @@ const SERVICES = [
     name: 'Реестр ООПТ РФ (Минприроды)',
     domain: 'карта.оцзк.рф',
     url: 'https://xn--80aa2azak.xn--g1agk6a.xn--p1ai/',
-    checkUrl: 'https://xn--80aa2azak.xn--g1agk6a.xn--p1ai/api/v1/oopt-selection/',
+    checkUrl: 'https://xn--80aa2azak.xn--g1agk6a.xn--p1ai/api/v1/dictionaries/',
     description: 'Официальная база данных охраняемых природных территорий (центроиды, площади, категории, паспорта)',
     type: 'http'
   },
@@ -129,6 +129,7 @@ export async function checkSingleService(serviceDef) {
     } else {
       const res = await axios.get(serviceDef.checkUrl || serviceDef.url, {
         timeout: 10000,
+        proxy: false,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': '*/*'

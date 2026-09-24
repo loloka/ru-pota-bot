@@ -1,5 +1,13 @@
 # История изменений (Changelog)
 
+## [1.16.78] - 2026-09-24 (Bypass Proxy for Russian OOPT Services and Lightweight Health Check)
+### Улучшено и оптимизировано
+- **Прямое соединение без прокси (`src/services/serviceHealth.js`, `src/services/ooptService.js`)**:
+  - Для проверки здоровья и клиентов обращения к государственному реестру ООПТ РФ (`карта.оцзк.рф`) явно установлен `proxy: false`. Это предотвращает случайную маршрутизацию запросов к внутрироссийским госресурсам через зарубежные VLESS/SOCKS5 прокси-серверы, настроенные для обхода блокировок Telegram API.
+  - URL проверки сервиса Минприроды заменен с тяжеловесного `oopt-selection` (15 МБ JSON) на легковесный эндпоинт словарей `/api/v1/dictionaries/` (5 КБ), что устраняет ложные таймауты и снижает нагрузку на сеть.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.78` (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.77] - 2026-09-24 (Administrative Filters for Reorganized & Planned OOPT for Coordinator)
 ### Добавлено и улучшено
 - **Административные фильтры и учет статусов ООПТ (`src/services/ooptService.js`, `src/web/admin.js`)**:

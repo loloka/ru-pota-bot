@@ -16,7 +16,7 @@ import {
   formatEmptyLinksReport,
   formatFullManuReport
 } from '../services/potaAuditService.js';
-import { checkAllServices, checkServiceById } from '../services/serviceHealth.js';
+import { checkAllServices, checkServiceById, setTelegramClient } from '../services/serviceHealth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +52,9 @@ console.warn = (...args) => { captureLog('warn', args); originalWarn.apply(conso
 console.error = (...args) => { captureLog('error', args); originalError.apply(console, args); };
 
 export const startAdminServer = (telegramClient) => {
+  if (telegramClient) {
+    setTelegramClient(telegramClient);
+  }
   const app = express();
   app.set('trust proxy', 1);
   const PORT = process.env.PORT || 3000;
@@ -929,11 +932,13 @@ export const startAdminServer = (telegramClient) => {
                   <!-- External Services Quick Status Alert for OOPT Coordinator -->
                   <div id="oopt-services-quickbar" class="d-flex flex-wrap align-items-center justify-content-between p-2 mb-3 bg-light rounded border small">
                     <div class="d-flex flex-wrap align-items-center gap-2">
-                      <span class="fw-semibold text-secondary"><i class="bi bi-activity"></i> Внешние источники:</span>
+                      <span class="fw-semibold text-secondary"><i class="bi bi-activity"></i> Сервисы & Источники:</span>
+                      <span id="oopt-quick-bot_core" class="badge bg-secondary">Бот & TMA: проверка...</span>
+                      <span id="oopt-quick-telegram_api" class="badge bg-secondary">TG API: проверка...</span>
                       <span id="oopt-quick-oopt_registry" class="badge bg-secondary">Минприроды: проверка...</span>
                       <span id="oopt-quick-oopt_nextgis" class="badge bg-secondary">NextGIS: проверка...</span>
                       <span id="oopt-quick-pota_api" class="badge bg-secondary">POTA API: проверка...</span>
-                      <span id="oopt-quick-osm_tiles" class="badge bg-secondary">OSM Карты: проверка...</span>
+                      <span id="oopt-quick-osm_tiles" class="badge bg-secondary">OSM: проверка...</span>
                     </div>
                     <div class="d-flex align-items-center gap-2 mt-1 mt-md-0">
                       <a href="#list-services" class="btn btn-xs btn-outline-primary py-0 px-2 small" style="font-size: 11px;" onclick="document.getElementById('list-services-list')?.click()"><i class="bi bi-speedometer2"></i> Мониторинг доступности</a>
@@ -4436,6 +4441,12 @@ export const startAdminServer = (telegramClient) => {
                   '</div>'
                 : '';
 
+              var detailsHtml = s.details 
+                ? '<div class="badge bg-light text-secondary border font-monospace mt-1 text-wrap text-start" style="font-size: 11px;">' +
+                    escapeHtmlClient(s.details) +
+                  '</div>'
+                : '';
+
               var timeStr = s.lastCheck ? new Date(s.lastCheck).toLocaleTimeString('ru-RU') : '—';
               var pingDisplay = s.latency !== null ? (s.latency + ' ms') : '—';
               var codeDisplay = s.code ? ('HTTP ' + s.code) : (s.status === 'down' ? 'ERROR' : '—');
@@ -4449,7 +4460,7 @@ export const startAdminServer = (telegramClient) => {
                   '<div class="card-body p-3 d-flex flex-column justify-content-between">' +
                     '<div>' +
                       '<div class="d-flex justify-content-between align-items-center mb-2">' +
-                        '<a href="' + escapeHtmlClient(s.url)" target="_blank" class="fw-semibold text-primary font-monospace small text-decoration-none">' +
+                        '<a href="' + escapeHtmlClient(s.url) + '" target="_blank" class="fw-semibold text-primary font-monospace small text-decoration-none">' +
                           escapeHtmlClient(s.domain) + ' <i class="bi bi-box-arrow-up-right" style="font-size: 10px;"></i>' +
                         '</a>' +
                         '<span class="badge bg-light text-secondary border font-monospace" style="font-size: 10px;">' + escapeHtmlClient(s.type) + '</span>' +
@@ -4471,6 +4482,7 @@ export const startAdminServer = (telegramClient) => {
                         '</div>' +
                       '</div>' +
 
+                      detailsHtml +
                       errorHtml +
                     '</div>' +
 
@@ -4478,7 +4490,7 @@ export const startAdminServer = (telegramClient) => {
                       '<button class="btn btn-xs btn-outline-primary py-1 px-2.5 small" id="btn-check-' + s.id + '" onclick="checkSingleServiceUI(\'' + s.id + '\')">' +
                         '<i class="bi bi-arrow-clockwise"></i> Проверить' +
                       '</button>' +
-                      '<a href="' + escapeHtmlClient(s.url)" target="_blank" class="small text-muted text-decoration-none" style="font-size: 11px;">' +
+                      '<a href="' + escapeHtmlClient(s.url) + '" target="_blank" class="small text-muted text-decoration-none" style="font-size: 11px;">' +
                         'Перейти к сайту <i class="bi bi-chevron-right"></i>' +
                       '</a>' +
                     '</div>' +
@@ -4525,6 +4537,8 @@ export const startAdminServer = (telegramClient) => {
           }
 
           function updateOoptQuickbar(services) {
+            const botSvc = services.find(s => s.id === 'bot_core');
+            const tgSvc = services.find(s => s.id === 'telegram_api');
             const regSvc = services.find(s => s.id === 'oopt_registry');
             const nextgisSvc = services.find(s => s.id === 'oopt_nextgis');
             const potaSvc = services.find(s => s.id === 'pota_api');
@@ -4545,10 +4559,12 @@ export const startAdminServer = (telegramClient) => {
               }
             }
 
+            setQuickBadge('oopt-quick-bot_core', botSvc, 'Бот');
+            setQuickBadge('oopt-quick-telegram_api', tgSvc, 'TG API');
             setQuickBadge('oopt-quick-oopt_registry', regSvc, 'Минприроды');
             setQuickBadge('oopt-quick-oopt_nextgis', nextgisSvc, 'NextGIS');
-            setQuickBadge('oopt-quick-pota_api', potaSvc, 'POTA API');
-            setQuickBadge('oopt-quick-osm_tiles', osmSvc, 'OSM Карты');
+            setQuickBadge('oopt-quick-pota_api', potaSvc, 'POTA');
+            setQuickBadge('oopt-quick-osm_tiles', osmSvc, 'OSM');
 
             const warnEl = document.getElementById('oopt-services-warning');
             if (warnEl && regSvc) {

@@ -3053,14 +3053,21 @@ export const startAdminServer = (telegramClient) => {
             'сахалинская': 'RU-SK'
           };
 
+          var REGION_LOCATION_ENTRIES_CLIENT = Object.entries(REGION_TO_POTA_LOCATION_CLIENT).sort(function(a, b) {
+            return b[0].length - a[0].length;
+          });
+
           function getPotaLocationCodeClient(regionStr) {
             if (!regionStr) return '';
             var parts = regionStr.split(/[,;\/]+/).map(function(s) { return s.trim().toLowerCase(); });
             var found = [];
             for (var i = 0; i < parts.length; i++) {
-              for (var kw in REGION_TO_POTA_LOCATION_CLIENT) {
-                if (parts[i].indexOf(kw) !== -1) {
-                  var code = REGION_TO_POTA_LOCATION_CLIENT[kw];
+              for (var j = 0; j < REGION_LOCATION_ENTRIES_CLIENT.length; j++) {
+                var entry = REGION_LOCATION_ENTRIES_CLIENT[j];
+                var kw = entry[0];
+                var code = entry[1];
+                var regex = new RegExp('(^|[^а-яёa-z0-9])' + kw, 'i');
+                if (regex.test(parts[i])) {
                   if (found.indexOf(code) === -1) found.push(code);
                   break;
                 }

@@ -64,4 +64,14 @@ assert(lenOblast.ooptCandidates > 40 && lenOblast.ooptCandidates < 70, `RU-LN OO
 assert(lenOblast.coverageRate >= 40, `RU-LN coverage should be >= 40%, got ${lenOblast.coverageRate}`);
 console.log(`✅ PASS: Leningrad Oblast (RU-LN) separated from SPb: ${lenOblast.ooptCandidates} OOPT (${lenOblast.coverageRate}% coverage)`);
 
+// 7. Test getPotaLocationCode accuracy and substring collision protection (Tomsk vs Omsk, Sakhalin vs Sakha)
+import { getPotaLocationCode } from './src/services/ooptService.js';
+assert.strictEqual(getPotaLocationCode('Томская область'), 'RU-TO', 'Томская область must resolve to RU-TO, not RU-OM');
+assert.strictEqual(getPotaLocationCode('Омская область'), 'RU-OM', 'Омская область must resolve to RU-OM');
+assert.strictEqual(getPotaLocationCode('Сахалинская область'), 'RU-SK', 'Сахалинская область must resolve to RU-SK, not RU-SL');
+assert.strictEqual(getPotaLocationCode('Республика Саха (Якутия)'), 'RU-SL', 'Саха (Якутия) must resolve to RU-SL');
+assert.strictEqual(getPotaLocationCode('Костромская область'), 'RU-KT', 'Костромская область must resolve to RU-KT, not RU-OM');
+assert.strictEqual(getPotaLocationCode('Новосибирская область, Томская область'), 'RU-NS, RU-TO', 'Multi-region cross-border must resolve both RU-NS and RU-TO');
+console.log('✅ PASS: getPotaLocationCode accurately resolves Tomsk (RU-TO), Omsk (RU-OM), Sakhalin (RU-SK), and cross-border regions');
+
 console.log('\n--- ALL REGIONAL POTA COVERAGE TESTS PASSED! ---');

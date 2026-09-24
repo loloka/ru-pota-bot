@@ -1406,14 +1406,17 @@ export const REGION_TO_POTA_LOCATION = {
   'сахалинская': 'RU-SK',
 };
 
+const REGION_LOCATION_ENTRIES = Object.entries(REGION_TO_POTA_LOCATION).sort((a, b) => b[0].length - a[0].length);
+
 export function getPotaLocationCode(regionStr = '') {
   if (!regionStr) return '';
   const parts = regionStr.split(/[,;\/]+/).map(s => s.trim().toLowerCase());
   const foundCodes = [];
 
   for (const part of parts) {
-    for (const [kw, code] of Object.entries(REGION_TO_POTA_LOCATION)) {
-      if (part.includes(kw)) {
+    for (const [kw, code] of REGION_LOCATION_ENTRIES) {
+      const regex = new RegExp('(^|[^а-яёa-z0-9])' + kw, 'i');
+      if (regex.test(part)) {
         if (!foundCodes.includes(code)) foundCodes.push(code);
         break;
       }

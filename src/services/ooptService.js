@@ -1,6 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 import db from '../db/database.js';
 import { potaApi } from '../api/potaApi.js';
@@ -16,13 +17,14 @@ const client = axios.create({
   timeout: 25000,
   proxy: false,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.78 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.81 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });
 
 const FALLBACK_PARKS_PATH = path.resolve(__dirname, '../data/parks_fallback.json');
 const RUNTIME_PARKS_CACHE_PATH = path.resolve(__dirname, '../../data/parks_cache.json');
+const FALLBACK_OOPT_GZ_PATH = path.resolve(__dirname, '../data/oopt_fallback.json.gz');
 
 function getParksDatasetPath() {
   if (fs.existsSync(RUNTIME_PARKS_CACHE_PATH)) {
@@ -224,11 +226,12 @@ export async function syncOoptRegistry() {
     const rows = data.rows;
     console.log(`[OOPT Service] 📥 Downloaded ${rows.length} records in ${((Date.now() - startTime) / 1000).toFixed(1)}s. Writing to SQLite...`);
 
-    // Backup json file for offline guarantee
+    // Backup json file for offline guarantee + compressed git fallback
     try {
       const backupDir = path.resolve('data');
       if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
       fs.writeFileSync(path.join(backupDir, 'oopt_registry_backup.json'), JSON.stringify(data, null, 2), 'utf8');
+      fs.writeFileSync(FALLBACK_OOPT_GZ_PATH, zlib.gzipSync(Buffer.from(JSON.stringify(data))), 'utf8');
     } catch (e) {
       console.warn('[OOPT Service] ⚠️ Backup file write warning:', e.message);
     }
@@ -287,17 +290,33 @@ export async function syncOoptRegistry() {
   } catch (err) {
     console.error('[OOPT Service] ❌ Sync failed:', err.message);
 
-    // Fallback: check if we have offline backup file
+    // Fallback: check if we have offline backup file (or compressed git-shipped fallback)
     const backupFile = path.resolve('data/oopt_registry_backup.json');
+    let raw = null;
     if (fs.existsSync(backupFile)) {
-      console.log('[OOPT Service] 🔄 Restoring from local offline backup...');
-      const raw = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
-      if (raw.rows && Array.isArray(raw.rows)) {
-        const insertStmt = db.prepare(`
-          INSERT OR REPLACE INTO oopt_registry (
-            nid, title, sig, sig_display, status, category, agency, ate, start_date, area, area_aquatory, area_protection_zone, updated_at
-          ) VALUES (@nid, @title, @sig, @sig_display, @status, @category, @agency, @ate, @start_date, @area, @area_aquatory, @area_protection_zone, CURRENT_TIMESTAMP)
-        `);
+      try {
+        raw = JSON.parse(fs.readFileSync(backupFile, 'utf8'));
+      } catch (_) {}
+    }
+    if ((!raw || !Array.isArray(raw.rows)) && fs.existsSync(FALLBACK_OOPT_GZ_PATH)) {
+      try {
+        const decompressed = zlib.gunzipSync(fs.readFileSync(FALLBACK_OOPT_GZ_PATH));
+        raw = JSON.parse(decompressed.toString('utf8'));
+      } catch (_) {}
+    }
+
+    if (raw && raw.rows && Array.isArray(raw.rows)) {
+      console.log(`[OOPT Service] 🔄 Restoring ${raw.rows.length} records from local offline backup...`);
+      try {
+        const backupDir = path.resolve('data');
+        if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+        fs.writeFileSync(backupFile, JSON.stringify(raw, null, 2), 'utf8');
+      } catch (_) {}
+      const insertStmt = db.prepare(`
+        INSERT OR REPLACE INTO oopt_registry (
+          nid, title, sig, sig_display, status, category, agency, ate, start_date, area, area_aquatory, area_protection_zone, updated_at
+        ) VALUES (@nid, @title, @sig, @sig_display, @status, @category, @agency, @ate, @start_date, @area, @area_aquatory, @area_protection_zone, CURRENT_TIMESTAMP)
+      `);
         const transaction = db.transaction((items) => {
           for (const item of items) {
             const { sig, display } = normalizeSig(item.sig, item.sig_display);
@@ -326,9 +345,8 @@ export async function syncOoptRegistry() {
         }
         return { success: true, count: raw.rows.length, total: totalInDb, fromBackup: true };
       }
+      throw err;
     }
-    throw err;
-  }
 }
 
 export function isPotaRestrictedAte(ate = '') {

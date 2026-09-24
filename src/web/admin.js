@@ -16,6 +16,7 @@ import {
   formatEmptyLinksReport,
   formatFullManuReport
 } from '../services/potaAuditService.js';
+import { checkAllServices, checkServiceById } from '../services/serviceHealth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -613,6 +614,7 @@ export const startAdminServer = (telegramClient) => {
                 <a class="list-group-item list-group-item-action" id="list-oopt-list" data-bs-toggle="list" href="#list-oopt" role="tab" aria-controls="list-oopt"><i class="bi bi-tree"></i> Реестр ООПТ РФ</a>
                 <a class="list-group-item list-group-item-action" id="list-regions-list" data-bs-toggle="list" href="#list-regions" role="tab" aria-controls="list-regions"><i class="bi bi-geo-alt"></i> Регионы POTA</a>
                 <a class="list-group-item list-group-item-action" id="list-links-list" data-bs-toggle="list" href="#list-links" role="tab" aria-controls="list-links"><i class="bi bi-link-45deg"></i> Аудит ссылок POTA <span class="badge bg-warning text-dark rounded-pill ms-1" id="links-wiki-badge" title="Википедия: ${auditStats.wikipedia}">${auditStats.wikipedia}</span> <span class="badge bg-danger rounded-pill ms-1" id="links-empty-badge" title="Без ссылок (Алярма): ${auditStats.empty}">${auditStats.empty}</span></a>
+                <a class="list-group-item list-group-item-action" id="list-services-list" data-bs-toggle="list" href="#list-services" role="tab" aria-controls="list-services"><i class="bi bi-activity"></i> Доступность сервисов <span class="badge bg-success rounded-pill ms-1" id="services-summary-badge">...</span></a>
                 <a class="list-group-item list-group-item-action" id="list-console-list" data-bs-toggle="list" href="#list-console" role="tab" aria-controls="list-console"><i class="bi bi-terminal"></i> Live Консоль</a>
               </div>
             </div>
@@ -922,6 +924,24 @@ export const startAdminServer = (telegramClient) => {
                       <button type="button" class="btn btn-sm btn-outline-primary" id="btn-sync-oopt"><i class="bi bi-arrow-repeat"></i> Синхронизировать с карта.оцзк.рф</button>
                       <button type="button" class="btn btn-sm btn-success" id="btn-sync-pota-oopt" title="Обновить базу парков POTA с api.pota.app и привязать к ООПТ"><i class="bi bi-cloud-arrow-down-fill"></i> Синхронизировать парки POTA</button>
                     </div>
+                  </div>
+
+                  <!-- External Services Quick Status Alert for OOPT Coordinator -->
+                  <div id="oopt-services-quickbar" class="d-flex flex-wrap align-items-center justify-content-between p-2 mb-3 bg-light rounded border small">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                      <span class="fw-semibold text-secondary"><i class="bi bi-activity"></i> Внешние источники:</span>
+                      <span id="oopt-quick-oopt_registry" class="badge bg-secondary">Минприроды: проверка...</span>
+                      <span id="oopt-quick-oopt_nextgis" class="badge bg-secondary">NextGIS: проверка...</span>
+                      <span id="oopt-quick-pota_api" class="badge bg-secondary">POTA API: проверка...</span>
+                      <span id="oopt-quick-osm_tiles" class="badge bg-secondary">OSM Карты: проверка...</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mt-1 mt-md-0">
+                      <a href="#list-services" class="btn btn-xs btn-outline-primary py-0 px-2 small" style="font-size: 11px;" onclick="document.getElementById('list-services-list')?.click()"><i class="bi bi-speedometer2"></i> Мониторинг доступности</a>
+                    </div>
+                  </div>
+                  <div id="oopt-services-warning" class="alert alert-warning py-2 px-3 small mb-3 d-none">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                    <strong>Внимание:</strong> Сервер Минприроды (<span class="font-monospace">карта.оцзк.рф</span>) временно не отвечает или перегружен. Детальные данные и координаты могут загружаться с задержкой.
                   </div>
 
                   <!-- OOPT Statistics Summary Cards -->
@@ -1239,6 +1259,37 @@ export const startAdminServer = (telegramClient) => {
                         <tr><td colspan="6" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm text-primary"></span> Загрузка аудита ссылок...</td></tr>
                       </tbody>
                     </table>
+                  </div>
+                </div>
+
+                <!-- Tab: Services Health -->
+                <div class="tab-pane fade" id="list-services" role="tabpanel" aria-labelledby="list-services-list">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                    <div>
+                      <h3 class="mb-1"><i class="bi bi-activity text-primary"></i> Доступность внешних сервисов</h3>
+                      <p class="text-muted small mb-0">Мониторинг доступности и времени отклика внешних реестров ООПТ, API кластера POTA и картографических серверов</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mt-2 mt-sm-0">
+                      <span class="text-muted small" id="services-last-check-text">—</span>
+                      <button type="button" class="btn btn-sm btn-primary" id="btn-refresh-services" onclick="checkAllServicesUI(true)">
+                        <i class="bi bi-arrow-repeat"></i> Проверить все сервисы
+                      </button>
+                    </div>
+                  </div>
+
+                  <div id="services-summary-alert" class="alert alert-light border shadow-sm py-2.5 px-3 mb-3 d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="spinner-border spinner-border-sm text-primary" id="services-spinner" role="status"></span>
+                      <span id="services-summary-text" class="fw-semibold">Загрузка статуса сервисов...</span>
+                    </div>
+                    <span class="badge bg-secondary font-monospace" id="services-summary-pill">Проверка...</span>
+                  </div>
+
+                  <div class="row g-3" id="services-cards-grid">
+                    <div class="col-12 text-center py-5 text-muted">
+                      <div class="spinner-border text-primary mb-2" role="status"></div>
+                      <div>Опрос внешних сервисов...</div>
+                    </div>
                   </div>
                 </div>
 
@@ -4281,6 +4332,248 @@ export const startAdminServer = (telegramClient) => {
             loadRegionsData();
           }
 
+          // Services Health Monitoring Client Logic
+          let cachedServicesHealth = [];
+
+          async function checkAllServicesUI(force) {
+            const btn = document.getElementById('btn-refresh-services');
+            const spinner = document.getElementById('services-spinner');
+            if (btn) {
+              btn.disabled = true;
+              btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Проверка...';
+            }
+            if (spinner) spinner.classList.remove('d-none');
+
+            try {
+              const res = await fetch('/api/admin/services/status' + (force ? '?force=1' : ''));
+              const data = await res.json();
+              if (data && data.services) {
+                cachedServicesHealth = data.services;
+                renderServicesCards(data.services);
+                updateServicesSummary(data.services);
+                updateOoptQuickbar(data.services);
+              }
+            } catch (err) {
+              console.error('Error fetching services health:', err);
+            } finally {
+              if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Проверить все сервисы';
+              }
+              if (spinner) spinner.classList.add('d-none');
+              const timeEl = document.getElementById('services-last-check-text');
+              if (timeEl) {
+                timeEl.textContent = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
+              }
+            }
+          }
+
+          async function checkSingleServiceUI(serviceId) {
+            const btn = document.getElementById('btn-check-' + serviceId);
+            if (btn) {
+              btn.disabled = true;
+              btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Проверка...';
+            }
+            try {
+              const res = await fetch('/api/admin/services/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: serviceId })
+              });
+              const updatedService = await res.json();
+              if (updatedService && updatedService.id) {
+                const idx = cachedServicesHealth.findIndex(s => s.id === updatedService.id);
+                if (idx !== -1) cachedServicesHealth[idx] = updatedService;
+                else cachedServicesHealth.push(updatedService);
+                renderServicesCards(cachedServicesHealth);
+                updateServicesSummary(cachedServicesHealth);
+                updateOoptQuickbar(cachedServicesHealth);
+              }
+            } catch (err) {
+              console.error('Error checking single service:', err);
+            } finally {
+              if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Проверить';
+              }
+            }
+          }
+
+          function renderServicesCards(services) {
+            var grid = document.getElementById('services-cards-grid');
+            if (!grid) return;
+
+            grid.innerHTML = services.map(function(s) {
+              var statusBadge = '<span class="badge bg-secondary">Неизвестно</span>';
+              var cardBorder = 'border-secondary-subtle';
+              var headerBg = 'bg-light';
+              var pingBadge = 'bg-secondary';
+              var codeBadge = 'bg-secondary';
+
+              if (s.status === 'up') {
+                statusBadge = '<span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Онлайн</span>';
+                cardBorder = 'border-success-subtle';
+                headerBg = 'bg-success-subtle';
+                pingBadge = s.latency < 500 ? 'bg-success' : s.latency < 1500 ? 'bg-info text-dark' : 'bg-warning text-dark';
+                codeBadge = 'bg-success';
+              } else if (s.status === 'degraded') {
+                statusBadge = '<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill"></i> Замедлен</span>';
+                cardBorder = 'border-warning-subtle';
+                headerBg = 'bg-warning-subtle';
+                pingBadge = 'bg-warning text-dark';
+                codeBadge = 'bg-info text-dark';
+              } else if (s.status === 'down') {
+                statusBadge = '<span class="badge bg-danger"><i class="bi bi-x-circle-fill"></i> Недоступен</span>';
+                cardBorder = 'border-danger-subtle';
+                headerBg = 'bg-danger-subtle';
+                pingBadge = 'bg-danger';
+                codeBadge = 'bg-danger';
+              }
+
+              var errorHtml = s.error 
+                ? '<div class="alert alert-danger py-1.5 px-2 mb-0 mt-2 small font-monospace" style="font-size: 11px;">' +
+                    '<i class="bi bi-exclamation-octagon-fill"></i> ' + escapeHtmlClient(s.error) +
+                  '</div>'
+                : '';
+
+              var timeStr = s.lastCheck ? new Date(s.lastCheck).toLocaleTimeString('ru-RU') : '—';
+              var pingDisplay = s.latency !== null ? (s.latency + ' ms') : '—';
+              var codeDisplay = s.code ? ('HTTP ' + s.code) : (s.status === 'down' ? 'ERROR' : '—');
+
+              return '<div class="col-md-6 col-xl-4" id="service-card-' + s.id + '">' +
+                '<div class="card h-100 shadow-sm ' + cardBorder + '">' +
+                  '<div class="card-header ' + headerBg + ' py-2 px-3 d-flex justify-content-between align-items-center">' +
+                    '<span class="fw-bold small text-truncate me-2">' + escapeHtmlClient(s.name) + '</span>' +
+                    statusBadge +
+                  '</div>' +
+                  '<div class="card-body p-3 d-flex flex-column justify-content-between">' +
+                    '<div>' +
+                      '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                        '<a href="' + escapeHtmlClient(s.url)" target="_blank" class="fw-semibold text-primary font-monospace small text-decoration-none">' +
+                          escapeHtmlClient(s.domain) + ' <i class="bi bi-box-arrow-up-right" style="font-size: 10px;"></i>' +
+                        '</a>' +
+                        '<span class="badge bg-light text-secondary border font-monospace" style="font-size: 10px;">' + escapeHtmlClient(s.type) + '</span>' +
+                      '</div>' +
+                      '<p class="text-muted small mb-2" style="font-size: 12px; min-height: 38px;">' + escapeHtmlClient(s.description) + '</p>' +
+                      
+                      '<div class="bg-light p-2 rounded border small mb-2">' +
+                        '<div class="d-flex justify-content-between align-items-center mb-1">' +
+                          '<span class="text-muted">Время отклика:</span>' +
+                          '<span class="badge ' + pingBadge + ' font-monospace">' + pingDisplay + '</span>' +
+                        '</div>' +
+                        '<div class="d-flex justify-content-between align-items-center mb-1">' +
+                          '<span class="text-muted">Код ответа:</span>' +
+                          '<span class="badge ' + codeBadge + ' font-monospace">' + codeDisplay + '</span>' +
+                        '</div>' +
+                        '<div class="d-flex justify-content-between align-items-center">' +
+                          '<span class="text-muted">Проверено:</span>' +
+                          '<span class="text-secondary font-monospace" style="font-size: 11px;">' + timeStr + '</span>' +
+                        '</div>' +
+                      '</div>' +
+
+                      errorHtml +
+                    '</div>' +
+
+                    '<div class="d-flex justify-content-between align-items-center pt-2 mt-2 border-top">' +
+                      '<button class="btn btn-xs btn-outline-primary py-1 px-2.5 small" id="btn-check-' + s.id + '" onclick="checkSingleServiceUI(\'' + s.id + '\')">' +
+                        '<i class="bi bi-arrow-clockwise"></i> Проверить' +
+                      '</button>' +
+                      '<a href="' + escapeHtmlClient(s.url)" target="_blank" class="small text-muted text-decoration-none" style="font-size: 11px;">' +
+                        'Перейти к сайту <i class="bi bi-chevron-right"></i>' +
+                      '</a>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+            }).join('');
+          }
+
+          function updateServicesSummary(services) {
+            const upCount = services.filter(s => s.status === 'up').length;
+            const degradedCount = services.filter(s => s.status === 'degraded').length;
+            const downCount = services.filter(s => s.status === 'down').length;
+            const total = services.length;
+
+            const badge = document.getElementById('services-summary-badge');
+            if (badge) {
+              badge.textContent = upCount + '/' + total;
+              badge.className = 'badge rounded-pill ms-1 ' + (downCount > 0 ? 'bg-danger' : degradedCount > 0 ? 'bg-warning text-dark' : 'bg-success');
+            }
+
+            const alertEl = document.getElementById('services-summary-alert');
+            const alertText = document.getElementById('services-summary-text');
+            const alertPill = document.getElementById('services-summary-pill');
+
+            if (alertEl && alertText && alertPill) {
+              if (downCount > 0) {
+                alertEl.className = 'alert alert-danger shadow-sm py-2 px-3 mb-3 d-flex align-items-center justify-content-between';
+                alertText.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-danger me-2"></i><strong>Внимание:</strong> Обнаружены недоступные внешние сервисы (' + downCount + ' из ' + total + '). Некоторые функции могут работать с задержкой или сбоить.';
+                alertPill.className = 'badge bg-danger font-monospace';
+                alertPill.textContent = downCount + ' НЕДОСТУПНО';
+              } else if (degradedCount > 0) {
+                alertEl.className = 'alert alert-warning shadow-sm py-2 px-3 mb-3 d-flex align-items-center justify-content-between';
+                alertText.innerHTML = '<i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Все сервисы доступны, но на некоторых ресурсах зафиксирован высокий пинг (>3.5 сек).';
+                alertPill.className = 'badge bg-warning text-dark font-monospace';
+                alertPill.textContent = degradedCount + ' ЗАМЕДЛЕНО';
+              } else {
+                alertEl.className = 'alert alert-success shadow-sm py-2 px-3 mb-3 d-flex align-items-center justify-content-between';
+                alertText.innerHTML = '<i class="bi bi-check-circle-fill text-success me-2"></i>Все внешние сервисы работают штатно (' + upCount + '/' + total + ' онлайн).';
+                alertPill.className = 'badge bg-success font-monospace';
+                alertPill.textContent = 'ВСЕ ОНЛАЙН';
+              }
+            }
+          }
+
+          function updateOoptQuickbar(services) {
+            const regSvc = services.find(s => s.id === 'oopt_registry');
+            const nextgisSvc = services.find(s => s.id === 'oopt_nextgis');
+            const potaSvc = services.find(s => s.id === 'pota_api');
+            const osmSvc = services.find(s => s.id === 'osm_tiles');
+
+            function setQuickBadge(id, svc, label) {
+              const el = document.getElementById(id);
+              if (!el || !svc) return;
+              if (svc.status === 'up') {
+                el.className = 'badge bg-success';
+                el.innerHTML = '🟢 ' + label + ' ' + (svc.latency ? '(' + svc.latency + 'ms)' : '');
+              } else if (svc.status === 'degraded') {
+                el.className = 'badge bg-warning text-dark';
+                el.innerHTML = '🟡 ' + label + ' ' + (svc.latency ? '(' + svc.latency + 'ms)' : '');
+              } else {
+                el.className = 'badge bg-danger';
+                el.innerHTML = '🔴 ' + label + ' (Ошибка)';
+              }
+            }
+
+            setQuickBadge('oopt-quick-oopt_registry', regSvc, 'Минприроды');
+            setQuickBadge('oopt-quick-oopt_nextgis', nextgisSvc, 'NextGIS');
+            setQuickBadge('oopt-quick-pota_api', potaSvc, 'POTA API');
+            setQuickBadge('oopt-quick-osm_tiles', osmSvc, 'OSM Карты');
+
+            const warnEl = document.getElementById('oopt-services-warning');
+            if (warnEl && regSvc) {
+              if (regSvc.status === 'down') {
+                warnEl.classList.remove('d-none');
+              } else {
+                warnEl.classList.add('d-none');
+              }
+            }
+          }
+
+          // Open and load services on tab click or hash
+          document.getElementById('list-services-list')?.addEventListener('shown.bs.tab', function() {
+            if (cachedServicesHealth.length === 0) {
+              checkAllServicesUI(false);
+            }
+          });
+
+          if (window.location.hash === '#list-services') {
+            checkAllServicesUI(false);
+          } else {
+            // Load in background for quickbar and sidebar badge
+            checkAllServicesUI(false);
+          }
+
           // Instant load on page reload (F5) if tab is oopt
           if (window.location.hash === '#list-oopt') {
             loadAdminOopt(1);
@@ -4767,6 +5060,34 @@ export const startAdminServer = (telegramClient) => {
       const text = formatFullManuReport();
       res.json({ text });
     } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // External Services Health Monitoring API
+  app.get('/api/admin/services/status', requireAuth, async (req, res) => {
+    try {
+      const force = req.query.force === '1' || req.query.force === 'true';
+      const results = await checkAllServices(force);
+      res.json({ services: results, timestamp: new Date().toISOString() });
+    } catch (err) {
+      console.error('[Admin] Services health check error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/services/check', requireAuth, async (req, res) => {
+    try {
+      const { id } = req.body || {};
+      if (id) {
+        const result = await checkServiceById(id);
+        if (!result) return res.status(404).json({ error: 'Service not found' });
+        return res.json(result);
+      }
+      const results = await checkAllServices(true);
+      res.json({ services: results, timestamp: new Date().toISOString() });
+    } catch (err) {
+      console.error('[Admin] Services health check error:', err);
       res.status(500).json({ error: err.message });
     }
   });

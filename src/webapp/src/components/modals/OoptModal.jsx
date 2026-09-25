@@ -528,7 +528,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                         type="text"
                         value={form.lat}
                         onPaste={(e) => {
-                          const text = e.clipboardData?.getData('text');
+                          const text = e.clipboardData ? (e.clipboardData.getData('text/plain') || e.clipboardData.getData('text')) : '';
                           if (text && handleCoordSmartPasteOrInput(text)) {
                             e.preventDefault();
                           }
@@ -552,7 +552,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                         type="text"
                         value={form.lon}
                         onPaste={(e) => {
-                          const text = e.clipboardData?.getData('text');
+                          const text = e.clipboardData ? (e.clipboardData.getData('text/plain') || e.clipboardData.getData('text')) : '';
                           if (text && handleCoordSmartPasteOrInput(text)) {
                             e.preventDefault();
                           }

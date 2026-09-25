@@ -1,5 +1,14 @@
 # История изменений (Changelog)
 
+## [1.16.85] - 2026-09-25 (Template String Escaping Fix for Web Submitter Auto-split)
+### Исправлено и оптимизировано
+- **Исправление регулярных выражений парсинга координат в веб-админке (`src/web/admin.js`)**:
+  - В ES6 template literal (` `) символы обратного слэша `\d` и `\s` интерполировались Node.js в обычные буквы `d` и `s`, из-за чего в браузере регулярное выражение искало символы `d` вместо цифр и не распознавало вставленную пару координат.
+  - Регулярные выражения в веб-интерфейсе переведены на zero-backslash формат (`[0-9]`, `[^0-9]`, `[ \t;]`, `(?:[.][0-9]+)`), что гарантирует 100% стабильную работу парсинга в браузере при любых способах сборки и рендеринга.
+  - Поддержан кроссбраузерный фолбек `(e.clipboardData.getData('text/plain') || e.clipboardData.getData('text'))`.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.85` (`package.json`, `potaApi.js`, `ooptService.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.84] - 2026-09-25 (Smart Coordinate Parser & Auto-split for POTA Park Submitter)
 ### Добавлено и улучшено
 - **Умная вставка координат (Smart Auto-split)** (`src/web/admin.js`, `src/webapp/src/components/modals/OoptModal.jsx`, `src/webapp/src/services/ooptUtils.js`):

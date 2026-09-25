@@ -3483,17 +3483,19 @@ export const startAdminServer = (telegramClient) => {
             if (el && el.tagName === 'SELECT') el.addEventListener('change', updateSubmitterPreview);
           });
 
-          // Smart coordinate parsing & auto-split for lat/lon
+          // Smart coordinate parsing & auto-split for lat/lon (Zero-backslash regexes for template literal safety)
           function parseCoordString(text) {
             if (!text || typeof text !== 'string') return null;
             var s = text.trim();
-            var ptMatch = s.match(/[?&]pt=([\d\.]+),([\d\.]+)/);
+            // 1. Check Yandex Maps URL: pt=lon,lat
+            var ptMatch = s.match(/[?&]pt=([0-9.]+),([0-9.]+)/);
             if (ptMatch) {
               var lat = Number(parseFloat(ptMatch[2]).toFixed(4));
               var lon = Number(parseFloat(ptMatch[1]).toFixed(4));
               if (!isNaN(lat) && !isNaN(lon)) return { lat: lat, lon: lon };
             }
-            var dmsMatch = s.match(/(\d+)[\D]+(\d+)[\D]+([\d\.]+)[\s"]*([NSns])[\D]+(\d+)[\D]+(\d+)[\D]+([\d\.]+)[\s"]*([EWew])/);
+            // 2. Check DMS (e.g. 55°52'30"N 37°46'10"E)
+            var dmsMatch = s.match(/([0-9]+)[^0-9]+([0-9]+)[^0-9]+([0-9.]+)[ "]*([NSns])[^0-9]+([0-9]+)[^0-9]+([0-9]+)[^0-9]+([0-9.]+)[ "]*([EWew])/);
             if (dmsMatch) {
               var latDms = parseInt(dmsMatch[1], 10) + parseInt(dmsMatch[2], 10)/60 + parseFloat(dmsMatch[3])/3600;
               if (dmsMatch[4].toUpperCase() === 'S') latDms = -latDms;
@@ -3501,13 +3503,16 @@ export const startAdminServer = (telegramClient) => {
               if (dmsMatch[8].toUpperCase() === 'W') lonDms = -lonDms;
               return { lat: Number(latDms.toFixed(4)), lon: Number(lonDms.toFixed(4)) };
             }
-            if (/^\d+,\d+[\s;]+\d+,\d+$/.test(s)) {
-              var commaParts = s.split(/[\s;]+/);
+            // 3. Russian decimal comma: "55,8821 37,7812" or "55,8821; 37,7812"
+            if (/^[0-9]+,[0-9]+[ \t;]+[0-9]+,[0-9]+$/.test(s)) {
+              var commaParts = s.split(/[ \t;]+/);
               var cLat = parseFloat(commaParts[0].replace(',', '.'));
               var cLon = parseFloat(commaParts[1].replace(',', '.'));
               if (!isNaN(cLat) && !isNaN(cLon)) return { lat: Number(cLat.toFixed(4)), lon: Number(cLon.toFixed(4)) };
             }
-            var nums = s.replace(/,/g, ' ').match(/[-+]?\d+(?:\.\d+)?/g);
+            // 4. Standard comma / space / semicolon / slash separated floats (e.g. "56.452771, 45.3898")
+            var clean = s.replace(/,/g, ' ');
+            var nums = clean.match(/[-+]?[0-9]+(?:[.][0-9]+)?/g);
             if (nums && nums.length >= 2) {
               var n1 = parseFloat(nums[0]);
               var n2 = parseFloat(nums[1]);
@@ -3540,7 +3545,8 @@ export const startAdminServer = (telegramClient) => {
             var el = document.getElementById(id);
             if (el) {
               el.addEventListener('paste', function(e) {
-                var pasted = (e.clipboardData || window.clipboardData)?.getData('text');
+                var clip = e.clipboardData || window.clipboardData;
+                var pasted = clip ? (clip.getData('text/plain') || clip.getData('text')) : '';
                 if (pasted) {
                   var parsed = parseCoordString(pasted);
                   if (parsed) {

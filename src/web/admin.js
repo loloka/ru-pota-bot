@@ -939,6 +939,7 @@ export const startAdminServer = (telegramClient) => {
                       <span id="oopt-quick-oopt_nextgis" class="badge bg-secondary">NextGIS: проверка...</span>
                       <span id="oopt-quick-pota_api" class="badge bg-secondary">POTA API: проверка...</span>
                       <span id="oopt-quick-osm_tiles" class="badge bg-secondary">OSM: проверка...</span>
+                      <span id="oopt-quick-rusoir_grounds" class="badge bg-secondary">RusOIR: проверка...</span>
                     </div>
                     <div class="d-flex align-items-center gap-2 mt-1 mt-md-0">
                       <a href="#list-services" class="btn btn-xs btn-outline-primary py-0 px-2 small" style="font-size: 11px;" onclick="document.getElementById('list-services-list')?.click()"><i class="bi bi-speedometer2"></i> Мониторинг доступности</a>
@@ -4710,6 +4711,7 @@ export const startAdminServer = (telegramClient) => {
             const nextgisSvc = services.find(s => s.id === 'oopt_nextgis');
             const potaSvc = services.find(s => s.id === 'pota_api');
             const osmSvc = services.find(s => s.id === 'osm_tiles');
+            const rusoirSvc = services.find(s => s.id === 'rusoir_grounds');
 
             function setQuickBadge(id, svc, label) {
               const el = document.getElementById(id);
@@ -4732,6 +4734,7 @@ export const startAdminServer = (telegramClient) => {
             setQuickBadge('oopt-quick-oopt_nextgis', nextgisSvc, 'NextGIS');
             setQuickBadge('oopt-quick-pota_api', potaSvc, 'POTA');
             setQuickBadge('oopt-quick-osm_tiles', osmSvc, 'OSM');
+            setQuickBadge('oopt-quick-rusoir_grounds', rusoirSvc, 'RusOIR');
 
             const warnEl = document.getElementById('oopt-services-warning');
             if (warnEl && regSvc) {

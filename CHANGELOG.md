@@ -1,5 +1,15 @@
 # История изменений (Changelog)
 
+## [1.16.87] - 2026-09-25 (Service Health Monitoring: RusOIR Grounds Catalog Added)
+### Добавлено и улучшено
+- **Мониторинг доступности каталога RusOIR** (`src/services/serviceHealth.js`, `src/web/admin.js`, `test/test_service_health.js`):
+  - Каталог природных территорий RusOIR (`rusoir_grounds`, `rusoir.com`) добавлен в единую систему мониторинга доступности сервисов (`serviceHealth.js`).
+  - В панели координатора ООПТ («Сервисы & Источники») добавлен оперативный статус-бейдж `RusOIR` с динамической индикацией задержки ответа и состояния.
+  - В общей таблице «Доступность сервисов» RusOIR теперь отслеживается наряду с Минприроды, NextGIS, Telegram API, POTA API и OSM Tiles.
+  - Набор автотестов `test_service_health.js` расширен до 8 сервисов.
+- **Синхронизация версий**:
+  - Версия синхронизирована до `1.16.87` во всех файлах проекта по правилу 2.1 (`package.json`, `potaApi.js`, `ooptService.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.86] - 2026-09-25 (RusOIR Integration: Automatic Coordinates Fallback & Grounds Enrichment)
 ### Добавлено и улучшено
 - **Интеграция с каталогом природных территорий RusOIR (`rusoir.com`)** (`src/services/ooptService.js`, `src/web/admin.js`, `src/webapp/src/components/modals/OoptModal.jsx`):

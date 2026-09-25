@@ -5,9 +5,9 @@ console.log('=== RUNNING EXTERNAL SERVICES HEALTH MONITORING TESTS ===\n');
 
 // 1. Verify SERVICES definitions
 assert(Array.isArray(SERVICES), 'SERVICES should be an array');
-assert.strictEqual(SERVICES.length, 7, 'Should define exactly 7 services');
+assert.strictEqual(SERVICES.length, 8, 'Should define exactly 8 services');
 
-const requiredIds = ['bot_core', 'telegram_api', 'pota_api', 'pota_next', 'oopt_registry', 'oopt_nextgis', 'osm_tiles'];
+const requiredIds = ['bot_core', 'telegram_api', 'pota_api', 'pota_next', 'oopt_registry', 'oopt_nextgis', 'osm_tiles', 'rusoir_grounds'];
 for (const id of requiredIds) {
   const found = SERVICES.find(s => s.id === id);
   assert(found, `Service ${id} must be defined`);
@@ -15,7 +15,7 @@ for (const id of requiredIds) {
   assert(found.domain, `Service ${id} must have a domain`);
   assert(found.url, `Service ${id} must have a url`);
 }
-console.log('✅ PASS: SERVICES array and definitions are valid (7 services)');
+console.log('✅ PASS: SERVICES array and definitions are valid (8 services)');
 
 // 2. Test invalid service ID lookup
 const nullResult = await checkServiceById('invalid_unknown_service');
@@ -33,7 +33,7 @@ console.log(`✅ PASS: checkServiceById('bot_core') responded with status=${botR
 // 4. Test checkAllServices and caching
 const all1 = await checkAllServices(true);
 assert(Array.isArray(all1), 'checkAllServices should return array');
-assert.strictEqual(all1.length, 7, 'checkAllServices should return 7 results');
+assert.strictEqual(all1.length, 8, 'checkAllServices should return 8 results');
 
 const cached = getCachedServicesStatus();
 assert.strictEqual(cached, all1, 'getCachedServicesStatus matches checkAllServices result');

@@ -72,6 +72,15 @@ const SERVICES = [
     checkUrl: 'https://tile.openstreetmap.org/',
     description: 'Картографическая основа и тайловый сервер для интерактивного выбора и перемещения координат на карте',
     type: 'http'
+  },
+  {
+    id: 'rusoir_grounds',
+    name: 'Каталог природных территорий RusOIR',
+    domain: 'rusoir.com',
+    url: 'https://rusoir.com/',
+    checkUrl: 'https://rusoir.com/api/search?q=%D0%93%D0%BE%D0%BC%D0%B5%D0%BB%D1%8C',
+    description: 'Интеллектуальный поиск и резервный источник GPS-координат ООПТ России (резерв при блокировке Минприроды)',
+    type: 'http'
   }
 ];
 

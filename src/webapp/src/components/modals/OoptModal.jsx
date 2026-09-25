@@ -29,7 +29,8 @@ import {
   parseOoptForSubmitter, 
   formatR2bbxTemplate, 
   getYandexMapsUrl,
-  isPotaRestrictedAte
+  isPotaRestrictedAte,
+  parseCoordinatePair
 } from '../../services/ooptUtils.js';
 
 export default function OoptModal({ oopt, onClose, onShowOnMap }) {
@@ -39,6 +40,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
   const [copied, setCopied] = useState(false);
   const [translating, setTranslating] = useState(false);
   const [error, setError] = useState(null);
+  const [coordFlash, setCoordFlash] = useState(false);
 
   // Editable Submitter form state
   const [form, setForm] = useState(() => parseOoptForSubmitter(oopt));
@@ -133,6 +135,22 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleCoordSmartPasteOrInput = (value) => {
+    const parsed = parseCoordinatePair(value);
+    if (parsed) {
+      setForm((prev) => ({
+        ...prev,
+        lat: parsed.lat.toFixed(4),
+        lon: parsed.lon.toFixed(4)
+      }));
+      setCoordFlash(true);
+      setTimeout(() => setCoordFlash(false), 2000);
+      try { telegram.haptic.notification('success'); } catch (_) {}
+      return true;
+    }
+    return false;
   };
 
   const handleAiTranslate = async () => {
@@ -500,34 +518,60 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                 </div>
 
                 {/* Coordinates Row (4 decimal precision per R2BBX) */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      7. Координата 1 (Широта, Lat) <span className="text-emerald-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={form.lat}
-                      onChange={(e) => handleInputChange('lat', e.target.value)}
-                      onClick={(e) => e.target.select()}
-                      onFocus={(e) => e.target.select()}
-                      placeholder="55.8772"
-                      className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 select-text"
-                    />
+                <div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        7. Координата 1 (Широта, Lat) <span className="text-emerald-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.lat}
+                        onPaste={(e) => {
+                          const text = e.clipboardData?.getData('text');
+                          if (text && handleCoordSmartPasteOrInput(text)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (!handleCoordSmartPasteOrInput(e.target.value)) {
+                            handleInputChange('lat', e.target.value);
+                          }
+                        }}
+                        onClick={(e) => e.target.select()}
+                        onFocus={(e) => e.target.select()}
+                        placeholder="55.8772"
+                        className={`w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border ${coordFlash ? 'border-emerald-500 ring-2 ring-emerald-500/50 bg-emerald-500/10' : 'border-slate-200 dark:border-slate-700'} text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 select-text transition-all`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        8. Координата 2 (Долгота, Lon) <span className="text-emerald-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.lon}
+                        onPaste={(e) => {
+                          const text = e.clipboardData?.getData('text');
+                          if (text && handleCoordSmartPasteOrInput(text)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (!handleCoordSmartPasteOrInput(e.target.value)) {
+                            handleInputChange('lon', e.target.value);
+                          }
+                        }}
+                        onClick={(e) => e.target.select()}
+                        onFocus={(e) => e.target.select()}
+                        placeholder="37.7818"
+                        className={`w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border ${coordFlash ? 'border-emerald-500 ring-2 ring-emerald-500/50 bg-emerald-500/10' : 'border-slate-200 dark:border-slate-700'} text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 select-text transition-all`}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      8. Координата 2 (Долгота, Lon) <span className="text-emerald-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={form.lon}
-                      onChange={(e) => handleInputChange('lon', e.target.value)}
-                      onClick={(e) => e.target.select()}
-                      onFocus={(e) => e.target.select()}
-                      placeholder="37.7818"
-                      className="w-full px-3 py-2 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 select-text"
-                    />
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-1.5 px-0.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <span><strong>Умная вставка:</strong> скопируйте координаты в Яндекс.Картах (правой кнопкой ➔ «Скопировать координаты») и вставьте в любое поле — бот автоматически разделит их на Широту и Долготу.</span>
                   </div>
                 </div>
 

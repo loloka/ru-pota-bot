@@ -833,3 +833,57 @@ export function getYandexMapsUrl(lat, lon, name = '', region = '') {
   return null;
 }
 
+/**
+ * Smart coordinate parser: extracts lat/lon from raw text or URL
+ * Supports formats:
+ * - "55.8821, 37.7812"
+ * - "55.8821 37.7812"
+ * - "55,8821 37,7812" / "55,8821; 37,7812"
+ * - "[55.8821, 37.7812]"
+ * - "55°52'30\"N 37°46'10\"E"
+ * - Yandex Maps URLs ("...pt=37.7812,55.8821...")
+ */
+export function parseCoordinatePair(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const s = raw.trim();
+
+  // 1. Check Yandex Maps URL: ?pt=lon,lat
+  const ptMatch = s.match(/[?&]pt=([\d\.]+),([\d\.]+)/);
+  if (ptMatch) {
+    const lat = Number(parseFloat(ptMatch[2]).toFixed(4));
+    const lon = Number(parseFloat(ptMatch[1]).toFixed(4));
+    if (!isNaN(lat) && !isNaN(lon)) return { lat, lon };
+  }
+
+  // 2. Check DMS (e.g. 55°52'30"N 37°46'10"E)
+  const dmsMatch = s.match(/(\d+)[\D]+(\d+)[\D]+([\d\.]+)[\s"]*([NSns])[\D]+(\d+)[\D]+(\d+)[\D]+([\d\.]+)[\s"]*([EWew])/);
+  if (dmsMatch) {
+    let latDms = parseInt(dmsMatch[1], 10) + parseInt(dmsMatch[2], 10)/60 + parseFloat(dmsMatch[3])/3600;
+    if (dmsMatch[4].toUpperCase() === 'S') latDms = -latDms;
+    let lonDms = parseInt(dmsMatch[5], 10) + parseInt(dmsMatch[6], 10)/60 + parseFloat(dmsMatch[7])/3600;
+    if (dmsMatch[8].toUpperCase() === 'W') lonDms = -lonDms;
+    return { lat: Number(latDms.toFixed(4)), lon: Number(lonDms.toFixed(4)) };
+  }
+
+  // 3. Russian decimal comma: "55,8821 37,7812" or "55,8821; 37,7812"
+  if (/^\d+,\d+[\s;]+\d+,\d+$/.test(s)) {
+    const commaParts = s.split(/[\s;]+/);
+    const cLat = parseFloat(commaParts[0].replace(',', '.'));
+    const cLon = parseFloat(commaParts[1].replace(',', '.'));
+    if (!isNaN(cLat) && !isNaN(cLon)) return { lat: Number(cLat.toFixed(4)), lon: Number(cLon.toFixed(4)) };
+  }
+
+  // 4. Standard comma / space / semicolon / slash separated numbers
+  const nums = s.replace(/,/g, ' ').match(/[-+]?\d+(?:\.\d+)?/g);
+  if (nums && nums.length >= 2) {
+    const n1 = parseFloat(nums[0]);
+    const n2 = parseFloat(nums[1]);
+    if (!isNaN(n1) && !isNaN(n2)) {
+      return { lat: Number(n1.toFixed(4)), lon: Number(n2.toFixed(4)) };
+    }
+  }
+
+  return null;
+}
+
+

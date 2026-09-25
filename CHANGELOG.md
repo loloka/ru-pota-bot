@@ -1,5 +1,16 @@
 # История изменений (Changelog)
 
+## [1.16.84] - 2026-09-25 (Smart Coordinate Parser & Auto-split for POTA Park Submitter)
+### Добавлено и улучшено
+- **Умная вставка координат (Smart Auto-split)** (`src/web/admin.js`, `src/webapp/src/components/modals/OoptModal.jsx`, `src/webapp/src/services/ooptUtils.js`):
+  - Реализован интеллектуальный парсер `parseCoordinatePair`: распознает координаты в буфере обмена или поле ввода в любых форматах (через запятую, пробел, точку с запятой, в квадратных скобках, из ссылок Яндекс.Карт `?pt=lon,lat`, а также градусы/минуты/секунды DMS).
+  - Теперь при вставке координат скопированной парой (например, из Яндекс.Карт или Google Maps: `55.8821, 37.7812` или `55.882134, 37.781256`) в любое из полей (Широта или Долгота) бот автоматически разделяет их, форматирует до 4 знаков по регламенту POTA и подсвечивает поля успешным статусом.
+  - Добавлена понятная подсказка под полями координат в веб-админке и Telegram Mini App.
+- **Интеграционное тестирование**:
+  - Добавлен тестовый модуль `test_coord_parse.js`, включенный в обязательный набор `npm test`.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.84` (`package.json`, `potaApi.js`, `ooptService.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.83] - 2026-09-24 (Automatic Startup Seeding & Smart Fallback Prioritization for OOPT Registry)
 ### Исправлено и улучшено
 - **Приоритет актуального оффлайн-снапшота (`src/services/ooptService.js`)**:

@@ -1412,6 +1412,9 @@ export const startAdminServer = (telegramClient) => {
                       </a>
                     </div>
                   </div>
+                  <div class="form-text small text-muted mb-2 mt-0" style="font-size:11px;">
+                    <i class="bi bi-magic text-primary"></i> <b>Умная вставка:</b> скопируйте координаты в Яндекс.Картах (правой кнопкой ➔ «Скопировать координаты») и вставьте в любое поле — бот автоматически разделит их на Широту и Долготу.
+                  </div>
 
                   <div class="mb-2">
                     <label class="form-label small fw-bold mb-1">9. Регион России:</label>
@@ -3478,6 +3481,82 @@ export const startAdminServer = (telegramClient) => {
             var el = document.getElementById(id);
             if (el) el.addEventListener('input', updateSubmitterPreview);
             if (el && el.tagName === 'SELECT') el.addEventListener('change', updateSubmitterPreview);
+          });
+
+          // Smart coordinate parsing & auto-split for lat/lon
+          function parseCoordString(text) {
+            if (!text || typeof text !== 'string') return null;
+            var s = text.trim();
+            var ptMatch = s.match(/[?&]pt=([\d\.]+),([\d\.]+)/);
+            if (ptMatch) {
+              var lat = Number(parseFloat(ptMatch[2]).toFixed(4));
+              var lon = Number(parseFloat(ptMatch[1]).toFixed(4));
+              if (!isNaN(lat) && !isNaN(lon)) return { lat: lat, lon: lon };
+            }
+            var dmsMatch = s.match(/(\d+)[\D]+(\d+)[\D]+([\d\.]+)[\s"]*([NSns])[\D]+(\d+)[\D]+(\d+)[\D]+([\d\.]+)[\s"]*([EWew])/);
+            if (dmsMatch) {
+              var latDms = parseInt(dmsMatch[1], 10) + parseInt(dmsMatch[2], 10)/60 + parseFloat(dmsMatch[3])/3600;
+              if (dmsMatch[4].toUpperCase() === 'S') latDms = -latDms;
+              var lonDms = parseInt(dmsMatch[5], 10) + parseInt(dmsMatch[6], 10)/60 + parseFloat(dmsMatch[7])/3600;
+              if (dmsMatch[8].toUpperCase() === 'W') lonDms = -lonDms;
+              return { lat: Number(latDms.toFixed(4)), lon: Number(lonDms.toFixed(4)) };
+            }
+            if (/^\d+,\d+[\s;]+\d+,\d+$/.test(s)) {
+              var commaParts = s.split(/[\s;]+/);
+              var cLat = parseFloat(commaParts[0].replace(',', '.'));
+              var cLon = parseFloat(commaParts[1].replace(',', '.'));
+              if (!isNaN(cLat) && !isNaN(cLon)) return { lat: Number(cLat.toFixed(4)), lon: Number(cLon.toFixed(4)) };
+            }
+            var nums = s.replace(/,/g, ' ').match(/[-+]?\d+(?:\.\d+)?/g);
+            if (nums && nums.length >= 2) {
+              var n1 = parseFloat(nums[0]);
+              var n2 = parseFloat(nums[1]);
+              if (!isNaN(n1) && !isNaN(n2)) {
+                return { lat: Number(n1.toFixed(4)), lon: Number(n2.toFixed(4)) };
+              }
+            }
+            return null;
+          }
+
+          function applySmartCoordPair(parsed) {
+            if (!parsed) return false;
+            var latInput = document.getElementById('subm-lat');
+            var lonInput = document.getElementById('subm-lon');
+            if (latInput && lonInput) {
+              latInput.value = parsed.lat.toFixed(4);
+              lonInput.value = parsed.lon.toFixed(4);
+              updateSubmitterPreview();
+              
+              [latInput, lonInput].forEach(function(el) {
+                el.classList.add('is-valid');
+                setTimeout(function() { el.classList.remove('is-valid'); }, 2000);
+              });
+              return true;
+            }
+            return false;
+          }
+
+          ['subm-lat', 'subm-lon'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) {
+              el.addEventListener('paste', function(e) {
+                var pasted = (e.clipboardData || window.clipboardData)?.getData('text');
+                if (pasted) {
+                  var parsed = parseCoordString(pasted);
+                  if (parsed) {
+                    e.preventDefault();
+                    applySmartCoordPair(parsed);
+                  }
+                }
+              });
+              el.addEventListener('input', function(e) {
+                var val = e.target.value;
+                var parsed = parseCoordString(val);
+                if (parsed) {
+                  applySmartCoordPair(parsed);
+                }
+              });
+            }
           });
 
           // Quick POTA Type chip buttons

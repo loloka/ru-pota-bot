@@ -2443,9 +2443,9 @@ export const startAdminServer = (telegramClient) => {
                 if (r.pota_restricted) {
                   submitterBtn = '<button type="button" class="btn btn-sm btn-outline-secondary disabled" title="Приём заявок для данного региона временно приостановлен комитетом POTA"><i class="bi bi-slash-circle"></i> Недоступно для POTA</button>';
                 } else if (r.pota_ref) {
-                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-ref="' + parentRefAttr + '" data-parent-name="' + parentNameAttr + '" data-parent-notes="' + parentNotesAttr + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>';
+                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '" data-rusoir-url="' + (r.rusoir_url || '') + '" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-ref="' + parentRefAttr + '" data-parent-name="' + parentNameAttr + '" data-parent-notes="' + parentNotesAttr + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>';
                 } else {
-                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="" data-pota-name="" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-ref="' + parentRefAttr + '" data-parent-name="' + parentNameAttr + '" data-parent-notes="' + parentNotesAttr + '"><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
+                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="" data-pota-name="" data-rusoir-url="' + (r.rusoir_url || '') + '" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-ref="' + parentRefAttr + '" data-parent-name="' + parentNameAttr + '" data-parent-notes="' + parentNotesAttr + '"><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
                 }
 
                 return '<tr>' +
@@ -3639,11 +3639,14 @@ export const startAdminServer = (telegramClient) => {
 
               var parsed = parseOoptForSubmitter(title, category, sig, ate, lat, lon, nid, area, status, profile, null, parentPota);
 
-              window.__currentSubmRusoirUrl = null;
+              var rusoirUrl = btn.getAttribute('data-rusoir-url') || null;
+              window.__currentSubmRusoirUrl = rusoirUrl;
               var rusoirLink = document.getElementById('subm-rusoir-link');
               var rusoirText = document.getElementById('subm-rusoir-text');
-              if (rusoirLink) rusoirLink.href = 'https://rusoir.com/search?q=' + encodeURIComponent(parsed.name);
-              if (rusoirText) rusoirText.textContent = 'RusOIR';
+              if (rusoirLink) {
+                rusoirLink.href = rusoirUrl || (nid ? ('/api/tma/oopt/' + nid + '/rusoir') : 'https://rusoir.com/grounds');
+              }
+              if (rusoirText) rusoirText.textContent = rusoirUrl ? 'RusOIR ✓' : 'RusOIR';
 
               document.getElementById('subm-nid').value = nid;
               document.getElementById('subm-name').value = parsed.name;

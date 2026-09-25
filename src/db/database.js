@@ -405,6 +405,13 @@ try {
     console.log('[DB] Migrated oopt_registry table: added nested_oopt column');
   }
 
+  const hasRusoirUrl = ooptColumns.some(col => col.name === 'rusoir_url');
+  if (!hasRusoirUrl) {
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN rusoir_url TEXT`);
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN rusoir_name TEXT`);
+    console.log('[DB] Migrated oopt_registry table: added rusoir_url and rusoir_name columns');
+  }
+
   // Ensure missing categories are populated
   try {
     db.exec(`

@@ -631,11 +631,11 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                     )}
 
                     <a
-                      href={current.rusoir_url || form.rusoir_url || `https://rusoir.com/search?q=${encodeURIComponent(form.name || current.title)}`}
+                      href={current.rusoir_url || form.rusoir_url || (current.nid ? `/api/tma/oopt/${current.nid}/rusoir` : 'https://rusoir.com/grounds')}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 transition-all active:scale-95 shadow-xs"
-                      title="Поиск объекта в базе природных территорий RusOIR (rusoir.com)"
+                      title="Открыть объект в базе природных территорий RusOIR (rusoir.com)"
                     >
                       <Trees className="w-3.5 h-3.5 text-emerald-500" />
                       <span>{(current.rusoir_url || form.rusoir_url) ? 'RusOIR ✓' : 'RusOIR'}</span>

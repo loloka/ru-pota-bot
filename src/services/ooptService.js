@@ -17,7 +17,7 @@ const client = axios.create({
   timeout: 25000,
   proxy: false,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.87 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.88 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });
@@ -609,7 +609,7 @@ export function getOoptList({
   const selectSql = `
     SELECT 
       nid, title, sig, sig_display, status, category, agency, ate, start_date, area,
-      lat, lon, profile, pota_ref, pota_name
+      lat, lon, profile, pota_ref, pota_name, rusoir_url, rusoir_name
     FROM oopt_registry
     ${whereClause}
     ${orderByClause}
@@ -2173,25 +2173,34 @@ export async function getOoptDetails(nid) {
     }
   }
 
-  // Automatic coordinate fallback via RusOIR (rusoir.com) when Minprirody lacks coordinates
-  if (details.lat === null || details.lon === null || details.lat === 0 || details.lon === 0) {
+  // Automatic coordinate fallback & direct RusOIR ground enrichment
+  if (!details.rusoir_url) {
     try {
       const rusoir = await fetchCoordsFromRusoir(row.title, row.ate, row.category);
-      if (rusoir && rusoir.lat && rusoir.lon) {
-        db.prepare(`
-          UPDATE oopt_registry 
-          SET lat = ?, lon = ?, updated_at = CURRENT_TIMESTAMP
-          WHERE nid = ?
-        `).run(rusoir.lat, rusoir.lon, numNid);
-
-        details.lat = rusoir.lat;
-        details.lon = rusoir.lon;
+      if (rusoir && rusoir.rusoirUrl) {
+        const needCoords = (details.lat === null || details.lon === null || details.lat === 0 || details.lon === 0) && rusoir.lat && rusoir.lon;
+        if (needCoords) {
+          db.prepare(`
+            UPDATE oopt_registry 
+            SET lat = ?, lon = ?, rusoir_url = ?, rusoir_name = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE nid = ?
+          `).run(rusoir.lat, rusoir.lon, rusoir.rusoirUrl, rusoir.groundName, numNid);
+          details.lat = rusoir.lat;
+          details.lon = rusoir.lon;
+          console.log(`[OOPT Service] 🌲 Coordinates & URL resolved from RusOIR for "${row.title}" (NID ${numNid}): ${rusoir.lat}, ${rusoir.lon} -> ${rusoir.rusoirUrl}`);
+        } else {
+          db.prepare(`
+            UPDATE oopt_registry 
+            SET rusoir_url = ?, rusoir_name = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE nid = ?
+          `).run(rusoir.rusoirUrl, rusoir.groundName, numNid);
+          console.log(`[OOPT Service] 🌲 RusOIR URL matched for "${row.title}" (NID ${numNid}): ${rusoir.rusoirUrl}`);
+        }
         details.rusoir_url = rusoir.rusoirUrl;
         details.rusoir_name = rusoir.groundName;
-        console.log(`[OOPT Service] 🌲 Coordinates resolved from RusOIR for "${row.title}" (NID ${numNid}): ${rusoir.lat}, ${rusoir.lon}`);
       }
     } catch (err) {
-      console.warn(`[OOPT Service] ⚠️ RusOIR fallback error for NID ${numNid}:`, err.message);
+      console.warn(`[OOPT Service] ⚠️ RusOIR lookup error for NID ${numNid}:`, err.message);
     }
   }
 

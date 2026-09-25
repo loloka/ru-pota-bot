@@ -794,7 +794,9 @@ export function parseOoptForSubmitter(item) {
     lon,
     region,
     site,
-    clarification
+    clarification,
+    rusoir_url: item.rusoir_url || null,
+    rusoir_name: item.rusoir_name || null
   };
 }
 

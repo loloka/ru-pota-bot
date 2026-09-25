@@ -1,5 +1,15 @@
 # История изменений (Changelog)
 
+## [1.16.88] - 2026-09-25 (RusOIR Direct Ground Links, Schema Migration & Dynamic Redirect)
+### Исправлено и улучшено
+- **Прямые ссылки на карточки RusOIR и устранение 404** (`src/services/ooptService.js`, `src/db/database.js`, `src/web/tmaApi.js`, `src/web/admin.js`, `src/webapp/src/components/modals/OoptModal.jsx`, `src/webapp/src/services/ooptUtils.js`):
+  - **Колонка в базе данных**: Добавлены безопасные миграции колонок `rusoir_url` и `rusoir_name` в таблицу `oopt_registry` SQLite. Теперь прямая ссылка на объект на RusOIR надёжно сохраняется и кэшируется при первом же обнаружении.
+  - **Динамический маршрут перенаправления**: Добавлен эндпоинт `/api/tma/oopt/:nid/rusoir`. При переходе по ссылке (даже если данные ещё не загружены в кэш) бот мгновенно находит прямую страницу объекта на RusOIR (`https://rusoir.com/grounds/...`), кэширует её в БД и делает 302 redirect. Если объект отсутствует, перенаправляет на общий каталог без 404.
+  - **Устранение ошибочных ссылок `/search?q=...`**: На сайте RusOIR нет отдельной страницы поисковой выдачи (поиск работает через AJAX-дропдаун). Кнопка «RusOIR» в Telegram Mini App и Web Admin теперь ведет строго на прямую карточку природной территории (`/grounds/<region>/<slug>`).
+  - **Скрипт сбора (`src/scripts/crawlRusoirCoords.js`)**: При фоновом обходе краулер теперь сохраняет как координаты, так и прямую ссылку `rusoir_url` с официальным названием объекта `rusoir_name`.
+- **Синхронизация версий**:
+  - Версия синхронизирована до `1.16.88` во всех файлах проекта по правилу 2.1 (`package.json`, `potaApi.js`, `ooptService.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.87] - 2026-09-25 (Service Health Monitoring: RusOIR Grounds Catalog Added)
 ### Добавлено и улучшено
 - **Мониторинг доступности каталога RusOIR** (`src/services/serviceHealth.js`, `src/web/admin.js`, `test/test_service_health.js`):

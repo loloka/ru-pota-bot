@@ -64,7 +64,7 @@ async function run() {
   let skippedCount = 0;
   const updateStmt = db.prepare(`
     UPDATE oopt_registry 
-    SET lat = ?, lon = ?, updated_at = CURRENT_TIMESTAMP 
+    SET lat = ?, lon = ?, rusoir_url = ?, rusoir_name = ?, updated_at = CURRENT_TIMESTAMP 
     WHERE nid = ?
   `);
 
@@ -80,7 +80,7 @@ async function run() {
       if (res && res.lat && res.lon) {
         resolvedCount++;
         if (!dryRun) {
-          updateStmt.run(res.lat, res.lon, item.nid);
+          updateStmt.run(res.lat, res.lon, res.rusoirUrl, res.groundName, item.nid);
         }
         console.log(`  \x1b[32m✔\x1b[0m ${prefix} -> \x1b[1m${res.lat}, ${res.lon}\x1b[0m (${res.groundName})`);
       } else {

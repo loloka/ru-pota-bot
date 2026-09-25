@@ -2302,6 +2302,19 @@ export function createTmaRouter(telegramClient) {
     }
   });
 
+  // Direct redirect to RusOIR territory page (or instant lookup if not yet cached)
+  router.get('/oopt/:nid/rusoir', async (req, res) => {
+    try {
+      const details = await getOoptDetails(req.params.nid);
+      if (details && details.rusoir_url) {
+        return res.redirect(302, details.rusoir_url);
+      }
+      return res.redirect(302, 'https://rusoir.com/grounds');
+    } catch (_) {
+      return res.redirect(302, 'https://rusoir.com/grounds');
+    }
+  });
+
   // ==========================================
   // POTA GPX, WMS & Tiles for OsmAnd / GIS
   // ==========================================

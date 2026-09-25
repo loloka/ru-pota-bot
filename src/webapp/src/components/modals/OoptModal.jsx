@@ -75,6 +75,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
           region: detailedParsed.region || prev.region,
           site: prev.site || detailedParsed.site,
           clarification: (detailedParsed.clarification !== undefined && detailedParsed.clarification !== null) ? detailedParsed.clarification : prev.clarification,
+          rusoir_url: data.rusoir_url || detailedParsed.rusoir_url || prev.rusoir_url || null,
         }));
       })
       .catch((err) => {
@@ -586,7 +587,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                     ) : form.lat && form.lon ? (
                       <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
                         <Check className="w-3.5 h-3.5 text-emerald-500" />
-                        Координаты указаны (4 знака)
+                        Координаты указаны {(current.rusoir_url || form.rusoir_url) ? '(RusOIR)' : '(4 знака)'}
                       </span>
                     ) : (
                       <span className="text-amber-600 dark:text-amber-400 text-[11px] font-medium">
@@ -628,6 +629,17 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                         <span>{yandexInfo.label}</span>
                       </a>
                     )}
+
+                    <a
+                      href={current.rusoir_url || form.rusoir_url || `https://rusoir.com/search?q=${encodeURIComponent(form.name || current.title)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 transition-all active:scale-95 shadow-xs"
+                      title="Поиск объекта в базе природных территорий RusOIR (rusoir.com)"
+                    >
+                      <Trees className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>{(current.rusoir_url || form.rusoir_url) ? 'RusOIR ✓' : 'RusOIR'}</span>
+                    </a>
                   </div>
                 </div>
 

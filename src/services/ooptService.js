@@ -17,7 +17,7 @@ const client = axios.create({
   timeout: 25000,
   proxy: false,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.85 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.86 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });
@@ -1916,7 +1916,9 @@ export function parseSubmitterFields(item) {
     clarification,
     pota_ref: item.pota_ref || null,
     pota_name: item.pota_name || null,
-    nested_oopt: item.nested_oopt || null
+    nested_oopt: item.nested_oopt || null,
+    rusoir_url: item.rusoir_url || null,
+    rusoir_name: item.rusoir_name || null
   };
 }
 
@@ -1985,6 +1987,143 @@ export function findParentPotaPark(title, ate = '') {
 }
 
 /**
+ * Resolves GPS coordinates for a Russian Protected Area using RusOIR (rusoir.com)
+ * as an automatic fallback when Minprirody/карта.оцзк.рф is unavailable or lacks coordinates.
+ * @param {string} rawTitle - OOPT title
+ * @param {string} ate - Administrative-territorial entity / Region name
+ * @param {string} [category] - Optional category
+ * @returns {Promise<{ lat: number, lon: number, rusoirUrl: string, groundName: string, region: string } | null>}
+ */
+export async function fetchCoordsFromRusoir(rawTitle, ate = '', category = '') {
+  if (!rawTitle) return null;
+  const cleanName = cleanOoptName(rawTitle, category);
+  const query = (cleanName && cleanName.length >= 3) ? cleanName : rawTitle;
+
+  try {
+    const searchUrl = `https://rusoir.com/api/search?q=${encodeURIComponent(query)}`;
+    const res = await axios.get(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+      },
+      timeout: 5000,
+    });
+
+    let grounds = res.data?.grounds;
+    // Fallback search with rawTitle if cleanName yielded no grounds
+    if ((!Array.isArray(grounds) || grounds.length === 0) && query !== rawTitle) {
+      try {
+        const rawRes = await axios.get(`https://rusoir.com/api/search?q=${encodeURIComponent(rawTitle)}`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+          },
+          timeout: 4000,
+        });
+        if (Array.isArray(rawRes.data?.grounds) && rawRes.data.grounds.length > 0) {
+          grounds = rawRes.data.grounds;
+        }
+      } catch (_) {}
+    }
+
+    if (!Array.isArray(grounds) || grounds.length === 0) {
+      return null;
+    }
+
+    // Clean region stem for matching
+    let cleanAte = (ate || '').split('(')[0].toLowerCase().trim();
+    cleanAte = cleanAte.replace(/(республика|область|край|автономный|округ|город|федерального значения)/g, '').trim();
+    const regionStem = cleanAte.length >= 4 ? cleanAte.substring(0, cleanAte.length - 1) : cleanAte;
+
+    const lowerQuery = query.toLowerCase();
+    const isBufferZoneQuery = lowerQuery.includes('охранная зона');
+
+    let bestGround = null;
+    let bestScore = -1;
+
+    for (const g of grounds) {
+      if (!g.href || !g.label) continue;
+      const gLabel = g.label.toLowerCase();
+      const gSublabel = (g.sublabel || '').toLowerCase();
+
+      let score = 0;
+
+      // Region match
+      const regionMatch = regionStem && gSublabel.includes(regionStem);
+      if (regionMatch) {
+        score += 50;
+      }
+
+      // Exact title match or contains match
+      if (gLabel === lowerQuery) {
+        score += 60;
+      } else if (gLabel.includes(lowerQuery)) {
+        score += 40;
+      }
+
+      // Token overlap
+      const queryTokens = lowerQuery.split(/\s+/).filter(t => t.length >= 3);
+      for (const t of queryTokens) {
+        if (gLabel.includes(t)) {
+          score += 15;
+        }
+      }
+
+      // Penalize buffer zones if original query is not a buffer zone
+      if (!isBufferZoneQuery && (gLabel.includes('охранная зона') || gLabel.includes('охранной зоны'))) {
+        score -= 25;
+      }
+
+      // If region stem was provided but not matched, penalize
+      if (regionStem && !regionMatch) {
+        score -= 30;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestGround = g;
+      }
+    }
+
+    if (!bestGround || bestScore < 20) {
+      return null;
+    }
+
+    // Fetch ground detail page
+    const pageUrl = bestGround.href.startsWith('http') ? bestGround.href : `https://rusoir.com${bestGround.href}`;
+    const pageRes = await axios.get(pageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+      },
+      timeout: 5000,
+    });
+
+    const html = typeof pageRes.data === 'string' ? pageRes.data : '';
+    const latM = html.match(/Широта:[^<]*<span[^>]*>([0-9.,]+)/i);
+    const lonM = html.match(/Долгота:[^<]*<span[^>]*>([0-9.,]+)/i);
+
+    if (latM && lonM) {
+      const lat = parseFloat(latM[1].replace(',', '.'));
+      const lon = parseFloat(lonM[1].replace(',', '.'));
+
+      if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+        return {
+          lat: Number(lat.toFixed(4)),
+          lon: Number(lon.toFixed(4)),
+          rusoirUrl: pageUrl,
+          groundName: bestGround.label,
+          region: bestGround.sublabel,
+        };
+      }
+    }
+
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
  * Fetches and caches full detail card for a specific ООПТ (coordinates, documents, legal acts)
  */
 export async function getOoptDetails(nid) {
@@ -1999,7 +2138,7 @@ export async function getOoptDetails(nid) {
   // If coordinates are missing or need documents, fetch live detail from API and cache in DB
   if (row.lat === null || row.lon === null || !row.bbox) {
     try {
-      const res = await client.get(`/api/v1/oopt/${numNid}/`);
+      const res = await client.get(`/api/v1/oopt/${numNid}/`, { timeout: 3500 });
       const ext = res.data;
       if (ext) {
         let lat = null;
@@ -2030,7 +2169,29 @@ export async function getOoptDetails(nid) {
         details.regime_forbidden = ext.regime_forbidden || null;
       }
     } catch (e) {
-      console.warn(`[OOPT Service] ⚠️ Could not fetch live details for NID ${numNid}:`, e.message);
+      console.warn(`[OOPT Service] ⚠️ Could not fetch live details for NID ${numNid} from карта.оцзк.рф:`, e.message);
+    }
+  }
+
+  // Automatic coordinate fallback via RusOIR (rusoir.com) when Minprirody lacks coordinates
+  if (details.lat === null || details.lon === null || details.lat === 0 || details.lon === 0) {
+    try {
+      const rusoir = await fetchCoordsFromRusoir(row.title, row.ate, row.category);
+      if (rusoir && rusoir.lat && rusoir.lon) {
+        db.prepare(`
+          UPDATE oopt_registry 
+          SET lat = ?, lon = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE nid = ?
+        `).run(rusoir.lat, rusoir.lon, numNid);
+
+        details.lat = rusoir.lat;
+        details.lon = rusoir.lon;
+        details.rusoir_url = rusoir.rusoirUrl;
+        details.rusoir_name = rusoir.groundName;
+        console.log(`[OOPT Service] 🌲 Coordinates resolved from RusOIR for "${row.title}" (NID ${numNid}): ${rusoir.lat}, ${rusoir.lon}`);
+      }
+    } catch (err) {
+      console.warn(`[OOPT Service] ⚠️ RusOIR fallback error for NID ${numNid}:`, err.message);
     }
   }
 
@@ -2580,5 +2741,6 @@ export default {
   translateOoptNameOnline,
   generateR2bbxTemplate,
   findParentPotaPark,
+  fetchCoordsFromRusoir,
   ensureOoptRegistryPopulated,
 };

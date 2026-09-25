@@ -1401,14 +1401,19 @@ export const startAdminServer = (telegramClient) => {
                         <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-lon" title="Скопировать долготу"><i class="bi bi-clipboard"></i></button>
                       </div>
                     </div>
-                    <div class="col-md-3 d-flex align-items-end">
+                    <div class="col-md-2 d-flex align-items-end">
                       <button type="button" id="btn-subm-open-map" class="btn btn-sm btn-outline-primary w-100" title="Интерактивный выбор и уточнение координат на карте">
                         <i class="bi bi-pin-map-fill"></i> На карте
                       </button>
                     </div>
-                    <div class="col-md-3 d-flex align-items-end">
+                    <div class="col-md-2 d-flex align-items-end">
                       <a href="#" id="subm-yandex-link" target="_blank" class="btn btn-sm btn-outline-warning w-100">
                         <i class="bi bi-geo-alt"></i> <span id="subm-yandex-text">Яндекс.Карты</span>
+                      </a>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                      <a href="#" id="subm-rusoir-link" target="_blank" class="btn btn-sm btn-outline-success w-100" title="Открыть объект или поиск в базе RusOIR (rusoir.com)">
+                        <i class="bi bi-tree"></i> <span id="subm-rusoir-text">RusOIR</span>
                       </a>
                     </div>
                   </div>
@@ -3473,6 +3478,18 @@ export const startAdminServer = (telegramClient) => {
               yandexLink.href = 'https://yandex.ru/maps/?text=' + encodeURIComponent(q);
               if (yandexText) yandexText.textContent = '🔍 Найти в Яндекс.Картах';
             }
+
+            var rusoirLink = document.getElementById('subm-rusoir-link');
+            var rusoirText = document.getElementById('subm-rusoir-text');
+            if (rusoirLink) {
+              if (window.__currentSubmRusoirUrl) {
+                rusoirLink.href = window.__currentSubmRusoirUrl;
+                if (rusoirText) rusoirText.textContent = 'RusOIR ✓';
+              } else {
+                rusoirLink.href = 'https://rusoir.com/search?q=' + encodeURIComponent(name);
+                if (rusoirText) rusoirText.textContent = 'RusOIR';
+              }
+            }
             return text;
           }
 
@@ -3621,6 +3638,12 @@ export const startAdminServer = (telegramClient) => {
 
               var parsed = parseOoptForSubmitter(title, category, sig, ate, lat, lon, nid, area, status, profile, null, parentPota);
 
+              window.__currentSubmRusoirUrl = null;
+              var rusoirLink = document.getElementById('subm-rusoir-link');
+              var rusoirText = document.getElementById('subm-rusoir-text');
+              if (rusoirLink) rusoirLink.href = 'https://rusoir.com/search?q=' + encodeURIComponent(parsed.name);
+              if (rusoirText) rusoirText.textContent = 'RusOIR';
+
               document.getElementById('subm-nid').value = nid;
               document.getElementById('subm-name').value = parsed.name;
               document.getElementById('subm-name-en').value = parsed.nameEn;
@@ -3709,6 +3732,13 @@ export const startAdminServer = (telegramClient) => {
                   var res = await fetch('/api/tma/oopt/' + nid);
                   var details = await res.json();
                   if (details) {
+                    if (details.rusoir_url) {
+                      window.__currentSubmRusoirUrl = details.rusoir_url;
+                      var rusoirLink = document.getElementById('subm-rusoir-link');
+                      var rusoirText = document.getElementById('subm-rusoir-text');
+                      if (rusoirLink) rusoirLink.href = details.rusoir_url;
+                      if (rusoirText) rusoirText.textContent = 'RusOIR ✓';
+                    }
                     if (details.lat && details.lon) {
                       document.getElementById('subm-lat').value = Number(details.lat).toFixed(4);
                       document.getElementById('subm-lon').value = Number(details.lon).toFixed(4);
@@ -3719,7 +3749,9 @@ export const startAdminServer = (telegramClient) => {
                         }
                       }
                       if (needsCoords) {
-                        document.getElementById('subm-coords-status').textContent = '✅ Данные загружены';
+                        document.getElementById('subm-coords-status').innerHTML = details.rusoir_url
+                          ? '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Координаты получены с RusOIR</span>'
+                          : '✅ Данные загружены';
                       }
                     } else if (needsCoords) {
                       document.getElementById('subm-coords-status').textContent = 'Координаты отсутствуют';

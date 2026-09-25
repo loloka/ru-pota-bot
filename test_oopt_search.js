@@ -89,6 +89,13 @@ assert.strictEqual(shukhiOopt.pota_ref, 'RU-0377', 'Шухи-Поктой must b
 assert.strictEqual(shukhiOopt.pota_name, 'Shukhi-Poktoy Nature Reserve');
 console.log('✅ PASS: RU-0377 (Shukhi-Poktoy) correctly matched and synced to "Шухи-Поктой" (nid 15909)');
 
+// 13b. Test RU-0756 (Wintering Pits N 3) matches "Зимовальные ямы N 3" (nid 58135) in Astrakhan Oblast (RU-AS)
+const zimov3Oopt = db.prepare('SELECT nid, title, ate, pota_ref, pota_name FROM oopt_registry WHERE nid = 58135').get();
+assert.ok(zimov3Oopt, 'OOPT nid 58135 must exist');
+assert.strictEqual(zimov3Oopt.pota_ref, 'RU-0756', 'Зимовальные ямы N 3 must be synced with RU-0756');
+assert.strictEqual(zimov3Oopt.pota_name, 'Wintering Pits N 3 Nature Recreation Area');
+console.log('✅ PASS: RU-0756 (Wintering Pits N 3) correctly matched and synced to "Зимовальные ямы N 3" (nid 58135)');
+
 // 14. Test Reorganized OOPT status filtering and parent POTA park linking
 const reorgList = getOoptList({ status: 'reorganized', limit: 10 });
 assert.ok(reorgList.total > 0, 'Reorganized list must not be empty');

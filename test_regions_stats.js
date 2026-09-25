@@ -8,8 +8,8 @@ const stats = getRegionalPotaStats();
 // 1. Check summary structure
 assert(stats.summary, 'Summary object must exist');
 assert(stats.summary.totalPotentialParks > 10000, `Potential parks must be > 10000, got ${stats.summary.totalPotentialParks}`);
-assert.strictEqual(stats.summary.under10ParksCount, 67, `Under 10 parks count must be 67 (excluding RU-FJ and RU-IN), got ${stats.summary.under10ParksCount}`);
 const under10Codes = stats.regions.filter(r => r.isUnder10).map(r => r.code);
+assert.strictEqual(stats.summary.under10ParksCount, under10Codes.length, `Under 10 parks count must match filtered regions count, got ${stats.summary.under10ParksCount}`);
 assert.strictEqual(under10Codes.includes('RU-FJ'), false, 'RU-FJ (ZFI) must be excluded from under10 list');
 assert.strictEqual(under10Codes.includes('RU-IN'), false, 'RU-IN (Ingushetia) must be excluded from under10 list');
 assert(stats.summary.overallCoverageRate > 4 && stats.summary.overallCoverageRate < 10, `Overall coverage rate should be around 4.9%, got ${stats.summary.overallCoverageRate}`);

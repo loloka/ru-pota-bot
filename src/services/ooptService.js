@@ -17,7 +17,7 @@ const client = axios.create({
   timeout: 25000,
   proxy: false,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.88 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.89 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });
@@ -2450,6 +2450,14 @@ const EN_TO_RU_WORDS = {
   'black': ['черн'],
   'red': ['красн'],
   'blue': ['син', 'голуб'],
+  'wintering': ['зимовал'],
+  'pit': ['ям'],
+  'pits': ['ям'],
+};
+
+// Known manual / verified POTA-to-OOPT overrides (e.g. NextGIS URL typos on pota.app)
+const KNOWN_POTA_MATCHES = {
+  'RU-0756': 58135, // Wintering Pits N 3 (NextGIS URL on pota.app has typo node/5813 instead of node/58135)
 };
 
 const STOP_WORDS = new Set([
@@ -2549,9 +2557,9 @@ export function syncPotaMatches() {
     const pLon = parseFloat(p.lon);
 
     // Direct URL hints from POTA website (NextGIS node or slug)
-    let targetNid = null;
+    let targetNid = KNOWN_POTA_MATCHES[p.reference] || null;
     let targetSlug = null;
-    if (p.website) {
+    if (!targetNid && p.website) {
       try {
         const decoded = decodeURIComponent(p.website);
         const nodeM = decoded.match(/node\/(\d+)/);
@@ -2663,6 +2671,18 @@ export function syncPotaMatches() {
         if (o.titleLower.includes(root)) {
           score += 25;
           properNameMatch = true;
+        }
+      }
+
+      // Number / Ordinal matching (e.g., № 2, N 3, No. 4)
+      const pNumMatch = pNameLower.match(/(?:№|no\.?|n\b|номер|#|\s|^)(\d+)(?:\s|$|[^\w])/i);
+      const oNumMatch = o.titleLower.match(/(?:№|no\.?|n\b|номер|#|\s|^)(\d+)(?:\s|$|[^\w])/i);
+      if (pNumMatch && oNumMatch) {
+        if (pNumMatch[1] === oNumMatch[1]) {
+          score += 40;
+          properNameMatch = true;
+        } else {
+          score -= 50; // Heavy penalty if numbers mismatch (e.g. 2 vs 3)
         }
       }
 

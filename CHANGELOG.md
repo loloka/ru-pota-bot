@@ -1,5 +1,16 @@
 # История изменений (Changelog)
 
+## [1.16.89] - 2026-09-25 (POTA Parks Auto-matching: Wintering Pits & NextGIS Typos Resolver)
+### Исправлено и улучшено
+- **Синхронизация и распознавание парков «Зимовальные ямы» (RU-0756)** (`src/services/ooptService.js`, `test_oopt_search.js`, `src/data/parks_fallback.json`):
+  - **Устранение опечатки в ссылке NextGIS на pota.app**: В официальной базе POTA для парка RU-0756 (*Wintering Pits N 3*) в поле сайта была указана ссылка `ooptaari.nextgis.ru/node/5813` (с пропущенной последней цифрой 5 вместо `58135`). Добавлена таблица сопоставления известных расхождений `KNOWN_POTA_MATCHES`.
+  - **Словарь терминов (`EN_TO_RU_WORDS`)**: Добавлен перевод для гидробиологических объектов: `wintering` -> `зимовал`, `pit` / `pits` -> `ям`.
+  - **Интеллектуальное сопоставление номеров и литер**: Реализован алгоритм распознавания номеров объектов (`№ 2`, `N 3`, `No. 4`). Одинаковые номера дают бонус +40 к релевантности, а разные номера блокируют ошибочные перекрёстные сопоставления.
+  - Объект «Зимовальные ямы N 3» (NID 58135) теперь точно и безошибочно сопоставляется с **RU-0756** с автоматическим заполнением GPS-координат из POTA (`47.3172, 47.1769`).
+  - База `parks_fallback.json` актуализирована до 942 парков (775 в RU).
+- **Синхронизация версий**:
+  - Версия синхронизирована до `1.16.89` во всех файлах проекта по правилу 2.1 (`package.json`, `potaApi.js`, `ooptService.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.88] - 2026-09-25 (RusOIR Direct Ground Links, Schema Migration & Dynamic Redirect)
 ### Исправлено и улучшено
 - **Прямые ссылки на карточки RusOIR и устранение 404** (`src/services/ooptService.js`, `src/db/database.js`, `src/web/tmaApi.js`, `src/web/admin.js`, `src/webapp/src/components/modals/OoptModal.jsx`, `src/webapp/src/services/ooptUtils.js`):

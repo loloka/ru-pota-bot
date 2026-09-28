@@ -12,7 +12,7 @@ const axiosConfig = {
   baseURL: BASE_URL,
   timeout: 35000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.92 (Telegram Bot; Node.js)'
+    'User-Agent': 'RU-POTA-Bot/1.16.93 (Telegram Bot; Node.js)'
   }
 };
 
@@ -39,7 +39,7 @@ if (potaProxySetting) {
   console.log(`\x1b[36m[POTA API]\x1b[0m 🌐 Маршрутизация запросов POTA через прокси: ${safeProxyUrl}`);
 }
 
-const apiClient = axios.create(axiosConfig);
+export const apiClient = axios.create(axiosConfig);
 
 export const potaApi = {
   /**

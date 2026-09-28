@@ -1,5 +1,13 @@
 # История изменений (Changelog)
 
+## [1.16.93] - 2026-09-28 (Service Health: Route POTA API Check Through Configured Proxy)
+### Исправлено
+- **Устранение HTTP 403 Forbidden при проверке доступности API POTA** (`src/services/serviceHealth.js`, `src/api/potaApi.js`):
+  - **Причина 403**: Прямые обращения из РФ/некоторых дата-центров к `api.pota.app` блокируются Cloudflare защитой. Мониторинг сервисов вызывал прямой `axios.get('https://api.pota.app/spot/parks?limit=1')` без использования прокси.
+  - **Исправление**: Экспортирован настроенный инстанс `apiClient` из `src/api/potaApi.js`, который автоматически использует `POTA_PROXY` / `TG_PROXY`. Проверка переведена на вызов `apiClient.get('/spot/activator', { timeout: 3500 })`. Статус POTA теперь корректно отображается как `200 Онлайн` с выводом реального количества активных спотов.
+- **Синхронизация версий**:
+  - Версия синхронизирована до `1.16.93` во всех файлах проекта по правилу 2.1 (`package.json`, `potaApi.js`, `ooptService.js`, `serviceHealth.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.92] - 2026-09-28 (Web Admin: Fix Template Literal Regex Newline & Automated HTML Syntax Test)
 ### Исправлено и предотвращено
 - **Устранение критической синтаксической ошибки в клиентском JavaScript Web Admin** (`src/web/admin.js`):

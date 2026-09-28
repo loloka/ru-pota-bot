@@ -1,6 +1,6 @@
 import axios from 'axios';
 import https from 'https';
-import { potaApi } from '../api/potaApi.js';
+import { potaApi, apiClient } from '../api/potaApi.js';
 
 let cachedResults = null;
 let lastCheckTime = 0;
@@ -125,7 +125,7 @@ export async function checkSingleService(serviceDef) {
         const res = await axios.get('https://api.telegram.org/', {
           timeout: 3500,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': 'RU-POTA-Bot/1.16.93 (Telegram Bot; Node.js)'
           }
         });
         result.status = res.status >= 200 && res.status < 500 ? 'up' : 'down';
@@ -134,13 +134,12 @@ export async function checkSingleService(serviceDef) {
         result.details = 'Шлюз api.telegram.org доступен';
       }
     } else if (serviceDef.type === 'pota_api') {
-      const res = await axios.get('https://api.pota.app/spot/parks?limit=1', {
-        timeout: 3500,
-        headers: { 'User-Agent': 'RU-POTA-Bot/1.16.92 (Telegram Bot; Node.js)' }
-      });
+      const res = await apiClient.get('/spot/activator', { timeout: 3500 });
       result.status = res.status === 200 ? 'up' : 'down';
       result.code = res.status;
       result.latency = Date.now() - t0;
+      const spotsCount = Array.isArray(res.data) ? res.data.length : 0;
+      result.details = `Активных спотов в кластере: ${spotsCount}`;
     } else {
       const res = await axios.get(serviceDef.checkUrl || serviceDef.url, {
         timeout: 3500,

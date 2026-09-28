@@ -17,7 +17,7 @@ const client = axios.create({
   timeout: 25000,
   proxy: false,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.92 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.93 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });

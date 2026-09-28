@@ -114,14 +114,16 @@ export async function checkSingleService(serviceDef) {
       result.details = `Аптайм: ${hours}ч ${minutes}м ${seconds}с | RAM: ${rssMb} МБ | Node.js ${process.version}`;
     } else if (serviceDef.type === 'telegram_api') {
       if (tgClient && typeof tgClient.getMe === 'function') {
-        const me = await tgClient.getMe();
+        const mePromise = tgClient.getMe();
+        const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout (3.5s)')), 3500));
+        const me = await Promise.race([mePromise, timeoutPromise]);
         result.status = 'up';
         result.code = 200;
         result.latency = Date.now() - t0;
         result.details = `@${me.username || 'bot'} (ID: ${me.id})`;
       } else {
         const res = await axios.get('https://api.telegram.org/', {
-          timeout: 10000,
+          timeout: 3500,
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
           }
@@ -132,13 +134,16 @@ export async function checkSingleService(serviceDef) {
         result.details = 'Шлюз api.telegram.org доступен';
       }
     } else if (serviceDef.type === 'pota_api') {
-      await potaApi.getSpots();
-      result.status = 'up';
-      result.code = 200;
+      const res = await axios.get('https://api.pota.app/spot/parks?limit=1', {
+        timeout: 3500,
+        headers: { 'User-Agent': 'RU-POTA-Bot/1.16.91 (Telegram Bot; Node.js)' }
+      });
+      result.status = res.status === 200 ? 'up' : 'down';
+      result.code = res.status;
       result.latency = Date.now() - t0;
     } else {
       const res = await axios.get(serviceDef.checkUrl || serviceDef.url, {
-        timeout: 10000,
+        timeout: 3500,
         proxy: false,
         httpsAgent: new https.Agent({ family: 4, autoSelectFamily: false, keepAlive: false }),
         headers: {
@@ -151,7 +156,7 @@ export async function checkSingleService(serviceDef) {
       result.latency = Date.now() - t0;
     }
 
-    if (result.status === 'up' && result.latency > 3500) {
+    if (result.status === 'up' && result.latency > 2500) {
       result.status = 'degraded';
     }
   } catch (err) {
@@ -162,7 +167,7 @@ export async function checkSingleService(serviceDef) {
     if (serviceDef.id === 'oopt_registry' && (err.code === 'ECONNABORTED' || err.message?.includes('timeout') || err.message?.includes('ECONNREFUSED'))) {
       result.error = 'Блокировка дата-центров (Ростелеком): доступ с хостингов ограничен (работает только с домашних/мобильных провайдеров РФ). Локальная база ООПТ (11 342 объекта) в боте работает автономно.';
     } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-      result.error = 'Таймаут соединения (>10 сек): сервер перегружен или не отвечает';
+      result.error = 'Таймаут соединения (>3.5 сек): сервер перегружен или не отвечает';
     } else if (err.code === 'ECONNREFUSED') {
       result.error = 'Отказ в соединении (ECONNREFUSED): порт закрыт или сервис выключен';
     } else if (err.code === 'ENOTFOUND') {
@@ -179,16 +184,29 @@ export async function checkSingleService(serviceDef) {
   return result;
 }
 
+let inFlightCheck = null;
+
 export async function checkAllServices(force = false) {
   const now = Date.now();
   if (!force && cachedResults && (now - lastCheckTime < CACHE_TTL_MS)) {
     return cachedResults;
   }
+  if (inFlightCheck) {
+    return inFlightCheck;
+  }
 
-  const results = await Promise.all(SERVICES.map(s => checkSingleService(s)));
-  cachedResults = results;
-  lastCheckTime = now;
-  return results;
+  inFlightCheck = (async () => {
+    try {
+      const results = await Promise.all(SERVICES.map(s => checkSingleService(s)));
+      cachedResults = results;
+      lastCheckTime = Date.now();
+      return results;
+    } finally {
+      inFlightCheck = null;
+    }
+  })();
+
+  return inFlightCheck;
 }
 
 export async function checkServiceById(id) {

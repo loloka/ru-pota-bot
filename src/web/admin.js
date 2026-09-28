@@ -249,9 +249,9 @@ export const startAdminServer = (telegramClient) => {
       }
     } catch (dbErr) {}
 
-    // 2. Fetch from Telegram Bot API with 10s timeout
+    // 2. Fetch from Telegram Bot API with 3s timeout
     try {
-      const getChatTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('getChat Timeout (10s)')), 10000));
+      const getChatTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('getChat Timeout (3s)')), 3000));
       let userObj = null;
       try {
         const chat = await Promise.race([
@@ -264,7 +264,7 @@ export const startAdminServer = (telegramClient) => {
         const mainChatId = process.env.MAIN_CHAT_ID;
         if (mainChatId) {
           try {
-            const memberTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('member Timeout (5s)')), 5000));
+            const memberTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('member Timeout (2s)')), 2000));
             const member = await Promise.race([
               telegramClient.getChatMember(mainChatId, numId),
               memberTimeout
@@ -282,7 +282,7 @@ export const startAdminServer = (telegramClient) => {
 
       let avatarUrl = null;
       try {
-        const photoTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('photo Timeout (5s)')), 5000));
+        const photoTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('photo Timeout (2s)')), 2000));
         const photos = await Promise.race([
           telegramClient.getUserProfilePhotos(id, 0, 1),
           photoTimeout
@@ -331,6 +331,7 @@ export const startAdminServer = (telegramClient) => {
           };
         }
       } catch (err) {}
+      userCache.set(id, fallbackInfo);
       res.json(fallbackInfo);
     }
   });
@@ -1779,9 +1780,12 @@ export const startAdminServer = (telegramClient) => {
             }
           }
 
+          let isFetchingSpots = false;
           async function loadSpots() {
+            if (isFetchingSpots) return;
             // Prevent refreshing table while user is confirming a deletion to avoid UI glitches
             if (typeof Swal !== 'undefined' && Swal.isVisible()) return;
+            isFetchingSpots = true;
             try {
               const res = await fetch('/api/spots');
               if (res.ok) {
@@ -1829,8 +1833,14 @@ export const startAdminServer = (telegramClient) => {
               }
             } catch (e) {
               console.error(e);
+            } finally {
+              isFetchingSpots = false;
             }
           }
+
+          document.getElementById('list-spots-list')?.addEventListener('shown.bs.tab', () => {
+            loadSpots();
+          });
 
           async function archiveAllShield() {
             let isConfirmed = false;
@@ -2111,7 +2121,12 @@ export const startAdminServer = (telegramClient) => {
           }
 
           // Load user infos
+          let isFetchingUserInfos = false;
           async function loadUserInfos() {
+            if (isFetchingUserInfos) return;
+            const usersTab = document.getElementById('list-users');
+            if (usersTab && !usersTab.classList.contains('active')) return;
+
             const rows = document.querySelectorAll('tr[id^="user-row-"]');
             const toFetch = [];
             for (const row of rows) {
@@ -2124,46 +2139,60 @@ export const startAdminServer = (telegramClient) => {
             }
 
             if (toFetch.length === 0) return;
+            isFetchingUserInfos = true;
 
-            // Fetch missing user infos in parallel batches of 4
-            const batchSize = 4;
-            for (let i = 0; i < toFetch.length; i += batchSize) {
-              const batch = toFetch.slice(i, i + batchSize);
-              await Promise.all(batch.map(async (id) => {
-                try {
-                  const res = await fetch('/api/user-info/' + id);
-                  if (res.ok) {
-                    const data = await res.json();
+            // Fetch missing user infos in throttled batches of 2 to avoid starving socket pool
+            const batchSize = 2;
+            try {
+              for (let i = 0; i < toFetch.length; i += batchSize) {
+                if (usersTab && !usersTab.classList.contains('active')) break;
+                const batch = toFetch.slice(i, i + batchSize);
+                await Promise.all(batch.map(async (id) => {
+                  try {
+                    const res = await fetch('/api/user-info/' + id);
+                    if (res.ok) {
+                      const data = await res.json();
+                      const infoDiv = document.getElementById('user-info-' + id);
+                      const avatarImg = document.getElementById('avatar-' + id);
+                      if (infoDiv) {
+                        let text = [];
+                        if (data.first_name || data.last_name) {
+                          text.push((data.first_name + ' ' + (data.last_name || '')).trim());
+                        }
+                        if (text.length > 0) {
+                          infoDiv.innerHTML = text.join(' • ');
+                        } else if (data.error) {
+                          infoDiv.innerHTML = '<span class="text-warning small" title="Telegram Bot API временно недоступен (проверьте TG_PROXY)"><i class="bi bi-exclamation-triangle"></i> Ошибка связи с TG</span>';
+                        } else {
+                          infoDiv.innerHTML = '<span class="text-muted">Нет данных Telegram</span>';
+                        }
+                      }
+                      if (avatarImg && data.avatar) {
+                        avatarImg.src = data.avatar;
+                      }
+                    } else {
+                      throw new Error('Bad response');
+                    }
+                  } catch(e) {
                     const infoDiv = document.getElementById('user-info-' + id);
-                    const avatarImg = document.getElementById('avatar-' + id);
-                    if (infoDiv) {
-                      let text = [];
-                      if (data.first_name || data.last_name) {
-                        text.push((data.first_name + ' ' + (data.last_name || '')).trim());
-                      }
-                      if (text.length > 0) {
-                        infoDiv.innerHTML = text.join(' • ');
-                      } else if (data.error) {
-                        infoDiv.innerHTML = '<span class="text-warning small" title="Telegram Bot API временно недоступен (проверьте TG_PROXY)"><i class="bi bi-exclamation-triangle"></i> Ошибка связи с TG</span>';
-                      } else {
-                        infoDiv.innerHTML = '<span class="text-muted">Нет данных Telegram</span>';
-                      }
-                    }
-                    if (avatarImg && data.avatar) {
-                      avatarImg.src = data.avatar;
-                    }
-                  } else {
-                    throw new Error('Bad response');
+                    if (infoDiv) infoDiv.innerHTML = '<span class="text-warning small" title="Ошибка связи с Telegram"><i class="bi bi-exclamation-triangle"></i> Ошибка связи с TG</span>';
                   }
-                } catch(e) {
-                  const infoDiv = document.getElementById('user-info-' + id);
-                  if (infoDiv) infoDiv.innerHTML = '<span class="text-warning small" title="Ошибка связи с Telegram"><i class="bi bi-exclamation-triangle"></i> Ошибка связи с TG</span>';
-                }
-              }));
+                }));
+                // Short yield between batches
+                await new Promise(r => setTimeout(r, 100));
+              }
+            } finally {
+              isFetchingUserInfos = false;
             }
           }
 
-          loadUserInfos();
+          document.getElementById('list-users-list')?.addEventListener('shown.bs.tab', () => {
+            loadUserInfos();
+          });
+
+          if (!window.location.hash || window.location.hash === '#list-users') {
+            loadUserInfos();
+          }
 
           // Auto-refresh spots every 5 seconds if Spots tab is active
           setInterval(() => {
@@ -2179,7 +2208,10 @@ export const startAdminServer = (telegramClient) => {
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
           }
 
+          let isFetchingLogs = false;
           async function fetchLogs() {
+            if (isFetchingLogs) return;
+            isFetchingLogs = true;
             try {
               const res = await fetch('/api/logs');
               if (res.ok) {
@@ -2199,9 +2231,15 @@ export const startAdminServer = (telegramClient) => {
               }
             } catch(e) {
               logContainer.innerHTML = '<div class="text-danger">Ошибка загрузки логов</div>';
+            } finally {
+              isFetchingLogs = false;
             }
           }
           
+          document.getElementById('list-console-list')?.addEventListener('shown.bs.tab', () => {
+            fetchLogs();
+          });
+
           // Poll logs every 3 seconds if the tab is visible
           setInterval(() => {
             const tab = document.getElementById('list-console');
@@ -2210,8 +2248,10 @@ export const startAdminServer = (telegramClient) => {
             }
           }, 3000);
           
-          // Initial fetch
-          fetchLogs();
+          // Initial fetch only if console tab is active on load
+          if (window.location.hash === '#list-console') {
+            fetchLogs();
+          }
 
           // Pinned Message Editor Logic
           const defaultPinnedTemplate = ${JSON.stringify(WELCOME_PINNED_POST)};
@@ -4233,10 +4273,13 @@ export const startAdminServer = (telegramClient) => {
           // ==========================================
           var allAuditParks = [];
           var currentAuditFilter = 'wikipedia';
+          var isFetchingAudit = false;
 
           async function loadAuditData() {
+            if (isFetchingAudit) return;
             var tbody = document.getElementById('audit-table-body');
             if (!tbody) return;
+            isFetchingAudit = true;
             tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm text-primary"></span> Загрузка аудита ссылок...</td></tr>';
             try {
               var res = await fetch('/api/admin/pota-links/audit');
@@ -4321,6 +4364,8 @@ export const startAdminServer = (telegramClient) => {
               }
             } catch(err) {
               tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Ошибка загрузки данных аудита: ' + err.message + '</td></tr>';
+            } finally {
+              isFetchingAudit = false;
             }
           }
 
@@ -4550,9 +4595,6 @@ export const startAdminServer = (telegramClient) => {
 
           if (window.location.hash === '#list-links') {
             loadAuditData();
-          } else {
-            // Load audit in background to initialize badge count
-            loadAuditData();
           }
 
           // Open and load regions on tab click or hash
@@ -4568,8 +4610,11 @@ export const startAdminServer = (telegramClient) => {
 
           // Services Health Monitoring Client Logic
           let cachedServicesHealth = [];
+          let isCheckingServices = false;
 
           async function checkAllServicesUI(force) {
+            if (isCheckingServices) return;
+            isCheckingServices = true;
             const btn = document.getElementById('btn-refresh-services');
             const spinner = document.getElementById('services-spinner');
             if (btn) {
@@ -4590,6 +4635,7 @@ export const startAdminServer = (telegramClient) => {
             } catch (err) {
               console.error('Error fetching services health:', err);
             } finally {
+              isCheckingServices = false;
               if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Проверить все сервисы';
@@ -4825,8 +4871,12 @@ export const startAdminServer = (telegramClient) => {
           if (window.location.hash === '#list-services') {
             checkAllServicesUI(false);
           } else {
-            // Load in background for quickbar and sidebar badge
-            checkAllServicesUI(false);
+            // Lazy-load in background after initial page settle to avoid starving socket pool
+            setTimeout(() => {
+              if (cachedServicesHealth.length === 0) {
+                checkAllServicesUI(false);
+              }
+            }, 2500);
           }
 
           // Instant load on page reload (F5) if tab is oopt

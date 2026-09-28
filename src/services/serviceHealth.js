@@ -136,7 +136,7 @@ export async function checkSingleService(serviceDef) {
     } else if (serviceDef.type === 'pota_api') {
       const res = await axios.get('https://api.pota.app/spot/parks?limit=1', {
         timeout: 3500,
-        headers: { 'User-Agent': 'RU-POTA-Bot/1.16.91 (Telegram Bot; Node.js)' }
+        headers: { 'User-Agent': 'RU-POTA-Bot/1.16.92 (Telegram Bot; Node.js)' }
       });
       result.status = res.status === 200 ? 'up' : 'down';
       result.code = res.status;

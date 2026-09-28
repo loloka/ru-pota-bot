@@ -1,5 +1,17 @@
 # История изменений (Changelog)
 
+## [1.16.92] - 2026-09-28 (Web Admin: Fix Template Literal Regex Newline & Automated HTML Syntax Test)
+### Исправлено и предотвращено
+- **Устранение критической синтаксической ошибки в клиентском JavaScript Web Admin** (`src/web/admin.js`):
+  - **Причина зависания**: В шаблонной строке (template literal) `const html = `...`` регулярное выражение парсинга вложенных ООПТ `nestedOopt.split(/[,;\n]+/)` содержало неэкранированный `\n`. Интерполятор JavaScript преобразовал его в реальный перевод строки `[,;\n]+` -> `[,;` + новая строка + `]+/`, что вызвало фатальную ошибку парсера браузера: `SyntaxError: Invalid regular expression: missing /`.
+  - Из-за этого сбойного токена браузер мгновенно прекращал выполнение ВСЕГО блока `<script>` веб-панели: не навешивались обработчики вкладок, не запускались `loadRegionsData()`, `loadAuditData()`, `checkAllServicesUI()`, из-за чего все вкладки зависали на начальных серверных спиннерах.
+  - **Исправление**: `\n` корректно экранирован как `\\n` (`/[,;\\n]+/`).
+- **Автоматический тест синтаксиса HTML & JS админки** (`test_admin_html.js`, `package.json`):
+  - Написан изолированный E2E-тест `test_admin_html.js`, который поднимает веб-сервер, проходит авторизацию, получает сгенерированный HTML дашборда и через `new vm.Script(code)` валидирует все inline `<script>` блоки на отсутствие синтаксических ошибок.
+  - Тест включён в обязательный прогон `npm test`.
+- **Синхронизация версий**:
+  - Версия синхронизирована до `1.16.92` во всех файлах проекта по правилу 2.1 (`package.json`, `potaApi.js`, `ooptService.js`, `serviceHealth.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.91] - 2026-09-28 (Web Admin: Socket Starvation Fix, In-flight Guards & Fast Health Checks)
 ### Исправлено и оптимизировано
 - **Устранение «цикличной загрузки» и блокировки пула сокетов браузера** (`src/web/admin.js`, `src/services/serviceHealth.js`):

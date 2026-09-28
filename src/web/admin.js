@@ -3398,7 +3398,7 @@ export const startAdminServer = (telegramClient) => {
               try {
                 nestedList = JSON.parse(nestedOopt);
               } catch (_) {
-                nestedList = nestedOopt.split(/[,;\n]+/).map(function(s) { return { name: s.trim() }; }).filter(function(x) { return x.name; });
+                nestedList = nestedOopt.split(/[,;\\n]+/).map(function(s) { return { name: s.trim() }; }).filter(function(x) { return x.name; });
               }
             }
 

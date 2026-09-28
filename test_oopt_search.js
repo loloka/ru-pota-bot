@@ -144,7 +144,15 @@ assert.ok(amurAsc.rows[0].area > 0 && amurAsc.rows[0].area <= amurAsc.rows[1].ar
 
 const minAreaList = getOoptList({ region: 'Амурская область', min_area: 100000 });
 assert.ok(minAreaList.rows.every(r => r.area >= 100000), 'All rows must have area >= 100,000 ha');
-console.log('✅ PASS: OOPT area sorting (desc/asc) and min_area filter functioning properly');
+// 18. Test cluster extraction and clarification formatting (NID 58135: Wintering Pits N 3)
+const zimov3Details = await getOoptDetails(58135);
+assert.ok(zimov3Details, 'Details for 58135 must exist');
+assert.strictEqual(zimov3Details.cluster_count, 10, 'Wintering Pits N 3 must have 10 clusters');
+assert.ok(Array.isArray(zimov3Details.parsedClusters), 'Must have parsedClusters array');
+assert.strictEqual(zimov3Details.parsedClusters.length, 10, 'Must have 10 parsed cluster items');
+assert.ok(zimov3Details.submitterFields.clarification.includes('Кластерность: 10 участков'), 'Clarification must contain cluster prefix');
+assert.ok(zimov3Details.submitterFields.clarification.length <= 255, 'Clarification must not exceed 255 characters');
+console.log('✅ PASS: Cluster extraction & clarification formatting verified (NID 58135: 10 clusters, len <= 255)');
 
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');
 

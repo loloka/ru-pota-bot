@@ -742,6 +742,67 @@ export function formatClarification(item) {
     if (item.area) parts.push(`Площадь: ${Number(item.area).toLocaleString('ru-RU')} га`);
   }
 
+  // 2. Clusters (Priority per Manu R2BBX: "при числе от 2 его дописывать в уточнение")
+  const clusterCount = Number(item.cluster_count) || (Array.isArray(item.parsedClusters) ? item.parsedClusters.length : 0);
+  let clusterList = [];
+  if (Array.isArray(item.parsedClusters)) {
+    clusterList = item.parsedClusters;
+  } else if (Array.isArray(item.clusters)) {
+    clusterList = item.clusters;
+  } else if (typeof item.clusters === 'string' && item.clusters.trim()) {
+    try {
+      clusterList = JSON.parse(item.clusters);
+    } catch (_) {}
+  }
+
+  if (clusterCount >= 2 || clusterList.length >= 2) {
+    const effectiveCount = Math.max(clusterCount, clusterList.length);
+    const validClusters = clusterList.filter(c => c && c.name && c.name.toLowerCase() !== 'название');
+
+    // Calculate available space for clusters
+    const currentText = parts.join('. ');
+    const maxClusterLen = Math.max(30, 255 - (currentText ? currentText.length + 2 : 0));
+
+    const prefix = `Кластерность: ${effectiveCount} участков`;
+    let clusterPart = prefix;
+
+    if (validClusters.length > 0) {
+      // 1. Try with cluster names and areas
+      const fullDetails = validClusters.map(c => c.area ? `${c.name} ${c.area}` : c.name);
+      let cand = `${prefix} (${fullDetails.join(', ')})`;
+      if (cand.length <= maxClusterLen) {
+        clusterPart = cand;
+      } else {
+        // 2. Try with names only
+        const nameOnly = validClusters.map(c => c.name);
+        cand = `${prefix} (${nameOnly.join(', ')})`;
+        if (cand.length <= maxClusterLen) {
+          clusterPart = cand;
+        } else {
+          // 3. Fit as many names as possible
+          const fitted = [];
+          for (let i = 0; i < validClusters.length; i++) {
+            const testItems = [...fitted, validClusters[i].name];
+            const rem = validClusters.length - testItems.length;
+            const remSuffix = rem > 0 ? ` и ещё ${rem}` : '';
+            const testStr = `${prefix} (${testItems.join(', ')}${remSuffix})`;
+            if (testStr.length <= maxClusterLen) {
+              fitted.push(validClusters[i].name);
+            } else {
+              break;
+            }
+          }
+          if (fitted.length >= 2) {
+            const rem = validClusters.length - fitted.length;
+            const remSuffix = rem > 0 ? ` и ещё ${rem}` : '';
+            clusterPart = `${prefix} (${fitted.join(', ')}${remSuffix})`;
+          }
+        }
+      }
+    }
+    parts.push(clusterPart);
+  }
+
   let text = parts.join('. ');
   if (text.length > 255) {
     text = text.substring(0, 252).trim() + '...';
@@ -750,7 +811,7 @@ export function formatClarification(item) {
 }
 
 export function parseOoptForSubmitter(item) {
-  if (!item) return { name: '', nameEn: '', statusEn: '', status: '', dxEntity: '', locationCode: '', lat: '', lon: '', region: '', site: '', clarification: '' };
+  if (!item) return { name: '', nameEn: '', statusEn: '', status: '', dxEntity: '', locationCode: '', lat: '', lon: '', region: '', site: '', clarification: '', cluster_count: null, clusters: null };
 
   const rawTitle = (item.title || '').trim();
   const rawCat = deduceCategory(rawTitle, item.category);
@@ -795,6 +856,8 @@ export function parseOoptForSubmitter(item) {
     region,
     site,
     clarification,
+    cluster_count: item.cluster_count || null,
+    clusters: item.clusters || null,
     rusoir_url: item.rusoir_url || null,
     rusoir_name: item.rusoir_name || null
   };

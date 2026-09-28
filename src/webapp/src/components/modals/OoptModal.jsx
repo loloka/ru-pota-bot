@@ -60,7 +60,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
         if (!isMounted) return;
         setDetails(data);
 
-        // Merge freshly loaded details (coordinates, rf_subjects, documents, nested_oopt) into form
+        // Merge freshly loaded details (coordinates, rf_subjects, documents, nested_oopt, clusters) into form
         const detailedParsed = parseOoptForSubmitter(data);
         setForm((prev) => ({
           ...prev,
@@ -75,6 +75,8 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
           region: detailedParsed.region || prev.region,
           site: prev.site || detailedParsed.site,
           clarification: (detailedParsed.clarification !== undefined && detailedParsed.clarification !== null) ? detailedParsed.clarification : prev.clarification,
+          cluster_count: data.cluster_count || detailedParsed.cluster_count || prev.cluster_count || null,
+          clusters: data.clusters || detailedParsed.clusters || prev.clusters || null,
           rusoir_url: data.rusoir_url || detailedParsed.rusoir_url || prev.rusoir_url || null,
         }));
       })
@@ -130,6 +132,15 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
         : (typeof current.nested_oopt === 'string' 
             ? (() => { try { return JSON.parse(current.nested_oopt); } catch(_) { return []; } })() 
             : []));
+
+  const clusterList = Array.isArray(current.parsedClusters)
+    ? current.parsedClusters
+    : (Array.isArray(current.clusters)
+        ? current.clusters
+        : (typeof current.clusters === 'string'
+            ? (() => { try { return JSON.parse(current.clusters); } catch(_) { return []; } })()
+            : []));
+  const effectiveClusterCount = Number(current.cluster_count) || (clusterList ? clusterList.length : 0);
 
   const handleInputChange = (field, value) => {
     setForm((prev) => ({
@@ -258,6 +269,12 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                   <Sparkles className="w-3 h-3 text-emerald-500" />
                   В POTA: {current.pota_ref}
+                </span>
+              )}
+              {effectiveClusterCount >= 2 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
+                  <Compass className="w-3 h-3 text-violet-500" />
+                  Кластеров: {effectiveClusterCount}
                 </span>
               )}
             </div>
@@ -926,6 +943,33 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                           </span>
                         ) : (
                           <span className="text-[10px] text-slate-400 shrink-0">не в POTA</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Clusters (Кластерность / обособленные участки) */}
+              {clusterList && clusterList.length > 0 && (
+                <div className="pt-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
+                    <Compass className="w-3.5 h-3.5 text-violet-500" />
+                    <span>Кластерные участки ({effectiveClusterCount})</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {clusterList.map((item, idx) => (
+                      <div 
+                        key={idx}
+                        className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs flex items-center justify-between gap-2"
+                      >
+                        <span className="font-medium text-slate-800 dark:text-slate-200 leading-snug truncate">
+                          {typeof item === 'string' ? item : (item.name || 'Участок')}
+                        </span>
+                        {typeof item === 'object' && item.area && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-200/60 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">
+                            {item.area}
+                          </span>
                         )}
                       </div>
                     ))}

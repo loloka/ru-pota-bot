@@ -3341,7 +3341,7 @@ export const startAdminServer = (telegramClient) => {
             return translated || transliterated || '';
           }
 
-          function formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota) {
+          function formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota, clusterCount, clusters) {
             var parts = [];
             if (status && status !== 'действующий') {
               if (status === 'реорганизованный') {
@@ -3358,7 +3358,7 @@ export const startAdminServer = (telegramClient) => {
               try {
                 nestedList = JSON.parse(nestedOopt);
               } catch (_) {
-                nestedList = nestedOopt.split(/[,;\\n]+/).map(function(s) { return { name: s.trim() }; }).filter(function(x) { return x.name; });
+                nestedList = nestedOopt.split(/[,;\n]+/).map(function(s) { return { name: s.trim() }; }).filter(function(x) { return x.name; });
               }
             }
 
@@ -3383,6 +3383,62 @@ export const startAdminServer = (telegramClient) => {
               if (area) parts.push('Площадь: ' + Number(area).toLocaleString('ru-RU') + ' га');
             }
 
+            // Clusters (при числе от 2 дописываем в уточнение)
+            var cCount = Number(clusterCount) || 0;
+            var cList = [];
+            if (Array.isArray(clusters)) {
+              cList = clusters;
+            } else if (typeof clusters === 'string' && clusters.trim()) {
+              try {
+                cList = JSON.parse(clusters);
+              } catch (_) {}
+            }
+            if (cCount >= 2 || cList.length >= 2) {
+              var effectiveCount = Math.max(cCount, cList.length);
+              var validClusters = cList.filter(function(c) { return c && c.name && c.name.toLowerCase() !== 'название'; });
+
+              var currentText = parts.join('. ');
+              var maxClusterLen = Math.max(30, 255 - (currentText ? currentText.length + 2 : 0));
+              var prefix = 'Кластерность: ' + effectiveCount + ' участков';
+              var clusterPart = prefix;
+
+              if (validClusters.length > 0) {
+                // 1. Try with cluster names and areas
+                var fullDetails = validClusters.map(function(c) { return c.area ? (c.name + ' ' + c.area) : c.name; });
+                var cand = prefix + ' (' + fullDetails.join(', ') + ')';
+                if (cand.length <= maxClusterLen) {
+                  clusterPart = cand;
+                } else {
+                  // 2. Try with names only
+                  var nameOnly = validClusters.map(function(c) { return c.name; });
+                  cand = prefix + ' (' + nameOnly.join(', ') + ')';
+                  if (cand.length <= maxClusterLen) {
+                    clusterPart = cand;
+                  } else {
+                    // 3. Fit as many names as possible
+                    var fitted = [];
+                    for (var i = 0; i < validClusters.length; i++) {
+                      var testItems = fitted.concat([validClusters[i].name]);
+                      var rem = validClusters.length - testItems.length;
+                      var remSuffix = rem > 0 ? (' и ещё ' + rem) : '';
+                      var testStr = prefix + ' (' + testItems.join(', ') + remSuffix + ')';
+                      if (testStr.length <= maxClusterLen) {
+                        fitted.push(validClusters[i].name);
+                      } else {
+                        break;
+                      }
+                    }
+                    if (fitted.length >= 2) {
+                      var rem2 = validClusters.length - fitted.length;
+                      var remSuffix2 = rem2 > 0 ? (' и ещё ' + rem2) : '';
+                      clusterPart = prefix + ' (' + fitted.join(', ') + remSuffix2 + ')';
+                    }
+                  }
+                }
+              }
+              parts.push(clusterPart);
+            }
+
             var text = parts.join('. ');
             if (text.length > 255) {
               text = text.substring(0, 252).trim() + '...';
@@ -3390,7 +3446,7 @@ export const startAdminServer = (telegramClient) => {
             return text;
           }
 
-          function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid, area, status, profile, nestedOopt, parentPota) {
+          function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid, area, status, profile, nestedOopt, parentPota, clusterCount, clusters) {
             var detectedCategory = deduceOoptCategoryClient(rawTitle, category);
             var cleanName = cleanOoptNameClient(rawTitle, detectedCategory);
             var nameEn = formatDualParkNameClient(cleanName, detectedCategory);
@@ -3409,7 +3465,7 @@ export const startAdminServer = (telegramClient) => {
             var latVal = (lat !== null && lat !== undefined && lat !== '' && !isNaN(Number(lat))) ? Number(lat).toFixed(4) : '';
             var lonVal = (lon !== null && lon !== undefined && lon !== '' && !isNaN(Number(lon))) ? Number(lon).toFixed(4) : '';
 
-            var clarifyText = formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota);
+            var clarifyText = formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota, clusterCount, clusters);
 
             return {
               name: cleanName,
@@ -3765,7 +3821,7 @@ export const startAdminServer = (telegramClient) => {
                       renderReorgAlertClient(true, details.parent_pota || parentPota);
                     }
 
-                    // Dynamically update clarification if details contain nested OOPTs!
+                    // Dynamically update clarification if details contain nested OOPTs or clusters!
                     var updatedClarify = formatClarificationClient(
                       details.profile || profile,
                       details.status || status,
@@ -3774,7 +3830,9 @@ export const startAdminServer = (telegramClient) => {
                       title,
                       parsed.name,
                       nid,
-                      details.parent_pota || parentPota
+                      details.parent_pota || parentPota,
+                      details.cluster_count,
+                      details.parsedClusters || details.clusters
                     );
                     if (updatedClarify) {
                       document.getElementById('subm-clarify').value = updatedClarify;

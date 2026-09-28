@@ -412,6 +412,13 @@ try {
     console.log('[DB] Migrated oopt_registry table: added rusoir_url and rusoir_name columns');
   }
 
+  const hasClusters = ooptColumns.some(col => col.name === 'clusters');
+  if (!hasClusters) {
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN cluster_count INTEGER DEFAULT NULL`);
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN clusters TEXT DEFAULT NULL`);
+    console.log('[DB] Migrated oopt_registry table: added cluster_count and clusters columns');
+  }
+
   // Ensure missing categories are populated
   try {
     db.exec(`

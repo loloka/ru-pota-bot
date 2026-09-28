@@ -17,7 +17,7 @@ const client = axios.create({
   timeout: 25000,
   proxy: false,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.89 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.90 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });
@@ -609,7 +609,7 @@ export function getOoptList({
   const selectSql = `
     SELECT 
       nid, title, sig, sig_display, status, category, agency, ate, start_date, area,
-      lat, lon, profile, pota_ref, pota_name, rusoir_url, rusoir_name
+      lat, lon, profile, pota_ref, pota_name, rusoir_url, rusoir_name, cluster_count, clusters
     FROM oopt_registry
     ${whereClause}
     ${orderByClause}
@@ -1852,6 +1852,67 @@ export function formatClarification(item) {
     if (item.area) parts.push(`Площадь: ${Number(item.area).toLocaleString('ru-RU')} га`);
   }
 
+  // 2. Clusters (Priority per Manu R2BBX: "при числе от 2 его дописывать в уточнение")
+  const clusterCount = Number(item.cluster_count) || (Array.isArray(item.parsedClusters) ? item.parsedClusters.length : 0);
+  let clusterList = [];
+  if (Array.isArray(item.parsedClusters)) {
+    clusterList = item.parsedClusters;
+  } else if (Array.isArray(item.clusters)) {
+    clusterList = item.clusters;
+  } else if (typeof item.clusters === 'string' && item.clusters.trim()) {
+    try {
+      clusterList = JSON.parse(item.clusters);
+    } catch (_) {}
+  }
+
+  if (clusterCount >= 2 || clusterList.length >= 2) {
+    const effectiveCount = Math.max(clusterCount, clusterList.length);
+    const validClusters = clusterList.filter(c => c && c.name && c.name.toLowerCase() !== 'название');
+
+    // Calculate available space for clusters
+    const currentText = parts.join('. ');
+    const maxClusterLen = Math.max(30, 255 - (currentText ? currentText.length + 2 : 0));
+
+    const prefix = `Кластерность: ${effectiveCount} участков`;
+    let clusterPart = prefix;
+
+    if (validClusters.length > 0) {
+      // 1. Try with cluster names and areas
+      const fullDetails = validClusters.map(c => c.area ? `${c.name} ${c.area}` : c.name);
+      let cand = `${prefix} (${fullDetails.join(', ')})`;
+      if (cand.length <= maxClusterLen) {
+        clusterPart = cand;
+      } else {
+        // 2. Try with names only
+        const nameOnly = validClusters.map(c => c.name);
+        cand = `${prefix} (${nameOnly.join(', ')})`;
+        if (cand.length <= maxClusterLen) {
+          clusterPart = cand;
+        } else {
+          // 3. Fit as many names as possible
+          const fitted = [];
+          for (let i = 0; i < validClusters.length; i++) {
+            const testItems = [...fitted, validClusters[i].name];
+            const rem = validClusters.length - testItems.length;
+            const remSuffix = rem > 0 ? ` и ещё ${rem}` : '';
+            const testStr = `${prefix} (${testItems.join(', ')}${remSuffix})`;
+            if (testStr.length <= maxClusterLen) {
+              fitted.push(validClusters[i].name);
+            } else {
+              break;
+            }
+          }
+          if (fitted.length >= 2) {
+            const rem = validClusters.length - fitted.length;
+            const remSuffix = rem > 0 ? ` и ещё ${rem}` : '';
+            clusterPart = `${prefix} (${fitted.join(', ')}${remSuffix})`;
+          }
+        }
+      }
+    }
+    parts.push(clusterPart);
+  }
+
   let text = parts.join('. ');
   if (text.length > 255) {
     text = text.substring(0, 252).trim() + '...';
@@ -1918,7 +1979,9 @@ export function parseSubmitterFields(item) {
     pota_name: item.pota_name || null,
     nested_oopt: item.nested_oopt || null,
     rusoir_url: item.rusoir_url || null,
-    rusoir_name: item.rusoir_name || null
+    rusoir_name: item.rusoir_name || null,
+    cluster_count: item.cluster_count !== undefined ? item.cluster_count : null,
+    clusters: item.clusters || null
   };
 }
 
@@ -2204,15 +2267,15 @@ export async function getOoptDetails(nid) {
     }
   }
 
-  // If nested OOPTs not yet checked/cached, fetch from NextGIS node page
-  if (row.nested_oopt === null) {
+  // If nested OOPTs or clusters not yet checked/cached, fetch from NextGIS node page
+  if (row.nested_oopt === null || row.clusters === null) {
     try {
       const nextgisRes = await axios.get(`https://ooptaari.nextgis.ru/node/${numNid}`, {
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
         timeout: 6000
       });
-      const html = nextgisRes.data;
-      const match = typeof html === 'string' ? html.match(/Наличие в границах ООПТ иных ООПТ:[\s\S]*?<\/div>\s*<\/div>/i) : null;
+      const html = typeof nextgisRes.data === 'string' ? nextgisRes.data : '';
+      const match = html.match(/Наличие в границах ООПТ иных ООПТ:[\s\S]*?<\/div>\s*<\/div>/i);
       const extracted = [];
       if (match) {
         const items = [];
@@ -2248,8 +2311,57 @@ export async function getOoptDetails(nid) {
         }
       }
       const jsonStr = JSON.stringify(extracted);
-      db.prepare("UPDATE oopt_registry SET nested_oopt = ? WHERE nid = ?").run(jsonStr, numNid);
+
+      // Extract clusters (Кластерность / Количество участков)
+      let clusterCount = null;
+      let clusterItems = [];
+      const countMatch = html.match(/Количество участков:[\s\S]*?(\d+)/i);
+      if (countMatch) {
+        clusterCount = parseInt(countMatch[1], 10);
+      }
+
+      const clusterTableIdx = html.indexOf('view-cluster-list');
+      if (clusterTableIdx !== -1) {
+        const tableEnd = html.indexOf('</table>', clusterTableIdx);
+        const tableHtml = html.substring(clusterTableIdx, tableEnd !== -1 ? tableEnd : clusterTableIdx + 8000);
+        const tbodyM = tableHtml.match(/<tbody>([\s\S]*?)<\/tbody>/i);
+        const targetHtml = tbodyM ? tbodyM[1] : tableHtml;
+        const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+        let rM;
+        while ((rM = rowRegex.exec(targetHtml)) !== null) {
+          const rowContent = rM[1];
+          const titleM = rowContent.match(/views-field-title[^>]*>[\s\S]*?<a[^>]*>([^<]+)<\/a>/i) ||
+                         rowContent.match(/views-field-title[^>]*>\s*([^<\s][^<]*)/i);
+          const areaM = rowContent.match(/views-field-field-cluster-area-value[^>]*>\s*([0-9.,]+(?:\s*га)?)/i);
+          if (titleM) {
+            const cName = titleM[1].trim();
+            if (cName && cName.toLowerCase() !== 'название') {
+              clusterItems.push({
+                name: cName,
+                area: areaM ? areaM[1].trim() : ''
+              });
+            }
+          }
+        }
+      }
+
+      if (clusterCount === null && clusterItems.length > 0) {
+        clusterCount = clusterItems.length;
+      }
+      if (clusterCount === null) {
+        clusterCount = 1;
+      }
+
+      const clustersJson = JSON.stringify(clusterItems);
+      db.prepare("UPDATE oopt_registry SET nested_oopt = ?, clusters = ?, cluster_count = ? WHERE nid = ?").run(
+        jsonStr,
+        clustersJson,
+        clusterCount,
+        numNid
+      );
       details.nested_oopt = jsonStr;
+      details.clusters = clustersJson;
+      details.cluster_count = clusterCount;
     } catch (e) {
       // Non-critical network warning
     }
@@ -2263,6 +2375,15 @@ export async function getOoptDetails(nid) {
     } catch (_) {}
   }
   details.parsedNestedOopt = parsedNestedOopt;
+
+  // Parse clusters if available
+  let parsedClusters = [];
+  if (details.clusters) {
+    try {
+      parsedClusters = typeof details.clusters === 'string' ? JSON.parse(details.clusters) : details.clusters;
+    } catch (_) {}
+  }
+  details.parsedClusters = parsedClusters;
 
   // Parse bbox if present
   let parsedBbox = null;

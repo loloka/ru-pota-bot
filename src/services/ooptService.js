@@ -17,7 +17,7 @@ const client = axios.create({
   timeout: 25000,
   proxy: false,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.93 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.94 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });
@@ -2218,7 +2218,7 @@ export async function getOoptDetails(nid) {
 
         db.prepare(`
           UPDATE oopt_registry 
-          SET lat = ?, lon = ?, bbox = ?, profile = ?, rf_subjects = ?, updated_at = CURRENT_TIMESTAMP
+          SET lat = ?, lon = ?, bbox = ?, profile = ?, rf_subjects = ?, details_fetched_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
           WHERE nid = ?
         `).run(lat, lon, bboxStr, profile, rfSubjStr, numNid);
 

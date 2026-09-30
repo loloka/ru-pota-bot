@@ -1,5 +1,20 @@
 # История изменений (Changelog)
 
+## [1.16.94] - 2026-09-30 (OOPT Details Harvester & Offline Resilience Architecture)
+### Добавлено и оптимизировано
+- **Фоновый сборщик детальных карточек ООПТ Минприроды** (`src/scripts/harvestMinprirodaDetails.js`, `package.json`):
+  - Разработан мягкий сборщик (harvester) для постепенного обогащения локальной SQLite базы (`oopt_registry`) точными координатами центроидов (`lat`, `lon`), границами полигонов (`bbox`), профилями и субъектами РФ с официального геопортала Минприроды (`карта.оцзк.рф`).
+  - Поддержка безопасного темпа опроса по умолчанию (`--delay 35000` мс ~ 1.7 запроса в минуту) с защитой от банов по IP, обработкой HTTP 429/503 и автоматическим бэкоффом на 3 минуты при нагрузке.
+  - Поддержка аргументов `--status`, `--limit`, `--region`, `--pota-only`, `--dry-run`.
+  - Автоматическая периодическая выгрузка прогресса в офлайн-бэкапы `data/oopt_registry_backup.json` и `src/data/oopt_fallback.json.gz`.
+  - Защита от сбоев соединений с `https.Agent(keepAlive: true)` и автоматическим retry до 2 попыток.
+- **Безопасная автомиграция базы данных** (`src/db/database.js`):
+  - Добавлена колонка `details_fetched_at DATETIME DEFAULT NULL` и индекс `idx_oopt_details_fetched` в таблицу `oopt_registry` с автоматическим бэкфиллом ранее обогащенных записей.
+- **Оптимизация кэширования `getOoptDetails`** (`src/services/ooptService.js`):
+  - При успешном онлайн-запросе к геопорталу Минприроды автоматически проставляется метка `details_fetched_at = CURRENT_TIMESTAMP`, исключая повторные онлайн-запросы.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.94` во всех обязательных файлах по правилу 2.1 (`package.json`, `potaApi.js`, `ooptService.js`, `harvestMinprirodaDetails.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.93] - 2026-09-28 (Service Health: Route POTA API Check Through Configured Proxy)
 ### Исправлено
 - **Устранение HTTP 403 Forbidden при проверке доступности API POTA** (`src/services/serviceHealth.js`, `src/api/potaApi.js`):

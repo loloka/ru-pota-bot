@@ -419,6 +419,15 @@ try {
     console.log('[DB] Migrated oopt_registry table: added cluster_count and clusters columns');
   }
 
+  const hasDetailsFetched = ooptColumns.some(col => col.name === 'details_fetched_at');
+  if (!hasDetailsFetched) {
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN details_fetched_at DATETIME DEFAULT NULL`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_oopt_details_fetched ON oopt_registry (details_fetched_at)`);
+    // Backfill already enriched rows
+    db.exec(`UPDATE oopt_registry SET details_fetched_at = updated_at WHERE (lat IS NOT NULL AND lon IS NOT NULL) OR bbox IS NOT NULL`);
+    console.log('[DB] Migrated oopt_registry table: added details_fetched_at column and backfilled existing entries');
+  }
+
   // Ensure missing categories are populated
   try {
     db.exec(`

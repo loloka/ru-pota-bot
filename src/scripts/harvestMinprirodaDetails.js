@@ -59,7 +59,7 @@ const client = axios.create({
   proxy: false,
   httpsAgent,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.94 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.95 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });

@@ -3205,16 +3205,17 @@ export const startAdminServer = (telegramClient) => {
             'иркутская': 'RU-IK',
             'бурятия': 'RU-BU',
             'забайкальский': 'RU-ZB',
-            'саха': 'RU-SL',
-            'якутия': 'RU-SL',
+            'сахалинская': 'RU-SL',
+            'сахалин': 'RU-SL',
+            'саха': 'RU-SK',
+            'якутия': 'RU-SK',
             'еврейская': 'RU-YV',
             'амурская': 'RU-AM',
             'хабаровский': 'RU-KH',
             'приморский': 'RU-PR',
             'магаданская': 'RU-MG',
             'чукотский': 'RU-CK',
-            'камчатский': 'RU-KQ',
-            'сахалинская': 'RU-SK'
+            'камчатский': 'RU-KQ'
           };
 
           var REGION_LOCATION_ENTRIES_CLIENT = Object.entries(REGION_TO_POTA_LOCATION_CLIENT).sort(function(a, b) {

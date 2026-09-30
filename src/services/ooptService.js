@@ -17,7 +17,7 @@ const client = axios.create({
   timeout: 25000,
   proxy: false,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.94 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.95 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });
@@ -1494,8 +1494,10 @@ export const REGION_TO_POTA_LOCATION = {
   'иркутская': 'RU-IK',
   'бурятия': 'RU-BU',
   'забайкальский': 'RU-ZB',
-  'саха': 'RU-SL',
-  'якутия': 'RU-SL',
+  'сахалинская': 'RU-SL',
+  'сахалин': 'RU-SL',
+  'саха': 'RU-SK',
+  'якутия': 'RU-SK',
   'еврейская': 'RU-YV',
   'амурская': 'RU-AM',
   'хабаровский': 'RU-KH',
@@ -1503,7 +1505,6 @@ export const REGION_TO_POTA_LOCATION = {
   'магаданская': 'RU-MG',
   'чукотский': 'RU-CK',
   'камчатский': 'RU-KQ',
-  'сахалинская': 'RU-SK',
 };
 
 const REGION_LOCATION_ENTRIES = Object.entries(REGION_TO_POTA_LOCATION).sort((a, b) => b[0].length - a[0].length);
@@ -1587,8 +1588,8 @@ export const POTA_LOCATION_CANONICAL = {
   'RU-RO': 'Ростовская область',
   'RU-RZ': 'Рязанская область',
   'RU-SA': 'Самарская область',
-  'RU-SK': 'Сахалинская область',
-  'RU-SL': 'Республика Саха (Якутия)',
+  'RU-SK': 'Республика Саха (Якутия)',
+  'RU-SL': 'Сахалинская область',
   'RU-SM': 'Смоленская область',
   'RU-SP': 'Санкт-Петербург',
   'RU-SR': 'Саратовская область',
@@ -2416,7 +2417,8 @@ for (const [code, name] of Object.entries(POTA_LOCATION_CANONICAL)) {
   if (code === 'RU-YV') clean = 'еврейск';
   if (code === 'RU-KM') clean = 'ханты-мансийск';
   if (code === 'RU-PE') clean = 'перм';
-  if (code === 'RU-SK') clean = 'сахалин';
+  if (code === 'RU-SK') clean = 'саха';
+  if (code === 'RU-SL') clean = 'сахалин';
   if (code === 'RU-NN') clean = 'ненецк';
   if (code === 'RU-SM') clean = 'смоленск';
   if (code === 'RU-SA') clean = 'самар';
@@ -2493,9 +2495,10 @@ REGION_HINT_MAP['RU-IRK'] = 'иркутск';
 REGION_HINT_MAP['RU-IR'] = 'иркутск';
 REGION_HINT_MAP['RU-IK'] = 'иркутск';
 REGION_HINT_MAP['RU-SAR'] = 'саратовск';
-REGION_HINT_MAP['RU-SR'] = 'саратовск';
-REGION_HINT_MAP['RU-SK'] = 'сахалинск';
-REGION_HINT_MAP['RU-SAK'] = 'сахалинск';
+REGION_HINT_MAP['RU-SL'] = 'сахалинск';
+REGION_HINT_MAP['RU-SK'] = 'саха';
+REGION_HINT_MAP['RU-YAK'] = 'якут';
+REGION_HINT_MAP['RU-SAK'] = 'саха';
 REGION_HINT_MAP['RU-ULY'] = 'ульяновск';
 REGION_HINT_MAP['RU-UL'] = 'ульяновск';
 REGION_HINT_MAP['RU-YV'] = 'еврейск';

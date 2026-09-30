@@ -1,5 +1,16 @@
 # История изменений (Changelog)
 
+## [1.16.95] - 2026-09-30 (Fix POTA Location Codes: Sakha RU-SK vs Sakhalin RU-SL)
+### Исправлено
+- **Коррекция кодов локаций POTA для Республики Саха (Якутия) и Сахалинской области** (`src/services/ooptService.js`, `src/web/admin.js`, `test_regions_stats.js`):
+  - По сообщению координатора POTA Manu R2BBX устранена путаница между кодами регионов POTA:
+    - **Республика Саха (Якутия)** переведена на официальный код **`RU-SK`** (вместо `RU-SL`).
+    - **Сахалинская область** переведена на официальный код **`RU-SL`** (вместо `RU-SK`).
+  - Исправлены `REGION_TO_POTA_LOCATION`, `POTA_LOCATION_CANONICAL`, `REGION_HINT_MAP` и клиентский генератор формы заявки `getPotaLocationCodeClient` в веб-админке.
+  - Обновлены регрессионные тесты в `test_regions_stats.js`.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.95` во всех обязательных файлах по правилу 2.1 (`package.json`, `potaApi.js`, `ooptService.js`, `harvestMinprirodaDetails.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.94] - 2026-09-30 (OOPT Details Harvester & Offline Resilience Architecture)
 ### Добавлено и оптимизировано
 - **Фоновый сборщик детальных карточек ООПТ Минприроды** (`src/scripts/harvestMinprirodaDetails.js`, `package.json`):

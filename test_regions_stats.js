@@ -68,10 +68,10 @@ console.log(`✅ PASS: Leningrad Oblast (RU-LN) separated from SPb: ${lenOblast.
 import { getPotaLocationCode } from './src/services/ooptService.js';
 assert.strictEqual(getPotaLocationCode('Томская область'), 'RU-TO', 'Томская область must resolve to RU-TO, not RU-OM');
 assert.strictEqual(getPotaLocationCode('Омская область'), 'RU-OM', 'Омская область must resolve to RU-OM');
-assert.strictEqual(getPotaLocationCode('Сахалинская область'), 'RU-SK', 'Сахалинская область must resolve to RU-SK, not RU-SL');
-assert.strictEqual(getPotaLocationCode('Республика Саха (Якутия)'), 'RU-SL', 'Саха (Якутия) must resolve to RU-SL');
+assert.strictEqual(getPotaLocationCode('Сахалинская область'), 'RU-SL', 'Сахалинская область must resolve to RU-SL (Sakhalin)');
+assert.strictEqual(getPotaLocationCode('Республика Саха (Якутия)'), 'RU-SK', 'Саха (Якутия) must resolve to RU-SK (Sakha)');
 assert.strictEqual(getPotaLocationCode('Костромская область'), 'RU-KT', 'Костромская область must resolve to RU-KT, not RU-OM');
 assert.strictEqual(getPotaLocationCode('Новосибирская область, Томская область'), 'RU-NS, RU-TO', 'Multi-region cross-border must resolve both RU-NS and RU-TO');
-console.log('✅ PASS: getPotaLocationCode accurately resolves Tomsk (RU-TO), Omsk (RU-OM), Sakhalin (RU-SK), and cross-border regions');
+console.log('✅ PASS: getPotaLocationCode accurately resolves Tomsk (RU-TO), Omsk (RU-OM), Sakhalin (RU-SL), Sakha (RU-SK), and cross-border regions');
 
 console.log('\n--- ALL REGIONAL POTA COVERAGE TESTS PASSED! ---');

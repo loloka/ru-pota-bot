@@ -3383,6 +3383,18 @@ export const startAdminServer = (telegramClient) => {
             return translated || transliterated || '';
           }
 
+          function isGenericClusterNameClient(name) {
+            if (!name || typeof name !== 'string') return true;
+            var s = name.trim().toLowerCase();
+            if (s === 'название' || s === 'участок' || s === 'кластер' || s === 'сектор' || s === 'зона' || s === 'часть') return true;
+            if (/^[0-9]+$/.test(s)) return true;
+            if (/^[0-9]+-(?:й|ой|ий|ый)[ \t]+(?:участок|кластер|сектор)$/i.test(s)) return true;
+            if (/^(?:участок|кластер|сектор|зона|часть|территория|отделение)[ \t]*(?:№|n|#|no\.?)?[ \t]*[-–—]?[ \t]*(?:[0-9]+|[ivx]+|[a-zа-я](?:-[0-9]+)?)?$/i.test(s)) {
+              return true;
+            }
+            return false;
+          }
+
           function formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota, clusterCount, clusters) {
             var parts = [];
             if (status && status !== 'действующий') {
@@ -3437,44 +3449,36 @@ export const startAdminServer = (telegramClient) => {
             }
             if (cCount >= 2 || cList.length >= 2) {
               var effectiveCount = Math.max(cCount, cList.length);
-              var validClusters = cList.filter(function(c) { return c && c.name && c.name.toLowerCase() !== 'название'; });
+              var validClusters = cList.filter(function(c) { return c && c.name && c.name.toLowerCase() !== 'название' && c.name.trim().length > 0; });
 
               var currentText = parts.join('. ');
-              var maxClusterLen = Math.max(30, 255 - (currentText ? currentText.length + 2 : 0));
+              var maxClusterLen = Math.max(0, 255 - (currentText ? currentText.length + 2 : 0));
               var prefix = 'Кластерность: ' + effectiveCount + ' участков';
               var clusterPart = prefix;
 
-              if (validClusters.length > 0) {
-                // 1. Try with cluster names and areas
-                var fullDetails = validClusters.map(function(c) { return c.area ? (c.name + ' ' + c.area) : c.name; });
-                var cand = prefix + ' (' + fullDetails.join(', ') + ')';
-                if (cand.length <= maxClusterLen) {
-                  clusterPart = cand;
+              var hasDistinctNames = validClusters.some(function(c) { return !isGenericClusterNameClient(c.name); });
+
+              if (hasDistinctNames && validClusters.length > 0) {
+                // 1. Try with cluster names and areas (if all clusters fit within maxClusterLen)
+                var candWithArea = prefix + ' (' + validClusters.map(function(c) {
+                  var name = (c.name || '').trim();
+                  if (!c.area) return name;
+                  var a = String(c.area).trim();
+                  if (!a) return name;
+                  var withGa = /га$/i.test(a) ? a : (a + ' га');
+                  return name + ' ' + withGa;
+                }).join(', ') + ')';
+
+                if (candWithArea.length <= maxClusterLen) {
+                  clusterPart = candWithArea;
                 } else {
-                  // 2. Try with names only
-                  var nameOnly = validClusters.map(function(c) { return c.name; });
-                  cand = prefix + ' (' + nameOnly.join(', ') + ')';
-                  if (cand.length <= maxClusterLen) {
-                    clusterPart = cand;
+                  // 2. Try with names only (if all clusters fit within maxClusterLen)
+                  var candNamesOnly = prefix + ' (' + validClusters.map(function(c) { return (c.name || '').trim(); }).join(', ') + ')';
+                  if (candNamesOnly.length <= maxClusterLen) {
+                    clusterPart = candNamesOnly;
                   } else {
-                    // 3. Fit as many names as possible
-                    var fitted = [];
-                    for (var i = 0; i < validClusters.length; i++) {
-                      var testItems = fitted.concat([validClusters[i].name]);
-                      var rem = validClusters.length - testItems.length;
-                      var remSuffix = rem > 0 ? (' и ещё ' + rem) : '';
-                      var testStr = prefix + ' (' + testItems.join(', ') + remSuffix + ')';
-                      if (testStr.length <= maxClusterLen) {
-                        fitted.push(validClusters[i].name);
-                      } else {
-                        break;
-                      }
-                    }
-                    if (fitted.length >= 2) {
-                      var rem2 = validClusters.length - fitted.length;
-                      var remSuffix2 = rem2 > 0 ? (' и ещё ' + rem2) : '';
-                      clusterPart = prefix + ' (' + fitted.join(', ') + remSuffix2 + ')';
-                    }
+                    // 3. If full list does not fit within 255 chars, IGNORE the list completely per Manu R2BBX!
+                    clusterPart = prefix;
                   }
                 }
               }

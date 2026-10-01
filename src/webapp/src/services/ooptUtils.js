@@ -692,6 +692,28 @@ export function getPotaLocationCode(regionStr = '') {
   return foundCodes.join(', ');
 }
 
+export function isGenericClusterName(name) {
+  if (!name || typeof name !== 'string') return true;
+  const s = name.trim().toLowerCase();
+  if (s === 'название' || s === 'участок' || s === 'кластер' || s === 'сектор' || s === 'зона' || s === 'часть') return true;
+  if (/^\d+$/.test(s)) return true;
+  if (/^\d+-(?:й|ой|ий|ый)\s+(?:участок|кластер|сектор)$/i.test(s)) return true;
+  if (/^(?:участок|кластер|сектор|зона|часть|территория|отделение)\s*(?:№|n|#|no\.?)?\s*[-–—]?\s*(?:\d+|[ivx]+|[a-zа-я](?:-\d+)?)?$/i.test(s)) {
+    return true;
+  }
+  return false;
+}
+
+export function formatClusterItem(c, includeArea) {
+  if (!c) return '';
+  const name = (c.name || '').trim();
+  if (!includeArea || !c.area) return name;
+  const a = String(c.area).trim();
+  if (!a) return name;
+  const withGa = /га$/i.test(a) ? a : `${a} га`;
+  return `${name} ${withGa}`;
+}
+
 export function formatClarification(item) {
   if (!item) return '';
   const parts = [];
@@ -757,46 +779,30 @@ export function formatClarification(item) {
 
   if (clusterCount >= 2 || clusterList.length >= 2) {
     const effectiveCount = Math.max(clusterCount, clusterList.length);
-    const validClusters = clusterList.filter(c => c && c.name && c.name.toLowerCase() !== 'название');
+    const validClusters = clusterList.filter(c => c && c.name && c.name.toLowerCase() !== 'название' && c.name.trim().length > 0);
 
     // Calculate available space for clusters
     const currentText = parts.join('. ');
-    const maxClusterLen = Math.max(30, 255 - (currentText ? currentText.length + 2 : 0));
+    const maxClusterLen = Math.max(0, 255 - (currentText ? currentText.length + 2 : 0));
 
     const prefix = `Кластерность: ${effectiveCount} участков`;
     let clusterPart = prefix;
 
-    if (validClusters.length > 0) {
-      // 1. Try with cluster names and areas
-      const fullDetails = validClusters.map(c => c.area ? `${c.name} ${c.area}` : c.name);
-      let cand = `${prefix} (${fullDetails.join(', ')})`;
-      if (cand.length <= maxClusterLen) {
-        clusterPart = cand;
+    const hasDistinctNames = validClusters.some(c => !isGenericClusterName(c.name));
+
+    if (hasDistinctNames && validClusters.length > 0) {
+      // 1. Try with cluster names and areas (if all clusters fit within maxClusterLen)
+      const candWithArea = `${prefix} (${validClusters.map(c => formatClusterItem(c, true)).join(', ')})`;
+      if (candWithArea.length <= maxClusterLen) {
+        clusterPart = candWithArea;
       } else {
-        // 2. Try with names only
-        const nameOnly = validClusters.map(c => c.name);
-        cand = `${prefix} (${nameOnly.join(', ')})`;
-        if (cand.length <= maxClusterLen) {
-          clusterPart = cand;
+        // 2. Try with cluster names only (if all clusters fit within maxClusterLen)
+        const candNamesOnly = `${prefix} (${validClusters.map(c => (c.name || '').trim()).join(', ')})`;
+        if (candNamesOnly.length <= maxClusterLen) {
+          clusterPart = candNamesOnly;
         } else {
-          // 3. Fit as many names as possible
-          const fitted = [];
-          for (let i = 0; i < validClusters.length; i++) {
-            const testItems = [...fitted, validClusters[i].name];
-            const rem = validClusters.length - testItems.length;
-            const remSuffix = rem > 0 ? ` и ещё ${rem}` : '';
-            const testStr = `${prefix} (${testItems.join(', ')}${remSuffix})`;
-            if (testStr.length <= maxClusterLen) {
-              fitted.push(validClusters[i].name);
-            } else {
-              break;
-            }
-          }
-          if (fitted.length >= 2) {
-            const rem = validClusters.length - fitted.length;
-            const remSuffix = rem > 0 ? ` и ещё ${rem}` : '';
-            clusterPart = `${prefix} (${fitted.join(', ')}${remSuffix})`;
-          }
+          // 3. If full list does not fit within 255 chars, IGNORE the list completely per Manu R2BBX!
+          clusterPart = prefix;
         }
       }
     }

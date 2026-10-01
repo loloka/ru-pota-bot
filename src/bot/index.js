@@ -884,7 +884,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.97\x1b[0m 📡             \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.98\x1b[0m 📡             \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

@@ -174,17 +174,23 @@ assert.strictEqual(kavkazDetails.submitterFields.statusEn, 'UNESCO Biosphere Res
 assert.ok(kavkazDetails.international_status.includes('Биосферный резерват'), 'International status must be captured from NextGIS');
 console.log('✅ PASS: Multi-region extraction & UNESCO Biosphere Reserve status verified (NID 6453: 3 regions, UNESCO Biosphere Reserve)');
 
-// 20. Test strict regional isolation for nested OOPTs & area prioritization (NID 34145: Lipetsky Reserve)
+// 20. Test nested OOPT counting & area prioritization per Manu R2BBX (NID 34145: Lipetsky Reserve)
 const lipetskDetails = await getOoptDetails(34145);
 assert.ok(lipetskDetails, 'Details for 34145 must exist');
 const lipetskClarify = lipetskDetails.submitterFields.clarification;
 assert.ok(lipetskClarify.includes('Площадь: 18 327,11 га') || lipetskClarify.includes('Площадь: 18\u00a0327,11 га'), 'Must include area of submitted OOPT');
 assert.ok(lipetskClarify.indexOf('Площадь:') < lipetskClarify.indexOf('В границах ООПТ:'), 'Area must come before nested OOPTs (Priority 1)');
-assert.ok(lipetskClarify.includes('Митрохин угол (RU-0268)'), 'Must include local POTA ref RU-0268 in Lipetsk');
-assert.ok(lipetskClarify.includes('Сосновый бор'), 'Must include local nested OOPT Сосновый бор');
-assert.strictEqual(lipetskClarify.includes('RU-0310'), false, 'Must NOT match RU-0310 from Arkhangelsk to Lipetsk Сосновый бор');
+assert.ok(lipetskClarify.includes('В границах ООПТ: 3 иных ООПТ'), 'Must format nested OOPTs as "В границах ООПТ: 3 иных ООПТ"');
+assert.strictEqual(lipetskClarify.includes('Сосновый бор'), false, 'Names of nested OOPTs must NOT be listed per Manu R2BBX');
 assert.ok(lipetskClarify.length <= 255, 'Clarification must not exceed 255 characters');
-console.log('✅ PASS: Strict regional isolation & area prioritization verified (NID 34145: Lipetsk RU-0268 matched, RU-0310 excluded, Area first)');
+
+// Test 1 and 2 nested OOPT inflections
+import { formatClarification } from './src/services/ooptService.js';
+const singleNested = formatClarification({ area: 100, nested_oopt: JSON.stringify([{ name: 'Заказник 1' }]) });
+assert.ok(singleNested.includes('В границах ООПТ: 1 иная ООПТ'), 'Must decline as "1 иная ООПТ"');
+const doubleNested = formatClarification({ area: 100, nested_oopt: JSON.stringify([{ name: 'Заказник 1' }, { name: 'Заказник 2' }]) });
+assert.ok(doubleNested.includes('В границах ООПТ: 2 иных ООПТ'), 'Must decline as "2 иных ООПТ"');
+console.log('✅ PASS: Nested OOPT count formatting verified (NID 34145: "3 иных ООПТ", 1 and 2 inflections, Area first)');
 
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');
 

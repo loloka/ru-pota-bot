@@ -3479,7 +3479,7 @@ export const startAdminServer = (telegramClient) => {
               parts.push(clusterPart);
             }
 
-            // 3. Additional: Nested OOPTs (Priority 3 per Manu R2BBX: "И только потом, если осталось место - указывать допы")
+            // 3. Additional: Nested OOPTs (Priority 3 per Manu R2BBX: count of nested OOPTs, e.g. "В границах ООПТ: ## иных ООПТ")
             var nestedList = [];
             if (Array.isArray(nestedOopt)) {
               nestedList = nestedOopt;
@@ -3495,41 +3495,30 @@ export const startAdminServer = (telegramClient) => {
             var selfClean = (cleanName || '').toLowerCase().trim();
             var selfNid = nid ? Number(nid) : null;
 
-            var formatted = (nestedList || []).map(function(n) {
+            var validNested = (nestedList || []).filter(function(n) {
               var name = typeof n === 'string' ? n : (n.name || n.title || '');
               var cleanN = name.toLowerCase().trim();
               var nNid = (typeof n === 'object' && n.nid) ? Number(n.nid) : null;
-              if (selfNid && nNid && selfNid === nNid) return '';
-              if (cleanN && (cleanN === selfTitle || cleanN === selfClean)) return '';
+              if (selfNid && nNid && selfNid === nNid) return false;
+              if (cleanN && (cleanN === selfTitle || cleanN === selfClean)) return false;
+              return !!cleanN;
+            });
 
-              var ref = '';
-              if (typeof n === 'object' && n.pota_ref) {
-                if (!region || !n.ate || isSameOrOverlappingRegionClient(region, n.ate)) {
-                  ref = ' (' + n.pota_ref + ')';
+            if (validNested.length > 0) {
+              var count = validNested.length;
+              var mod10 = count % 10;
+              var mod100 = count % 100;
+              var countWord = count + ' иных ООПТ';
+              if (mod100 < 11 || mod100 > 14) {
+                if (mod10 === 1) {
+                  countWord = count + ' иная ООПТ';
                 }
               }
-              return name ? (name + ref) : '';
-            }).filter(Boolean);
-
-            if (formatted.length > 0) {
               var curText = parts.join('. ');
               var remSpace = 255 - (curText ? curText.length + 2 : 0);
-              var fullCand = 'В границах ООПТ: ' + formatted.join(', ');
-              if (fullCand.length <= remSpace) {
-                parts.push(fullCand);
-              } else {
-                var fittedNested = [];
-                for (var fIdx = 0; fIdx < formatted.length; fIdx++) {
-                  var testCand = 'В границах ООПТ: ' + fittedNested.concat([formatted[fIdx]]).join(', ');
-                  if (testCand.length <= remSpace) {
-                    fittedNested.push(formatted[fIdx]);
-                  } else {
-                    break;
-                  }
-                }
-                if (fittedNested.length > 0) {
-                  parts.push('В границах ООПТ: ' + fittedNested.join(', '));
-                }
+              var nestedCand = 'В границах ООПТ: ' + countWord;
+              if (nestedCand.length <= remSpace) {
+                parts.push(nestedCand);
               }
             }
 

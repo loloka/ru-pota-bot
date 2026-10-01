@@ -1905,7 +1905,7 @@ export function formatClarification(item) {
     parts.push(clusterPart);
   }
 
-  // 4. Additional: Nested OOPTs (Priority 3 per Manu R2BBX: "И только потом, если осталось место - указывать допы")
+  // 4. Additional: Nested OOPTs (Priority 3 per Manu R2BBX: count of nested OOPTs, e.g. "В границах ООПТ: ## иных ООПТ")
   let nestedList = [];
   if (Array.isArray(item.nested_oopt)) {
     nestedList = item.nested_oopt;
@@ -1922,46 +1922,32 @@ export function formatClarification(item) {
   const selfTitle = (item.title || item.rawTitle || item.name || '').toLowerCase().trim();
   const selfClean = cleanOoptName(selfTitle).toLowerCase().trim();
   const selfNid = item.nid ? Number(item.nid) : null;
-  const parentRegion = item.rf_subjects || item.ate || item.region || '';
 
-  // Filter out self-reference & cross-region mismatches
-  const formattedNested = (nestedList || []).map(n => {
+  // Filter out self-reference & empty items
+  const validNested = (nestedList || []).filter(n => {
     const name = typeof n === 'string' ? n : (n.name || n.title || '');
     const cleanN = name.toLowerCase().trim();
     const nNid = typeof n === 'object' && n.nid ? Number(n.nid) : null;
-    if (selfNid && nNid && selfNid === nNid) return '';
-    if (cleanN && (cleanN === selfTitle || cleanN === selfClean)) return '';
+    if (selfNid && nNid && selfNid === nNid) return false;
+    if (cleanN && (cleanN === selfTitle || cleanN === selfClean)) return false;
+    return !!cleanN;
+  });
 
-    let ref = '';
-    if (typeof n === 'object' && n.pota_ref) {
-      if (!parentRegion || !n.ate || isSameOrOverlappingRegion(parentRegion, n.ate)) {
-        ref = ` (${n.pota_ref})`;
+  if (validNested.length > 0) {
+    const count = validNested.length;
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    let countWord = `${count} иных ООПТ`;
+    if (mod100 < 11 || mod100 > 14) {
+      if (mod10 === 1) {
+        countWord = `${count} иная ООПТ`;
       }
     }
-    return name ? `${name}${ref}` : '';
-  }).filter(Boolean);
-
-  if (formattedNested.length > 0) {
     const currentText = parts.join('. ');
     const remainingSpace = 255 - (currentText ? currentText.length + 2 : 0);
-
-    const fullNestedCand = `В границах ООПТ: ${formattedNested.join(', ')}`;
-    if (fullNestedCand.length <= remainingSpace) {
-      parts.push(fullNestedCand);
-    } else {
-      const fittedNested = [];
-      for (const nStr of formattedNested) {
-        const testList = [...fittedNested, nStr];
-        const testCand = `В границах ООПТ: ${testList.join(', ')}`;
-        if (testCand.length <= remainingSpace) {
-          fittedNested.push(nStr);
-        } else {
-          break;
-        }
-      }
-      if (fittedNested.length > 0) {
-        parts.push(`В границах ООПТ: ${fittedNested.join(', ')}`);
-      }
+    const nestedCand = `В границах ООПТ: ${countWord}`;
+    if (nestedCand.length <= remainingSpace) {
+      parts.push(nestedCand);
     }
   }
 

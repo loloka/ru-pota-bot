@@ -4,10 +4,21 @@ import db from './src/db/database.js';
 
 console.log('🧪 Running RusOIR integration tests...');
 
+async function withRetry(fn, retries = 3, delay = 1500) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fn();
+      if (res) return res;
+    } catch (_) {}
+    if (i < retries - 1) await new Promise(r => setTimeout(r, delay));
+  }
+  return await fn();
+}
+
 async function runTests() {
   // Test 1: Fetch coords from RusOIR for Гора Гомель
   console.log('  Test 1: fetchCoordsFromRusoir("Гора Гомель", "Еврейская автономная область")');
-  const gomel = await fetchCoordsFromRusoir('Гора Гомель', 'Еврейская автономная область', 'памятник природы');
+  const gomel = await withRetry(() => fetchCoordsFromRusoir('Гора Гомель', 'Еврейская автономная область', 'памятник природы'));
   assert.ok(gomel, 'Should find Гора Гомель on RusOIR');
   assert.strictEqual(gomel.lat, 48.0459, 'Latitude should match 48.0459');
   assert.strictEqual(gomel.lon, 132.8352, 'Longitude should match 132.8352');
@@ -16,7 +27,7 @@ async function runTests() {
 
   // Test 2: Fetch coords from RusOIR for Выборгский заказник
   console.log('  Test 2: fetchCoordsFromRusoir("Выборгский", "Ленинградская область")');
-  const vyborg = await fetchCoordsFromRusoir('Выборгский', 'Ленинградская область', 'государственный природный заказник');
+  const vyborg = await withRetry(() => fetchCoordsFromRusoir('Выборгский', 'Ленинградская область', 'государственный природный заказник'));
   assert.ok(vyborg, 'Should find Выборгский on RusOIR');
   assert.ok(Math.abs(vyborg.lat - 60.49) < 0.05, `Latitude ${vyborg.lat} should be close to 60.49`);
   assert.ok(Math.abs(vyborg.lon - 28.58) < 0.05, `Longitude ${vyborg.lon} should be close to 28.58`);

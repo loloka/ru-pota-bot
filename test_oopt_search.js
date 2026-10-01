@@ -192,5 +192,22 @@ const doubleNested = formatClarification({ area: 100, nested_oopt: JSON.stringif
 assert.ok(doubleNested.includes('В границах ООПТ: 2 иных ООПТ'), 'Must decline as "2 иных ООПТ"');
 console.log('✅ PASS: Nested OOPT count formatting verified (NID 34145: "3 иных ООПТ", 1 and 2 inflections, Area first)');
 
+// 21. Test redundant dual name suppression per Manu R2BBX ("Stanovlyansky (Stanovlyanskiy)" -> single name)
+import { areNamesSubstantiallyIdentical, translateOoptNameOnline } from './src/services/ooptService.js';
+assert.strictEqual(areNamesSubstantiallyIdentical('Stanovlyansky', 'Stanovlyanskiy'), true);
+assert.strictEqual(areNamesSubstantiallyIdentical('Prisursky', 'Prisurskiy'), true);
+assert.strictEqual(areNamesSubstantiallyIdentical('Wild Field', 'Dikoe Pole'), false);
+
+const dualStanovlyansky = formatDualParkName('Становлянский');
+assert.strictEqual(dualStanovlyansky.includes('('), false, 'Must NOT contain parentheses when translation and transliteration are practically identical');
+
+const onlineStanovlyansky = await translateOoptNameOnline('Становлянский');
+assert.strictEqual(onlineStanovlyansky.includes('('), false, 'Online AI translation must NOT contain parentheses for identical transliterations');
+assert.ok(onlineStanovlyansky.startsWith('Stanovlyan'), 'Should translate to Stanovlyansky or Stanovlyanskiy');
+
+const dualWild = formatDualParkName('Дикое поле', 'памятник природы');
+assert.strictEqual(dualWild, 'Wild Field (Dikoe Pole)', 'Must preserve dual format when translation is semantically distinct');
+console.log('✅ PASS: Redundant dual name suppression verified per Manu R2BBX ("Stanovlyansky" single, "Wild Field (Dikoe Pole)" dual)');
+
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');
 

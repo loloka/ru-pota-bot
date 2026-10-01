@@ -1,5 +1,15 @@
 # История изменений (Changelog)
 
+## [1.16.101] - 2026-10-01 (Smart POTA EN Names: Suppress Redundant Transliteration Duplicates)
+### Изменено и оптимизировано
+- **Подавление избыточных двойных названий при схожести перевода и транслитерации по правилу Manu R2BBX** (`src/services/ooptService.js`, `src/web/admin.js`, `src/webapp/src/services/ooptUtils.js`, `test_oopt_search.js`):
+  - По замечанию координатора POTA Manu R2BBX («*Думаю логику ИИ тоже б подкрутить. Оставлять из таких вариантов только первый. Ну почти идентичные, исходник один, а предлагает 2 максимально схожих варианта*») устранена тавтология вида `Stanovlyansky (Stanovlyanskiy)`.
+  - Реализована функция умного сравнения `areNamesSubstantiallyIdentical`: нормализация окончаний (`-sky` vs `-skiy`, `-yy` vs `-iy`), учёт дистанции Левенштейна (similarity >= 75%) и фонетических дублетов.
+  - Если перевод (AI / словарь) и транслитерация практически идентичны, скобки и второй вариант отбрасываются, остаётся только один лаконичный вариант (например, `Stanovlyansky` вместо `Stanovlyansky (Stanovlyanskiy)`).
+  - Полноценный двойной формат `Translation (Transliteration)` сохраняется строго тогда, когда перевод является смысловым (например, `Wild Field (Dikoe Pole)`, `Russian Forest (Russkiy Les)`).
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.101` во всех обязательных файлах по правилу 2.1 (`package.json`, `src/api/potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.100] - 2026-10-01 (Nested OOPTs: Count "## иных ООПТ" Instead of Listing Long Names)
 ### Изменено и оптимизировано
 - **Подсчёт количества вложенных ООПТ вместо перечисления длинных названий по правилу Manu R2BBX** (`src/services/ooptService.js`, `src/web/admin.js`, `src/webapp/src/services/ooptUtils.js`, `test_oopt_search.js`):

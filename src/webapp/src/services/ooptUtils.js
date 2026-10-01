@@ -506,10 +506,69 @@ export function transliterateOnly(cleanName) {
   return en.replace(/\s+/g, ' ').trim();
 }
 
+export function levenshteinDistance(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+    }
+  }
+  return dp[m][n];
+}
+
+export function normalizeForSim(str) {
+  if (!str) return '';
+  return str.toLowerCase()
+    .replace(/[-_'"’`]/g, ' ')
+    .replace(/\b([a-z]+)(?:skiy|skij|skyy|sky|ski)\b/g, '$1ski')
+    .replace(/\b([a-z]+)(?:yy|iy|ij|y|i)\b/g, '$1i')
+    .replace(/shch/g, 'sh')
+    .replace(/kh/g, 'h')
+    .replace(/ts|tc/g, 'c')
+    .replace(/ya|ia|ja/g, 'ya')
+    .replace(/yu|iu|ju/g, 'yu')
+    .replace(/zh/g, 'z')
+    .replace(/ch/g, 'c')
+    .replace(/\s+/g, '')
+    .trim();
+}
+
+/**
+ * Checks if two English candidate names (e.g. Translation and Transliteration)
+ * are practically identical (minor transliteration variants like Stanovlyansky vs Stanovlyanskiy).
+ * Per Manu R2BBX: suppress redundant dual name and keep only the first variant.
+ */
+export function areNamesSubstantiallyIdentical(a, b) {
+  if (!a || !b) return false;
+  const lowA = a.toLowerCase().trim();
+  const lowB = b.toLowerCase().trim();
+  if (lowA === lowB) return true;
+  const normA = normalizeForSim(lowA);
+  const normB = normalizeForSim(lowB);
+  if (normA === normB) return true;
+  const maxLen = Math.max(lowA.length, lowB.length);
+  if (maxLen > 0) {
+    const dist = levenshteinDistance(lowA, lowB);
+    const sim = 1 - (dist / maxLen);
+    if (sim >= 0.75) return true;
+  }
+  const normMaxLen = Math.max(normA.length, normB.length);
+  if (normMaxLen >= 4) {
+    const normDist = levenshteinDistance(normA, normB);
+    if (normDist <= 2) return true;
+  }
+  return false;
+}
+
 /**
  * Generates combined "Translation (Transliteration)" name for POTA coordinator
  * (per Manu R2BBX spec, e.g. "Lakeside (Priozernyy)", "Russian Forest (Russkiy Les)").
- * If translation equals transliteration (proper nouns like "Mashuk"), returns single name.
+ * If translation equals or is practically identical to transliteration (like "Stanovlyansky" vs "Stanovlyanskiy"),
+ * returns only the first variant per Manu R2BBX.
  */
 export function formatDualParkName(cleanName, category) {
   if (!cleanName) return '';
@@ -518,6 +577,9 @@ export function formatDualParkName(cleanName, category) {
 
   if (translated && transliterated && translated.toLowerCase() !== transliterated.toLowerCase()) {
     if (!translated.includes('(')) {
+      if (areNamesSubstantiallyIdentical(translated, transliterated)) {
+        return translated;
+      }
       const words = translated.trim().split(/\s+/).filter(Boolean);
       // Per Manu R2BBX: if translated name is long (> 3 words or > 30 characters), use translation only
       if (words.length > 3 || translated.length > 30) {

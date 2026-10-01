@@ -3365,6 +3365,63 @@ export const startAdminServer = (telegramClient) => {
             return en.replace(/\\s+/g, ' ').trim();
           }
 
+          function levenshteinClient(a, b) {
+            var m = a.length, n = b.length;
+            var dp = [];
+            for (var i = 0; i <= m; i++) {
+              dp[i] = [];
+              for (var j = 0; j <= n; j++) dp[i][j] = 0;
+              dp[i][0] = i;
+            }
+            for (var j = 0; j <= n; j++) dp[0][j] = j;
+            for (var i = 1; i <= m; i++) {
+              for (var j = 1; j <= n; j++) {
+                var cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+                dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+              }
+            }
+            return dp[m][n];
+          }
+
+          function normalizeForSimClient(str) {
+            if (!str) return '';
+            return str.toLowerCase()
+              .replace(/[-'"’_]/g, ' ')
+              .replace(/(?:skiy|skij|skyy|sky|ski)(?=[ \t]|$)/g, 'ski')
+              .replace(/(?:yy|iy|ij|y|i)(?=[ \t]|$)/g, 'i')
+              .replace(/shch/g, 'sh')
+              .replace(/kh/g, 'h')
+              .replace(/ts|tc/g, 'c')
+              .replace(/ya|ia|ja/g, 'ya')
+              .replace(/yu|iu|ju/g, 'yu')
+              .replace(/zh/g, 'z')
+              .replace(/ch/g, 'c')
+              .replace(/[ \t]+/g, '')
+              .trim();
+          }
+
+          function areNamesSubstantiallyIdenticalClient(a, b) {
+            if (!a || !b) return false;
+            var lowA = a.toLowerCase().trim();
+            var lowB = b.toLowerCase().trim();
+            if (lowA === lowB) return true;
+            var normA = normalizeForSimClient(lowA);
+            var normB = normalizeForSimClient(lowB);
+            if (normA === normB) return true;
+            var maxLen = Math.max(lowA.length, lowB.length);
+            if (maxLen > 0) {
+              var dist = levenshteinClient(lowA, lowB);
+              var sim = 1 - (dist / maxLen);
+              if (sim >= 0.75) return true;
+            }
+            var normMaxLen = Math.max(normA.length, normB.length);
+            if (normMaxLen >= 4) {
+              var normDist = levenshteinClient(normA, normB);
+              if (normDist <= 2) return true;
+            }
+            return false;
+          }
+
           function formatDualParkNameClient(cleanName, category) {
             if (!cleanName) return '';
             var translated = translateOoptNameToEnglishClient(cleanName, category);
@@ -3372,6 +3429,9 @@ export const startAdminServer = (telegramClient) => {
 
             if (translated && transliterated && translated.toLowerCase() !== transliterated.toLowerCase()) {
               if (translated.indexOf('(') === -1) {
+                if (areNamesSubstantiallyIdenticalClient(translated, transliterated)) {
+                  return translated;
+                }
                 var words = translated.trim().split(/\s+/).filter(Boolean);
                 // Per Manu R2BBX: if translated name is long (> 3 words or > 30 characters), use translation only
                 if (words.length > 3 || translated.length > 30) {

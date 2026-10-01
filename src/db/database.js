@@ -381,6 +381,7 @@ try {
       bbox TEXT,
       profile TEXT,
       rf_subjects TEXT,
+      international_status TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -417,6 +418,12 @@ try {
     db.exec(`ALTER TABLE oopt_registry ADD COLUMN cluster_count INTEGER DEFAULT NULL`);
     db.exec(`ALTER TABLE oopt_registry ADD COLUMN clusters TEXT DEFAULT NULL`);
     console.log('[DB] Migrated oopt_registry table: added cluster_count and clusters columns');
+  }
+
+  const hasInternationalStatus = ooptColumns.some(col => col.name === 'international_status');
+  if (!hasInternationalStatus) {
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN international_status TEXT DEFAULT NULL`);
+    console.log('[DB] Migrated oopt_registry table: added international_status column');
   }
 
   const hasDetailsFetched = ooptColumns.some(col => col.name === 'details_fetched_at');

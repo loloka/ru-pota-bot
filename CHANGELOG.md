@@ -1,5 +1,20 @@
 # История изменений (Changelog)
 
+## [1.16.96] - 2026-10-01 (Multi-Region OOPTs & UNESCO Biosphere Reserve Status)
+### Добавлено и исправлено
+- **Поддержка пограничных ООПТ с 2+ регионами РФ (Multi-region / Cross-boundary)** (`src/services/ooptService.js`, `src/web/admin.js`, `test_oopt_search.js`):
+  - По запросу координатора POTA Manu R2BBX устранено ограничение Минприроды, когда межрегиональные объекты (на примере Кавказского заповедника NID 6453) содержали только один субъект РФ (`Краснодарский край`).
+  - Реализован автоматический парсинг административного дерева NextGIS (`lineage-item lineage-item-level-1`), извлекающий все пограничные субъекты РФ (для Кавказского заповедника: `Карачаево-Черкесская Республика, Краснодарский край, Республика Адыгея`).
+  - Локация POTA теперь корректно и автоматически генерирует все ISO-коды регионов через запятую (`RU-KC, RU-KD, RU-AD`).
+- **Автоопределение и поддержка статуса UNESCO Biosphere Reserve** (`src/services/ooptService.js`, `src/web/admin.js`, `src/db/database.js`):
+  - Добавлено извлечение международного статуса ООПТ из NextGIS (`Международный статус ООПТ: Биосферный резерват / Объект всемирного культурного и природного наследия ЮНЕСКО`).
+  - Добавлена колонка `international_status TEXT` в таблицу `oopt_registry` с безопасной автомиграцией SQLite.
+  - Значение статуса POTA (EN) `statusEn` для биосферных резерватов и объектов ЮНЕСКО переведено на **`UNESCO Biosphere Reserve`** (вместо устаревшего `State Biosphere Nature Reserve`).
+  - В модальное окно подачи заявки Web Admin Submitter добавлен быстрый чип **`🌿 UNESCO Biosphere Reserve`**.
+  - Поле `subm-status-en` автоматически предзаполняется значением `UNESCO Biosphere Reserve` при наличии соответствующего статуса.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.96` во всех файлах по правилу 2.1 (`package.json`, `potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.95] - 2026-09-30 (Fix POTA Location Codes: Sakha RU-SK vs Sakhalin RU-SL)
 ### Исправлено
 - **Коррекция кодов локаций POTA для Республики Саха (Якутия) и Сахалинской области** (`src/services/ooptService.js`, `src/web/admin.js`, `test_regions_stats.js`):

@@ -1363,6 +1363,7 @@ export const startAdminServer = (telegramClient) => {
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Nature Park">Nature Park</button>
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Botanical Gardens">Botanical Gardens</button>
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Reserve">Reserve</button>
+                        <button type="button" class="btn btn-xs btn-outline-success py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="UNESCO Biosphere Reserve">🌿 UNESCO Biosphere Reserve</button>
                       </div>
                     </div>
                     <div class="col-md-7">
@@ -2483,9 +2484,9 @@ export const startAdminServer = (telegramClient) => {
                 if (r.pota_restricted) {
                   submitterBtn = '<button type="button" class="btn btn-sm btn-outline-secondary disabled" title="Приём заявок для данного региона временно приостановлен комитетом POTA"><i class="bi bi-slash-circle"></i> Недоступно для POTA</button>';
                 } else if (r.pota_ref) {
-                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '" data-rusoir-url="' + (r.rusoir_url || '') + '" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-ref="' + parentRefAttr + '" data-parent-name="' + parentNameAttr + '" data-parent-notes="' + parentNotesAttr + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>';
+                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-rf-subjects="' + escapeHtmlClient(r.rf_subjects || '') + '" data-international-status="' + escapeHtmlClient(r.international_status || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="' + r.pota_ref + '" data-pota-name="' + escapeHtmlClient(r.pota_name || '') + '" data-rusoir-url="' + (r.rusoir_url || '') + '" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-ref="' + parentRefAttr + '" data-parent-name="' + parentNameAttr + '" data-parent-notes="' + parentNotesAttr + '"><i class="bi bi-check2-circle"></i> Уже в POTA (' + r.pota_ref + ')</button>';
                 } else {
-                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="" data-pota-name="" data-rusoir-url="' + (r.rusoir_url || '') + '" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-ref="' + parentRefAttr + '" data-parent-name="' + parentNameAttr + '" data-parent-notes="' + parentNotesAttr + '"><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
+                  submitterBtn = '<button type="button" class="btn btn-sm btn-outline-success open-submitter-btn" data-nid="' + r.nid + '" data-title="' + escapeHtmlClient(r.title) + '" data-category="' + escapeHtmlClient(r.category || '') + '" data-sig="' + escapeHtmlClient(r.sig_display || '') + '" data-ate="' + escapeHtmlClient(r.ate || '') + '" data-rf-subjects="' + escapeHtmlClient(r.rf_subjects || '') + '" data-international-status="' + escapeHtmlClient(r.international_status || '') + '" data-lat="' + (r.lat || '') + '" data-lon="' + (r.lon || '') + '" data-area="' + (r.area || '') + '" data-status="' + escapeHtmlClient(r.status || '') + '" data-profile="' + escapeHtmlClient(r.profile || '') + '" data-pota-ref="" data-pota-name="" data-rusoir-url="' + (r.rusoir_url || '') + '" data-is-reorganized="' + (isReorg ? 'true' : 'false') + '" data-parent-ref="' + parentRefAttr + '" data-parent-name="' + parentNameAttr + '" data-parent-notes="' + parentNotesAttr + '"><i class="bi bi-pencil-square"></i> 📋 Подготовить заявку POTA</button>';
                 }
 
                 return '<tr>' +
@@ -3048,7 +3049,7 @@ export const startAdminServer = (telegramClient) => {
           function getEnglishSuffixClient(category) {
             var c = (category || '').toLowerCase();
             if (c.indexOf('морск') !== -1) return 'State Marine Reserve';
-            if (c.indexOf('биосферн') !== -1) return 'State Biosphere Nature Reserve';
+            if (c.indexOf('биосферн') !== -1) return 'UNESCO Biosphere Reserve';
             if (c.indexOf('памятник природы') !== -1 || c.indexOf('памятные природные места') !== -1) return 'Natural Monument';
             if (c.indexOf('ботанический сад') !== -1 || c.indexOf('дендрологический') !== -1 || c.indexOf('дендрарий') !== -1) return 'Botanical Gardens';
             if (c.indexOf('национальный парк') !== -1) {
@@ -3487,15 +3488,21 @@ export const startAdminServer = (telegramClient) => {
             return text;
           }
 
-          function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid, area, status, profile, nestedOopt, parentPota, clusterCount, clusters) {
+          function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid, area, status, profile, nestedOopt, parentPota, clusterCount, clusters, rfSubjects, internationalStatus) {
             var detectedCategory = deduceOoptCategoryClient(rawTitle, category);
             var cleanName = cleanOoptNameClient(rawTitle, detectedCategory);
             var nameEn = formatDualParkNameClient(cleanName, detectedCategory);
             var statusEn = getEnglishSuffixClient(detectedCategory);
+            if (statusEn === 'State Biosphere Nature Reserve' ||
+                (rawTitle && /биосферн/i.test(rawTitle)) ||
+                (category && /биосферн/i.test(category)) ||
+                (internationalStatus && /биосферн|юнеско|unesco/i.test(internationalStatus))) {
+              statusEn = 'UNESCO Biosphere Reserve';
+            }
             var catDisplay = detectedCategory.charAt(0).toUpperCase() + detectedCategory.slice(1);
 
             var fullStatus = sigDisplay ? (catDisplay + ' (' + sigDisplay + ' значение)') : catDisplay;
-            var region = ate || '';
+            var region = rfSubjects || ate || '';
             if (region.indexOf('(') !== -1) region = region.split('(')[0].trim();
 
             var dxEntity = getDxEntityClient(region, rawTitle);
@@ -3722,6 +3729,8 @@ export const startAdminServer = (telegramClient) => {
               var category = btn.getAttribute('data-category') || '';
               var sig = btn.getAttribute('data-sig') || '';
               var ate = btn.getAttribute('data-ate') || '';
+              var rfSubjects = btn.getAttribute('data-rf-subjects') || '';
+              var intStatus = btn.getAttribute('data-international-status') || '';
               var lat = btn.getAttribute('data-lat') || '';
               var lon = btn.getAttribute('data-lon') || '';
               var nid = btn.getAttribute('data-nid') || '';
@@ -3734,7 +3743,7 @@ export const startAdminServer = (telegramClient) => {
               var parentNotes = btn.getAttribute('data-parent-notes') || '';
               var parentPota = parentRef ? { reference: parentRef, name: parentName, notes: parentNotes } : null;
 
-              var parsed = parseOoptForSubmitter(title, category, sig, ate, lat, lon, nid, area, status, profile, null, parentPota);
+              var parsed = parseOoptForSubmitter(title, category, sig, ate, lat, lon, nid, area, status, profile, null, parentPota, null, null, rfSubjects, intStatus);
 
               var rusoirUrl = btn.getAttribute('data-rusoir-url') || null;
               window.__currentSubmRusoirUrl = rusoirUrl;
@@ -3843,12 +3852,6 @@ export const startAdminServer = (telegramClient) => {
                     if (details.lat && details.lon) {
                       document.getElementById('subm-lat').value = Number(details.lat).toFixed(4);
                       document.getElementById('subm-lon').value = Number(details.lon).toFixed(4);
-                      if (details.rf_subjects) {
-                        document.getElementById('subm-region').value = details.rf_subjects;
-                        if (document.getElementById('subm-location-code')) {
-                          document.getElementById('subm-location-code').value = getPotaLocationCodeClient(details.rf_subjects);
-                        }
-                      }
                       if (needsCoords) {
                         document.getElementById('subm-coords-status').innerHTML = details.rusoir_url
                           ? '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Координаты получены с RusOIR</span>'
@@ -3856,6 +3859,20 @@ export const startAdminServer = (telegramClient) => {
                       }
                     } else if (needsCoords) {
                       document.getElementById('subm-coords-status').textContent = 'Координаты отсутствуют';
+                    }
+
+                    if (details.rf_subjects) {
+                      document.getElementById('subm-region').value = details.rf_subjects;
+                      if (document.getElementById('subm-location-code')) {
+                        document.getElementById('subm-location-code').value = getPotaLocationCodeClient(details.rf_subjects);
+                      }
+                    }
+
+                    if (details.is_biosphere || (details.international_status && /биосферн|юнеско|unesco/i.test(details.international_status))) {
+                      var statusEnEl = document.getElementById('subm-status-en');
+                      if (statusEnEl) {
+                        statusEnEl.value = 'UNESCO Biosphere Reserve';
+                      }
                     }
 
                     if (details.is_reorganized || details.parent_pota) {

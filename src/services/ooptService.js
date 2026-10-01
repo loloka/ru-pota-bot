@@ -1107,7 +1107,7 @@ const GEOGRAPHIC_TERMS = RAW_GEOGRAPHIC_TERMS.map(([pat, repl]) => [
 export function getEnglishCategorySuffix(category) {
   const c = (category || '').toLowerCase();
   if (c.includes('морск')) return 'State Marine Reserve';
-  if (c.includes('биосферн')) return 'State Biosphere Nature Reserve';
+  if (c.includes('биосферн')) return 'UNESCO Biosphere Reserve';
   if (c.includes('памятник природы') || c.includes('памятные природные места')) return 'Natural Monument';
   if (c.includes('ботанический сад') || c.includes('дендрологический') || c.includes('дендрарий')) return 'Botanical Gardens';
   if (c.includes('национальный парк')) {
@@ -1936,7 +1936,16 @@ export function parseSubmitterFields(item) {
 
   // English translation for POTA (dual Translation (Transliteration) per R2BBX request)
   const nameEn = formatDualParkName(cleanName, rawCat);
-  const statusEn = getEnglishCategorySuffix(rawCat);
+  let statusEn = getEnglishCategorySuffix(rawCat);
+  const isBiosphere = Boolean(
+    item.is_biosphere ||
+    (item.international_status && /биосферн|юнеско|unesco/i.test(item.international_status)) ||
+    (item.category && /биосферн/i.test(item.category)) ||
+    (rawTitle && /биосферн/i.test(rawTitle))
+  );
+  if (isBiosphere) {
+    statusEn = 'UNESCO Biosphere Reserve';
+  }
 
   // Significance
   const sigDisplay = item.sig_display || (item.sig === 'federal' ? 'Федеральное' : item.sig === 'regional' ? 'Региональное' : 'Местное');
@@ -1982,7 +1991,9 @@ export function parseSubmitterFields(item) {
     rusoir_url: item.rusoir_url || null,
     rusoir_name: item.rusoir_name || null,
     cluster_count: item.cluster_count !== undefined ? item.cluster_count : null,
-    clusters: item.clusters || null
+    clusters: item.clusters || null,
+    international_status: item.international_status || null,
+    is_biosphere: isBiosphere
   };
 }
 
@@ -2268,8 +2279,8 @@ export async function getOoptDetails(nid) {
     }
   }
 
-  // If nested OOPTs or clusters not yet checked/cached, fetch from NextGIS node page
-  if (row.nested_oopt === null || row.clusters === null) {
+  // If nested OOPTs, clusters, or international status not yet checked/cached, fetch from NextGIS node page
+  if (row.nested_oopt === null || row.clusters === null || row.international_status === null) {
     try {
       const nextgisRes = await axios.get(`https://ooptaari.nextgis.ru/node/${numNid}`, {
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
@@ -2354,15 +2365,42 @@ export async function getOoptDetails(nid) {
       }
 
       const clustersJson = JSON.stringify(clusterItems);
-      db.prepare("UPDATE oopt_registry SET nested_oopt = ?, clusters = ?, cluster_count = ? WHERE nid = ?").run(
+
+      // Multi-region administrative hierarchy extraction from NextGIS lineage (e.g. Caucasian Reserve spanning 3 regions)
+      const lineageMatches = [...html.matchAll(/<span class="lineage-item lineage-item-level-1">\s*<a[^>]*>([^<]+)<\/a>\s*<\/span>/gi)];
+      const nextgisSubjects = lineageMatches.map(m => m[1].trim()).filter(Boolean);
+      const uniqueSubjects = [...new Set(nextgisSubjects)];
+      let finalRfSubjects = row.rf_subjects || null;
+      if (uniqueSubjects.length > 1) {
+        finalRfSubjects = uniqueSubjects.join(', ');
+      }
+
+      // International Status extraction (e.g. "Биосферный резерват", "Объект всемирного наследия ЮНЕСКО")
+      const intStatusMatches = [...html.matchAll(/Международный статус ООПТ:[\s\S]*?<a[^>]*>([^<]+)<\/a>/gi)];
+      const rawIntStatuses = intStatusMatches.map(m => m[1].trim()).filter(Boolean);
+      const uniqueIntStatuses = [...new Set(rawIntStatuses)];
+      let intStatusStr = uniqueIntStatuses.length > 0 ? uniqueIntStatuses.join(', ') : null;
+      if (!intStatusStr) {
+        const intBlockMatch = html.match(/Международный статус ООПТ:[\s\S]*?<\/div>\s*<\/div>/i);
+        if (intBlockMatch) {
+          const cleanText = intBlockMatch[0].replace(/<[^>]+>/g, ' ').replace('Международный статус ООПТ:', '').trim();
+          if (cleanText) intStatusStr = cleanText;
+        }
+      }
+
+      db.prepare("UPDATE oopt_registry SET nested_oopt = ?, clusters = ?, cluster_count = ?, international_status = ?, rf_subjects = ? WHERE nid = ?").run(
         jsonStr,
         clustersJson,
         clusterCount,
+        intStatusStr,
+        finalRfSubjects,
         numNid
       );
       details.nested_oopt = jsonStr;
       details.clusters = clustersJson;
       details.cluster_count = clusterCount;
+      details.international_status = intStatusStr;
+      details.rf_subjects = finalRfSubjects;
     } catch (e) {
       // Non-critical network warning
     }
@@ -2394,6 +2432,14 @@ export async function getOoptDetails(nid) {
     } catch (_) {}
   }
   details.parsedBbox = parsedBbox;
+
+  // Determine UNESCO / Biosphere status
+  const isBiosphere = Boolean(
+    (details.international_status && /биосферн|юнеско|unesco/i.test(details.international_status)) ||
+    (details.category && /биосферн/i.test(details.category)) ||
+    (details.title && /биосферн/i.test(details.title))
+  );
+  details.is_biosphere = isBiosphere;
 
   // Format R2BBX Coordinator Application Template and Submitter Fields
   const isReorganized = details.status && details.status.toLowerCase() !== 'действующий';

@@ -154,5 +154,17 @@ assert.ok(zimov3Details.submitterFields.clarification.includes('Кластерн
 assert.ok(zimov3Details.submitterFields.clarification.length <= 255, 'Clarification must not exceed 255 characters');
 console.log('✅ PASS: Cluster extraction & clarification formatting verified (NID 58135: 10 clusters, len <= 255)');
 
+// 19. Test multi-region extraction and UNESCO Biosphere Reserve status (NID 6453: Caucasian Reserve)
+const kavkazDetails = await getOoptDetails(6453);
+assert.ok(kavkazDetails, 'Details for 6453 must exist');
+assert.ok(kavkazDetails.rf_subjects.includes('Карачаево-Черкесская'), 'Must include Karachay-Cherkessia');
+assert.ok(kavkazDetails.rf_subjects.includes('Краснодарский'), 'Must include Krasnodar Krai');
+assert.ok(kavkazDetails.rf_subjects.includes('Адыгея'), 'Must include Adygea');
+assert.strictEqual(kavkazDetails.submitterFields.locationCode, 'RU-KC, RU-KD, RU-AD', 'Location code must include all 3 regions: RU-KC, RU-KD, RU-AD');
+assert.strictEqual(kavkazDetails.is_biosphere, true, 'is_biosphere must be true');
+assert.strictEqual(kavkazDetails.submitterFields.statusEn, 'UNESCO Biosphere Reserve', 'StatusEn must be UNESCO Biosphere Reserve');
+assert.ok(kavkazDetails.international_status.includes('Биосферный резерват'), 'International status must be captured from NextGIS');
+console.log('✅ PASS: Multi-region extraction & UNESCO Biosphere Reserve status verified (NID 6453: 3 regions, UNESCO Biosphere Reserve)');
+
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');
 

@@ -2198,6 +2198,16 @@ export async function fetchCoordsFromRusoir(rawTitle, ate = '', category = '') {
   }
 }
 
+export function epsg3857ToWgs84(x, y) {
+  const numX = Number(x);
+  const numY = Number(y);
+  if (isNaN(numX) || isNaN(numY)) return { lat: null, lon: null };
+  const lon = Number(((numX / 20037508.34) * 180).toFixed(4));
+  let lat = (numY / 20037508.34) * 180;
+  lat = Number(((180 / Math.PI) * (2 * Math.atan(Math.exp((lat * Math.PI) / 180)) - Math.PI / 2)).toFixed(4));
+  return { lat, lon };
+}
+
 /**
  * Fetches and caches full detail card for a specific ООПТ (coordinates, documents, legal acts)
  */
@@ -2209,6 +2219,16 @@ export async function getOoptDetails(nid) {
   if (!row) throw new Error('ООПТ не найдено в базе');
 
   let details = { ...row };
+
+  // Normalize any Spherical Mercator meters coordinates
+  if (details.lat !== null && details.lon !== null && (Math.abs(details.lat) > 90 || Math.abs(details.lon) > 180)) {
+    const wgs = epsg3857ToWgs84(details.lon, details.lat);
+    details.lat = wgs.lat;
+    details.lon = wgs.lon;
+    try {
+      db.prepare('UPDATE oopt_registry SET lat = ?, lon = ? WHERE nid = ?').run(wgs.lat, wgs.lon, numNid);
+    } catch (_) {}
+  }
 
   // If coordinates are missing or need documents, fetch live detail from API and cache in DB
   if (row.lat === null || row.lon === null || !row.bbox) {
@@ -2222,9 +2242,20 @@ export async function getOoptDetails(nid) {
           // In center: [lon, lat]
           lon = Number(ext.center[0]) || null;
           lat = Number(ext.center[1]) || null;
+          if (lon !== null && lat !== null && (Math.abs(lon) > 180 || Math.abs(lat) > 90)) {
+            const wgs = epsg3857ToWgs84(lon, lat);
+            lat = wgs.lat;
+            lon = wgs.lon;
+          }
         }
 
-        const bboxStr = ext.bbox ? JSON.stringify(ext.bbox) : null;
+        let bboxArr = ext.bbox;
+        if (Array.isArray(bboxArr) && bboxArr.length === 4 && (Math.abs(bboxArr[0]) > 180 || Math.abs(bboxArr[1]) > 90)) {
+          const sw = epsg3857ToWgs84(bboxArr[0], bboxArr[1]);
+          const ne = epsg3857ToWgs84(bboxArr[2], bboxArr[3]);
+          bboxArr = [sw.lon, sw.lat, ne.lon, ne.lat];
+        }
+        const bboxStr = bboxArr ? JSON.stringify(bboxArr) : null;
         const rfSubjStr = ext.rf_subjects ? ext.rf_subjects.join(', ') : null;
         const profile = ext.profile || null;
 

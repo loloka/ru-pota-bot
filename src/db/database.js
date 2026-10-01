@@ -435,6 +435,41 @@ try {
     console.log('[DB] Migrated oopt_registry table: added details_fetched_at column and backfilled existing entries');
   }
 
+  // Auto-convert any EPSG:3857 (Spherical Mercator meters) coordinates to WGS84 degrees (Minpriroda API anomalies)
+  try {
+    const mercatorRows = db.prepare('SELECT nid, lat, lon, bbox FROM oopt_registry WHERE lat > 90 OR lon > 180 OR lat < -90 OR lon < -180').all();
+    if (mercatorRows.length > 0) {
+      const updateCoordStmt = db.prepare('UPDATE oopt_registry SET lat = ?, lon = ?, bbox = ? WHERE nid = ?');
+      for (const row of mercatorRows) {
+        // In EPSG:3857 center, lat was stored as Y (northing) and lon as X (easting)
+        const numX = Number(row.lon);
+        const numY = Number(row.lat);
+        const lon = Number(((numX / 20037508.34) * 180).toFixed(4));
+        let lat = (numY / 20037508.34) * 180;
+        lat = Number(((180 / Math.PI) * (2 * Math.atan(Math.exp((lat * Math.PI) / 180)) - Math.PI / 2)).toFixed(4));
+        let newBbox = row.bbox;
+        if (row.bbox) {
+          try {
+            const b = JSON.parse(row.bbox);
+            if (Array.isArray(b) && b.length === 4 && (Math.abs(b[0]) > 180 || Math.abs(b[1]) > 90)) {
+              const minLon = Number(((b[0] / 20037508.34) * 180).toFixed(4));
+              let minLat = (b[1] / 20037508.34) * 180;
+              minLat = Number(((180 / Math.PI) * (2 * Math.atan(Math.exp((minLat * Math.PI) / 180)) - Math.PI / 2)).toFixed(4));
+              const maxLon = Number(((b[2] / 20037508.34) * 180).toFixed(4));
+              let maxLat = (b[3] / 20037508.34) * 180;
+              maxLat = Number(((180 / Math.PI) * (2 * Math.atan(Math.exp((maxLat * Math.PI) / 180)) - Math.PI / 2)).toFixed(4));
+              newBbox = JSON.stringify([minLon, minLat, maxLon, maxLat]);
+            }
+          } catch (_) {}
+        }
+        updateCoordStmt.run(lat, lon, newBbox, row.nid);
+        console.log(`[DB] 🌐 Converted NID ${row.nid} EPSG:3857 coords to WGS84: ${lat}, ${lon}`);
+      }
+    }
+  } catch (e) {
+    console.warn('[DB] EPSG:3857 migration warning:', e.message);
+  }
+
   // Ensure missing categories are populated
   try {
     db.exec(`

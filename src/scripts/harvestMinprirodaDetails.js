@@ -18,6 +18,7 @@ import path from 'path';
 import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 import db from '../db/database.js';
+import { epsg3857ToWgs84 } from '../services/ooptService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -238,9 +239,20 @@ async function run() {
         if (Array.isArray(ext.center) && ext.center.length === 2) {
           lon = Number(ext.center[0]) || null;
           lat = Number(ext.center[1]) || null;
+          if (lon !== null && lat !== null && (Math.abs(lon) > 180 || Math.abs(lat) > 90)) {
+            const wgs = epsg3857ToWgs84(lon, lat);
+            lat = wgs.lat;
+            lon = wgs.lon;
+          }
         }
 
-        const bboxStr = ext.bbox ? JSON.stringify(ext.bbox) : null;
+        let bboxArr = ext.bbox;
+        if (Array.isArray(bboxArr) && bboxArr.length === 4 && (Math.abs(bboxArr[0]) > 180 || Math.abs(bboxArr[1]) > 90)) {
+          const sw = epsg3857ToWgs84(bboxArr[0], bboxArr[1]);
+          const ne = epsg3857ToWgs84(bboxArr[2], bboxArr[3]);
+          bboxArr = [sw.lon, sw.lat, ne.lon, ne.lat];
+        }
+        const bboxStr = bboxArr ? JSON.stringify(bboxArr) : null;
         const rfSubjStr = ext.rf_subjects ? ext.rf_subjects.join(', ') : null;
         const profile = ext.profile || null;
 

@@ -835,8 +835,15 @@ export function parseOoptForSubmitter(item) {
   const locationCode = getPotaLocationCode(region);
 
   // Coordinates: 4 decimal places as requested by Manu R2BBX
-  const lat = (item.lat !== null && item.lat !== undefined && item.lat !== '') ? Number(item.lat).toFixed(4) : '';
-  const lon = (item.lon !== null && item.lon !== undefined && item.lon !== '') ? Number(item.lon).toFixed(4) : '';
+  let lat = (item.lat !== null && item.lat !== undefined && item.lat !== '') ? Number(item.lat).toFixed(4) : '';
+  let lon = (item.lon !== null && item.lon !== undefined && item.lon !== '') ? Number(item.lon).toFixed(4) : '';
+  if (lat && lon && (Math.abs(Number(lat)) > 90 || Math.abs(Number(lon)) > 180)) {
+    const wgs = epsg3857ToWgs84(lon, lat);
+    if (wgs.lat !== null && wgs.lon !== null) {
+      lat = wgs.lat.toFixed(4);
+      lon = wgs.lon.toFixed(4);
+    }
+  }
 
   // Priority link requested by Manu (R2BBX): https://ooptaari.nextgis.ru/node/:id
   const site = item.nid ? `https://ooptaari.nextgis.ru/node/${item.nid}` : 'https://карта.оцзк.рф/';
@@ -908,6 +915,27 @@ export function getYandexMapsUrl(lat, lon, name = '', region = '') {
  * - "55°52'30\"N 37°46'10\"E"
  * - Yandex Maps URLs ("...pt=37.7812,55.8821...")
  */
+export function epsg3857ToWgs84(x, y) {
+  const numX = Number(x);
+  const numY = Number(y);
+  if (isNaN(numX) || isNaN(numY)) return { lat: null, lon: null };
+  const lon = Number(((numX / 20037508.34) * 180).toFixed(4));
+  let lat = (numY / 20037508.34) * 180;
+  lat = Number(((180 / Math.PI) * (2 * Math.atan(Math.exp((lat * Math.PI) / 180)) - Math.PI / 2)).toFixed(4));
+  return { lat, lon };
+}
+
+/**
+ * Smart coordinate parser: extracts lat/lon from raw text or URL
+ * Supports formats:
+ * - "55.8821, 37.7812"
+ * - "55.8821 37.7812"
+ * - "55,8821 37,7812" / "55,8821; 37,7812"
+ * - "[55.8821, 37.7812]"
+ * - "55°52'30\"N 37°46'10\"E"
+ * - Yandex Maps URLs ("...pt=37.7812,55.8821...")
+ * - EPSG:3857 Web Mercator meters ("5544390.7185, 4340341.4425")
+ */
 export function parseCoordinatePair(raw) {
   if (!raw || typeof raw !== 'string') return null;
   const s = raw.trim();
@@ -944,6 +972,20 @@ export function parseCoordinatePair(raw) {
     const n1 = parseFloat(nums[0]);
     const n2 = parseFloat(nums[1]);
     if (!isNaN(n1) && !isNaN(n2)) {
+      if (Math.abs(n1) > 90 || Math.abs(n2) > 180) {
+        // Test (lat=n1, lon=n2) -> (x=n2, y=n1)
+        const wgsA = epsg3857ToWgs84(n2, n1);
+        // Test (lon=n1, lat=n2) -> (x=n1, y=n2)
+        const wgsB = epsg3857ToWgs84(n1, n2);
+        
+        const isRuA = wgsA.lat !== null && wgsA.lat >= 41 && wgsA.lat <= 82 && (wgsA.lon >= 19 || wgsA.lon <= -168);
+        const isRuB = wgsB.lat !== null && wgsB.lat >= 41 && wgsB.lat <= 82 && (wgsB.lon >= 19 || wgsB.lon <= -168);
+        
+        if (isRuA && !isRuB) return wgsA;
+        if (isRuB && !isRuA) return wgsB;
+        if (wgsA.lat !== null && Math.abs(wgsA.lat) <= 90 && Math.abs(wgsA.lon) <= 180) return wgsA;
+        if (wgsB.lat !== null && Math.abs(wgsB.lat) <= 90 && Math.abs(wgsB.lon) <= 180) return wgsB;
+      }
       return { lat: Number(n1.toFixed(4)), lon: Number(n2.toFixed(4)) };
     }
   }

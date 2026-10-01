@@ -1,5 +1,16 @@
 # История изменений (Changelog)
 
+## [1.16.97] - 2026-10-01 (Auto-detection & Conversion of EPSG:3857 Coordinates)
+### Исправлено и оптимизировано
+- **Автоматическая конвертация сферических координат Меркатора (EPSG:3857 в метрах) в WGS84 (градусы)** (`src/services/ooptService.js`, `src/web/admin.js`, `src/webapp/src/services/ooptUtils.js`, `src/db/database.js`, `src/scripts/harvestMinprirodaDetails.js`, `test_coord_parse.js`):
+  - Выявлена и устранена ошибка официальных данных Минприроды РФ (`карта.оцзк.рф` / NextGIS), где отдельные объекты (в частности, NID `13841` «Горячеключевской» и NID `12193` «Тарская сталактитовая пещера») были опубликованы в метрической проекции Web Mercator (`EPSG:3857`) вместо угловых градусов WGS84 (`EPSG:4326`), что приводило к значениям вида `5544390.7185, 4340341.4425`.
+  - Реализована функция прямой конвертации `epsg3857ToWgs84(x, y)` на бэкенде, фронтенде веб-админки и в Mini App.
+  - Добавлена безопасная автомиграция SQLite (`src/db/database.js`), автоматически преобразующая ошибочные метры в градусы WGS84 в таблице `oopt_registry` (`lat`, `lon` и `bbox`).
+  - Умный парсер координат `parseCoordString` / `parseCoordinatePair` научен автоматически распознавать и конвертировать координаты в метрах как при порядке `(lat, lon)`, так и `(lon, lat)` с валидацией границ географии РФ.
+  - Модальное окно сабмиттера (`openSubmitter` / `parseOoptForSubmitter`) теперь прозрачно отображает корректные координаты в градусах WGS84 (`44.5080, 38.9900` для Горячеключевского) и формирует рабочую ссылку на Яндекс.Карты.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.97` во всех файлах по правилу 2.1 (`package.json`, `src/api/potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.96] - 2026-10-01 (Multi-Region OOPTs & UNESCO Biosphere Reserve Status)
 ### Добавлено и исправлено
 - **Поддержка пограничных ООПТ с 2+ регионами РФ (Multi-region / Cross-boundary)** (`src/services/ooptService.js`, `src/web/admin.js`, `test_oopt_search.js`):

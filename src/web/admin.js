@@ -3488,6 +3488,16 @@ export const startAdminServer = (telegramClient) => {
             return text;
           }
 
+          function epsg3857ToWgs84Client(x, y) {
+            var numX = Number(x);
+            var numY = Number(y);
+            if (isNaN(numX) || isNaN(numY)) return { lat: null, lon: null };
+            var lon = Number(((numX / 20037508.34) * 180).toFixed(4));
+            var lat = (numY / 20037508.34) * 180;
+            lat = Number(((180 / Math.PI) * (2 * Math.atan(Math.exp((lat * Math.PI) / 180)) - Math.PI / 2)).toFixed(4));
+            return { lat: lat, lon: lon };
+          }
+
           function parseOoptForSubmitter(rawTitle, category, sigDisplay, ate, lat, lon, nid, area, status, profile, nestedOopt, parentPota, clusterCount, clusters, rfSubjects, internationalStatus) {
             var detectedCategory = deduceOoptCategoryClient(rawTitle, category);
             var cleanName = cleanOoptNameClient(rawTitle, detectedCategory);
@@ -3512,6 +3522,13 @@ export const startAdminServer = (telegramClient) => {
 
             var latVal = (lat !== null && lat !== undefined && lat !== '' && !isNaN(Number(lat))) ? Number(lat).toFixed(4) : '';
             var lonVal = (lon !== null && lon !== undefined && lon !== '' && !isNaN(Number(lon))) ? Number(lon).toFixed(4) : '';
+            if (latVal && lonVal && (Math.abs(Number(latVal)) > 90 || Math.abs(Number(lonVal)) > 180)) {
+              var wgs = epsg3857ToWgs84Client(lonVal, latVal);
+              if (wgs.lat !== null && wgs.lon !== null) {
+                latVal = wgs.lat.toFixed(4);
+                lonVal = wgs.lon.toFixed(4);
+              }
+            }
 
             var clarifyText = formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota, clusterCount, clusters);
 
@@ -3639,6 +3656,17 @@ export const startAdminServer = (telegramClient) => {
               var n1 = parseFloat(nums[0]);
               var n2 = parseFloat(nums[1]);
               if (!isNaN(n1) && !isNaN(n2)) {
+                if (Math.abs(n1) > 90 || Math.abs(n2) > 180) {
+                  // EPSG:3857 Web Mercator meters detection
+                  var wgsA = epsg3857ToWgs84Client(n2, n1);
+                  var wgsB = epsg3857ToWgs84Client(n1, n2);
+                  var isRuA = wgsA.lat !== null && wgsA.lat >= 41 && wgsA.lat <= 82 && (wgsA.lon >= 19 || wgsA.lon <= -168);
+                  var isRuB = wgsB.lat !== null && wgsB.lat >= 41 && wgsB.lat <= 82 && (wgsB.lon >= 19 || wgsB.lon <= -168);
+                  if (isRuA && !isRuB) return wgsA;
+                  if (isRuB && !isRuA) return wgsB;
+                  if (wgsA.lat !== null && Math.abs(wgsA.lat) <= 90 && Math.abs(wgsA.lon) <= 180) return wgsA;
+                  if (wgsB.lat !== null && Math.abs(wgsB.lat) <= 90 && Math.abs(wgsB.lon) <= 180) return wgsB;
+                }
                 return { lat: Number(n1.toFixed(4)), lon: Number(n2.toFixed(4)) };
               }
             }
@@ -3850,8 +3878,17 @@ export const startAdminServer = (telegramClient) => {
                       if (rusoirText) rusoirText.textContent = 'RusOIR ✓';
                     }
                     if (details.lat && details.lon) {
-                      document.getElementById('subm-lat').value = Number(details.lat).toFixed(4);
-                      document.getElementById('subm-lon').value = Number(details.lon).toFixed(4);
+                      var dLat = Number(details.lat);
+                      var dLon = Number(details.lon);
+                      if (Math.abs(dLat) > 90 || Math.abs(dLon) > 180) {
+                        var dWgs = epsg3857ToWgs84Client(dLon, dLat);
+                        if (dWgs.lat !== null && dWgs.lon !== null) {
+                          dLat = dWgs.lat;
+                          dLon = dWgs.lon;
+                        }
+                      }
+                      document.getElementById('subm-lat').value = Number(dLat).toFixed(4);
+                      document.getElementById('subm-lon').value = Number(dLon).toFixed(4);
                       if (needsCoords) {
                         document.getElementById('subm-coords-status').innerHTML = details.rusoir_url
                           ? '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Координаты получены с RusOIR</span>'

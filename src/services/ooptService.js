@@ -1825,57 +1825,42 @@ export function formatClusterItem(c, includeArea) {
   return `${name} ${withGa}`;
 }
 
+export function isSameOrOverlappingRegion(regionA, regionB) {
+  if (!regionA || !regionB) return false;
+  const getStems = (str) => {
+    return String(str).toLowerCase()
+      .split(/[,;\n()]+/)
+      .map(s => s.replace(/(республика|край|область|автономный|округ|город|федеральный|значения)/g, '').trim())
+      .filter(s => s.length >= 3);
+  };
+  const stemsA = getStems(regionA);
+  const stemsB = getStems(regionB);
+  for (const a of stemsA) {
+    for (const b of stemsB) {
+      if (a.includes(b) || b.includes(a)) return true;
+    }
+  }
+  return false;
+}
+
 export function formatClarification(item) {
   if (!item) return '';
   const parts = [];
 
-  // Non-standard status
+  // 1. Status / Reorganization
   if (item.status && item.status !== 'действующий') {
-    if (item.status === 'реорганизованный') {
-      parts.push(`⚠️ Реорганизован${item.parent_pota ? ` (в составе ${item.parent_pota.reference})` : ''}`);
+    if (item.status === 'реорганизованный' || item.is_reorganized) {
+      parts.push(`⚠️ Реорганизован${item.parent_pota && item.parent_pota.reference ? ` (в составе ${item.parent_pota.reference})` : ''}`);
     } else {
       parts.push(`Статус: ${item.status}`);
     }
   }
 
-  // 1. Nested OOPTs (Priority per Manu R2BBX: "Вместо площади")
-  let nestedList = [];
-  if (Array.isArray(item.nested_oopt)) {
-    nestedList = item.nested_oopt;
-  } else if (Array.isArray(item.parsedNestedOopt)) {
-    nestedList = item.parsedNestedOopt;
-  } else if (typeof item.nested_oopt === 'string' && item.nested_oopt.trim()) {
-    try {
-      nestedList = JSON.parse(item.nested_oopt);
-    } catch (_) {
-      nestedList = item.nested_oopt.split(/[,;\n]+/).map(s => ({ name: s.trim() })).filter(x => x.name);
-    }
-  }
+  // 2. Profile and Area of the OOPT being submitted (ALWAYS in first place per Manu R2BBX)
+  if (item.profile) parts.push(`Профиль: ${item.profile}`);
+  if (item.area) parts.push(`Площадь: ${Number(item.area).toLocaleString('ru-RU')} га`);
 
-  const selfTitle = (item.title || item.rawTitle || item.name || '').toLowerCase().trim();
-  const selfClean = cleanOoptName(selfTitle).toLowerCase().trim();
-  const selfNid = item.nid ? Number(item.nid) : null;
-
-  // Filter out self-reference (e.g. NextGIS listing parent OOPT under its own nested items)
-  const formattedNested = (nestedList || []).map(n => {
-    const name = typeof n === 'string' ? n : (n.name || n.title || '');
-    const cleanN = name.toLowerCase().trim();
-    const nNid = typeof n === 'object' && n.nid ? Number(n.nid) : null;
-    if (selfNid && nNid && selfNid === nNid) return '';
-    if (cleanN && (cleanN === selfTitle || cleanN === selfClean)) return '';
-    const ref = typeof n === 'object' && n.pota_ref ? ` (${n.pota_ref})` : '';
-    return name ? `${name}${ref}` : '';
-  }).filter(Boolean);
-
-  if (formattedNested.length > 0) {
-    parts.push(`В границах ООПТ: ${formattedNested.join(', ')}`);
-  } else {
-    // If no nested OOPTs (or only self-reference), include Profile and Area
-    if (item.profile) parts.push(`Профиль: ${item.profile}`);
-    if (item.area) parts.push(`Площадь: ${Number(item.area).toLocaleString('ru-RU')} га`);
-  }
-
-  // 2. Clusters (Priority per Manu R2BBX: "при числе от 2 его дописывать в уточнение")
+  // 3. Clusters (Priority 2 per Manu R2BBX: "Далее сверять кластерность - и если 2+ - тоже писать")
   const clusterCount = Number(item.cluster_count) || (Array.isArray(item.parsedClusters) ? item.parsedClusters.length : 0);
   let clusterList = [];
   if (Array.isArray(item.parsedClusters)) {
@@ -1918,6 +1903,66 @@ export function formatClarification(item) {
       }
     }
     parts.push(clusterPart);
+  }
+
+  // 4. Additional: Nested OOPTs (Priority 3 per Manu R2BBX: "И только потом, если осталось место - указывать допы")
+  let nestedList = [];
+  if (Array.isArray(item.nested_oopt)) {
+    nestedList = item.nested_oopt;
+  } else if (Array.isArray(item.parsedNestedOopt)) {
+    nestedList = item.parsedNestedOopt;
+  } else if (typeof item.nested_oopt === 'string' && item.nested_oopt.trim()) {
+    try {
+      nestedList = JSON.parse(item.nested_oopt);
+    } catch (_) {
+      nestedList = item.nested_oopt.split(/[,;\n]+/).map(s => ({ name: s.trim() })).filter(x => x.name);
+    }
+  }
+
+  const selfTitle = (item.title || item.rawTitle || item.name || '').toLowerCase().trim();
+  const selfClean = cleanOoptName(selfTitle).toLowerCase().trim();
+  const selfNid = item.nid ? Number(item.nid) : null;
+  const parentRegion = item.rf_subjects || item.ate || item.region || '';
+
+  // Filter out self-reference & cross-region mismatches
+  const formattedNested = (nestedList || []).map(n => {
+    const name = typeof n === 'string' ? n : (n.name || n.title || '');
+    const cleanN = name.toLowerCase().trim();
+    const nNid = typeof n === 'object' && n.nid ? Number(n.nid) : null;
+    if (selfNid && nNid && selfNid === nNid) return '';
+    if (cleanN && (cleanN === selfTitle || cleanN === selfClean)) return '';
+
+    let ref = '';
+    if (typeof n === 'object' && n.pota_ref) {
+      if (!parentRegion || !n.ate || isSameOrOverlappingRegion(parentRegion, n.ate)) {
+        ref = ` (${n.pota_ref})`;
+      }
+    }
+    return name ? `${name}${ref}` : '';
+  }).filter(Boolean);
+
+  if (formattedNested.length > 0) {
+    const currentText = parts.join('. ');
+    const remainingSpace = 255 - (currentText ? currentText.length + 2 : 0);
+
+    const fullNestedCand = `В границах ООПТ: ${formattedNested.join(', ')}`;
+    if (fullNestedCand.length <= remainingSpace) {
+      parts.push(fullNestedCand);
+    } else {
+      const fittedNested = [];
+      for (const nStr of formattedNested) {
+        const testList = [...fittedNested, nStr];
+        const testCand = `В границах ООПТ: ${testList.join(', ')}`;
+        if (testCand.length <= remainingSpace) {
+          fittedNested.push(nStr);
+        } else {
+          break;
+        }
+      }
+      if (fittedNested.length > 0) {
+        parts.push(`В границах ООПТ: ${fittedNested.join(', ')}`);
+      }
+    }
   }
 
   let text = parts.join('. ');
@@ -2343,19 +2388,44 @@ export async function getOoptDetails(nid) {
         const selfTitle = (row.title || '').toLowerCase().trim();
         const selfClean = cleanOoptName(selfTitle).toLowerCase().trim();
 
+        // Extract region tokens from parent OOPT (ate & rf_subjects)
+        const regionText = `${row.ate || ''} ${row.rf_subjects || ''}`.toLowerCase();
+        const regionParts = regionText.split(/[,;\n()]+/).map(s => s.trim()).filter(Boolean);
+        const regionTokens = [];
+        for (const part of regionParts) {
+          const clean = part.replace(/(республика|край|область|автономный|округ|город|федеральный|значения)/g, '').trim();
+          if (clean.length >= 3) regionTokens.push(clean);
+        }
+        const uniqueTokens = [...new Set(regionTokens)];
+
         for (const itemTitle of items) {
           const cleanItem = itemTitle.trim();
           const itemClean = cleanOoptName(cleanItem).toLowerCase().trim();
           if (cleanItem.toLowerCase() === selfTitle || itemClean === selfClean) continue;
 
-          const found = db.prepare('SELECT nid, title, pota_ref, pota_name FROM oopt_registry WHERE title = ? OR title LIKE ? LIMIT 1').get(cleanItem, `%${cleanItem}%`);
+          let found = null;
+          if (uniqueTokens.length > 0) {
+            for (const tok of uniqueTokens) {
+              found = db.prepare(`
+                SELECT nid, title, ate, pota_ref, pota_name 
+                FROM oopt_registry 
+                WHERE (title = ? OR title LIKE ?) 
+                  AND (ate LIKE ? OR rf_subjects LIKE ?)
+                ORDER BY (pota_ref IS NOT NULL) DESC
+                LIMIT 1
+              `).get(cleanItem, `%${cleanItem}%`, `%${tok}%`, `%${tok}%`);
+              if (found) break;
+            }
+          }
+
           if (found && found.nid === numNid) continue;
 
           extracted.push({
             name: cleanItem,
             pota_ref: found?.pota_ref || null,
             pota_name: found?.pota_name || null,
-            nid: found?.nid || null
+            nid: found?.nid || null,
+            ate: found?.ate || null
           });
         }
       }

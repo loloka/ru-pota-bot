@@ -3395,7 +3395,29 @@ export const startAdminServer = (telegramClient) => {
             return false;
           }
 
-          function formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota, clusterCount, clusters) {
+          function isSameOrOverlappingRegionClient(regionA, regionB) {
+            if (!regionA || !regionB) return false;
+            var getStems = function(str) {
+              return String(str).toLowerCase()
+                .split(/[,;\\n()]+/)
+                .map(function(s) {
+                  return s.replace(/(республика|край|область|автономный|округ|город|федеральный|значения)/g, '').trim();
+                })
+                .filter(function(s) { return s.length >= 3; });
+            };
+            var stemsA = getStems(regionA);
+            var stemsB = getStems(regionB);
+            for (var i = 0; i < stemsA.length; i++) {
+              for (var j = 0; j < stemsB.length; j++) {
+                if (stemsA[i].indexOf(stemsB[j]) !== -1 || stemsB[j].indexOf(stemsA[i]) !== -1) {
+                  return true;
+                }
+              }
+            }
+            return false;
+          }
+
+          function formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota, clusterCount, clusters, region) {
             var parts = [];
             if (status && status !== 'действующий') {
               if (status === 'реорганизованный') {
@@ -3405,39 +3427,11 @@ export const startAdminServer = (telegramClient) => {
               }
             }
 
-            var nestedList = [];
-            if (Array.isArray(nestedOopt)) {
-              nestedList = nestedOopt;
-            } else if (typeof nestedOopt === 'string' && nestedOopt.trim()) {
-              try {
-                nestedList = JSON.parse(nestedOopt);
-              } catch (_) {
-                nestedList = nestedOopt.split(/[,;\\n]+/).map(function(s) { return { name: s.trim() }; }).filter(function(x) { return x.name; });
-              }
-            }
+            // 1. Profile and Area of the OOPT being submitted (ALWAYS in first place per Manu R2BBX)
+            if (profile) parts.push('Профиль: ' + profile);
+            if (area) parts.push('Площадь: ' + Number(area).toLocaleString('ru-RU') + ' га');
 
-            var selfTitle = (rawTitle || '').toLowerCase().trim();
-            var selfClean = (cleanName || '').toLowerCase().trim();
-            var selfNid = nid ? Number(nid) : null;
-
-            var formatted = (nestedList || []).map(function(n) {
-              var name = typeof n === 'string' ? n : (n.name || n.title || '');
-              var cleanN = name.toLowerCase().trim();
-              var nNid = (typeof n === 'object' && n.nid) ? Number(n.nid) : null;
-              if (selfNid && nNid && selfNid === nNid) return '';
-              if (cleanN && (cleanN === selfTitle || cleanN === selfClean)) return '';
-              var ref = (typeof n === 'object' && n.pota_ref) ? (' (' + n.pota_ref + ')') : '';
-              return name ? (name + ref) : '';
-            }).filter(Boolean);
-
-            if (formatted.length > 0) {
-              parts.push('В границах ООПТ: ' + formatted.join(', '));
-            } else {
-              if (profile) parts.push('Профиль: ' + profile);
-              if (area) parts.push('Площадь: ' + Number(area).toLocaleString('ru-RU') + ' га');
-            }
-
-            // Clusters (при числе от 2 дописываем в уточнение)
+            // 2. Clusters (Priority 2 per Manu R2BBX: "Далее сверять кластерность - и если 2+ - тоже писать")
             var cCount = Number(clusterCount) || 0;
             var cList = [];
             if (Array.isArray(clusters)) {
@@ -3483,6 +3477,60 @@ export const startAdminServer = (telegramClient) => {
                 }
               }
               parts.push(clusterPart);
+            }
+
+            // 3. Additional: Nested OOPTs (Priority 3 per Manu R2BBX: "И только потом, если осталось место - указывать допы")
+            var nestedList = [];
+            if (Array.isArray(nestedOopt)) {
+              nestedList = nestedOopt;
+            } else if (typeof nestedOopt === 'string' && nestedOopt.trim()) {
+              try {
+                nestedList = JSON.parse(nestedOopt);
+              } catch (_) {
+                nestedList = nestedOopt.split(/[,;\\n]+/).map(function(s) { return { name: s.trim() }; }).filter(function(x) { return x.name; });
+              }
+            }
+
+            var selfTitle = (rawTitle || '').toLowerCase().trim();
+            var selfClean = (cleanName || '').toLowerCase().trim();
+            var selfNid = nid ? Number(nid) : null;
+
+            var formatted = (nestedList || []).map(function(n) {
+              var name = typeof n === 'string' ? n : (n.name || n.title || '');
+              var cleanN = name.toLowerCase().trim();
+              var nNid = (typeof n === 'object' && n.nid) ? Number(n.nid) : null;
+              if (selfNid && nNid && selfNid === nNid) return '';
+              if (cleanN && (cleanN === selfTitle || cleanN === selfClean)) return '';
+
+              var ref = '';
+              if (typeof n === 'object' && n.pota_ref) {
+                if (!region || !n.ate || isSameOrOverlappingRegionClient(region, n.ate)) {
+                  ref = ' (' + n.pota_ref + ')';
+                }
+              }
+              return name ? (name + ref) : '';
+            }).filter(Boolean);
+
+            if (formatted.length > 0) {
+              var curText = parts.join('. ');
+              var remSpace = 255 - (curText ? curText.length + 2 : 0);
+              var fullCand = 'В границах ООПТ: ' + formatted.join(', ');
+              if (fullCand.length <= remSpace) {
+                parts.push(fullCand);
+              } else {
+                var fittedNested = [];
+                for (var fIdx = 0; fIdx < formatted.length; fIdx++) {
+                  var testCand = 'В границах ООПТ: ' + fittedNested.concat([formatted[fIdx]]).join(', ');
+                  if (testCand.length <= remSpace) {
+                    fittedNested.push(formatted[fIdx]);
+                  } else {
+                    break;
+                  }
+                }
+                if (fittedNested.length > 0) {
+                  parts.push('В границах ООПТ: ' + fittedNested.join(', '));
+                }
+              }
             }
 
             var text = parts.join('. ');
@@ -3534,7 +3582,7 @@ export const startAdminServer = (telegramClient) => {
               }
             }
 
-            var clarifyText = formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota, clusterCount, clusters);
+            var clarifyText = formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota, clusterCount, clusters, region);
 
             return {
               name: cleanName,
@@ -3931,7 +3979,8 @@ export const startAdminServer = (telegramClient) => {
                       nid,
                       details.parent_pota || parentPota,
                       details.cluster_count,
-                      details.parsedClusters || details.clusters
+                      details.parsedClusters || details.clusters,
+                      details.rf_subjects || details.ate || region
                     );
                     if (updatedClarify) {
                       document.getElementById('subm-clarify').value = updatedClarify;

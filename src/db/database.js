@@ -470,6 +470,44 @@ try {
     console.warn('[DB] EPSG:3857 migration warning:', e.message);
   }
 
+  // Sanitize nested_oopt pota_ref against parent region
+  try {
+    const nestedRows = db.prepare("SELECT nid, ate, rf_subjects, nested_oopt FROM oopt_registry WHERE nested_oopt LIKE '%pota_ref%'").all();
+    if (nestedRows.length > 0) {
+      const updateNestedStmt = db.prepare('UPDATE oopt_registry SET nested_oopt = ? WHERE nid = ?');
+      for (const row of nestedRows) {
+        try {
+          const items = JSON.parse(row.nested_oopt);
+          let changed = false;
+          const parentRegion = `${row.ate || ''} ${row.rf_subjects || ''}`.toLowerCase();
+          const getStems = (str) => str.split(/[,;\n()]+/).map(s => s.replace(/(республика|край|область|автономный|округ|город|федеральный|значения)/g, '').trim()).filter(s => s.length >= 3);
+          const pStems = getStems(parentRegion);
+          for (const it of items) {
+            if (it.pota_ref) {
+              const potaRow = db.prepare('SELECT ate, rf_subjects FROM oopt_registry WHERE pota_ref = ?').get(it.pota_ref);
+              if (potaRow) {
+                const potaRegion = `${potaRow.ate || ''} ${potaRow.rf_subjects || ''}`.toLowerCase();
+                const kStems = getStems(potaRegion);
+                const match = pStems.some(a => kStems.some(b => a.includes(b) || b.includes(a)));
+                if (!match) {
+                  it.pota_ref = null;
+                  it.pota_name = null;
+                  changed = true;
+                }
+              }
+            }
+          }
+          if (changed) {
+            updateNestedStmt.run(JSON.stringify(items), row.nid);
+            console.log(`[DB] 🧹 Sanitized cross-region nested OOPT pota_refs in NID ${row.nid}`);
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (e) {
+    console.warn('[DB] nested_oopt region sanitization warning:', e.message);
+  }
+
   // Ensure missing categories are populated
   try {
     db.exec(`

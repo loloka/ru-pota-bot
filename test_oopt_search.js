@@ -224,6 +224,14 @@ assert.ok(galichyaClarify.includes('Галичья Гора 19,0 га'), 'Must i
 assert.ok(galichyaClarify.length <= 255, 'Clarification must not exceed 255 chars');
 console.log('✅ PASS: Cluster HTML entity decoding & prefix cleaning verified for NID 6427 ("Галичья гора")');
 
+// 23. Test UNESCO Biosphere Reserve detection per Manu R2BBX ("Лапландский", nid 5456)
+const laplandDetails = await getOoptDetails(5456);
+assert.strictEqual(laplandDetails.international_status, 'Биосферный резерват', 'Must extract international status');
+assert.strictEqual(laplandDetails.is_biosphere, true, 'Must identify as biosphere reserve');
+assert.strictEqual(laplandDetails.submitterFields.statusEn, 'UNESCO Biosphere Reserve', 'Status EN must be UNESCO Biosphere Reserve');
+console.log('✅ PASS: UNESCO Biosphere Reserve status detection verified for NID 5456 ("Лапландский")');
+
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');
+
 
 

@@ -1365,6 +1365,7 @@ export const startAdminServer = (telegramClient) => {
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Reserve">Reserve</button>
                         <button type="button" class="btn btn-xs btn-outline-success py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="UNESCO Biosphere Reserve">🌿 UNESCO Biosphere Reserve</button>
                       </div>
+                      <div id="subm-int-status-badge" class="mt-1.5" style="display:none;"></div>
                     </div>
                     <div class="col-md-7">
                       <label class="form-label small fw-bold mb-1">4. Статус (парк/ООПТ и т.п.) (RU):</label>
@@ -3921,6 +3922,18 @@ export const startAdminServer = (telegramClient) => {
               document.getElementById('subm-name').value = parsed.name;
               document.getElementById('subm-name-en').value = parsed.nameEn;
               document.getElementById('subm-status-en').value = parsed.statusEn;
+              var initIntBadge = document.getElementById('subm-int-status-badge');
+              if (initIntBadge) {
+                var initInt = internationalStatus || (parsed.statusEn === 'UNESCO Biosphere Reserve' ? 'Биосферный резерват' : '');
+                if (initInt) {
+                  var isBio = /биосферн/i.test(initInt);
+                  var extra = isBio ? ' (ЮНЕСКО MAB)' : '';
+                  initIntBadge.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size:11px;"><i class="bi bi-globe-americas me-1"></i>Международный статус: <strong>' + escapeHtmlClient(initInt) + extra + '</strong></span>';
+                  initIntBadge.style.display = 'block';
+                } else {
+                  initIntBadge.style.display = 'none';
+                }
+              }
               document.getElementById('subm-status').value = parsed.status;
               if (document.getElementById('subm-dx-entity')) document.getElementById('subm-dx-entity').value = parsed.dxEntity;
               if (document.getElementById('subm-location-code')) document.getElementById('subm-location-code').value = parsed.locationCode;
@@ -4040,10 +4053,25 @@ export const startAdminServer = (telegramClient) => {
                       }
                     }
 
+                    var intBadgeEl = document.getElementById('subm-int-status-badge');
                     if (details.is_biosphere || (details.international_status && /биосферн|юнеско|unesco/i.test(details.international_status))) {
                       var statusEnEl = document.getElementById('subm-status-en');
                       if (statusEnEl) {
                         statusEnEl.value = 'UNESCO Biosphere Reserve';
+                      }
+                      if (intBadgeEl) {
+                        var rawStatus = details.international_status || 'Биосферный резерват';
+                        var isBio = /биосферн/i.test(rawStatus);
+                        var extra = isBio ? ' (ЮНЕСКО MAB)' : '';
+                        intBadgeEl.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size:11px;"><i class="bi bi-globe-americas me-1"></i>Международный статус: <strong>' + escapeHtmlClient(rawStatus) + extra + '</strong></span>';
+                        intBadgeEl.style.display = 'block';
+                      }
+                    } else if (intBadgeEl) {
+                      if (details.international_status) {
+                        intBadgeEl.innerHTML = '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle py-1 px-2" style="font-size:11px;"><i class="bi bi-globe me-1"></i>Международный статус: <strong>' + escapeHtmlClient(details.international_status) + '</strong></span>';
+                        intBadgeEl.style.display = 'block';
+                      } else {
+                        intBadgeEl.style.display = 'none';
                       }
                     }
 

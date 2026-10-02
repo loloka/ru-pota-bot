@@ -345,7 +345,7 @@ const GEOGRAPHIC_TERMS = RAW_GEOGRAPHIC_TERMS.map(([pat, repl]) => [
 export function getEnglishCategorySuffix(category) {
   const c = (category || '').toLowerCase();
   if (c.includes('морск')) return 'State Marine Reserve';
-  if (c.includes('биосферн')) return 'State Biosphere Nature Reserve';
+  if (c.includes('биосферн')) return 'UNESCO Biosphere Reserve';
   if (c.includes('памятник природы') || c.includes('памятные природные места')) return 'Natural Monument';
   if (c.includes('ботанический сад') || c.includes('дендрологический') || c.includes('дендрарий')) return 'Botanical Gardens';
   if (c.includes('национальный парк')) {
@@ -952,7 +952,16 @@ export function parseOoptForSubmitter(item) {
   const rawCat = deduceCategory(rawTitle, item.category);
   const cleanName = cleanOoptName(rawTitle, rawCat);
   const nameEn = formatDualParkName(cleanName, rawCat);
-  const statusEn = getEnglishCategorySuffix(rawCat);
+  let statusEn = getEnglishCategorySuffix(rawCat);
+  if (
+    statusEn === 'State Biosphere Nature Reserve' ||
+    item.is_biosphere ||
+    (rawTitle && /биосферн/i.test(rawTitle)) ||
+    (item.category && /биосферн/i.test(item.category)) ||
+    (item.international_status && /биосферн|юнеско|unesco/i.test(item.international_status))
+  ) {
+    statusEn = 'UNESCO Biosphere Reserve';
+  }
   const detectedCategory = rawCat.charAt(0).toUpperCase() + rawCat.slice(1);
 
   // Status with significance

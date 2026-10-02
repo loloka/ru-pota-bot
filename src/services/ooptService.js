@@ -1868,10 +1868,44 @@ export function getRegionalPotaStats() {
   };
 }
 
+/**
+ * Cleans cluster name: decodes HTML entities (&quot;, &amp;), strips quotes,
+ * and removes redundant generic prefixes ("Участок \"Плющань\"" -> "Плющань")
+ */
+export function cleanClusterName(name) {
+  if (!name || typeof name !== 'string') return '';
+  let s = name
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&laquo;|&raquo;/g, '"')
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+
+  // Handle: Участок "Плющань" or Участок"Галичья Гора" or "Плющань"
+  const quoteMatch = s.match(/^(?:участок|кластер|сектор|зона|часть|территория|отделение)?[ \t]*["«]([^"»]+)["»]$/i);
+  if (quoteMatch && quoteMatch[1].trim()) {
+    s = quoteMatch[1].trim();
+  } else {
+    // Strip leading generic descriptor if followed by a real name (not just a number)
+    const stripped = s.replace(/^(?:участок|кластер|сектор|зона|часть|территория|отделение)[ \t]*(?:№|n|#|no\.?)?[ \t]*[-–—:]?[ \t]*/i, '').trim();
+    if (stripped && !/^(?:\d+|[ivx]+|[a-zа-я](?:-\d+)?)$/i.test(stripped)) {
+      s = stripped;
+    }
+  }
+
+  // Strip remaining outer quotes
+  s = s.replace(/^["'«]+|["'»]+$/g, '').trim();
+  return s;
+}
+
 export function isGenericClusterName(name) {
   if (!name || typeof name !== 'string') return true;
-  const s = name.trim().toLowerCase();
-  if (s === 'название' || s === 'участок' || s === 'кластер' || s === 'сектор' || s === 'зона' || s === 'часть') return true;
+  const cleaned = cleanClusterName(name);
+  const s = cleaned.trim().toLowerCase();
+  if (!s || s === 'название' || s === 'участок' || s === 'кластер' || s === 'сектор' || s === 'зона' || s === 'часть') return true;
   if (/^\d+$/.test(s)) return true;
   if (/^\d+-(?:й|ой|ий|ый)\s+(?:участок|кластер|сектор)$/i.test(s)) return true;
   if (/^(?:участок|кластер|сектор|зона|часть|территория|отделение)\s*(?:№|n|#|no\.?)?\s*[-–—]?\s*(?:\d+|[ivx]+|[a-zа-я](?:-\d+)?)?$/i.test(s)) {
@@ -1882,7 +1916,7 @@ export function isGenericClusterName(name) {
 
 export function formatClusterItem(c, includeArea) {
   if (!c) return '';
-  const name = (c.name || '').trim();
+  const name = cleanClusterName(c.name || '');
   if (!includeArea || !c.area) return name;
   const a = String(c.area).trim();
   if (!a) return name;
@@ -1940,7 +1974,9 @@ export function formatClarification(item) {
 
   if (clusterCount >= 2 || clusterList.length >= 2) {
     const effectiveCount = Math.max(clusterCount, clusterList.length);
-    const validClusters = clusterList.filter(c => c && c.name && c.name.toLowerCase() !== 'название' && c.name.trim().length > 0);
+    const validClusters = clusterList
+      .map(c => ({ ...c, name: cleanClusterName(c.name || '') }))
+      .filter(c => c && c.name && c.name.toLowerCase() !== 'название' && c.name.trim().length > 0);
 
     // Calculate available space for clusters
     const currentText = parts.join('. ');
@@ -2504,7 +2540,8 @@ export async function getOoptDetails(nid) {
                          rowContent.match(/views-field-title[^>]*>\s*([^<\s][^<]*)/i);
           const areaM = rowContent.match(/views-field-field-cluster-area-value[^>]*>\s*([0-9.,]+(?:\s*га)?)/i);
           if (titleM) {
-            const cName = titleM[1].trim();
+            const rawName = titleM[1].trim();
+            const cName = cleanClusterName(rawName);
             if (cName && cName.toLowerCase() !== 'название') {
               clusterItems.push({
                 name: cName,

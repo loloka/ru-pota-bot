@@ -508,6 +508,61 @@ try {
     console.warn('[DB] nested_oopt region sanitization warning:', e.message);
   }
 
+  // Sanitize clusters JSON: decode HTML entities (&quot;, &amp;) and clean cluster names
+  try {
+    const clusterRows = db.prepare("SELECT nid, clusters FROM oopt_registry WHERE clusters LIKE '%&quot;%' OR clusters LIKE '%&amp;%' OR clusters LIKE '%Участок%'").all();
+    if (clusterRows.length > 0) {
+      const cleanNameHelper = (name) => {
+        if (!name || typeof name !== 'string') return '';
+        let s = name
+          .replace(/&quot;/g, '"')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&#39;|&apos;/g, "'")
+          .replace(/&laquo;|&raquo;/g, '"')
+          .replace(/&nbsp;/g, ' ')
+          .trim();
+        const quoteMatch = s.match(/^(?:участок|кластер|сектор|зона|часть|территория|отделение)?[ \t]*["«]([^"»]+)["»]$/i);
+        if (quoteMatch && quoteMatch[1].trim()) {
+          s = quoteMatch[1].trim();
+        } else {
+          const stripped = s.replace(/^(?:участок|кластер|сектор|зона|часть|территория|отделение)[ \t]*(?:№|n|#|no\.?)?[ \t]*[-–—:]?[ \t]*/i, '').trim();
+          if (stripped && !/^(?:\d+|[ivx]+|[a-zа-я](?:-\d+)?)$/i.test(stripped)) {
+            s = stripped;
+          }
+        }
+        s = s.replace(/^["'«]+|["'»]+$/g, '').trim();
+        return s;
+      };
+
+      const updateClusterStmt = db.prepare('UPDATE oopt_registry SET clusters = ? WHERE nid = ?');
+      for (const row of clusterRows) {
+        try {
+          const items = JSON.parse(row.clusters);
+          if (Array.isArray(items)) {
+            let changed = false;
+            for (const it of items) {
+              if (it && it.name) {
+                const cleaned = cleanNameHelper(it.name);
+                if (cleaned !== it.name) {
+                  it.name = cleaned;
+                  changed = true;
+                }
+              }
+            }
+            if (changed) {
+              updateClusterStmt.run(JSON.stringify(items), row.nid);
+              console.log(`[DB] 🧹 Sanitized cluster names and HTML entities in NID ${row.nid}`);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (e) {
+    console.warn('[DB] clusters sanitization warning:', e.message);
+  }
+
   // Ensure missing categories are populated
   try {
     db.exec(`

@@ -209,5 +209,21 @@ const dualWild = formatDualParkName('Дикое поле', 'памятник п�
 assert.strictEqual(dualWild, 'Wild Field (Dikoe Pole)', 'Must preserve dual format when translation is semantically distinct');
 console.log('✅ PASS: Redundant dual name suppression verified per Manu R2BBX ("Stanovlyansky" single, "Wild Field (Dikoe Pole)" dual)');
 
+// 22. Test cluster HTML entity decoding & prefix cleaning per Manu R2BBX ("Галичья гора", nid 6427)
+import { cleanClusterName } from './src/services/ooptService.js';
+assert.strictEqual(cleanClusterName('Участок &quot;Плющань&quot;'), 'Плющань');
+assert.strictEqual(cleanClusterName('Участок&quot;Галичья Гора&quot;'), 'Галичья Гора');
+assert.strictEqual(cleanClusterName('Участок 1'), 'Участок 1');
+
+const galichyaDetails = await getOoptDetails(6427);
+const galichyaClarify = galichyaDetails.submitterFields.clarification;
+assert.ok(!galichyaClarify.includes('&quot;'), 'Clarification must decode HTML entities (&quot;)');
+assert.ok(!galichyaClarify.includes('Участок "'), 'Clarification must strip redundant "Участок" prefix');
+assert.ok(galichyaClarify.includes('Плющань 39,5 га'), 'Must include clean cluster name and area');
+assert.ok(galichyaClarify.includes('Галичья Гора 19,0 га'), 'Must include clean cluster name and area');
+assert.ok(galichyaClarify.length <= 255, 'Clarification must not exceed 255 chars');
+console.log('✅ PASS: Cluster HTML entity decoding & prefix cleaning verified for NID 6427 ("Галичья гора")');
+
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');
+
 

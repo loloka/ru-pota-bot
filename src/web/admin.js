@@ -1447,7 +1447,7 @@ export const startAdminServer = (telegramClient) => {
                       <label class="form-label small fw-bold mb-0">11. Уточнение / Comments (не обязательно):</label>
                       <span id="subm-clarify-counter" class="badge bg-light text-secondary border font-monospace" style="font-size: 11px;">0 / 255</span>
                     </div>
-                    <textarea class="form-control form-control-sm" id="subm-clarify" rows="2" placeholder="Границы, кластерные участки, вложенные ООПТ (строгий лимит 255 символов)"></textarea>
+                    <textarea class="form-control form-control-sm" id="subm-clarify" rows="3" placeholder="Границы, кластерные участки, вложенные ООПТ (строгий лимит 255 символов)"></textarea>
                     <div class="form-text small text-muted">Строгий лимит админки координатора POTA: не более 255 символов на всё поле.</div>
                   </div>
 
@@ -3443,10 +3443,37 @@ export const startAdminServer = (telegramClient) => {
             return translated || transliterated || '';
           }
 
+          function cleanClusterNameClient(name) {
+            if (!name || typeof name !== 'string') return '';
+            var s = name
+              .replace(/&quot;/g, '"')
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&#39;|&apos;/g, "'")
+              .replace(/&laquo;|&raquo;/g, '"')
+              .replace(/&nbsp;/g, ' ')
+              .trim();
+
+            var quoteMatch = s.match(/^(?:участок|кластер|сектор|зона|часть|территория|отделение)?[ \t]*["«]([^"»]+)["»]$/i);
+            if (quoteMatch && quoteMatch[1].trim()) {
+              s = quoteMatch[1].trim();
+            } else {
+              var stripped = s.replace(/^(?:участок|кластер|сектор|зона|часть|территория|отделение)[ \t]*(?:№|n|#|no\.?)?[ \t]*[-–—:]?[ \t]*/i, '').trim();
+              if (stripped && !/^(?:[0-9]+|[ivx]+|[a-zа-я](?:-[0-9]+)?)$/i.test(stripped)) {
+                s = stripped;
+              }
+            }
+
+            s = s.replace(/^["'«]+|["'»]+$/g, '').trim();
+            return s;
+          }
+
           function isGenericClusterNameClient(name) {
             if (!name || typeof name !== 'string') return true;
-            var s = name.trim().toLowerCase();
-            if (s === 'название' || s === 'участок' || s === 'кластер' || s === 'сектор' || s === 'зона' || s === 'часть') return true;
+            var cleaned = cleanClusterNameClient(name);
+            var s = cleaned.trim().toLowerCase();
+            if (!s || s === 'название' || s === 'участок' || s === 'кластер' || s === 'сектор' || s === 'зона' || s === 'часть') return true;
             if (/^[0-9]+$/.test(s)) return true;
             if (/^[0-9]+-(?:й|ой|ий|ый)[ \t]+(?:участок|кластер|сектор)$/i.test(s)) return true;
             if (/^(?:участок|кластер|сектор|зона|часть|территория|отделение)[ \t]*(?:№|n|#|no\.?)?[ \t]*[-–—]?[ \t]*(?:[0-9]+|[ivx]+|[a-zа-я](?:-[0-9]+)?)?$/i.test(s)) {
@@ -3503,7 +3530,14 @@ export const startAdminServer = (telegramClient) => {
             }
             if (cCount >= 2 || cList.length >= 2) {
               var effectiveCount = Math.max(cCount, cList.length);
-              var validClusters = cList.filter(function(c) { return c && c.name && c.name.toLowerCase() !== 'название' && c.name.trim().length > 0; });
+              var validClusters = cList
+                .map(function(c) {
+                  return {
+                    name: cleanClusterNameClient(c ? c.name : ''),
+                    area: c ? c.area : ''
+                  };
+                })
+                .filter(function(c) { return c && c.name && c.name.toLowerCase() !== 'название' && c.name.trim().length > 0; });
 
               var currentText = parts.join('. ');
               var maxClusterLen = Math.max(0, 255 - (currentText ? currentText.length + 2 : 0));

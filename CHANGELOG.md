@@ -1,5 +1,14 @@
 # История изменений (Changelog)
 
+## [1.16.104] - 2026-10-03 (Fix: ReferenceError in open-submitter-btn & Robust Error Handling)
+### Исправлено
+- **Исправлена ошибка ReferenceError при нажатии кнопки «Подготовить заявку POTA»** (`src/web/admin.js`):
+  - По сообщению Manu R2BBX («*Что-то у меня кнопка подготовить заявку перестала реагировать*») устранена опечатка в имени переменной в обработчике `open-submitter-btn`: вместо объявленной `intStatus` ошибочно использовалась `internationalStatus`.
+  - В браузере возникала ошибка `ReferenceError: internationalStatus is not defined`, блокировавшая открытие модального окна сабмиттера.
+  - Весь обработчик клика кнопки сабмиттера обёрнут в защитный блок `try ... catch` с выводом ошибки в консоль и уведомлением, что исключает тихое падение интерфейса в будущем.
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.104` во всех обязательных файлах по правилу 2.1 (`package.json`, `src/api/potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.103] - 2026-10-02 (UNESCO Biosphere Reserve: Automatic Detection & International Status Badge)
 ### Улучшено и разъяснено
 - **Автоматическое распознавание статуса UNESCO Biosphere Reserve и отображение бейджа международного статуса ООПТ** (`src/web/admin.js`, `src/webapp/src/services/ooptUtils.js`, `test_oopt_search.js`):

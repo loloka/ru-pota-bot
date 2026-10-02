@@ -3889,7 +3889,8 @@ export const startAdminServer = (telegramClient) => {
           document.addEventListener('click', async function(e) {
             var btn = e.target.closest('.open-submitter-btn');
             if (btn) {
-              var title = btn.getAttribute('data-title') || '';
+              try {
+                var title = btn.getAttribute('data-title') || '';
               var category = btn.getAttribute('data-category') || '';
               var sig = btn.getAttribute('data-sig') || '';
               var ate = btn.getAttribute('data-ate') || '';
@@ -3924,7 +3925,7 @@ export const startAdminServer = (telegramClient) => {
               document.getElementById('subm-status-en').value = parsed.statusEn;
               var initIntBadge = document.getElementById('subm-int-status-badge');
               if (initIntBadge) {
-                var initInt = internationalStatus || (parsed.statusEn === 'UNESCO Biosphere Reserve' ? 'Биосферный резерват' : '');
+                var initInt = intStatus || (parsed.statusEn === 'UNESCO Biosphere Reserve' ? 'Биосферный резерват' : '');
                 if (initInt) {
                   var isBio = /биосферн/i.test(initInt);
                   var extra = isBio ? ' (ЮНЕСКО MAB)' : '';
@@ -4106,8 +4107,12 @@ export const startAdminServer = (telegramClient) => {
               } else {
                 document.getElementById('subm-coords-status').textContent = '';
               }
+            } catch (openErr) {
+              console.error('[Submitter Modal Error]', openErr);
+              alert('Ошибка открытия формы: ' + openErr.message);
             }
-          });
+          }
+        });
 
           // Copy Submitter Template Buttons
           function copySubmitterAction() {

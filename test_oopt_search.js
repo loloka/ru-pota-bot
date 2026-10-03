@@ -1,6 +1,6 @@
 import assert from 'assert';
 import db from './src/db/database.js';
-import { getOoptList, cleanOoptName, translateNameToEnglish } from './src/services/ooptService.js';
+import { getOoptList, cleanOoptName, translateNameToEnglish, isSameOrOverlappingRegion, getRegionalPotaStats } from './src/services/ooptService.js';
 
 console.log('=== RUNNING OOPT SEARCH & CYRILLIC CASE-INSENSITIVITY TESTS ===\n');
 
@@ -230,6 +230,57 @@ assert.strictEqual(laplandDetails.international_status, 'Биосферный р
 assert.strictEqual(laplandDetails.is_biosphere, true, 'Must identify as biosphere reserve');
 assert.strictEqual(laplandDetails.submitterFields.statusEn, 'UNESCO Biosphere Reserve', 'Status EN must be UNESCO Biosphere Reserve');
 console.log('✅ PASS: UNESCO Biosphere Reserve status detection verified for NID 5456 ("Лапландский")');
+
+// 24. Test cluster large number parsing & trailing descriptor stripping per Manu R2BBX ("Ямальский", nid 32)
+assert.strictEqual(cleanClusterName('Южно-Ямальский участок'), 'Южно-Ямальский');
+assert.strictEqual(cleanClusterName('Северо-Ямальский участок'), 'Северо-Ямальский');
+
+const yamalClarify = formatClarification({
+  area: 4183000,
+  cluster_count: 2,
+  clusters: JSON.stringify([
+    { name: 'Южно-Ямальский участок', area: '3 374 485,0 га' },
+    { name: 'Северо-Ямальский участок', area: '411 270,4 га' }
+  ])
+});
+assert.ok(yamalClarify.includes('Кластерность: 2 участка'), 'Must correctly inflect "2 участка" (not 2 участков)');
+assert.ok(yamalClarify.includes('Южно-Ямальский 3 374 485,0 га'), 'Must preserve thousands space in cluster area and strip trailing "участок"');
+assert.ok(yamalClarify.includes('Северо-Ямальский 411 270,4 га'), 'Must preserve full area for second cluster');
+assert.ok(!yamalClarify.includes('Южно-Ямальский 3 га'), 'Must NOT truncate thousands at space to 3 га');
+assert.ok(yamalClarify.length <= 255, 'Clarification must not exceed 255 chars');
+console.log('✅ PASS: Cluster large number parsing & trailing descriptor stripping verified ("Ямальский": 3 374 485,0 га, 2 участка)');
+
+// 25. Test strict Omsk region isolation from Tomsk and Kostroma per Manu R2BBX
+const omskList = getOoptList({ region: 'Омская область', limit: 100 });
+assert.strictEqual(omskList.total, 24, 'Omsk region must contain exactly 24 nature reserves (not 212)');
+for (const item of omskList.rows) {
+  assert.ok(item.ate.includes('Омская'), `Item ${item.nid} (${item.title}) must be in Omsk oblast`);
+  assert.ok(!item.ate.includes('Томск'), `Item ${item.nid} (${item.title}) must NOT be in Tomsk oblast`);
+  assert.ok(!item.ate.includes('Костром'), `Item ${item.nid} (${item.title}) must NOT be in Kostroma oblast`);
+}
+
+assert.strictEqual(isSameOrOverlappingRegion('Омская область', 'Томская область'), false, 'Omsk and Tomsk must NOT match');
+assert.strictEqual(isSameOrOverlappingRegion('Омская область', 'Костромская область'), false, 'Omsk and Kostroma must NOT match');
+assert.strictEqual(isSameOrOverlappingRegion('Омская область', 'г. Омск'), true, 'Omsk and Omsk city must match');
+
+const regStats = getRegionalPotaStats();
+const omskStat = regStats.regions.find(r => r.code === 'RU-OM');
+assert.ok(omskStat, 'RU-OM stat must exist');
+assert.strictEqual(omskStat.ooptCandidates, 24, 'RU-OM candidate count must be 24 (excluding Tomsk and Kostroma)');
+console.log('✅ PASS: Omsk region strictly isolated from Tomsk and Kostroma in search and stats (24 OOPTs, 0 Tomsk/Kostroma)');
+
+// 26. Test RU-0024 (Meshchyora) and RU-0025 (Meschyorsky) matching per Manu R2BBX
+const m24 = db.prepare('SELECT nid, title, ate, pota_ref, pota_name FROM oopt_registry WHERE nid = 6708').get();
+const m25 = db.prepare('SELECT nid, title, ate, pota_ref, pota_name FROM oopt_registry WHERE nid = 6709').get();
+
+assert.ok(m24, 'NID 6708 (Мещера) must exist');
+assert.strictEqual(m24.pota_ref, 'RU-0024', 'NID 6708 must be linked to RU-0024');
+assert.strictEqual(m24.pota_name, 'Meshchyora National Park', 'NID 6708 must have pota_name Meshchyora National Park');
+
+assert.ok(m25, 'NID 6709 (Мещерский) must exist');
+assert.strictEqual(m25.pota_ref, 'RU-0025', 'NID 6709 must be linked to RU-0025');
+assert.strictEqual(m25.pota_name, 'Meschyorsky National Park', 'NID 6709 must have pota_name Meschyorsky National Park');
+console.log('✅ PASS: RU-0024 (Мещера) and RU-0025 (Мещерский) successfully mapped and verified in oopt_registry');
 
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');
 

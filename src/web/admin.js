@@ -3466,6 +3466,11 @@ export const startAdminServer = (telegramClient) => {
               }
             }
 
+            var trailingStripped = s.replace(/[ \t]+(?:участок|кластер|сектор|зона|часть|территория|отделение)$/i, '').trim();
+            if (trailingStripped && !/^(?:№|n|#|no\.?)?[ \t]*[-–—]?$/i.test(trailingStripped)) {
+              s = trailingStripped;
+            }
+
             s = s.replace(/^["'«]+|["'»]+$/g, '').trim();
             return s;
           }
@@ -3483,10 +3488,20 @@ export const startAdminServer = (telegramClient) => {
             return false;
           }
 
+          function getUchastokWordClient(count) {
+            var mod100 = count % 100;
+            var mod10 = count % 10;
+            if (mod100 >= 11 && mod100 <= 14) return count + ' участков';
+            if (mod10 === 1) return count + ' участок';
+            if (mod10 >= 2 && mod10 <= 4) return count + ' участка';
+            return count + ' участков';
+          }
+
           function isSameOrOverlappingRegionClient(regionA, regionB) {
             if (!regionA || !regionB) return false;
             var getStems = function(str) {
               return String(str).toLowerCase()
+                .replace(/(?:^|\s)г\.?\s+/g, ' ')
                 .split(/[,;\\n()]+/)
                 .map(function(s) {
                   return s.replace(/(республика|край|область|автономный|округ|город|федеральный|значения)/g, '').trim();
@@ -3497,7 +3512,17 @@ export const startAdminServer = (telegramClient) => {
             var stemsB = getStems(regionB);
             for (var i = 0; i < stemsA.length; i++) {
               for (var j = 0; j < stemsB.length; j++) {
-                if (stemsA[i].indexOf(stemsB[j]) !== -1 || stemsB[j].indexOf(stemsA[i]) !== -1) {
+                var a = stemsA[i];
+                var b = stemsB[j];
+                if ((a.indexOf('омск') !== -1 || b.indexOf('омск') !== -1) && (a.indexOf('томск') !== -1 || b.indexOf('томск') !== -1 || a.indexOf('костром') !== -1 || b.indexOf('костром') !== -1)) {
+                  continue;
+                }
+                var isYamalA = a.indexOf('ямал') !== -1 || a.indexOf('долган') !== -1;
+                var isYamalB = b.indexOf('ямал') !== -1 || b.indexOf('долган') !== -1;
+                if (isYamalA !== isYamalB && (a.indexOf('ненец') !== -1 || b.indexOf('ненец') !== -1)) {
+                  continue;
+                }
+                if (a.indexOf(b) !== -1 || b.indexOf(a) !== -1) {
                   return true;
                 }
               }
@@ -3542,7 +3567,7 @@ export const startAdminServer = (telegramClient) => {
 
               var currentText = parts.join('. ');
               var maxClusterLen = Math.max(0, 255 - (currentText ? currentText.length + 2 : 0));
-              var prefix = 'Кластерность: ' + effectiveCount + ' участков';
+              var prefix = 'Кластерность: ' + getUchastokWordClient(effectiveCount);
               var clusterPart = prefix;
 
               var hasDistinctNames = validClusters.some(function(c) { return !isGenericClusterNameClient(c.name); });

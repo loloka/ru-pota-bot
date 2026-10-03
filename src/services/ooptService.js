@@ -546,6 +546,9 @@ export function getOoptList({
     if (regLower.includes('ненецк') && !regLower.includes('ямал')) {
       baseConditions.push(`(ate LIKE ? AND ate NOT LIKE '%Ямало-Ненецк%')`);
       baseParams.push(`%${regTrim}%`);
+    } else if (regLower.includes('омск') && !regLower.includes('томск') && !regLower.includes('костром')) {
+      baseConditions.push(`(ate LIKE ? AND ate NOT LIKE '%Томск%' AND ate NOT LIKE '%Костром%')`);
+      baseParams.push(`%${regTrim}%`);
     } else {
       baseConditions.push(`ate LIKE ?`);
       baseParams.push(`%${regTrim}%`);
@@ -1774,6 +1777,8 @@ export function getRegionalPotaStats() {
         matches = a.includes('ямало-ненецкий') || a.includes('ямал');
       } else if (code === 'RU-FJ') {
         matches = a.includes('русская арктика') || a.includes('франц');
+      } else if (code === 'RU-OM') {
+        matches = a.includes('омская') && !a.includes('томская') && !a.includes('костромская');
       } else {
         matches = a.includes(item.name.toLowerCase());
       }
@@ -1896,6 +1901,12 @@ export function cleanClusterName(name) {
     }
   }
 
+  // Strip trailing generic descriptor if preceded by a real name (e.g. "Южно-Ямальский участок" -> "Южно-Ямальский")
+  const trailingStripped = s.replace(/[ \t]+(?:участок|кластер|сектор|зона|часть|территория|отделение)$/i, '').trim();
+  if (trailingStripped && !/^(?:№|n|#|no\.?)?[ \t]*[-–—]?$/i.test(trailingStripped)) {
+    s = trailingStripped;
+  }
+
   // Strip remaining outer quotes
   s = s.replace(/^["'«]+|["'»]+$/g, '').trim();
   return s;
@@ -1914,6 +1925,15 @@ export function isGenericClusterName(name) {
   return false;
 }
 
+export function getUchastokWord(count) {
+  const mod100 = count % 100;
+  const mod10 = count % 10;
+  if (mod100 >= 11 && mod100 <= 14) return `${count} участков`;
+  if (mod10 === 1) return `${count} участок`;
+  if (mod10 >= 2 && mod10 <= 4) return `${count} участка`;
+  return `${count} участков`;
+}
+
 export function formatClusterItem(c, includeArea) {
   if (!c) return '';
   const name = cleanClusterName(c.name || '');
@@ -1928,6 +1948,7 @@ export function isSameOrOverlappingRegion(regionA, regionB) {
   if (!regionA || !regionB) return false;
   const getStems = (str) => {
     return String(str).toLowerCase()
+      .replace(/(?:^|\s)г\.?\s+/g, ' ')
       .split(/[,;\n()]+/)
       .map(s => s.replace(/(республика|край|область|автономный|округ|город|федеральный|значения)/g, '').trim())
       .filter(s => s.length >= 3);
@@ -1936,6 +1957,14 @@ export function isSameOrOverlappingRegion(regionA, regionB) {
   const stemsB = getStems(regionB);
   for (const a of stemsA) {
     for (const b of stemsB) {
+      if ((a.includes('омск') || b.includes('омск')) && (a.includes('томск') || b.includes('томск') || a.includes('костром') || b.includes('костром'))) {
+        continue;
+      }
+      const isYamalA = a.includes('ямал') || a.includes('долган');
+      const isYamalB = b.includes('ямал') || b.includes('долган');
+      if (isYamalA !== isYamalB && (a.includes('ненец') || b.includes('ненец'))) {
+        continue;
+      }
       if (a.includes(b) || b.includes(a)) return true;
     }
   }
@@ -1982,7 +2011,7 @@ export function formatClarification(item) {
     const currentText = parts.join('. ');
     const maxClusterLen = Math.max(0, 255 - (currentText ? currentText.length + 2 : 0));
 
-    const prefix = `Кластерность: ${effectiveCount} участков`;
+    const prefix = `Кластерность: ${getUchastokWord(effectiveCount)}`;
     let clusterPart = prefix;
 
     const hasDistinctNames = validClusters.some(c => !isGenericClusterName(c.name));
@@ -2538,14 +2567,20 @@ export async function getOoptDetails(nid) {
           const rowContent = rM[1];
           const titleM = rowContent.match(/views-field-title[^>]*>[\s\S]*?<a[^>]*>([^<]+)<\/a>/i) ||
                          rowContent.match(/views-field-title[^>]*>\s*([^<\s][^<]*)/i);
-          const areaM = rowContent.match(/views-field-field-cluster-area-value[^>]*>\s*([0-9.,]+(?:\s*га)?)/i);
+          const areaTd = rowContent.match(/views-field-field-cluster-area-value[^>]*>([\s\S]*?)(?:<\/td>|$)/i);
+          let areaStr = '';
+          if (areaTd) {
+            const cleanArea = areaTd[1].replace(/&nbsp;/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+            const valMatch = cleanArea.match(/([0-9][0-9\s\u00a0.,]*(?:\s*га)?)/i);
+            if (valMatch) areaStr = valMatch[1].trim();
+          }
           if (titleM) {
             const rawName = titleM[1].trim();
             const cName = cleanClusterName(rawName);
             if (cName && cName.toLowerCase() !== 'название') {
               clusterItems.push({
                 name: cName,
-                area: areaM ? areaM[1].trim() : ''
+                area: areaStr
               });
             }
           }
@@ -2822,6 +2857,8 @@ const EN_TO_RU_WORDS = {
 
 // Known manual / verified POTA-to-OOPT overrides (e.g. NextGIS URL typos on pota.app)
 const KNOWN_POTA_MATCHES = {
+  'RU-0024': 6708,  // Meshchyora National Park (Владимирская обл.) -> Мещера
+  'RU-0025': 6709,  // Meschyorsky National Park (Рязанская обл.) -> Мещерский
   'RU-0756': 58135, // Wintering Pits N 3 (NextGIS URL on pota.app has typo node/5813 instead of node/58135)
 };
 
@@ -2849,6 +2886,8 @@ const DESCRIPTOR_WORDS = new Set([
 function normalizeStem(token) {
   if (!token) return '';
   let s = token.toLowerCase();
+  s = s.replace(/sch/g, 'shch');
+  s = s.replace(/yo|jo/g, 'e');
   s = s.replace(/^y(?=[aeou])/i, '');
   s = s.replace(/yy|iy/g, 'y').replace(/i/g, 'y');
   s = s.replace(/ts|tz|cz/g, 'c');

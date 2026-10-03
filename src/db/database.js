@@ -532,6 +532,10 @@ try {
             s = stripped;
           }
         }
+        const trailingStripped = s.replace(/[ \t]+(?:участок|кластер|сектор|зона|часть|территория|отделение)$/i, '').trim();
+        if (trailingStripped && !/^(?:№|n|#|no\.?)?[ \t]*[-–—]?$/i.test(trailingStripped)) {
+          s = trailingStripped;
+        }
         s = s.replace(/^["'«]+|["'»]+$/g, '').trim();
         return s;
       };
@@ -563,12 +567,15 @@ try {
     console.warn('[DB] clusters sanitization warning:', e.message);
   }
 
-  // Ensure missing categories are populated
+  // Ensure missing categories are populated and sync verified POTA references
   try {
     db.exec(`
       UPDATE oopt_registry SET category = 'дендрологический парк и ботанический сад' WHERE nid = 66245 AND (category IS NULL OR category = '');
       UPDATE oopt_registry SET category = 'государственный природный заказник' WHERE nid = 58456 AND (category IS NULL OR category = '');
       UPDATE oopt_registry SET category = 'памятник природы' WHERE nid = 56585 AND (category IS NULL OR category = '');
+      UPDATE oopt_registry SET clusters = NULL WHERE nid IN (32, 235, 6453);
+      UPDATE oopt_registry SET pota_ref = 'RU-0024', pota_name = 'Meshchyora National Park' WHERE nid = 6708 AND (pota_ref IS NULL OR pota_ref != 'RU-0024');
+      UPDATE oopt_registry SET pota_ref = 'RU-0025', pota_name = 'Meschyorsky National Park' WHERE nid = 6709 AND (pota_ref IS NULL OR pota_ref != 'RU-0025');
     `);
   } catch (_) {}
 } catch (e) {

@@ -782,6 +782,12 @@ export function cleanClusterName(name) {
     }
   }
 
+  // Strip trailing generic descriptor if preceded by a real name (e.g. "Южно-Ямальский участок" -> "Южно-Ямальский")
+  const trailingStripped = s.replace(/[ \t]+(?:участок|кластер|сектор|зона|часть|территория|отделение)$/i, '').trim();
+  if (trailingStripped && !/^(?:№|n|#|no\.?)?[ \t]*[-–—]?$/i.test(trailingStripped)) {
+    s = trailingStripped;
+  }
+
   // Strip remaining outer quotes
   s = s.replace(/^["'«]+|["'»]+$/g, '').trim();
   return s;
@@ -800,6 +806,15 @@ export function isGenericClusterName(name) {
   return false;
 }
 
+export function getUchastokWord(count) {
+  const mod100 = count % 100;
+  const mod10 = count % 10;
+  if (mod100 >= 11 && mod100 <= 14) return `${count} участков`;
+  if (mod10 === 1) return `${count} участок`;
+  if (mod10 >= 2 && mod10 <= 4) return `${count} участка`;
+  return `${count} участков`;
+}
+
 export function formatClusterItem(c, includeArea) {
   if (!c) return '';
   const name = cleanClusterName(c.name || '');
@@ -814,6 +829,7 @@ export function isSameOrOverlappingRegion(regionA, regionB) {
   if (!regionA || !regionB) return false;
   const getStems = (str) => {
     return String(str).toLowerCase()
+      .replace(/(?:^|\s)г\.?\s+/g, ' ')
       .split(/[,;\n()]+/)
       .map(s => s.replace(/(республика|край|область|автономный|округ|город|федеральный|значения)/g, '').trim())
       .filter(s => s.length >= 3);
@@ -822,6 +838,14 @@ export function isSameOrOverlappingRegion(regionA, regionB) {
   const stemsB = getStems(regionB);
   for (const a of stemsA) {
     for (const b of stemsB) {
+      if ((a.includes('омск') || b.includes('омск')) && (a.includes('томск') || b.includes('томск') || a.includes('костром') || b.includes('костром'))) {
+        continue;
+      }
+      const isYamalA = a.includes('ямал') || a.includes('долган');
+      const isYamalB = b.includes('ямал') || b.includes('долган');
+      if (isYamalA !== isYamalB && (a.includes('ненец') || b.includes('ненец'))) {
+        continue;
+      }
       if (a.includes(b) || b.includes(a)) return true;
     }
   }
@@ -868,7 +892,7 @@ export function formatClarification(item) {
     const currentText = parts.join('. ');
     const maxClusterLen = Math.max(0, 255 - (currentText ? currentText.length + 2 : 0));
 
-    const prefix = `Кластерность: ${effectiveCount} участков`;
+    const prefix = `Кластерность: ${getUchastokWord(effectiveCount)}`;
     let clusterPart = prefix;
 
     const hasDistinctNames = validClusters.some(c => !isGenericClusterName(c.name));

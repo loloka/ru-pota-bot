@@ -2132,8 +2132,17 @@ export function parseSubmitterFields(item) {
   const lat = item.lat !== null && item.lat !== undefined && item.lat !== '' ? Number(item.lat).toFixed(4) : '';
   const lon = item.lon !== null && item.lon !== undefined && item.lon !== '' ? Number(item.lon).toFixed(4) : '';
 
-  // Priority NextGIS link requested by Manu (R2BBX): node/:id
-  const siteUrl = item.nid ? `https://ooptaari.nextgis.ru/node/${item.nid}` : 'https://карта.оцзк.рф/';
+  // Priority NextGIS link requested by Manu (R2BBX): node/:id (valid up to NID 66061)
+  let siteUrl = 'https://карта.оцзк.рф/';
+  if (item.nid) {
+    if (Number(item.nid) <= 66061) {
+      siteUrl = `https://ooptaari.nextgis.ru/node/${item.nid}`;
+    } else if (item.rusoir_url) {
+      siteUrl = item.rusoir_url;
+    } else {
+      siteUrl = 'https://карта.оцзк.рф/';
+    }
+  }
 
   // Clarification strictly formatted <= 255 chars
   const clarification = formatClarification(item);

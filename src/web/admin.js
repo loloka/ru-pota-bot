@@ -1452,6 +1452,7 @@ export const startAdminServer = (telegramClient) => {
                       <input type="text" class="form-control" id="subm-site" placeholder="https://ooptaari.nextgis.ru/node/... или сайт парка" required>
                       <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-site" title="Скопировать ссылку"><i class="bi bi-clipboard"></i></button>
                     </div>
+                    <div id="subm-site-notice" class="mt-1" style="display:none;"></div>
                     <div class="form-text small text-muted">Приоритет: собственный сайт парка или NextGIS по требованию R2BBX. Википедия, VK и коммерческие ресурсы не принимаются.</div>
                   </div>
 
@@ -3694,7 +3695,16 @@ export const startAdminServer = (telegramClient) => {
             var dxEntity = getDxEntityClient(region, rawTitle);
             var locationCode = getPotaLocationCodeClient(region);
 
-            var siteUrl = nid ? ('https://ooptaari.nextgis.ru/node/' + nid) : 'https://карта.оцзк.рф/';
+            var numNid = parseInt(nid, 10);
+            var isNextgisArchived = !isNaN(numNid) && numNid > 66061;
+            var siteUrl = 'https://карта.оцзк.рф/';
+            if (nid) {
+              if (!isNextgisArchived) {
+                siteUrl = 'https://ooptaari.nextgis.ru/node/' + nid;
+              } else {
+                siteUrl = 'https://карта.оцзк.рф/';
+              }
+            }
 
             var latVal = (lat !== null && lat !== undefined && lat !== '' && !isNaN(Number(lat))) ? Number(lat).toFixed(4) : '';
             var lonVal = (lon !== null && lon !== undefined && lon !== '' && !isNaN(Number(lon))) ? Number(lon).toFixed(4) : '';
@@ -3709,6 +3719,7 @@ export const startAdminServer = (telegramClient) => {
             var clarifyText = formatClarificationClient(profile, status, area, nestedOopt, rawTitle, cleanName, nid, parentPota, clusterCount, clusters, region);
 
             return {
+              nid: nid,
               name: cleanName,
               nameEn: nameEn,
               statusEn: statusEn,
@@ -3719,6 +3730,7 @@ export const startAdminServer = (telegramClient) => {
               lat: latVal,
               lon: lonVal,
               site: siteUrl,
+              isNextgisArchived: isNextgisArchived,
               clarification: clarifyText
             };
           }
@@ -3909,7 +3921,11 @@ export const startAdminServer = (telegramClient) => {
           // Quick switch buttons for site links
           document.getElementById('btn-set-link-nextgis')?.addEventListener('click', function() {
             var nid = document.getElementById('subm-nid').value;
+            var numNid = parseInt(nid, 10);
             if (nid) {
+              if (!isNaN(numNid) && numNid > 66061) {
+                if (Toast) Toast.fire({ icon: 'warning', title: '⚠️ Внимание: NID ' + nid + ' отсутствует в архиве NextGIS (выдаст 404)!' });
+              }
               document.getElementById('subm-site').value = 'https://ooptaari.nextgis.ru/node/' + nid;
               updateSubmitterPreview();
             }
@@ -3992,6 +4008,29 @@ export const startAdminServer = (telegramClient) => {
               document.getElementById('subm-lon').value = parsed.lon;
               document.getElementById('subm-region').value = parsed.region;
               document.getElementById('subm-site').value = parsed.site;
+              var siteNoticeEl = document.getElementById('subm-site-notice');
+              var nextgisBtn = document.getElementById('btn-set-link-nextgis');
+              if (parsed.isNextgisArchived) {
+                if (siteNoticeEl) {
+                  siteNoticeEl.innerHTML = '<div class="alert alert-warning py-1 px-2 small mb-1" style="font-size:11px;"><i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> <b>Внимание:</b> Объект зарегистрирован после закрытия архива NextGIS (NID ' + parsed.nid + ' > 66061). Ссылка NextGIS выдает 404. Рекомендуется использовать официальный сайт ООПТ или карту.оцзк.рф.</div>';
+                  siteNoticeEl.style.display = 'block';
+                }
+                if (nextgisBtn) {
+                  nextgisBtn.classList.remove('btn-outline-success');
+                  nextgisBtn.classList.add('btn-outline-secondary');
+                  nextgisBtn.title = 'Объект NID > 66061 отсутствует в архиве NextGIS (404)';
+                }
+              } else {
+                if (siteNoticeEl) {
+                  siteNoticeEl.innerHTML = '';
+                  siteNoticeEl.style.display = 'none';
+                }
+                if (nextgisBtn) {
+                  nextgisBtn.classList.remove('btn-outline-secondary');
+                  nextgisBtn.classList.add('btn-outline-success');
+                  nextgisBtn.title = 'Установить ссылку NextGIS зеркала (приоритет R2BBX)';
+                }
+              }
               document.getElementById('subm-clarify').value = parsed.clarification || '';
 
               var reorgBox = document.getElementById('subm-reorganized-alert-container');

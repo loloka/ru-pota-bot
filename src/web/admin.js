@@ -1338,7 +1338,10 @@ export const startAdminServer = (telegramClient) => {
                   <div class="row g-2 mb-2">
                     <div class="col-md-7">
                       <label class="form-label small fw-bold mb-1">1. Название парка/ООПТ (RU):</label>
-                      <input type="text" class="form-control form-control-sm font-monospace fw-bold" id="subm-name" required>
+                      <div class="input-group input-group-sm">
+                        <input type="text" class="form-control font-monospace fw-bold" id="subm-name" required>
+                        <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-name" title="Скопировать название (RU)"><i class="bi bi-clipboard"></i></button>
+                      </div>
                       <div class="form-text small text-muted">Собственное имя без бюрократических приставок и кавычек</div>
                     </div>
                     <div class="col-md-5">
@@ -1346,7 +1349,10 @@ export const startAdminServer = (telegramClient) => {
                         <label class="form-label small fw-bold mb-0">2. Название для POTA (EN):</label>
                         <button type="button" class="btn btn-xs btn-outline-success py-0 px-1" style="font-size:10px;" id="btn-ai-translate" onclick="runAiTranslateAdmin()"><i class="bi bi-stars"></i> AI перевод</button>
                       </div>
-                      <input type="text" class="form-control form-control-sm font-monospace text-success fw-bold" id="subm-name-en" placeholder="Lakeside (Priozernyy)" required>
+                      <div class="input-group input-group-sm">
+                        <input type="text" class="form-control font-monospace text-success fw-bold" id="subm-name-en" placeholder="Lakeside (Priozernyy)" required>
+                        <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-name-en" title="Скопировать название для POTA (EN)"><i class="bi bi-clipboard"></i></button>
+                      </div>
                       <div class="form-text small text-muted">Формат координатора POTA: Перевод (Транслитерация)</div>
                     </div>
                   </div>
@@ -1386,7 +1392,10 @@ export const startAdminServer = (telegramClient) => {
                     </div>
                     <div class="col-md-6">
                       <label class="form-label small fw-bold mb-1">6. Локация POTA (ISO): <span id="subm-location-badge"></span></label>
-                      <input type="text" class="form-control form-control-sm font-monospace fw-bold" id="subm-location-code" placeholder="RU-ST или RU-MOS, RU-MOW">
+                      <div class="input-group input-group-sm">
+                        <input type="text" class="form-control font-monospace fw-bold" id="subm-location-code" placeholder="RU-ST или RU-MOS, RU-MOW">
+                        <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-location-code" title="Скопировать локацию POTA"><i class="bi bi-clipboard"></i></button>
+                      </div>
                     </div>
                   </div>
 
@@ -1439,7 +1448,10 @@ export const startAdminServer = (telegramClient) => {
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:11px;" id="btn-set-link-custom" title="Ввести собственный сайт парка или заповедника">Свой сайт</button>
                       </div>
                     </div>
-                    <input type="text" class="form-control form-control-sm" id="subm-site" placeholder="https://ooptaari.nextgis.ru/node/... или сайт парка" required>
+                    <div class="input-group input-group-sm">
+                      <input type="text" class="form-control" id="subm-site" placeholder="https://ooptaari.nextgis.ru/node/... или сайт парка" required>
+                      <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-site" title="Скопировать ссылку"><i class="bi bi-clipboard"></i></button>
+                    </div>
                     <div class="form-text small text-muted">Приоритет: собственный сайт парка или NextGIS по требованию R2BBX. Википедия, VK и коммерческие ресурсы не принимаются.</div>
                   </div>
 
@@ -1448,7 +1460,10 @@ export const startAdminServer = (telegramClient) => {
                       <label class="form-label small fw-bold mb-0">11. Уточнение / Comments (не обязательно):</label>
                       <span id="subm-clarify-counter" class="badge bg-light text-secondary border font-monospace" style="font-size: 11px;">0 / 255</span>
                     </div>
-                    <textarea class="form-control form-control-sm" id="subm-clarify" rows="3" placeholder="Границы, кластерные участки, вложенные ООПТ (строгий лимит 255 символов)"></textarea>
+                    <div class="input-group input-group-sm">
+                      <textarea class="form-control form-control-sm" id="subm-clarify" rows="3" placeholder="Границы, кластерные участки, вложенные ООПТ (строгий лимит 255 символов)"></textarea>
+                      <button class="btn btn-outline-secondary btn-copy-coord d-flex align-items-center justify-content-center" type="button" data-target="subm-clarify" title="Скопировать уточнение / comments"><i class="bi bi-clipboard"></i></button>
+                    </div>
                     <div class="form-text small text-muted">Строгий лимит админки координатора POTA: не более 255 символов на всё поле.</div>
                   </div>
 
@@ -4261,22 +4276,24 @@ export const startAdminServer = (telegramClient) => {
             }
           });
 
-          // One-Click Coordinate Copy Handlers
+          // One-Click Field / Coordinate Copy Handlers
           document.addEventListener('click', function(e) {
             var copyCoordBtn = e.target.closest('.btn-copy-coord');
             if (copyCoordBtn) {
               var targetId = copyCoordBtn.getAttribute('data-target');
               var input = document.getElementById(targetId);
               if (input && input.value && input.value.trim()) {
-                navigator.clipboard.writeText(input.value.trim()).then(function() {
-                  if (Toast) Toast.fire({ icon: 'success', title: '📋 ' + input.value.trim() + ' скопировано!' });
+                var val = input.value.trim();
+                var shortVal = val.length > 35 ? val.substring(0, 32) + '...' : val;
+                navigator.clipboard.writeText(val).then(function() {
+                  if (Toast) Toast.fire({ icon: 'success', title: '📋 ' + shortVal + ' скопировано!' });
                 }).catch(function() {
                   input.select();
                   document.execCommand('copy');
-                  if (Toast) Toast.fire({ icon: 'success', title: '📋 ' + input.value.trim() + ' скопировано!' });
+                  if (Toast) Toast.fire({ icon: 'success', title: '📋 ' + shortVal + ' скопировано!' });
                 });
               } else {
-                if (Toast) Toast.fire({ icon: 'info', title: 'Координата пока не заполнена' });
+                if (Toast) Toast.fire({ icon: 'info', title: 'Поле пока не заполнено' });
               }
             }
 

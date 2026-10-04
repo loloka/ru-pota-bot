@@ -576,6 +576,8 @@ try {
       UPDATE oopt_registry SET clusters = NULL WHERE nid IN (32, 235, 6453);
       UPDATE oopt_registry SET pota_ref = 'RU-0024', pota_name = 'Meshchyora National Park' WHERE nid = 6708 AND (pota_ref IS NULL OR pota_ref != 'RU-0024');
       UPDATE oopt_registry SET pota_ref = 'RU-0025', pota_name = 'Meschyorsky National Park' WHERE nid = 6709 AND (pota_ref IS NULL OR pota_ref != 'RU-0025');
+      UPDATE oopt_registry SET pota_ref = 'RU-0031', pota_name = 'Pleshcheyevo Ozero National Park' WHERE nid = 6714 AND (pota_ref IS NULL OR pota_ref != 'RU-0031');
+      UPDATE oopt_registry SET pota_ref = 'RU-0324', pota_name = 'Bird Harbor Nature Park' WHERE nid = 7091 AND (pota_ref IS NULL OR pota_ref != 'RU-0324');
     `);
   } catch (_) {}
 } catch (e) {

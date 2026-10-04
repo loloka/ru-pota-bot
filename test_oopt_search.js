@@ -282,6 +282,19 @@ assert.strictEqual(m25.pota_ref, 'RU-0025', 'NID 6709 must be linked to RU-0025'
 assert.strictEqual(m25.pota_name, 'Meschyorsky National Park', 'NID 6709 must have pota_name Meschyorsky National Park');
 console.log('✅ PASS: RU-0024 (Мещера) and RU-0025 (Мещерский) successfully mapped and verified in oopt_registry');
 
+// 27. Test RU-0031 (Плещеево озеро) and RU-0324 (Птичья гавань) matching per Manu R2BBX
+const m31 = db.prepare('SELECT nid, title, ate, pota_ref, pota_name FROM oopt_registry WHERE nid = 6714').get();
+const m324 = db.prepare('SELECT nid, title, ate, pota_ref, pota_name FROM oopt_registry WHERE nid = 7091').get();
+
+assert.ok(m31, 'NID 6714 (Плещеево озеро) must exist');
+assert.strictEqual(m31.pota_ref, 'RU-0031', 'NID 6714 must be linked to RU-0031');
+assert.strictEqual(m31.pota_name, 'Pleshcheyevo Ozero National Park', 'NID 6714 must have pota_name Pleshcheyevo Ozero National Park');
+
+assert.ok(m324, 'NID 7091 (Птичья гавань) must exist');
+assert.strictEqual(m324.pota_ref, 'RU-0324', 'NID 7091 must be linked to RU-0324');
+assert.strictEqual(m324.pota_name, 'Bird Harbor Nature Park', 'NID 7091 must have pota_name Bird Harbor Nature Park');
+console.log('✅ PASS: RU-0031 (Плещеево озеро) and RU-0324 (Птичья гавань) successfully mapped and verified in oopt_registry');
+
 console.log('\n--- ALL OOPT SEARCH & NAME TESTS PASSED! ---');
 
 

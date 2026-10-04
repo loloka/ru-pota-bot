@@ -2852,13 +2852,18 @@ const EN_TO_RU_WORDS = {
   'blue': ['син', 'голуб'],
   'wintering': ['зимовал'],
   'pit': ['ям'],
-  'pits': ['ям'],
+  'bird': ['птич', 'птиц'],
+  'birds': ['птич', 'птиц'],
+  'harbor': ['гаван', 'порт', 'пристан'],
+  'harbour': ['гаван', 'порт', 'пристан'],
 };
 
 // Known manual / verified POTA-to-OOPT overrides (e.g. NextGIS URL typos on pota.app)
 const KNOWN_POTA_MATCHES = {
   'RU-0024': 6708,  // Meshchyora National Park (Владимирская обл.) -> Мещера
   'RU-0025': 6709,  // Meschyorsky National Park (Рязанская обл.) -> Мещерский
+  'RU-0031': 6714,  // Pleshcheyevo Ozero National Park (Ярославская обл.) -> Плещеево озеро
+  'RU-0324': 7091,  // Bird Harbor Nature Park (Омская обл.) -> Птичья гавань
   'RU-0756': 58135, // Wintering Pits N 3 (NextGIS URL on pota.app has typo node/5813 instead of node/58135)
 };
 
@@ -2888,10 +2893,10 @@ function normalizeStem(token) {
   let s = token.toLowerCase();
   s = s.replace(/sch/g, 'shch');
   s = s.replace(/yo|jo/g, 'e');
-  s = s.replace(/^y(?=[aeou])/i, '');
+  s = s.replace(/y(?=[aeiou])/g, '');
   s = s.replace(/yy|iy/g, 'y').replace(/i/g, 'y');
   s = s.replace(/ts|tz|cz/g, 'c');
-  s = s.replace(/(skiy|sky|skoy|skaya|skoe|nyy|naya|noe|nyn|ov|ev|in|ye|oe|aya|ogo|omu|ey|oy|a|e|o|u|y)$/, '');
+  s = s.replace(/(yevo|yovo|evo|ovo|ivo|skiy|sky|skoy|skaya|skoe|nyy|naya|noe|nyn|ov|ev|in|ye|oe|aya|ogo|omu|ey|oy|a|e|o|u|y)$/, '');
   return s;
 }
 
@@ -2946,7 +2951,7 @@ export function syncPotaMatches() {
       lon: o.lon ? parseFloat(o.lon) : null,
       tokens: cleanTokens(o.title),
       titleLower,
-      titleSlug: titleLower.replace(/[-_]/g, ' ').trim(),
+      titleSlug: titleLower.replace(/[-_.,]/g, ' ').replace(/\s+/g, ' ').trim(),
       catLower: (o.category || '').toLowerCase(),
       ateLower: (o.ate || '').toLowerCase(),
     };
@@ -2972,7 +2977,7 @@ export function syncPotaMatches() {
         }
         const slugM = decoded.match(/\/oopt\/([^/?#]+)/);
         if (slugM) {
-          targetSlug = slugM[1].replace(/[-_]/g, ' ').toLowerCase().trim();
+          targetSlug = slugM[1].replace(/[-_.,]/g, ' ').toLowerCase().replace(/\s+/g, ' ').trim();
         }
       } catch (_) {}
     }
@@ -3011,7 +3016,7 @@ export function syncPotaMatches() {
       if (targetNid && o.nid === targetNid) {
         score += 120;
         properNameMatch = true;
-      } else if (targetSlug && (o.titleLower === targetSlug || o.titleSlug === targetSlug || o.titleLower.includes(targetSlug) || targetSlug.includes(o.titleLower))) {
+      } else if (targetSlug && (o.titleLower === targetSlug || o.titleSlug === targetSlug || o.titleLower.includes(targetSlug) || targetSlug.includes(o.titleLower) || o.titleSlug.includes(targetSlug) || targetSlug.includes(o.titleSlug))) {
         score += 100;
         properNameMatch = true;
       }

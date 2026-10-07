@@ -17,7 +17,7 @@ const client = axios.create({
   timeout: 25000,
   proxy: false,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.95 (Telegram Bot; Node.js)',
+    'User-Agent': 'RU-POTA-Bot/1.16.109 (Telegram Bot; Node.js)',
     'Accept': 'application/json',
   },
 });
@@ -761,6 +761,12 @@ export function getOoptStats() {
     regionPotaCounts[r] = Math.max(fromPota, fromDb);
   }
 
+  const potaRuTotal = potaParks.length;
+  const uniqueMatchedPota = new Set(
+    db.prepare("SELECT DISTINCT pota_ref FROM oopt_registry WHERE pota_ref IS NOT NULL").all().map(r => r.pota_ref)
+  ).size;
+  const unmatchedPotaCount = Math.max(0, potaRuTotal - uniqueMatchedPota);
+
   cachedStats = {
     total,
     totalAll,
@@ -769,6 +775,8 @@ export function getOoptStats() {
     regional,
     local,
     inPota,
+    potaRuTotal,
+    unmatchedPotaCount,
     reorganized,
     categories,
     regions,
@@ -3175,6 +3183,163 @@ export function syncPotaMatches() {
   return { matched: finalMatches.length };
 }
 
+/**
+ * Retrieves Russian POTA parks that are not linked to any entry in oopt_registry.
+ * Includes potential fuzzy candidate suggestions from oopt_registry where possible.
+ */
+export function getUnmatchedPotaParks() {
+  const ruParks = getRussianPotaParks();
+  const matchedRows = db.prepare('SELECT DISTINCT pota_ref FROM oopt_registry WHERE pota_ref IS NOT NULL').all();
+  const matchedSet = new Set(matchedRows.map(r => r.pota_ref));
+  const unmatched = ruParks.filter(p => !matchedSet.has(p.reference));
+
+  // Load basic OOPT data for smart candidate matching
+  const ooptRows = db.prepare('SELECT nid, title, category, sig, ate, lat, lon FROM oopt_registry').all();
+
+  const enriched = unmatched.map(p => {
+    let candidate = null;
+    const pName = p.name || '';
+    const pWeb = p.website || '';
+
+    // 1. If NextGIS URL with slug or node
+    if (pWeb.includes('oopt')) {
+      try {
+        const decoded = decodeURIComponent(pWeb);
+        const slugM = decoded.match(/\/oopt\/([^/?#]+)/);
+        if (slugM) {
+          const rawSlug = slugM[1].replace(/[-_.,]/g, ' ').trim().toLowerCase();
+          const cand = ooptRows.find(o => {
+            const t = (o.title || '').toLowerCase().trim();
+            return t === rawSlug || t.includes(rawSlug) || rawSlug.includes(t);
+          });
+          if (cand) {
+            candidate = {
+              nid: cand.nid,
+              title: cand.title,
+              category: cand.category,
+              sig: cand.sig,
+              ate: cand.ate,
+              reason: 'Совпадение по NextGIS слагу'
+            };
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Keyword & root transliteration matching
+    if (!candidate) {
+      const pLower = pName.toLowerCase();
+      const commonStems = [
+        ['gydansky', 'гыданск'],
+        ['kytalyk', 'кыталык'],
+        ['lena pillars', 'ленские столбы'],
+        ['russian arctic', 'русская арктика'],
+        ['tula abatis', 'тульские засеки'],
+        ['dudergof', 'дудергоф'],
+        ['kaluga zaseki', 'калужские засеки'],
+        ['biryulev', 'бирюлев'],
+        ['prioratsky', 'приорат'],
+        ['zverinets', 'зверинец'],
+        ['petrovskiy', 'петровск'],
+        ['sosnovka', 'сосновка'],
+        ['vyazniki', 'вязниковск'],
+        ['vasilyevsky bor', 'васильевский бор'],
+        ['smorodinka', 'смородинка'],
+        ['poganaya lohan', 'поганая лохань'],
+        ['tipchakovyj lug', 'типчаковый луг'],
+        ['oleniy pereval', 'олений перевал'],
+        ['parkkhak', 'хакас'],
+      ];
+
+      for (const [stemEn, stemRu] of commonStems) {
+        if (pLower.includes(stemEn) || pWeb.toLowerCase().includes(stemEn)) {
+          const cand = ooptRows.find(o => (o.title || '').toLowerCase().includes(stemRu));
+          if (cand) {
+            candidate = {
+              nid: cand.nid,
+              title: cand.title,
+              category: cand.category,
+              sig: cand.sig,
+              ate: cand.ate,
+              reason: 'Совпадение по корню названия'
+            };
+            break;
+          }
+        }
+      }
+    }
+
+    return {
+      reference: p.reference,
+      name: p.name,
+      region: p.region || '',
+      website: p.website || '',
+      grid: p.grid || '',
+      lat: p.lat || '',
+      lon: p.lon || '',
+      activations: p.activations || 0,
+      qsos: p.qsos || 0,
+      candidate
+    };
+  });
+
+  return {
+    totalPotaRu: ruParks.length,
+    matchedCount: matchedSet.size,
+    unmatchedCount: enriched.length,
+    parks: enriched
+  };
+}
+
+/**
+ * Generates CSV string for unmatched Russian POTA parks with UTF-8 BOM
+ */
+export function exportUnmatchedPotaCsv() {
+  const { totalPotaRu, matchedCount, unmatchedCount, parks } = getUnmatchedPotaParks();
+  const escapeCsv = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+  const headers = [
+    'POTA_REF',
+    'POTA_NAME',
+    'REGION',
+    'WEBSITE',
+    'GRID',
+    'LAT',
+    'LON',
+    'ACTIVATIONS',
+    'QSOS',
+    'CANDIDATE_OOPT_NID',
+    'CANDIDATE_OOPT_TITLE',
+    'CANDIDATE_OOPT_CAT',
+    'CANDIDATE_OOPT_SIG',
+    'CANDIDATE_MATCH_REASON'
+  ];
+
+  const lines = [headers.join(';')];
+
+  for (const p of parks) {
+    const c = p.candidate || {};
+    lines.push([
+      escapeCsv(p.reference),
+      escapeCsv(p.name),
+      escapeCsv(p.region),
+      escapeCsv(p.website),
+      escapeCsv(p.grid),
+      escapeCsv(p.lat),
+      escapeCsv(p.lon),
+      escapeCsv(p.activations),
+      escapeCsv(p.qsos),
+      escapeCsv(c.nid || ''),
+      escapeCsv(c.title || ''),
+      escapeCsv(c.category || ''),
+      escapeCsv(c.sig || ''),
+      escapeCsv(c.reason || '')
+    ].join(';'));
+  }
+
+  return '\uFEFF' + lines.join('\r\n');
+}
+
 export default {
   syncOoptRegistry,
   syncPotaParksWithApi,
@@ -3190,4 +3355,6 @@ export default {
   findParentPotaPark,
   fetchCoordsFromRusoir,
   ensureOoptRegistryPopulated,
+  getUnmatchedPotaParks,
+  exportUnmatchedPotaCsv,
 };

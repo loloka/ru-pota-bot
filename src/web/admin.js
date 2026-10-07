@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
-import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv } from '../services/ooptService.js';
 import {
   auditPotaLinks,
   checkUrlOnline,
@@ -923,8 +923,9 @@ export const startAdminServer = (telegramClient) => {
                       <h3 class="mb-1"><i class="bi bi-tree text-success"></i> Реестр ООПТ России</h3>
                       <p class="text-muted small mb-0">Официальная база данных охраняемых природных территорий (<span id="oopt-header-total-count">11 348 объектов</span>) с генерацией заявок для координатора POTA (R2BBX)</p>
                     </div>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap">
                       <a href="/app" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-phone"></i> Открыть в Mini App</a>
+                      <a href="/api/admin/pota/unmatched/download" class="btn btn-sm btn-outline-warning" id="btn-export-unmatched-pota" title="Скачать CSV со списком парков POTA RU, которые не привязаны к реестру ООПТ (для координатора Manu R2BBX)"><i class="bi bi-file-earmark-arrow-down"></i> Выгрузка непривязанных (<span id="unmatched-pota-count-badge">...</span> POTA)</a>
                       <button type="button" class="btn btn-sm btn-outline-primary" id="btn-sync-oopt"><i class="bi bi-arrow-repeat"></i> Синхронизировать с карта.оцзк.рф</button>
                       <button type="button" class="btn btn-sm btn-success" id="btn-sync-pota-oopt" title="Обновить базу парков POTA с api.pota.app и привязать к ООПТ"><i class="bi bi-cloud-arrow-down-fill"></i> Синхронизировать парки POTA</button>
                     </div>
@@ -986,7 +987,8 @@ export const startAdminServer = (telegramClient) => {
                     <div class="col-md-2 col-6">
                       <div class="card bg-success border-0 shadow-sm h-100 p-2 text-center text-white" id="card-filter-pota" style="cursor: pointer;" title="Нажмите для фильтрации: только объекты в базе POTA">
                         <div class="small fw-semibold text-white-50"><i class="bi bi-funnel"></i> В базе POTA</div>
-                        <div class="fs-5 fw-bold text-white"><span id="stat-oopt-pota">304</span> <small class="fw-normal fs-6" id="pota-filter-label">(все)</small></div>
+                        <div class="fs-5 fw-bold text-white"><span id="stat-oopt-pota">631</span> <small class="fw-normal fs-6" id="pota-filter-label">(все)</small></div>
+                        <div class="small text-white-50 text-truncate" id="stat-oopt-pota-sub" style="font-size: 10px;" title="Привязано к реестру ООПТ">...</div>
                       </div>
                     </div>
                   </div>
@@ -2362,6 +2364,14 @@ export const startAdminServer = (telegramClient) => {
                 if (locEl && stats.local) locEl.textContent = Number(stats.local).toLocaleString('ru-RU');
                 if (reorgEl && stats.reorganized) reorgEl.textContent = Number(stats.reorganized).toLocaleString('ru-RU');
                 if (potaEl && stats.inPota) potaEl.textContent = Number(stats.inPota).toLocaleString('ru-RU');
+                if (stats.unmatchedPotaCount !== undefined) {
+                  const badgeEl = document.getElementById('unmatched-pota-count-badge');
+                  if (badgeEl) badgeEl.textContent = stats.unmatchedPotaCount;
+                  const subEl = document.getElementById('stat-oopt-pota-sub');
+                  if (subEl && stats.potaRuTotal) {
+                    subEl.textContent = 'из ' + stats.potaRuTotal + ' RU (' + stats.unmatchedPotaCount + ' вне ООПТ)';
+                  }
+                }
 
                 const headerTotalEl = document.getElementById('oopt-header-total-count');
                 if (headerTotalEl && (stats.totalAll || stats.total)) {
@@ -5613,6 +5623,33 @@ export const startAdminServer = (telegramClient) => {
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
+  });
+
+  // Unmatched Russian POTA Parks (Coordinator Export for Manu R2BBX)
+  app.get('/api/admin/pota/unmatched', requireAuth, (req, res) => {
+    try {
+      const data = getUnmatchedPotaParks();
+      res.json(data);
+    } catch (err) {
+      console.error('[Admin] Unmatched POTA parks error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/admin/pota/unmatched/download', requireAuth, (req, res) => {
+    try {
+      const csv = exportUnmatchedPotaCsv();
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="unmatched_pota_ru_parks.csv"');
+      res.send(csv);
+    } catch (err) {
+      console.error('[Admin] Export unmatched POTA CSV error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/admin/pota/unmatched-csv', requireAuth, (req, res) => {
+    res.redirect('/api/admin/pota/unmatched/download');
   });
 
   // Regional POTA Statistics API Endpoint

@@ -1,5 +1,23 @@
 # История изменений (Changelog)
 
+## [1.16.111] - 2026-10-13 (Automated POTA Scheduled Activations Channel Broadcasting & Alert Worker)
+### Новые функции и улучшения
+- **Фоновый мониторинг и авто-трансляция анонсов выездов POTA в Telegram-канал активности** (`src/services/scheduleWorker.js`, `src/db/database.js`, `src/bot/index.js`):
+  - По обращению Владимира Горбунова (R1BNG) и решению сообщества:
+    1. **Фоновая служба мониторинга `scheduleWorker`**:
+       - Периодический опрос официального POTA API активаций (`GET /activation`) с бережным интервалом (по умолчанию раз в 5 минут).
+       - Фильтрация актуальных предстоящих выездов для парков России и СНГ (`RU-`, `BY-`, `KZ-`) либо операторов с RU/CIS префиксами.
+    2. **Автоматическая публикация анонса в канал `@pota_activity`**:
+       - Форматирует красивый информативный пост с эмодзи: позывной со ссылкой на профиль pota.app, ссылка на парк, флаг и субъект РФ/страна, запланированные даты и время (UTC), диапазоны/моды и примечания экспедиционера.
+       - Уважает список исключений (`muted_broadcast_callsigns`).
+    3. **Дедупликация и защита от спама**:
+       - Создана SQLite таблица `scheduled_broadcasts (scheduled_id PRIMARY KEY, activator, reference, start_date, end_date, msg_id, broadcasted_at)` с индексами.
+       - При первом «холодном» старте бота текущие запланированные выезды сохраняются как известные без спам-рассылки в канал; транслируются только вновь созданные или обнаруженные анонсы.
+    4. **Персональные уведомления подписчикам**:
+       - При обнаружении нового анонса подписчики конкретного позывного или парка из таблицы `subscriptions` моментально получают личные оповещения в бота и карточку в раздел «Входящие» в Mini App (`schedule_announced`).
+- **Синхронизация версий**:
+  - Версия обновлена до `1.16.111` во всех обязательных файлах по правилу 2.1 (`package.json`, `src/api/potaApi.js`, `src/bot/index.js`, `README.md`, `README.en.md`, `ROADMAP.md`, `COMMANDS.md`, `CHANGELOG.md`).
+
 ## [1.16.110] - 2026-10-13 (Scheduled Activations Sync, Clean Spot Flow & TMA Notifications Fix)
 ### Новые функции и улучшения
 - **Интеграция запланированных активаций POTA (Scheduled Activations)** (`src/api/potaApi.js`, `src/bot/commands/plans.js`, `src/web/tmaApi.js`, `src/webapp/src/components/tabs/ClusterTab.jsx`):

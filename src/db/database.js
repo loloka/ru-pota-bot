@@ -190,6 +190,18 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_tg_login_token ON telegram_login_sessions (token);
   CREATE INDEX IF NOT EXISTS idx_tg_login_code ON telegram_login_sessions (code);
+
+  CREATE TABLE IF NOT EXISTS scheduled_broadcasts (
+    scheduled_id INTEGER PRIMARY KEY,
+    activator TEXT NOT NULL,
+    reference TEXT NOT NULL,
+    start_date TEXT,
+    end_date TEXT,
+    msg_id INTEGER,
+    broadcasted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_scheduled_broadcasts_ref ON scheduled_broadcasts (reference);
+  CREATE INDEX IF NOT EXISTS idx_scheduled_broadcasts_act ON scheduled_broadcasts (activator);
 `);
 
 // Migration for existing tables
@@ -360,6 +372,21 @@ try {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_blocked_users_is_archived ON blocked_users (is_archived)`);
     console.log('[DB] Migrated blocked_users table: added is_archived column');
   }
+
+  // Ensure scheduled_broadcasts table exists
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS scheduled_broadcasts (
+      scheduled_id INTEGER PRIMARY KEY,
+      activator TEXT NOT NULL,
+      reference TEXT NOT NULL,
+      start_date TEXT,
+      end_date TEXT,
+      msg_id INTEGER,
+      broadcasted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_scheduled_broadcasts_ref ON scheduled_broadcasts (reference);
+    CREATE INDEX IF NOT EXISTS idx_scheduled_broadcasts_act ON scheduled_broadcasts (activator);
+  `);
 
   // Ensure oopt_registry table exists for Russian Protected Areas
   db.exec(`

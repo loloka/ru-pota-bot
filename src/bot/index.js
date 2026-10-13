@@ -36,6 +36,7 @@ import { subWizard } from './scenes/subWizard.js';
 import { statsWizard } from './scenes/statsWizard.js';
 
 import { startClusterWorker } from '../services/clusterWorker.js';
+import { startScheduleWorker } from '../services/scheduleWorker.js';
 import { pinManager, isChannelChat } from '../services/pinManager.js';
 import { syncPotaParksWithApi, ensureOoptRegistryPopulated } from '../services/ooptService.js';
 
@@ -889,7 +890,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.110\x1b[0m 📡            \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.111\x1b[0m 📡            \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);
@@ -936,6 +937,9 @@ startBotWithSupervisor();
 
 // Start the background cluster worker
 startClusterWorker(bot.telegram);
+
+// Start the background scheduled activations worker
+startScheduleWorker(bot.telegram);
 
 // Start the spot auto-unpin worker (checks every 30s)
 pinManager.startPinWorker(bot.telegram);

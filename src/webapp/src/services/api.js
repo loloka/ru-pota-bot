@@ -102,6 +102,19 @@ export const api = {
   },
 
   /**
+   * Get scheduled activations with filters
+   * @param {{ scope?: 'ru'|'world', search?: string }} params 
+   */
+  async getPlans(params = {}) {
+    const query = new URLSearchParams();
+    if (params.scope) query.append('scope', params.scope);
+    if (params.search) query.append('search', params.search);
+
+    const qs = query.toString();
+    return request(`/plans${qs ? `?${qs}` : ''}`);
+  },
+
+  /**
    * Get POTA parks list with coordinates and active status
    * @param {{ search?: string, activeOnly?: boolean }} params 
    */

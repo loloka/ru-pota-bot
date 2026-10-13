@@ -79,8 +79,21 @@ export const detectMode = (rawMode, comments = '', freqKHz = 0) => {
  * Dispatch notification to both Telegram bot DM and SQLite user_notifications for TMA Live Feed
  */
 function dispatchSubscriberNotification(telegramClient, userId, spot, notifType, title, htmlMsg) {
-  // 1. Record to SQLite user_notifications for TMA Live Feed & Web inbox
+  // 1. Record to SQLite user_notifications for TMA Live Feed & Web inbox (clean text without HTML tags)
   try {
+    const locResolved = locationService.resolveLocation(spot.locationDesc || '', spot.reference || '');
+    const locParts = [];
+    if (locResolved.flag && locResolved.flag !== '🌐') locParts.push(locResolved.flag);
+    if (locResolved.countryName) locParts.push(locResolved.countryName);
+    if (locResolved.regionName) locParts.push(locResolved.regionName);
+    const cleanLoc = locParts.length > 0 ? locParts.join(' • ') : '';
+
+    const cleanMsg = [
+      spot.name ? spot.name : '',
+      cleanLoc,
+      spot.comments ? `📝 ${spot.comments}` : ''
+    ].filter(Boolean).join(' • ') || (htmlMsg ? htmlMsg.replace(/<[^>]+>/g, '').replace(/🌐\s*POTA Cluster Spot\s*/i, '').trim() : '');
+
     db.prepare(`
       INSERT INTO user_notifications (user_id, type, title, message, callsign, reference, frequency, mode, spot_time)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -88,7 +101,7 @@ function dispatchSubscriberNotification(telegramClient, userId, spot, notifType,
       userId,
       notifType,
       title,
-      htmlMsg,
+      cleanMsg,
       spot.activator || '',
       spot.reference || '',
       String(spot.frequency || ''),

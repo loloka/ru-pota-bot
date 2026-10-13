@@ -580,6 +580,40 @@ try {
       UPDATE oopt_registry SET pota_ref = 'RU-0324', pota_name = 'Bird Harbor Nature Park' WHERE nid = 7091 AND (pota_ref IS NULL OR pota_ref != 'RU-0324');
     `);
   } catch (_) {}
+
+  // Clean up any historical HTML tags in user_notifications table for TMA display
+  try {
+    const rawNotifs = db.prepare("SELECT id, message FROM user_notifications WHERE message LIKE '%<%'").all();
+    if (rawNotifs.length > 0) {
+      const updateNotifStmt = db.prepare('UPDATE user_notifications SET message = ? WHERE id = ?');
+      for (const row of rawNotifs) {
+        try {
+          const parkMatch = row.message.match(/—\s*<i>([^<]+)<\/i>/i) || row.message.match(/—\s*([^\n📍⚙️📝]+)/);
+          const locMatch = row.message.match(/📍\s*(?:<b>)?([^<\n]+)(?:<\/b>)?/i);
+          const commentMatch = row.message.match(/📝\s*([^\n]+)/);
+
+          const parkName = parkMatch ? parkMatch[1].trim() : '';
+          const location = locMatch ? locMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+          const comment = commentMatch ? commentMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+
+          let cleaned = [
+            parkName,
+            location,
+            comment ? `📝 ${comment}` : ''
+          ].filter(Boolean).join(' • ');
+
+          if (!cleaned) {
+            cleaned = row.message.replace(/<[^>]+>/g, '').replace(/🌐\s*POTA Cluster Spot\s*/i, '').trim();
+          }
+
+          updateNotifStmt.run(cleaned, row.id);
+        } catch (_) {}
+      }
+      console.log(`[DB] 🧹 Sanitized ${rawNotifs.length} HTML notification messages in user_notifications`);
+    }
+  } catch (e) {
+    console.warn('[DB] user_notifications sanitization warning:', e.message);
+  }
 } catch (e) {
   console.error('[DB] Migration error:', e.message);
 }

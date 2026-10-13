@@ -1,6 +1,6 @@
 # RU-POTA Telegram Bot & Mini App 🌲📡
 
-[![Version](https://img.shields.io/badge/version-1.16.109-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.16.110-blue.svg)](package.json)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![Telegraf](https://img.shields.io/badge/telegraf-4.x-orange.svg)](https://telegraf.js.org/)
 [![Database](https://img.shields.io/badge/SQLite-better--sqlite3%20(WAL)-lightgrey.svg)](https://github.com/WiseLibs/better-sqlite3)
@@ -29,8 +29,9 @@ The bot connects the Telegram community, the official POTA cluster API, personal
 
 ## ✨ Key Features
 
-### 📡 1. Interactive Spotting (/spot)
-- **Step-by-Step Wizard:** Submit field spots with status (*ON AIR NOW* or *PLANNED*), automated park data lookup from the official POTA API, Russian District Award (RDA) input, modulation selection (`SSB`, `CW`, `FT8`, `FT4`, `FM`, etc.), and TX power.
+### 📡 1. Interactive Spotting (/spot) & Activation Schedules (/plans)
+- **Step-by-Step Wizard:** Submit field spots directly with operating hours (UTC), frequency, automated park data lookup from the official POTA API, Russian District Award (RDA) input, modulation selection (`SSB`, `CW`, `FT8`, `FT4`, `FM`, etc.), and TX power.
+- **POTA Scheduled Activations (/plans):** Browse upcoming field expeditions and scheduled activations synced directly from pota.app within Telegram or in the Mini App tab.
 - **Dual Broadcast:** Spots are instantly published to [@pota_activity](https://t.me/pota_activity) and optionally forwarded to the official international POTA cluster.
 - **Auto-Respot (Keep-Alive):** Automatically re-submits active spots 3 times every 10 minutes to maintain cluster visibility during field operations.
 - **Spot Management:** One-click frequency adjustments, comment updates, mode switching, or instant deletion (which also removes the post from the Telegram channel).

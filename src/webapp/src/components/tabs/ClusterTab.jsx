@@ -10,7 +10,8 @@ import {
   Compass,
   MessageSquare,
   AlertCircle,
-  Check
+  Check,
+  Calendar
 } from 'lucide-react';
 import { telegram } from '../../services/telegram.js';
 import { api } from '../../services/api.js';
@@ -85,6 +86,30 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
     }, 20000);
     return () => clearInterval(timer);
   }, [fetchSpots]);
+
+  // Scheduled Activations (Plans) State
+  const [viewMode, setViewMode] = useState('live'); // 'live' | 'plans'
+  const [plans, setPlans] = useState([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+  const [isRefreshingPlans, setIsRefreshingPlans] = useState(false);
+
+  const fetchPlans = useCallback(async (isBackground = false) => {
+    if (!isBackground) setLoadingPlans(true);
+    else setIsRefreshingPlans(true);
+    try {
+      const data = await api.getPlans({ scope, search: searchQuery });
+      setPlans(data.plans || []);
+    } catch (err) {
+      console.warn('[ClusterTab] Plans fetch error:', err.message);
+    } finally {
+      setLoadingPlans(false);
+      setIsRefreshingPlans(false);
+    }
+  }, [scope, searchQuery]);
+
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
 
   const [subscribedCallsigns, setSubscribedCallsigns] = useState(new Set());
 
@@ -173,6 +198,51 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
 
   return (
     <div className="space-y-3 pb-tab-bottom animate-fade-in">
+      {/* 0. Main Mode: Live Spots (В эфире) vs Scheduled Plans (Планы) */}
+      <div className="flex p-1 rounded-2xl bg-slate-200/90 dark:bg-slate-900/90 border border-slate-300/80 dark:border-slate-800 shadow-inner">
+        <button
+          type="button"
+          onClick={() => {
+            telegram.haptic.selection();
+            setViewMode('live');
+          }}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            viewMode === 'live'
+              ? 'bg-gradient-to-r from-emerald-500/25 to-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 shadow-glow-pill font-extrabold'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Radio className="w-4 h-4" />
+          <span>{language === 'RU' ? 'В эфире' : 'Live Spots'}</span>
+          {spots.length > 0 && (
+            <span className="min-w-[18px] h-[18px] px-1 bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold rounded-full flex items-center justify-center">
+              {spots.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            telegram.haptic.selection();
+            setViewMode('plans');
+          }}
+          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            viewMode === 'plans'
+              ? 'bg-gradient-to-r from-blue-500/25 to-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/40 shadow-glow-pill font-extrabold'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          <span>{language === 'RU' ? 'Планы активаций' : 'Scheduled Plans'}</span>
+          {plans.length > 0 && (
+            <span className="min-w-[18px] h-[18px] px-1 bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[10px] font-bold rounded-full flex items-center justify-center">
+              {plans.length}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* 1. Scope Switch (RU/CIS vs World) & Refresh */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex p-1 rounded-xl bg-slate-200/80 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 flex-1">
@@ -208,12 +278,12 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
 
         <button
           type="button"
-          onClick={() => fetchSpots(true)}
-          disabled={isRefreshing}
+          onClick={() => (viewMode === 'plans' ? fetchPlans(true) : fetchSpots(true))}
+          disabled={viewMode === 'plans' ? isRefreshingPlans : isRefreshing}
           className="p-2.5 rounded-xl bg-slate-200/80 dark:bg-slate-800/80 hover:bg-slate-300 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/70 text-slate-700 dark:text-slate-300 transition active:scale-95 disabled:opacity-50"
-          title="Обновить кластер"
+          title="Обновить"
         >
-          <RefreshCw className={`w-4 h-4 text-emerald-600 dark:text-emerald-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 ${viewMode === 'plans' ? 'text-blue-500' : 'text-emerald-600 dark:text-emerald-400'} ${(viewMode === 'plans' ? isRefreshingPlans : isRefreshing) ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
@@ -229,7 +299,123 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
         />
       </div>
 
-      {/* 3. Filter Chips: Bands */}
+      {viewMode === 'plans' ? (
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
+            <span>
+              {loadingPlans 
+                ? (language === 'RU' ? 'Загрузка планов...' : 'Loading plans...') 
+                : (language === 'RU' ? `Запланировано активаций: ${plans.length}` : `Scheduled: ${plans.length}`)}
+            </span>
+            <span className="flex items-center gap-1 font-mono text-[11px] text-blue-500">
+              <Calendar className="w-3 h-3" />
+              <span>pota.app</span>
+            </span>
+          </div>
+
+          {loadingPlans && plans.length === 0 ? (
+            <div className="p-10 text-center glass-card rounded-2xl space-y-2">
+              <RefreshCw className="w-6 h-6 mx-auto text-blue-500 animate-spin" />
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {language === 'RU' ? 'Загрузка официальных планов POTA...' : 'Loading official POTA schedules...'}
+              </p>
+            </div>
+          ) : plans.length === 0 ? (
+            <div className="p-8 text-center glass-card rounded-2xl space-y-3">
+              <Calendar className="w-8 h-8 mx-auto text-blue-400/60" />
+              <div>
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-200">
+                  {language === 'RU' ? 'Нет запланированных активаций' : 'No upcoming activations'}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
+                  {language === 'RU'
+                    ? (scope === 'ru' ? 'В эфире RU/СНГ пока нет анонсированных выездов. Переключите на «Весь мир» или загляните позже!' : 'По выбранному фильтру планов не найдено.')
+                    : 'No scheduled activations found for this scope.'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {plans.map((p) => {
+                const dateText = p.startDate === p.endDate || !p.endDate
+                  ? p.startDate
+                  : `${p.startDate} — ${p.endDate}`;
+                const timeText = p.startTime
+                  ? (p.endTime ? `${p.startTime}–${p.endTime} UTC` : `${p.startTime} UTC`)
+                  : '';
+
+                return (
+                  <div key={p.id} className="p-3.5 rounded-2xl glass-card border border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="inline-flex items-center gap-1 font-mono font-bold text-blue-700 dark:text-blue-300 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>{dateText}</span>
+                        {timeText && <span className="opacity-75 ml-1 font-normal">({timeText})</span>}
+                      </span>
+                      {p.country && (
+                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                          {p.country} {p.regionName || p.countryName}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-mono font-extrabold text-base text-slate-900 dark:text-white tracking-wide">
+                          {p.activator}
+                        </span>
+                        <span className="font-mono font-bold text-xs text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                          {p.reference}
+                        </span>
+                      </div>
+                      {p.frequencies && (
+                        <span className="font-mono text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                          {p.frequencies}
+                        </span>
+                      )}
+                    </div>
+
+                    {p.parkName && (
+                      <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-snug">
+                        🌲 {p.parkName}
+                      </p>
+                    )}
+
+                    {p.comments && (
+                      <p className="text-xs text-slate-600 dark:text-slate-300 font-mono bg-slate-200/50 dark:bg-slate-800/60 p-2 rounded-xl leading-relaxed">
+                        📝 {p.comments}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-200/60 dark:border-slate-800/80">
+                      {p.reference && onNavigate && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigate('map', { focusParkRef: p.reference })}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 transition active:scale-95 cursor-pointer"
+                        >
+                          <Compass className="w-3.5 h-3.5" />
+                          <span>{language === 'RU' ? 'На карте' : 'On Map'}</span>
+                        </button>
+                      )}
+                      <a
+                        href={`https://next.pota.app/park/${p.reference}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-200/60 dark:bg-slate-800/60 border border-slate-300/80 dark:border-slate-700 transition active:scale-95 ml-auto"
+                      >
+                        <span>pota.app ↗</span>
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* 3. Filter Chips: Bands */}
       <div className="flex gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
         {BANDS.map((b) => (
           <button
@@ -502,12 +688,12 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
               </div>
 
 
-          );
-        })
-      )}
-    </div>
-
-
-    </div>
+            );
+          })
+        )}
+      </div>
+    </>
+  )}
+</div>
   );
 }

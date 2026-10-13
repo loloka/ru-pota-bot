@@ -11,7 +11,7 @@ const ACTIVITY_CHANNEL_ID = process.env.ACTIVITY_CHANNEL_ID;
 
 export const spotWizard = new Scenes.WizardScene(
   'SPOT_WIZARD',
-  // Step 1: Status
+  // Step 1: Operating / QRT time
   async (ctx) => {
     if (ctx.chat?.type !== 'private') {
       await deleteUserMessage(ctx);
@@ -36,26 +36,28 @@ export const spotWizard = new Scenes.WizardScene(
       return ctx.scene.leave();
     }
     
-    ctx.wizard.state.spot = { callsign: user.callsign };
+    ctx.wizard.state.spot = { callsign: user.callsign, status: 'СЕЙЧАС НА СВЯЗИ' };
     
-    await ctx.reply('🚀 Оформление нового спота. Укажите статус:\n\n<i>(выберите на клавиатуре внизу 👇 или напишите текстом: <b>Онлайн</b> / <b>План</b>)\nили введите /cancel для отмены</i>', {
-      parse_mode: 'HTML',
-      reply_markup: {
-        keyboard: [[{ text: 'СЕЙЧАС НА СВЯЗИ' }, { text: 'ПЛАНИРУЮ' }]],
-        one_time_keyboard: true,
-        resize_keyboard: true
+    await ctx.reply(
+      '🚀 <b>Оформление спота в эфире</b>\n\n' +
+      '⏳ До какого времени вы планируете работать в UTC?\n\n' +
+      '<i>(Например: <code>17:00</code> — бот сам добавит "до". Либо отправьте <code>-</code>, чтобы пропустить этот шаг)\n\n' +
+      'или введите /cancel для отмены</i>', 
+      {
+        parse_mode: 'HTML',
+        reply_markup: { remove_keyboard: true }
       }
-    });
+    );
     return ctx.wizard.next();
   },
-  // Step 2: Time
+  // Step 2: Time input & ask Freq
   async (ctx) => {
     if (!ctx.message?.text) return;
-    const raw = ctx.message.text.trim().toUpperCase();
+    const raw = ctx.message.text.trim();
 
     if (raw.startsWith('/')) {
       await ctx.scene.leave();
-      if (raw === '/CANCEL') {
+      if (raw.toUpperCase() === '/CANCEL') {
         await ctx.reply('🚫 Оформление спота отменено.', { reply_markup: getMainMenu(ctx) });
       } else {
         await ctx.reply('🚫 Оформление спота отменено. Пожалуйста, повторите вашу команду.', { reply_markup: getMainMenu(ctx) });
@@ -63,49 +65,8 @@ export const spotWizard = new Scenes.WizardScene(
       return;
     }
 
-    let status = null;
-    if (['СЕЙЧАС НА СВЯЗИ', 'СЕЙЧАС', 'В ЭФИРЕ', 'ОНЛАЙН', 'ONLINE', 'NOW', '1'].includes(raw) || /^(СЕЙЧАС|ЭФИР|ОНЛАЙН|ONLINE|NOW)/i.test(raw)) {
-      status = 'СЕЙЧАС НА СВЯЗИ';
-    } else if (['ПЛАНИРУЮ', 'ПЛАН', 'PLANNED', 'PLAN', '2'].includes(raw) || /^(ПЛАН|PLAN)/i.test(raw)) {
-      status = 'ПЛАНИРУЮ';
-    }
-
-    if (!status) {
-      await ctx.reply(
-        '⚠️ <b>Неизвестный статус.</b>\n\n' +
-        'Пожалуйста, выберите кнопку внизу или введите текстом:\n' +
-        '• <b>СЕЙЧАС НА СВЯЗИ</b> (или <i>Онлайн</i> / <i>1</i>)\n' +
-        '• <b>ПЛАНИРУЮ</b> (или <i>План</i> / <i>2</i>)\n\n' +
-        '<i>или введите /cancel для отмены</i>',
-        {
-          parse_mode: 'HTML',
-          reply_markup: {
-            keyboard: [[{ text: 'СЕЙЧАС НА СВЯЗИ' }, { text: 'ПЛАНИРУЮ' }]],
-            one_time_keyboard: true,
-            resize_keyboard: true
-          }
-        }
-      );
-      return; // Stay on this step!
-    }
-
-    ctx.wizard.state.spot.status = status;
-    
-    if (status === 'ПЛАНИРУЮ') {
-      const today = new Date();
-      today.setUTCDate(today.getUTCDate() + 1); // Завтрашний день для примера
-      const exDate = String(today.getUTCDate()).padStart(2, '0') + '.' + String(today.getUTCMonth() + 1).padStart(2, '0');
-      const exTime = String((today.getUTCHours() + 2) % 24).padStart(2, '0') + ':00';
-      await ctx.reply(`📅 Введите дату и примерное время в UTC\n\n<i>(Например: ${exDate} ~${exTime} или точно 12:00-14:00)\n\nили /cancel для отмены</i>:`, {
-        parse_mode: 'HTML',
-        reply_markup: { remove_keyboard: true }
-      });
-    } else {
-      await ctx.reply('⏳ До какого времени вы планируете работать в UTC?\n\n<i>(Можно просто написать 17:00, бот сам добавит "до". Либо отправьте "-", чтобы пропустить этот шаг)\n\nили /cancel для отмены</i>', {
-        parse_mode: 'HTML',
-        reply_markup: { remove_keyboard: true }
-      });
-    }
+    ctx.wizard.state.spot.timeStr = raw !== '-' ? raw : '';
+    await ctx.reply('📡 Введите точную частоту (например, 7.175, 7.175 MHz или 7175):\n\n<i>или /cancel для отмены</i>', { parse_mode: 'HTML' });
     return ctx.wizard.next();
   },
   // Step 3: Freq

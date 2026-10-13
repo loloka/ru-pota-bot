@@ -355,6 +355,49 @@ export default function SubscriptionsTab({
     );
   }
 
+  const renderNotificationDetails = (notif) => {
+    if (!notif.message) return null;
+    const msg = notif.message;
+
+    // Check if message has HTML tags or cluster broadcast format
+    const parkMatch = msg.match(/—\s*<i>([^<]+)<\/i>/i) || msg.match(/—\s*([^\n📍⚙️📝]+)/);
+    const locMatch = msg.match(/📍\s*(?:<b>)?([^<\n]+)(?:<\/b>)?/i);
+    const commentMatch = msg.match(/📝\s*([^\n]+)/);
+
+    const parkName = parkMatch ? parkMatch[1].trim() : '';
+    const location = locMatch ? locMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+    const comment = commentMatch ? commentMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+
+    if (parkName || location || comment) {
+      return (
+        <div className="mt-1 space-y-1 text-xs leading-snug">
+          {(parkName || location) && (
+            <p className="text-slate-600 dark:text-slate-300 font-medium">
+              {parkName && <span>{parkName}</span>}
+              {parkName && location && <span className="opacity-40 mx-1">•</span>}
+              {location && <span className="text-slate-500 dark:text-slate-400">{location}</span>}
+            </p>
+          )}
+          {comment && (
+            <p className="text-emerald-700 dark:text-emerald-300/90 font-mono text-[11px] bg-slate-200/60 dark:bg-slate-800/80 px-2 py-0.5 rounded-md inline-block">
+              📝 {comment}
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    // Fallback: strip any HTML tags and render clean text
+    const cleanText = msg.replace(/<[^>]+>/g, '').replace(/🌐\s*POTA Cluster Spot\s*/i, '').trim();
+    if (!cleanText) return null;
+
+    return (
+      <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-snug">
+        {cleanText}
+      </p>
+    );
+  };
+
   const totalRulesCount = (callsignSubs?.length || 0) + (parkSubs?.length || 0);
 
   return (
@@ -546,11 +589,7 @@ export default function SubscriptionsTab({
                           )}
                         </div>
 
-                        {notif.message && (
-                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-snug">
-                            {notif.message}
-                          </p>
-                        )}
+                        {renderNotificationDetails(notif)}
                       </div>
 
                       {/* Frequency & Mode Pill */}

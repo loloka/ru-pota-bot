@@ -12,7 +12,7 @@ const axiosConfig = {
   baseURL: BASE_URL,
   timeout: 35000,
   headers: {
-    'User-Agent': 'RU-POTA-Bot/1.16.109 (Telegram Bot; Node.js)'
+    'User-Agent': 'RU-POTA-Bot/1.16.110 (Telegram Bot; Node.js)'
   }
 };
 
@@ -192,5 +192,31 @@ export const potaApi = {
       }
     }
     return [];
+  },
+
+  /**
+   * Fetch scheduled activations from the POTA API
+   * Cached for 3 minutes in-memory to prevent rate-limiting
+   * @returns {Promise<Array>} Array of scheduled activations
+   */
+  async getScheduledActivations() {
+    const now = Date.now();
+    if (this._scheduledCache && (now - (this._scheduledCacheTime || 0) < 3 * 60 * 1000)) {
+      return this._scheduledCache;
+    }
+
+    try {
+      const response = await apiClient.get('/activation');
+      if (Array.isArray(response.data)) {
+        this._scheduledCache = response.data;
+        this._scheduledCacheTime = now;
+        return response.data;
+      }
+      return [];
+    } catch (error) {
+      const code = error.code || (error.response ? `HTTP ${error.response.status}` : error.message);
+      console.warn(`[POTA API] ⚠️ Ошибка загрузки запланированных активаций (${code}):`, error.message);
+      return this._scheduledCache || [];
+    }
   }
 };

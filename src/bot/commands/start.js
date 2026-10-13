@@ -27,6 +27,7 @@ export const startHandler = async (ctx) => {
         `👋 Привет, ${username}! Вы зарегистрированы как <b>${ctx.state.user.callsign}</b>.\n\n` +
         `<b>Доступные команды в группе:</b>\n` +
         `🔸 <code>/onair</code> — Кто в эфире прямо сейчас\n` +
+        `🔸 <code>/plans</code> — Запланированные выезды (POTA Schedules)\n` +
         `🔸 <code>/stats</code> — Ваша статистика\n` +
         `🔸 <code>/stats [ПОЗЫВНОЙ]</code> — Статистика радиолюбителя\n` +
         `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n\n` +
@@ -45,6 +46,7 @@ export const startHandler = async (ctx) => {
         `📻 <b>Бот RU-POTA</b> — ваш помощник для работы с кластером POTA.\n\n` +
         `<b>Доступные команды:</b>\n` +
         `🔸 <code>/onair</code> — Кто в эфире прямо сейчас\n` +
+        `🔸 <code>/plans</code> — Запланированные выезды (POTA Schedules)\n` +
         `🔸 <code>/stats [ПОЗЫВНОЙ]</code> — Статистика радиолюбителя\n` +
         `🔸 <code>/park [РЕФЕРЕНЦИЯ]</code> — Инфо по парку\n\n` +
         `Чтобы подписываться на споты нужного вам активатора либо самому отправлять споты, пройдите в личные сообщения 👇`, 

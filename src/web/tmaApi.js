@@ -1056,6 +1056,86 @@ export function createTmaRouter(telegramClient) {
   });
 
   // ==========================================
+  // 2.0. GET /api/tma/plans - Scheduled Activations
+  // ==========================================
+  router.get('/plans', async (req, res) => {
+    try {
+      const scope = (req.query.scope || 'ru').toLowerCase(); // 'ru' | 'all' | 'world'
+      const search = (req.query.search || '').toUpperCase().trim();
+
+      const rawPlans = await potaApi.getScheduledActivations();
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      // Filter and enrich
+      const enriched = [];
+      for (const item of rawPlans) {
+        // Exclude expired activations (where endDate is before today)
+        const end = item.endDate || item.startDate || '';
+        if (end && end < todayStr) continue;
+
+        const ref = (item.reference || '').toUpperCase().trim();
+        const activator = (item.activator || '').toUpperCase().trim();
+        const isRuPark = ALLOWED_PREFIXES.some(prefix => ref.startsWith(prefix));
+        const isRuCall = /^(R[A-Z0-9]|UA|UB|UC|UD|UE|UF|UG|UH|UI|RA|RN|RK|RU|RV|RW|RX|RY|RZ|EW|EV|UN|UL|UP|UQ)/.test(activator);
+        const isRu = isRuPark || isRuCall;
+
+        if (scope === 'ru' && !isRu) {
+          continue;
+        }
+
+        if (search) {
+          const matchCall = activator.includes(search);
+          const matchRef = ref.includes(search);
+          const matchName = (item.name || '').toUpperCase().includes(search);
+          const matchComm = (item.comments || '').toUpperCase().includes(search);
+          if (!matchCall && !matchRef && !matchName && !matchComm) {
+            continue;
+          }
+        }
+
+        const locResolved = locationService.resolveLocation(item.locationDesc || '', ref);
+
+        enriched.push({
+          id: item.scheduledActivitiesId,
+          activator,
+          reference: ref,
+          parkName: item.name || '',
+          startDate: item.startDate || '',
+          endDate: item.endDate || '',
+          startTime: item.startTime || '',
+          endTime: item.endTime || '',
+          frequencies: item.frequencies || '',
+          comments: item.comments || '',
+          location: item.locationDesc || locResolved.location || '',
+          country: locResolved.flag || '🌐',
+          countryName: locResolved.countryName || '',
+          regionName: locResolved.regionName || '',
+          isRu
+        });
+      }
+
+      // Sort: RU activations first, then by startDate, then startTime
+      enriched.sort((a, b) => {
+        if (scope !== 'ru') {
+          if (a.isRu && !b.isRu) return -1;
+          if (!a.isRu && b.isRu) return 1;
+        }
+        const dateA = `${a.startDate || '9999'} ${a.startTime || '00:00'}`;
+        const dateB = `${b.startDate || '9999'} ${b.startTime || '00:00'}`;
+        return dateA.localeCompare(dateB);
+      });
+
+      res.json({
+        total: enriched.length,
+        plans: enriched
+      });
+    } catch (err) {
+      console.error('[TMA API] Error in /plans:', err.message);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  // ==========================================
   // 2.1. GET /api/tma/parks - POTA Parks for Map
   // ==========================================
   router.get('/parks', async (req, res) => {

@@ -1,6 +1,6 @@
 # RU-POTA Telegram Bot & Mini App 🌲📡
 
-[![Version](https://img.shields.io/badge/version-1.16.111-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.16.112-blue.svg)](package.json)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![Telegraf](https://img.shields.io/badge/telegraf-4.x-orange.svg)](https://telegraf.js.org/)
 [![Database](https://img.shields.io/badge/SQLite-better--sqlite3%20(WAL)-lightgrey.svg)](https://github.com/WiseLibs/better-sqlite3)
@@ -18,6 +18,7 @@ The bot connects the Telegram community, the official POTA cluster API, personal
 
 | Resource | Link | Description |
 |---|---|---|
+| 📖 **Community Handbook** | [pota.r9o.ru/guide](https://pota.r9o.ru/guide) / [PDF](https://pota.r9o.ru/guide.pdf) | Official guide, protected area rules, quick start memo |
 | 🤖 **Telegram Bot** | [@ru_pota_bot](https://t.me/ru_pota_bot) | Main bot for spotting, subscriptions, and profile statistics |
 | 📱 **Telegram Mini App** | [t.me/ru_pota_bot/app](https://t.me/ru_pota_bot/app) | Fullscreen mobile hub: map, live cluster, directory & spotting |
 | 🌐 **Web Version** | [pota.r9o.ru/app/](https://pota.r9o.ru/app/) | Public guest access from any PC or mobile browser |

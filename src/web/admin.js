@@ -87,6 +87,21 @@ export const startAdminServer = (telegramClient) => {
     res.sendFile(path.join(webappDist, 'index.html'));
   });
 
+  // Public RU-POTA Handbook & Quick Guide (HTML & PDF)
+  const docsDir = path.resolve(__dirname, '../../docs');
+  app.get(['/guide', '/memo', '/pamyatka', '/guide.html', '/memo.html', '/pamyatka.html', '/pamjatka'], (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.sendFile(path.join(docsDir, 'RU-POTA_Quick_Guide.html'));
+  });
+
+  app.get(['/guide.pdf', '/memo.pdf', '/pamyatka.pdf', '/RU-POTA_Quick_Guide.pdf', '/pamjatka.pdf'], (req, res) => {
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="RU-POTA_Quick_Guide.pdf"');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(path.join(docsDir, 'RU-POTA_Quick_Guide.pdf'));
+  });
+
   // Gentle background warm-up of Telegram user profiles for existing users
   setTimeout(async () => {
     try {

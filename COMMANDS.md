@@ -1,7 +1,8 @@
 # Команды Telegram бота RU-POTA 🤖📡
 
 Бот доступен в Telegram: **[@ru_pota_bot](https://t.me/ru_pota_bot)**  
-Канал спотов и активности: **[@pota_activity](https://t.me/pota_activity)**
+Канал спотов и активности: **[@pota_activity](https://t.me/pota_activity)**  
+📖 **Онлайн-памятка участника:** **[https://pota.r9o.ru/guide](https://pota.r9o.ru/guide)** *(или скачивание PDF: [https://pota.r9o.ru/guide.pdf](https://pota.r9o.ru/guide.pdf))*
 
 Здесь представлен полный список команд и возможностей, поддерживаемых ботом.
 

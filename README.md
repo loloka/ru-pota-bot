@@ -1,6 +1,6 @@
 # RU-POTA Telegram Bot & Mini App 🌲📡
 
-[![Version](https://img.shields.io/badge/version-1.16.111-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.16.112-blue.svg)](package.json)
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![Telegraf](https://img.shields.io/badge/telegraf-4.x-orange.svg)](https://telegraf.js.org/)
@@ -19,6 +19,7 @@
 
 | Ресурс | Ссылка | Описание |
 |---|---|---|
+| 📖 **Памятка участника** | [pota.r9o.ru/guide](https://pota.r9o.ru/guide) / [PDF](https://pota.r9o.ru/guide.pdf) | Официальное руководство, правила ООПТ, быстрый старт |
 | 🤖 **Telegram-бот** | [@ru_pota_bot](https://t.me/ru_pota_bot) | Основной бот для отправки спотов, подписок и статистики |
 | 📱 **Telegram Mini App** | [t.me/ru_pota_bot/app](https://t.me/ru_pota_bot/app) | Мобильный хаб во весь экран: карта, кластер, поиск и споттинг в Telegram |
 | 🌐 **Веб-версия (Web)** | [pota.r9o.ru/app/](https://pota.r9o.ru/app/) | Открытый гостевой доступ через любой браузер на ПК и смартфоне |

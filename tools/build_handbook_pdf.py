@@ -851,14 +851,14 @@ def generate_pdf():
                 <div class="sub-card">
                   <div class="sub-card-title">
                     <span>Интерактивная карта и Веб-хаб</span>
-                    <span class="pill pill-amber">668 парков RU, BY, KZ</span>
+                    <span class="pill pill-amber">1428 парков (RU, BY, KZ)</span>
                   </div>
                   <p style="margin-bottom: 2.5px;">
                     &bull; <strong>Внутри Telegram:</strong> <a href="https://t.me/ru_pota_bot/app" target="_blank" class="url">t.me/ru_pota_bot/app</a> (полноэкранный Mini App)<br>
                     &bull; <strong>В браузере (ПК / смартфон):</strong> <a href="https://pota.r9o.ru/app/" target="_blank" class="url">https://pota.r9o.ru/app/</a>
                   </p>
                   <p>
-                    Карта парков с фильтрами диапазонов (160m&ndash;70cm) и мод (SSB, CW, FT8), радиолюбительские слои RDA/RAZA/RAFA/SOTA, пульсирующие маркеры активных станций, споттинг и QRT в один тап. Быстрый вход на ПК по коду <span class="code">/login</span>.
+                    Интерактивная карта 1428 парков с фильтрами диапазонов (160m&ndash;70cm) и мод (SSB, CW, FT8), радиолюбительские слои RDA/RAZA/RAFA/SOTA, пульсирующие маркеры активных станций, споттинг и QRT в один тап. Быстрый вход на ПК по коду <span class="code">/login</span>.
                   </p>
                 </div>
 

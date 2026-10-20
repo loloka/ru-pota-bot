@@ -1,5 +1,19 @@
 # История изменений (Changelog)
 
+## [1.16.113] - 2026-10-21 (State Natural Reserve & POTA Submitter Field Quick-Copy for Manu R2BBX)
+### Новые функции и улучшения
+- **Синхронизация официального типа парка для заказников POTA (State Natural Reserve)** (src/services/ooptService.js, src/webapp/src/services/ooptUtils.js, src/web/admin.js, src/webapp/src/components/modals/OoptModal.jsx):
+  - По обращению координатора POTA Manu (R2BBX): в новой версии панели администратора POTA («EL JEFE») в выпадающем списке типов парков официальным значением для природных заказников является State Natural Reserve (вместо прежнего State Nature Reserve).
+  - Все генераторы шаблонов и сопоставления категорий ООПТ обновлены с State Nature Reserve на State Natural Reserve.
+- **Быстрое копирование полей заявки в буфер обмена под новую форму POTA EL JEFE**:
+  - **Веб-админка (src/web/admin.js)**:
+    - Для поля «3. Статус ООПТ для POTA (EN)» (subm-status-en) добавлен input-group с кнопкой копирования в буфер обмена (tn-copy-coord).
+    - Быстрая кнопка-чип обновлена на State Natural Reserve.
+    - Добавлены кнопки быстрого копирования для поля статуса RU (subm-status) и региона (subm-region).
+  - **Telegram Mini App и веб-хаб (src/webapp/src/components/modals/OoptModal.jsx)**:
+    - В модальном окне подготовки заявки ООПТ добавлены индивидуальные кнопки быстрого копирования для каждого ключевого поля (Название RU, Название EN, Тип парка EN, Статус RU, Локация POTA, Широта, Долгота, Регион, Ссылка, Комментарии).
+    - Для поля «3. Тип парка / Статус POTA (EN)» добавлен блок быстрых кнопок-чипов (State Natural Reserve, Natural Monument, National Park, Nature Park, State Nature Preserve, UNESCO Biosphere Reserve), позволяющий в один клик выбрать статус и сразу скопировать его в буфер обмена для вставки в панель EL JEFE.
+
 ## [1.16.112] - 2026-10-15 (RU-POTA Quick Guide & Web Handbook on pota.r9o.ru)
 ### Новые функции и улучшения
 - **Публичный веб-гид и памятка участника RU-POTA** (`docs/RU-POTA_Quick_Guide.html`, `src/web/admin.js`, `tools/build_handbook_pdf.py`):

@@ -356,7 +356,7 @@ export function getEnglishCategorySuffix(category) {
   if (c.includes('природно-исторический') || c.includes('исторический парк') || c.includes('историко-природный')) return 'National Historical Park';
   if (c.includes('ландшафтный заказник') || c.includes('особо охраняемый природный ландшафт')) return 'Landscape Reserve';
   if (c.includes('заповедник')) return 'State Nature Preserve';
-  if (c.includes('заказник')) return 'State Nature Reserve';
+  if (c.includes('заказник')) return 'State Natural Reserve';
   if (c.includes('охраняемый природный ландшафт')) return 'Protected Landscape Area';
   if (c.includes('охраняемый ландшафт')) return 'Protected Landscape';
   if (c.includes('ресурсный резерват')) return 'Reserve';
@@ -374,7 +374,7 @@ export function getEnglishCategorySuffix(category) {
   if (c.includes('охраняемый природный объект')) return 'Protected Area';
   if (c.includes('зона покоя')) return 'Nature Reserve';
   if (c.includes('ландшафт')) return 'Protected Landscape';
-  return 'State Nature Reserve';
+  return 'State Natural Reserve';
 }
 
 export function cleanOoptName(rawTitle, category) {

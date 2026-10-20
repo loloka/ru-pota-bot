@@ -1377,10 +1377,13 @@ export const startAdminServer = (telegramClient) => {
                   <div class="row g-2 mb-2">
                     <div class="col-md-5">
                       <label class="form-label small fw-bold mb-1">3. Статус ООПТ для POTA (EN):</label>
-                      <input type="text" class="form-control form-control-sm font-monospace text-success fw-bold" id="subm-status-en" required>
+                      <div class="input-group input-group-sm">
+                        <input type="text" class="form-control font-monospace text-success fw-bold" id="subm-status-en" required>
+                        <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-status-en" title="Скопировать тип парка для POTA (EN)"><i class="bi bi-clipboard"></i></button>
+                      </div>
                       <div class="d-flex flex-wrap gap-1 mt-1">
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Natural Monument">Natural Monument</button>
-                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="State Nature Reserve">State Nature Reserve</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="State Natural Reserve">State Natural Reserve</button>
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="State Nature Preserve">State Nature Preserve</button>
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="National Park">National Park</button>
                         <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1 quick-pota-type-btn" style="font-size:10px;" data-type="Nature Park">Nature Park</button>
@@ -1392,7 +1395,10 @@ export const startAdminServer = (telegramClient) => {
                     </div>
                     <div class="col-md-7">
                       <label class="form-label small fw-bold mb-1">4. Статус (парк/ООПТ и т.п.) (RU):</label>
-                      <input type="text" class="form-control form-control-sm" id="subm-status" required>
+                      <div class="input-group input-group-sm">
+                        <input type="text" class="form-control form-control-sm" id="subm-status" required>
+                        <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-status" title="Скопировать статус (RU)"><i class="bi bi-clipboard"></i></button>
+                      </div>
                       <div class="form-text small text-muted">Официальная категория в РФ со значением</div>
                     </div>
                   </div>
@@ -1453,7 +1459,10 @@ export const startAdminServer = (telegramClient) => {
 
                   <div class="mb-2">
                     <label class="form-label small fw-bold mb-1">9. Регион России:</label>
-                    <input type="text" class="form-control form-control-sm" id="subm-region" required>
+                    <div class="input-group input-group-sm">
+                      <input type="text" class="form-control form-control-sm" id="subm-region" required>
+                      <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-region" title="Скопировать регион"><i class="bi bi-clipboard"></i></button>
+                    </div>
                     <div class="form-text small text-muted">Для межрегиональных объектов указываются все субъекты через запятую (например: <i>Москва, Московская область</i>)</div>
                   </div>
 
@@ -3102,7 +3111,7 @@ export const startAdminServer = (telegramClient) => {
             if (c.indexOf('природно-исторический') !== -1 || c.indexOf('исторический парк') !== -1 || c.indexOf('историко-природный') !== -1) return 'National Historical Park';
             if (c.indexOf('ландшафтный заказник') !== -1 || c.indexOf('особо охраняемый природный ландшафт') !== -1) return 'Landscape Reserve';
             if (c.indexOf('заповедник') !== -1) return 'State Nature Preserve';
-            if (c.indexOf('заказник') !== -1) return 'State Nature Reserve';
+            if (c.indexOf('заказник') !== -1) return 'State Natural Reserve';
             if (c.indexOf('охраняемый природный ландшафт') !== -1) return 'Protected Landscape Area';
             if (c.indexOf('охраняемый ландшафт') !== -1) return 'Protected Landscape';
             if (c.indexOf('ресурсный резерват') !== -1) return 'Reserve';
@@ -3120,7 +3129,7 @@ export const startAdminServer = (telegramClient) => {
             if (c.indexOf('охраняемый природный объект') !== -1) return 'Protected Area';
             if (c.indexOf('зона покоя') !== -1) return 'Nature Reserve';
             if (c.indexOf('ландшафт') !== -1) return 'Protected Landscape';
-            return 'State Nature Reserve';
+            return 'State Natural Reserve';
           }
 
           function getDxEntityClient(regionName, title) {

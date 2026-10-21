@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
-import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, getOoptMapPoints } from '../services/ooptService.js';
 import {
   auditPotaLinks,
   checkUrlOnline,
@@ -631,6 +631,7 @@ export const startAdminServer = (telegramClient) => {
                 <a class="list-group-item list-group-item-action" id="list-broadcast-list" data-bs-toggle="list" href="#list-broadcast" role="tab" aria-controls="list-broadcast"><i class="bi bi-megaphone"></i> Рассылка</a>
                 <a class="list-group-item list-group-item-action" id="list-welcome-list" data-bs-toggle="list" href="#list-welcome" role="tab" aria-controls="list-welcome"><i class="bi bi-pin-angle"></i> Закрепленный пост</a>
                 <a class="list-group-item list-group-item-action" id="list-oopt-list" data-bs-toggle="list" href="#list-oopt" role="tab" aria-controls="list-oopt"><i class="bi bi-tree"></i> Реестр ООПТ РФ</a>
+                <a class="list-group-item list-group-item-action" id="list-map-oopt-list" data-bs-toggle="list" href="#list-map-oopt" role="tab" aria-controls="list-map-oopt"><i class="bi bi-map"></i> Карта ООПТ / POTA <span class="badge bg-success rounded-pill ms-1" id="nav-map-oopt-count">...</span></a>
                 <a class="list-group-item list-group-item-action" id="list-regions-list" data-bs-toggle="list" href="#list-regions" role="tab" aria-controls="list-regions"><i class="bi bi-geo-alt"></i> Регионы POTA</a>
                 <a class="list-group-item list-group-item-action" id="list-links-list" data-bs-toggle="list" href="#list-links" role="tab" aria-controls="list-links"><i class="bi bi-link-45deg"></i> Аудит ссылок POTA <span class="badge bg-warning text-dark rounded-pill ms-1" id="links-wiki-badge" title="Википедия: ${auditStats.wikipedia}">${auditStats.wikipedia}</span> <span class="badge bg-danger rounded-pill ms-1" id="links-empty-badge" title="Без ссылок (Алярма): ${auditStats.empty}">${auditStats.empty}</span></a>
                 <a class="list-group-item list-group-item-action" id="list-services-list" data-bs-toggle="list" href="#list-services" role="tab" aria-controls="list-services"><i class="bi bi-activity"></i> Доступность сервисов <span class="badge bg-success rounded-pill ms-1" id="services-summary-badge">...</span></a>
@@ -1067,6 +1068,91 @@ export const startAdminServer = (telegramClient) => {
                         <tr><td colspan="7" class="text-center text-muted">Загрузка реестра ООПТ...</td></tr>
                       </tbody>
                     </table>
+                  </div>
+                </div>
+
+                <!-- Tab: Interactive OOPT / POTA Coverage Map -->
+                <div class="tab-pane fade" id="list-map-oopt" role="tabpanel" aria-labelledby="list-map-oopt-list">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <div>
+                      <h3 class="mb-1"><i class="bi bi-map text-success"></i> Карта ООПТ и POTA РФ</h3>
+                      <div class="text-muted small">
+                        Интерактивная карта покрытия для кураторов POTA: сопоставленные парки, несопоставленные объекты и свободные кандидаты на добавление в базу.
+                      </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                      <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-map-oopt-reload" title="Обновить точки">
+                        <i class="bi bi-arrow-clockwise"></i> Обновить
+                      </button>
+                      <button type="button" class="btn btn-sm btn-outline-primary" id="btn-map-reset-view" title="Показать всю Россию">
+                        <i class="bi bi-arrows-fullscreen"></i> Вся Россия
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Toolbar & Layer Filters -->
+                  <div class="card shadow-sm border-0 mb-3 bg-light">
+                    <div class="card-body p-3">
+                      <div class="row g-2 align-items-center">
+                        <div class="col-md-4 col-sm-12">
+                          <label for="oopt-map-region-select" class="form-label small fw-bold mb-1"><i class="bi bi-geo-alt"></i> Регион РФ:</label>
+                          <select id="oopt-map-region-select" class="form-select form-select-sm">
+                            <option value="">🇷🇺 Все регионы России (обзор)</option>
+                          </select>
+                        </div>
+                        <div class="col-md-5 col-sm-12">
+                          <label class="form-label small fw-bold mb-1"><i class="bi bi-layers"></i> Отображаемые слои:</label>
+                          <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <div class="form-check form-check-inline m-0">
+                              <input class="form-check-input" type="checkbox" id="layer-matched-check" checked>
+                              <label class="form-check-label small" for="layer-matched-check">
+                                <span class="badge bg-success" id="count-matched-badge">...</span> POTA + ООПТ
+                              </label>
+                            </div>
+                            <div class="form-check form-check-inline m-0">
+                              <input class="form-check-input" type="checkbox" id="layer-unmatched-check" checked>
+                              <label class="form-check-label small" for="layer-unmatched-check">
+                                <span class="badge bg-warning text-dark" id="count-unmatched-badge">...</span> POTA без ООПТ
+                              </label>
+                            </div>
+                            <div class="form-check form-check-inline m-0">
+                              <input class="form-check-input" type="checkbox" id="layer-candidates-check" checked>
+                              <label class="form-check-label small" for="layer-candidates-check">
+                                <span class="badge bg-secondary" id="count-candidates-badge">...</span> Кандидаты (не в POTA)
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-3 col-sm-12 text-md-end">
+                          <label class="form-label small fw-bold mb-1 d-block">Пакетная выгрузка El Jefe:</label>
+                          <button type="button" class="btn btn-sm btn-success w-100" id="btn-map-export-10" title="Скачать CSV из 10 новых кандидатов выбранного региона">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> 📥 Скачать 10 для El Jefe
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Map Canvas -->
+                  <div class="position-relative">
+                    <div id="admin-oopt-pota-map" style="height: 640px; width: 100%; border-radius: 8px; border: 1px solid #dee2e6; z-index: 1;"></div>
+                    
+                    <!-- Floating Legend -->
+                    <div class="card shadow-sm border-0 position-absolute bg-white bg-opacity-95 p-2 small" style="bottom: 25px; left: 15px; z-index: 1000; border-radius: 6px; font-size: 11px; max-width: 270px;">
+                      <div class="fw-bold mb-1 text-muted text-uppercase" style="font-size: 10px;">Легенда карты</div>
+                      <div class="d-flex align-items-center mb-1">
+                        <span style="display:inline-block; width:12px; height:12px; background:#28a745; border:1.5px solid #198754; border-radius:50%; margin-right:6px; flex-shrink:0;"></span>
+                        <span><strong>Зелёный:</strong> Парк POTA сопоставлен с ООПТ</span>
+                      </div>
+                      <div class="d-flex align-items-center mb-1">
+                        <span style="display:inline-block; width:12px; height:12px; background:#ffc107; border:1.5px solid #d39e00; border-radius:50%; margin-right:6px; flex-shrink:0;"></span>
+                        <span><strong>Оранжевый:</strong> Парк POTA без привязки к ООПТ</span>
+                      </div>
+                      <div class="d-flex align-items-center">
+                        <span style="display:inline-block; width:12px; height:12px; background:#adb5bd; border:1.5px solid #495057; border-radius:50%; margin-right:6px; flex-shrink:0;"></span>
+                        <span><strong>Серый:</strong> Свободный кандидат ООПТ (не в POTA)</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -4937,6 +5023,282 @@ export const startAdminServer = (telegramClient) => {
             loadAuditData();
           }
 
+          // ==========================================
+          // Interactive OOPT / POTA Coverage Map Logic
+          // ==========================================
+          var adminOoptMap = null;
+          var isMapInitialized = false;
+          var mapMatchedGroup = null;
+          var mapUnmatchedGroup = null;
+          var mapCandidatesGroup = null;
+          var currentMapRegion = '';
+          var isMapPointsLoading = false;
+
+          async function initAdminOoptMap() {
+            var container = document.getElementById('admin-oopt-pota-map');
+            if (!container) return;
+
+            if (isMapInitialized && adminOoptMap) {
+              adminOoptMap.invalidateSize();
+              return;
+            }
+
+            adminOoptMap = L.map('admin-oopt-pota-map', {
+              center: [60.0, 95.0],
+              zoom: 3,
+              minZoom: 2,
+              maxZoom: 17
+            });
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '© OpenStreetMap contributors',
+              maxZoom: 19
+            }).addTo(adminOoptMap);
+
+            mapMatchedGroup = L.layerGroup().addTo(adminOoptMap);
+            mapUnmatchedGroup = L.layerGroup().addTo(adminOoptMap);
+            mapCandidatesGroup = L.layerGroup().addTo(adminOoptMap);
+
+            isMapInitialized = true;
+
+            populateMapRegionsDropdown();
+            loadAdminMapPoints('', false);
+
+            container.addEventListener('click', function(e) {
+              var btn = e.target.closest('.btn-copy-map-title');
+              if (btn) {
+                var text = decodeURIComponent(btn.getAttribute('data-title') || '');
+                if (navigator.clipboard) {
+                  navigator.clipboard.writeText(text);
+                  if (typeof Swal !== 'undefined') {
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Название скопировано', timer: 1500, showConfirmButton: false });
+                  }
+                }
+              }
+            });
+
+            document.getElementById('layer-matched-check')?.addEventListener('change', function(e) {
+              if (!adminOoptMap) return;
+              if (e.target.checked) adminOoptMap.addLayer(mapMatchedGroup);
+              else adminOoptMap.removeLayer(mapMatchedGroup);
+            });
+            document.getElementById('layer-unmatched-check')?.addEventListener('change', function(e) {
+              if (!adminOoptMap) return;
+              if (e.target.checked) adminOoptMap.addLayer(mapUnmatchedGroup);
+              else adminOoptMap.removeLayer(mapUnmatchedGroup);
+            });
+            document.getElementById('layer-candidates-check')?.addEventListener('change', function(e) {
+              if (!adminOoptMap) return;
+              if (e.target.checked) adminOoptMap.addLayer(mapCandidatesGroup);
+              else adminOoptMap.removeLayer(mapCandidatesGroup);
+            });
+
+            document.getElementById('oopt-map-region-select')?.addEventListener('change', function(e) {
+              currentMapRegion = e.target.value;
+              updateMapExportButtonState();
+              loadAdminMapPoints(currentMapRegion, true);
+            });
+
+            document.getElementById('btn-map-reset-view')?.addEventListener('click', function() {
+              var sel = document.getElementById('oopt-map-region-select');
+              if (sel) sel.value = '';
+              currentMapRegion = '';
+              updateMapExportButtonState();
+              adminOoptMap.setView([60.0, 95.0], 3);
+              loadAdminMapPoints('', false);
+            });
+
+            document.getElementById('btn-map-oopt-reload')?.addEventListener('click', function() {
+              loadAdminMapPoints(currentMapRegion, false);
+            });
+
+            document.getElementById('btn-map-export-10')?.addEventListener('click', function() {
+              var regParam = currentMapRegion ? '&region=' + encodeURIComponent(currentMapRegion) : '';
+              window.location.href = '/api/admin/oopt/export-eljefe-csv?limit=10' + regParam;
+            });
+          }
+
+          async function populateMapRegionsDropdown() {
+            var sel = document.getElementById('oopt-map-region-select');
+            if (!sel || sel.children.length > 1) return;
+            try {
+              var res = await fetch('/api/admin/regions/stats');
+              var data = await res.json();
+              if (data && data.regions) {
+                var copy = data.regions.slice();
+                copy.sort(function(a, b) { return a.name.localeCompare(b.name, 'ru'); });
+                copy.forEach(function(r) {
+                  if (!r.isRestricted) {
+                    var opt = document.createElement('option');
+                    opt.value = r.name;
+                    opt.textContent = r.name + ' (' + r.code + ')';
+                    sel.appendChild(opt);
+                  }
+                });
+              }
+            } catch (err) {
+              console.warn('[Admin Map] Could not load regions list:', err);
+            }
+          }
+
+          function updateMapExportButtonState() {
+            var btn = document.getElementById('btn-map-export-10');
+            if (!btn) return;
+            if (currentMapRegion) {
+              var shortName = currentMapRegion.split(' ')[0];
+              btn.innerHTML = '<i class="bi bi-file-earmark-spreadsheet"></i> 📥 Скачать 10 (' + shortName + ')';
+              btn.title = 'Скачать CSV из 10 новых кандидатов для ' + currentMapRegion + ' (El Jefe)';
+            } else {
+              btn.innerHTML = '<i class="bi bi-file-earmark-spreadsheet"></i> 📥 Скачать 10 для El Jefe';
+              btn.title = 'Скачать CSV из 10 новых кандидатов (El Jefe)';
+            }
+          }
+
+          function updateMapCounters(counts) {
+            if (!counts) return;
+            var elMatched = document.getElementById('count-matched-badge');
+            var elUnmatched = document.getElementById('count-unmatched-badge');
+            var elCandidates = document.getElementById('count-candidates-badge');
+            var elNav = document.getElementById('nav-map-oopt-count');
+            if (elMatched) elMatched.textContent = counts.matched || 0;
+            if (elUnmatched) elUnmatched.textContent = counts.unmatchedPota || 0;
+            if (elCandidates) elCandidates.textContent = counts.candidates || 0;
+            if (elNav) elNav.textContent = (counts.matched || 0) + (counts.unmatchedPota || 0);
+          }
+
+          function renderMapPoints(data, fitBounds) {
+            if (!adminOoptMap) return;
+            mapMatchedGroup.clearLayers();
+            mapUnmatchedGroup.clearLayers();
+            mapCandidatesGroup.clearLayers();
+
+            var bounds = [];
+
+            // 1. Matched (Green)
+            (data.matched || []).forEach(function(m) {
+              var areaHtml = m.area ? '<div style="color:#666; font-size:11px; margin-bottom:6px;">📏 Площадь: ' + Number(m.area).toLocaleString('ru-RU') + ' га</div>' : '';
+              var siteBtn = m.site ? '<a href="' + m.site + '" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #0d6efd; border-radius:3px; color:#0d6efd;">NextGIS</a>' : '';
+              var popupHtml = '<div style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
+                '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#198754;">' +
+                  '<span style="background:#d1e7dd; padding:1px 6px; border-radius:4px; font-size:11px; margin-right:4px;">' + m.ref + '</span> ' + m.title +
+                '</div>' +
+                '<div style="color:#555; margin-bottom:4px;"><strong>POTA:</strong> ' + (m.potaName || m.ref) + '</div>' +
+                '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (m.category || 'ООПТ') + ' (' + (m.sigDisplay || m.sig) + ')</div>' +
+                '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (m.ate || '') + '</div>' +
+                areaHtml +
+                '<div style="display:flex; gap:6px; margin-top:8px;">' +
+                  '<a href="https://pota.app/#/park/' + m.ref + '" target="_blank" class="btn btn-xs btn-outline-success" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #198754; border-radius:3px; color:#198754;">Карточка POTA</a>' +
+                  siteBtn +
+                '</div>' +
+              '</div>';
+
+              var marker = L.circleMarker([m.lat, m.lon], {
+                radius: 6,
+                color: '#146c43',
+                fillColor: '#198754',
+                fillOpacity: 0.85,
+                weight: 1.5
+              }).bindPopup(popupHtml);
+              mapMatchedGroup.addLayer(marker);
+              bounds.push([m.lat, m.lon]);
+            });
+
+            // 2. Unmatched POTA (Orange)
+            (data.unmatchedPota || []).forEach(function(u) {
+              var siteBtn = u.website ? '<a href="' + u.website + '" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #6c757d; border-radius:3px; color:#495057;">Сайт</a>' : '';
+              var popupHtml = '<div style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
+                '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#d39e00;">' +
+                  '<span style="background:#fff3cd; color:#664d03; padding:1px 6px; border-radius:4px; font-size:11px; margin-right:4px;">' + u.ref + '</span> ' + u.name +
+                '</div>' +
+                '<div style="color:#b02a37; font-weight:600; margin-bottom:4px;">⚠️ Не сопоставлен с реестром ООПТ РФ</div>' +
+                '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (u.location || '') + '</div>' +
+                '<div style="display:flex; gap:6px; margin-top:8px;">' +
+                  '<a href="https://pota.app/#/park/' + u.ref + '" target="_blank" class="btn btn-xs btn-outline-warning" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #d39e00; border-radius:3px; color:#664d03;">Карточка POTA</a>' +
+                  siteBtn +
+                '</div>' +
+              '</div>';
+
+              var marker = L.circleMarker([u.lat, u.lon], {
+                radius: 7,
+                color: '#997404',
+                fillColor: '#ffc107',
+                fillOpacity: 0.9,
+                weight: 2
+              }).bindPopup(popupHtml);
+              mapUnmatchedGroup.addLayer(marker);
+              bounds.push([u.lat, u.lon]);
+            });
+
+            // 3. Candidates (Grey)
+            (data.candidates || []).forEach(function(c) {
+              var areaHtml = c.area ? '<div style="color:#666; font-size:11px; margin-bottom:6px;">📏 Площадь: ' + Number(c.area).toLocaleString('ru-RU') + ' га</div>' : '';
+              var siteBtn = c.site ? '<a href="' + c.site + '" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #0d6efd; border-radius:3px; color:#0d6efd;">NextGIS</a>' : '';
+              var safeTitle = encodeURIComponent(c.title || '');
+              var copyBtn = '<button class="btn btn-xs btn-outline-secondary btn-copy-map-title" data-title="' + safeTitle + '" style="font-size:10px; padding:2px 8px; border:1px solid #6c757d; border-radius:3px; background:none; cursor:pointer;">Копировать</button>';
+
+              var popupHtml = '<div style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
+                '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#495057;">' +
+                  c.title +
+                '</div>' +
+                '<div style="color:#6c757d; font-weight:600; margin-bottom:4px;">⚪ Кандидат на добавление в POTA</div>' +
+                '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (c.category || 'ООПТ') + ' (' + (c.sigDisplay || c.sig) + ')</div>' +
+                '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (c.ate || '') + '</div>' +
+                areaHtml +
+                '<div style="display:flex; gap:6px; margin-top:8px;">' +
+                  siteBtn +
+                  copyBtn +
+                '</div>' +
+              '</div>';
+
+              var marker = L.circleMarker([c.lat, c.lon], {
+                radius: 5,
+                color: '#343a40',
+                fillColor: '#adb5bd',
+                fillOpacity: 0.75,
+                weight: 1
+              }).bindPopup(popupHtml);
+              mapCandidatesGroup.addLayer(marker);
+              bounds.push([c.lat, c.lon]);
+            });
+
+            if (fitBounds && bounds.length > 0) {
+              try {
+                adminOoptMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 10 });
+              } catch (_) {}
+            }
+          }
+
+          async function loadAdminMapPoints(region, fitBounds) {
+            if (isMapPointsLoading) return;
+            isMapPointsLoading = true;
+            var spin = document.getElementById('btn-map-oopt-reload');
+            if (spin) spin.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            try {
+              var url = '/api/admin/map/oopt-pota-points';
+              if (region) url += '?region=' + encodeURIComponent(region);
+              var res = await fetch(url);
+              var data = await res.json();
+              renderMapPoints(data, fitBounds);
+              updateMapCounters(data.counts);
+            } catch (err) {
+              console.error('[Admin Map] Error loading points:', err);
+            } finally {
+              isMapPointsLoading = false;
+              if (spin) spin.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Обновить';
+            }
+          }
+
+          document.getElementById('list-map-oopt-list')?.addEventListener('shown.bs.tab', function() {
+            initAdminOoptMap();
+            setTimeout(function() {
+              if (adminOoptMap) adminOoptMap.invalidateSize();
+            }, 200);
+          });
+
+          if (window.location.hash === '#list-map-oopt') {
+            initAdminOoptMap();
+          }
+
           // Open and load regions on tab click or hash
           document.getElementById('list-regions-list')?.addEventListener('shown.bs.tab', function() {
             if (!isRegionsLoaded) {
@@ -5702,6 +6064,20 @@ export const startAdminServer = (telegramClient) => {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="pota_bulk_test_WD4DAN.csv"');
     res.sendFile(filePath);
+  });
+
+  // OOPT & POTA Coverage Map Points API
+  app.get('/api/admin/map/oopt-pota-points', requireAuth, (req, res) => {
+    try {
+      const data = getOoptMapPoints({
+        region: req.query.region,
+        limitCandidates: req.query.limit_candidates
+      });
+      res.json(data);
+    } catch (err) {
+      console.error('[Admin] Map points error:', err);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // Regional POTA Statistics API Endpoint

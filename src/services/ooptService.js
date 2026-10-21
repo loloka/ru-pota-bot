@@ -3457,7 +3457,7 @@ export function exportElJefePotaCsv(options = {}) {
       escapeCsv(p.locationCode),
       p.lat,
       p.lon,
-      escapeCsv(p.site),
+      escapeCsv(p.siteUrl || p.site),
       escapeCsv(p.clarification || (r.area ? `Площадь: ${Number(r.area).toLocaleString('ru-RU')} га` : '')),
       'Automobile;Foot;Other',
       'Automobile;Campground;Other;Pedestrian',
@@ -3467,6 +3467,116 @@ export function exportElJefePotaCsv(options = {}) {
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Returns geo-points for the Interactive OOPT / POTA Coverage Map in Web Admin:
+ * 1. matched (Green): POTA parks linked with OOPT records
+ * 2. unmatchedPota (Orange): POTA parks in Russia not linked to OOPT
+ * 3. candidates (Grey): Active OOPT records not in POTA (candidates for El Jefe)
+ *
+ * @param {Object} options - { region: string, sig: string, limitCandidates: number }
+ */
+export function getOoptMapPoints(options = {}) {
+  const restricted = "ate NOT LIKE '%Крым%' AND ate NOT LIKE '%Севастополь%' AND ate NOT LIKE '%Донецк%' AND ate NOT LIKE '%Луганск%' AND ate NOT LIKE '%Запорож%' AND ate NOT LIKE '%Херсон%'";
+  const region = (options.region || '').trim();
+
+  // 1. Matched (Green): pota_ref IS NOT NULL
+  let matchedSql = `
+    SELECT nid, title, pota_ref, pota_name, category, sig, sig_display, ate, lat, lon, area, rusoir_url
+    FROM oopt_registry
+    WHERE pota_ref IS NOT NULL 
+      AND lat IS NOT NULL AND lat != 0 
+      AND lon IS NOT NULL AND lon != 0
+  `;
+  const matchedParams = [];
+  if (region) {
+    matchedSql += ' AND (ate LIKE ? OR rf_subjects LIKE ?)';
+    matchedParams.push(`%${region}%`, `%${region}%`);
+  }
+  const matchedRows = db.prepare(matchedSql).all(...matchedParams);
+  const matched = matchedRows.map(r => ({
+    nid: r.nid,
+    title: r.title,
+    ref: r.pota_ref,
+    potaName: r.pota_name,
+    category: r.category,
+    sig: r.sig,
+    sigDisplay: r.sig_display || (r.sig === 'federal' ? 'Федеральное' : 'Региональное'),
+    ate: r.ate,
+    lat: parseFloat(r.lat),
+    lon: parseFloat(r.lon),
+    area: r.area ? Number(r.area) : null,
+    site: r.nid <= 66061 ? `https://ooptaari.nextgis.ru/node/${r.nid}` : (r.rusoir_url || 'https://карта.оцзк.рф/')
+  }));
+
+  // 2. Unmatched POTA (Orange): from Russian POTA parks without match in oopt_registry
+  const matchedRefs = new Set(db.prepare('SELECT DISTINCT pota_ref FROM oopt_registry WHERE pota_ref IS NOT NULL').all().map(r => r.pota_ref));
+  const ruParks = getRussianPotaParks();
+  let unmatchedPotaRaw = ruParks.filter(p => !matchedRefs.has(p.reference) && p.lat && p.lon);
+  if (region) {
+    const regLower = region.toLowerCase();
+    unmatchedPotaRaw = unmatchedPotaRaw.filter(p => {
+      const loc = (p.locationDesc || p.region || '').toLowerCase();
+      const name = (p.name || '').toLowerCase();
+      return loc.includes(regLower) || name.includes(regLower);
+    });
+  }
+  const unmatchedPota = unmatchedPotaRaw.map(p => ({
+    ref: p.reference,
+    name: p.name,
+    lat: parseFloat(p.lat),
+    lon: parseFloat(p.lon),
+    location: p.locationDesc || p.region || '',
+    website: p.website || ''
+  }));
+
+  // 3. Candidates (Grey): pota_ref IS NULL, active, valid coords
+  let candSql = `
+    SELECT nid, title, category, sig, sig_display, ate, lat, lon, area, rusoir_url
+    FROM oopt_registry
+    WHERE pota_ref IS NULL 
+      AND lat IS NOT NULL AND lat != 0 
+      AND lon IS NOT NULL AND lon != 0
+      AND LOWER(status) = 'действующий'
+      AND ${restricted}
+  `;
+  const candParams = [];
+  if (region) {
+    candSql += ' AND (ate LIKE ? OR rf_subjects LIKE ?)';
+    candParams.push(`%${region}%`, `%${region}%`);
+    candSql += ' ORDER BY CASE sig WHEN \'federal\' THEN 1 WHEN \'regional\' THEN 2 ELSE 3 END, area DESC';
+  } else {
+    // If all Russia: return top 1200 candidate points to maintain high map fluidity
+    const limit = Math.min(3000, Math.max(50, parseInt(options.limitCandidates, 10) || 1200));
+    candSql += ' ORDER BY CASE sig WHEN \'federal\' THEN 1 WHEN \'regional\' THEN 2 ELSE 3 END, area DESC LIMIT ?';
+    candParams.push(limit);
+  }
+  const candRows = db.prepare(candSql).all(...candParams);
+  const candidates = candRows.map(r => ({
+    nid: r.nid,
+    title: r.title,
+    category: r.category,
+    sig: r.sig,
+    sigDisplay: r.sig_display || (r.sig === 'federal' ? 'Федеральное' : 'Региональное'),
+    ate: r.ate,
+    lat: parseFloat(r.lat),
+    lon: parseFloat(r.lon),
+    area: r.area ? Number(r.area) : null,
+    site: r.nid <= 66061 ? `https://ooptaari.nextgis.ru/node/${r.nid}` : (r.rusoir_url || 'https://карта.оцзк.рф/')
+  }));
+
+  return {
+    matched,
+    unmatchedPota,
+    candidates,
+    counts: {
+      matched: matched.length,
+      unmatchedPota: unmatchedPota.length,
+      candidates: candidates.length,
+      total: matched.length + unmatchedPota.length + candidates.length
+    }
+  };
 }
 
 export default {
@@ -3487,4 +3597,5 @@ export default {
   getUnmatchedPotaParks,
   exportUnmatchedPotaCsv,
   exportElJefePotaCsv,
+  getOoptMapPoints,
 };

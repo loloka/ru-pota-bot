@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
-import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv } from '../services/ooptService.js';
 import {
   auditPotaLinks,
   checkUrlOnline,
@@ -940,6 +940,7 @@ export const startAdminServer = (telegramClient) => {
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
                       <a href="/app" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-phone"></i> Открыть в Mini App</a>
+                      <a href="/api/admin/oopt/export-eljefe-csv?limit=50" class="btn btn-sm btn-outline-success" id="btn-export-eljefe-csv" title="Скачать CSV файл в официальном формате POTA El Jefe для пакетной загрузки новых парков (WD4DAN)"><i class="bi bi-file-earmark-spreadsheet"></i> 📥 Выгрузка для El Jefe (POTA)</a>
                       <a href="/api/admin/pota/unmatched/download" class="btn btn-sm btn-outline-warning" id="btn-export-unmatched-pota" title="Скачать CSV со списком парков POTA RU, которые не привязаны к реестру ООПТ (для координатора Manu R2BBX)"><i class="bi bi-file-earmark-arrow-down"></i> Выгрузка непривязанных (<span id="unmatched-pota-count-badge">...</span> POTA)</a>
                       <button type="button" class="btn btn-sm btn-outline-primary" id="btn-sync-oopt"><i class="bi bi-arrow-repeat"></i> Синхронизировать с карта.оцзк.рф</button>
                       <button type="button" class="btn btn-sm btn-success" id="btn-sync-pota-oopt" title="Обновить базу парков POTA с api.pota.app и привязать к ООПТ"><i class="bi bi-cloud-arrow-down-fill"></i> Синхронизировать парки POTA</button>
@@ -5674,6 +5675,33 @@ export const startAdminServer = (telegramClient) => {
 
   app.get('/api/admin/pota/unmatched-csv', requireAuth, (req, res) => {
     res.redirect('/api/admin/pota/unmatched/download');
+  });
+
+  // Official POTA El Jefe Bulk Import CSV
+  app.get('/api/admin/oopt/export-eljefe-csv', requireAuth, (req, res) => {
+    try {
+      const csv = exportElJefePotaCsv({
+        limit: req.query.limit,
+        region: req.query.region,
+        category: req.query.category,
+        sig: req.query.sig
+      });
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${timestamp}-eljefe-ru-parks.csv"`);
+      res.send(csv);
+    } catch (err) {
+      console.error('[Admin] Export El Jefe CSV error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Direct download for test file requested by Dan (WD4DAN) / Manu R2BBX
+  app.get(['/eljefe_test.csv', '/pota_bulk_test_WD4DAN.csv'], (req, res) => {
+    const filePath = path.resolve(__dirname, '../../docs/pota_bulk_test_WD4DAN.csv');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="pota_bulk_test_WD4DAN.csv"');
+    res.sendFile(filePath);
   });
 
   // Regional POTA Statistics API Endpoint

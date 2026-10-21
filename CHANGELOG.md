@@ -1,5 +1,16 @@
 # История изменений (Changelog)
 
+## [1.16.114] - 2026-10-21 (Official POTA El Jefe Bulk CSV Export & Russian Park Names Integration)
+### Новые функции и улучшения
+- **Генерация и экспорт CSV для пакетного добавления парков в POTA («El Jefe»)** (src/services/ooptService.js, src/web/admin.js, 	ools/generate_eljefe_csv.js):
+  - По официальному запросу разработчика POTA Дэна (WD4DAN) и координатора Manu (R2BBX) реализована выгрузка парков строго по официальной спецификации El Jefe: eference,name,parktype,program,locations,latitude,longitude,website,comments,accessMethods,activationMethods,active.
+  - Сгенерирован эталонный тестовый файл docs/pota_bulk_test_WD4DAN.csv на 10 действующих региональных заказников с точными координатами, ссылками на NextGIS и валидными методами доступа.
+  - В Веб-админку добавлена кнопка «📥 Выгрузка для El Jefe (POTA)» и REST API эндпоинт /api/admin/oopt/export-eljefe-csv с гибкими фильтрами по лимиту, регионам и категориям.
+  - Доступны прямые ссылки для скачивания файла: https://pota.r9o.ru/eljefe_test.csv и https://pota.r9o.ru/pota_bulk_test_WD4DAN.csv.
+- **Официальная интеграция русских названий парков (кириллица)**:
+  - Согласно новому требованию руководства POTA от 21.10.2026, новые парки РФ теперь вносятся на родном русском языке без бюрократических приставок и кавычек (напр. Ярославский, Унженский лес, Опочецкий).
+  - Обновлены инструкции и валидаторы в модальном окне подготовки заявок (OoptModal.jsx).
+
 ## [1.16.113] - 2026-10-21 (State Natural Reserve & POTA Submitter Field Quick-Copy for Manu R2BBX)
 ### Новые функции и улучшения
 - **Синхронизация официального типа парка для заказников POTA (State Natural Reserve)** (src/services/ooptService.js, src/webapp/src/services/ooptUtils.js, src/web/admin.js, src/webapp/src/components/modals/OoptModal.jsx):

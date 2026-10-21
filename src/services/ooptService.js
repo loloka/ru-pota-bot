@@ -3340,6 +3340,95 @@ export function exportUnmatchedPotaCsv() {
   return '\uFEFF' + lines.join('\r\n');
 }
 
+/**
+ * Generates official POTA El Jefe bulk import CSV for candidate OOPT parks
+ * @param {Object} options - { limit: number, region: string, category: string, sig: string }
+ * @returns {string} CSV content
+ */
+export function exportElJefePotaCsv(options = {}) {
+  const limit = Math.min(1000, Math.max(1, parseInt(options.limit, 10) || 50));
+  const restricted = "ate NOT LIKE '%Крым%' AND ate NOT LIKE '%Севастополь%' AND ate NOT LIKE '%Донецк%' AND ate NOT LIKE '%Луганск%' AND ate NOT LIKE '%Запорож%' AND ate NOT LIKE '%Херсон%'";
+
+  let sql = `
+    SELECT nid, title, category, sig, sig_display, status, ate, rf_subjects, lat, lon, area, rusoir_url
+    FROM oopt_registry
+    WHERE pota_ref IS NULL 
+      AND lat IS NOT NULL AND lat != 0 
+      AND lon IS NOT NULL AND lon != 0
+      AND LOWER(status) = 'действующий' 
+      AND ${restricted}
+  `;
+  const params = [];
+
+  if (options.region) {
+    sql += ' AND (ate LIKE ? OR rf_subjects LIKE ?)';
+    params.push(`%${options.region}%`, `%${options.region}%`);
+  }
+  if (options.category) {
+    sql += ' AND category LIKE ?';
+    params.push(`%${options.category}%`);
+  }
+  if (options.sig) {
+    sql += ' AND sig = ?';
+    params.push(options.sig);
+  }
+
+  sql += ' ORDER BY CASE sig WHEN \'federal\' THEN 1 WHEN \'regional\' THEN 2 ELSE 3 END, area DESC LIMIT ?';
+  params.push(limit);
+
+  const rows = db.prepare(sql).all(...params);
+
+  const escapeCsv = (val) => {
+    if (val === null || val === undefined) return '';
+    const str = String(val).replace(/[\r\n]+/g, ' ').trim();
+    if (str.includes(',') || str.includes('"') || str.includes(';') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const headers = [
+    'reference',
+    'name',
+    'parktype',
+    'program',
+    'locations',
+    'latitude',
+    'longitude',
+    'website',
+    'comments',
+    'accessMethods',
+    'activationMethods',
+    'active'
+  ];
+
+  const lines = [headers.join(',')];
+
+  for (const r of rows) {
+    const p = parseSubmitterFields(r);
+    let program = p.dxEntity || 'European Russia';
+    program = program.replace(/\s*\(RU\)\s*$/, '').trim();
+
+    const record = [
+      '', // Blank for new park
+      escapeCsv(p.name), // Russian name per official POTA guidelines!
+      escapeCsv(p.statusEn || 'State Natural Reserve'),
+      escapeCsv(program),
+      escapeCsv(p.locationCode),
+      p.lat,
+      p.lon,
+      escapeCsv(p.site),
+      escapeCsv(p.clarification || (r.area ? `Площадь: ${Number(r.area).toLocaleString('ru-RU')} га` : '')),
+      'Automobile;Foot;Other',
+      'Automobile;Campground;Other;Pedestrian',
+      '1'
+    ];
+    lines.push(record.join(','));
+  }
+
+  return lines.join('\n');
+}
+
 export default {
   syncOoptRegistry,
   syncPotaParksWithApi,
@@ -3357,4 +3446,5 @@ export default {
   ensureOoptRegistryPopulated,
   getUnmatchedPotaParks,
   exportUnmatchedPotaCsv,
+  exportElJefePotaCsv,
 };

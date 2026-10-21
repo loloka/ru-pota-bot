@@ -1,5 +1,4 @@
 reference,name,parktype,program,locations,latitude,longitude,website,comments,accessMethods,activationMethods,active
-,Ярославский,State Natural Reserve,European Russia,RU-YS,57.9237,40.5447,https://ooptaari.nextgis.ru/node/6903,"Площадь: 13 639,96 га",Automobile;Foot;Other,Automobile;Campground;Other;Pedestrian,1
 ,Унженский лес,State Natural Reserve,European Russia,RU-VO,59.2956,43.9393,https://ooptaari.nextgis.ru/node/10313,"Площадь: 2 139,04 га",Automobile;Foot;Other,Automobile;Campground;Other;Pedestrian,1
 ,Верховинский лес,State Natural Reserve,European Russia,RU-VO,59.4888,43.3157,https://ooptaari.nextgis.ru/node/10317,"Площадь: 755,31 га",Automobile;Foot;Other,Automobile;Campground;Other;Pedestrian,1
 ,Иконный бор,State Natural Reserve,European Russia,RU-VO,59.3427,43.7705,https://ooptaari.nextgis.ru/node/10318,"Площадь: 2 767,87 га",Automobile;Foot;Other,Automobile;Campground;Other;Pedestrian,1
@@ -9,3 +8,4 @@ reference,name,parktype,program,locations,latitude,longitude,website,comments,ac
 ,Кудринский бор,State Natural Reserve,European Russia,RU-VO,59.6828,45.5072,https://ooptaari.nextgis.ru/node/10330,"Площадь: 651,13 га",Automobile;Foot;Other,Automobile;Campground;Other;Pedestrian,1
 ,Талицкий лес,State Natural Reserve,European Russia,RU-VO,59.3965,44.9430,https://ooptaari.nextgis.ru/node/10332,"Площадь: 1 634,54 га",Automobile;Foot;Other,Automobile;Campground;Other;Pedestrian,1
 ,Гладкий бор,State Natural Reserve,European Russia,RU-VO,59.3737,44.4586,https://ooptaari.nextgis.ru/node/10333,"Площадь: 1 538,09 га",Automobile;Foot;Other,Automobile;Campground;Other;Pedestrian,1
+,Харинский,State Natural Reserve,European Russia,RU-VO,59.6389,36.7840,https://ooptaari.nextgis.ru/node/10366,"Площадь: 5 545,62 га",Automobile;Foot;Other,Automobile;Campground;Other;Pedestrian,1

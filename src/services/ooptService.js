@@ -25,6 +25,7 @@ const client = axios.create({
 const FALLBACK_PARKS_PATH = path.resolve(__dirname, '../data/parks_fallback.json');
 const RUNTIME_PARKS_CACHE_PATH = path.resolve(__dirname, '../../data/parks_cache.json');
 const FALLBACK_OOPT_GZ_PATH = path.resolve(__dirname, '../data/oopt_fallback.json.gz');
+const ELJEFE_RU_CSV_PATH = path.resolve(__dirname, '../data/pota_eljefe_ru_latest.csv');
 
 function getParksDatasetPath() {
   if (fs.existsSync(RUNTIME_PARKS_CACHE_PATH)) {
@@ -2954,7 +2955,37 @@ export function syncPotaMatches() {
   }
 
   const fallback = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
-  const ruPota = fallback.filter(p => p.reference && p.reference.startsWith('RU-'));
+  let ruPota = fallback.filter(p => p.reference && p.reference.startsWith('RU-'));
+
+  // Load official El Jefe CSV data if present (provides direct NextGIS website URLs for 1,600+ Russian parks)
+  const elJefeMap = new Map();
+  if (fs.existsSync(ELJEFE_RU_CSV_PATH)) {
+    try {
+      const csvData = fs.readFileSync(ELJEFE_RU_CSV_PATH, 'utf8');
+      const lines = csvData.split('\n').filter(Boolean);
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(',');
+        const ref = parts[0]?.trim();
+        const name = parts[1]?.trim();
+        const lat = parseFloat(parts[5]) || 0;
+        const lon = parseFloat(parts[6]) || 0;
+        const website = parts[7]?.trim();
+        if (ref && ref.startsWith('RU-')) {
+          elJefeMap.set(ref, { reference: ref, name, website, lat, lon });
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Merge El Jefe parks into ruPota list
+  const existingRefs = new Set(ruPota.map(p => p.reference));
+  for (const [ref, elPark] of elJefeMap.entries()) {
+    if (!existingRefs.has(ref)) {
+      ruPota.push(elPark);
+      existingRefs.add(ref);
+    }
+  }
+
   const ooptRows = db.prepare('SELECT nid, title, category, sig, ate, lat, lon FROM oopt_registry').all();
 
   const ooptPrepared = ooptRows.map(o => {
@@ -2982,12 +3013,18 @@ export function syncPotaMatches() {
     const pLat = parseFloat(p.lat);
     const pLon = parseFloat(p.lon);
 
-    // Direct URL hints from POTA website (NextGIS node or slug)
+    // Direct URL hints from POTA website or El Jefe (NextGIS node or slug)
+    const elJefeInfo = elJefeMap.get(p.reference);
+    const parkWebsite = p.website || elJefeInfo?.website || '';
+    if (!p.website && parkWebsite) {
+      p.website = parkWebsite;
+    }
+
     let targetNid = KNOWN_POTA_MATCHES[p.reference] || null;
     let targetSlug = null;
-    if (!targetNid && p.website) {
+    if (!targetNid && parkWebsite) {
       try {
-        const decoded = decodeURIComponent(p.website);
+        const decoded = decodeURIComponent(parkWebsite);
         const nodeM = decoded.match(/node\/(\d+)/);
         if (nodeM) {
           targetNid = parseInt(nodeM[1], 10);
@@ -3021,7 +3058,10 @@ export function syncPotaMatches() {
     }
 
     let candidates = ooptPrepared;
-    if (regionHints.length > 0) {
+    if (targetNid) {
+      const exactObj = ooptPrepared.find(o => o.nid === targetNid);
+      candidates = exactObj ? [exactObj] : ooptPrepared;
+    } else if (regionHints.length > 0) {
       candidates = ooptPrepared.filter(o => regionHints.some(hint => o.ateLower.includes(hint)));
     }
 
@@ -3031,7 +3071,7 @@ export function syncPotaMatches() {
 
       // Direct NextGIS URL / Node ID or OOPT Slug match
       if (targetNid && o.nid === targetNid) {
-        score += 120;
+        score += 500;
         properNameMatch = true;
       } else if (targetSlug && (o.titleLower === targetSlug || o.titleSlug === targetSlug || o.titleLower.includes(targetSlug) || targetSlug.includes(o.titleLower) || o.titleSlug.includes(targetSlug) || targetSlug.includes(o.titleSlug))) {
         score += 100;

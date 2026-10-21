@@ -39,15 +39,61 @@ function getParksDatasetPath() {
  */
 export function getRussianPotaParks() {
   const targetPath = getParksDatasetPath();
+  let parks = [];
   try {
-    if (!fs.existsSync(targetPath)) return [];
-    const content = fs.readFileSync(targetPath, 'utf8');
-    const parks = JSON.parse(content);
-    return parks.filter(p => p.reference && p.reference.startsWith('RU-'));
+    if (fs.existsSync(targetPath)) {
+      const content = fs.readFileSync(targetPath, 'utf8');
+      parks = JSON.parse(content).filter(p => p.reference && p.reference.startsWith('RU-'));
+    }
   } catch (err) {
     console.warn('[OOPT Service] ⚠️ Failed to load parks dataset:', err.message);
-    return [];
   }
+
+  // Merge full official El Jefe CSV if present
+  if (fs.existsSync(ELJEFE_RU_CSV_PATH)) {
+    try {
+      const csvData = fs.readFileSync(ELJEFE_RU_CSV_PATH, 'utf8');
+      const lines = csvData.split('\n').filter(Boolean);
+      const existingMap = new Map();
+      parks.forEach(p => existingMap.set(p.reference, p));
+
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(',');
+        const ref = parts[0]?.trim();
+        const name = parts[1]?.trim();
+        const locations = parts[4]?.trim() || '';
+        const lat = parseFloat(parts[5]) || 0;
+        const lon = parseFloat(parts[6]) || 0;
+        const website = parts[7]?.trim() || '';
+
+        if (ref && ref.startsWith('RU-')) {
+          if (existingMap.has(ref)) {
+            const existing = existingMap.get(ref);
+            if (!existing.website && website) existing.website = website;
+            if (!existing.region && locations) existing.region = locations;
+            if (!existing.locationDesc && locations) existing.locationDesc = locations;
+          } else {
+            const newPark = {
+              reference: ref,
+              name,
+              lat,
+              lon,
+              region: locations,
+              locationDesc: locations,
+              website,
+              activations: 0,
+              qsos: 0,
+              notes: ''
+            };
+            parks.push(newPark);
+            existingMap.set(ref, newPark);
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  return parks;
 }
 
 /**
@@ -1451,12 +1497,16 @@ export function getDxEntity(regionName = '', title = '') {
     return 'Franz Josef Land (RU)';
   }
 
-  // Asiatic Russia regions (requires word boundary to prevent 'костромская' matching 'омск'!)
+  // Asiatic Russia regions (per ITU/CQ radio amateur zones: Ural R9A-C-F-Q-S-W, Siberia R9H-M-O-U-Y, Far East R0)
   const asiaticPatterns = [
     /(?<![а-яёa-z0-9])свердловск/i,
     /(?<![а-яёa-z0-9])челябинск/i,
     /(?<![а-яёa-z0-9])курганск/i,
     /(?<![а-яёa-z0-9])тюмен/i,
+    /(?<![а-яёa-z0-9])башкир/i,
+    /(?<![а-яёa-z0-9])башкортостан/i,
+    /(?<![а-яёa-z0-9])оренбург/i,
+    /(?<![а-яёa-z0-9])перм/i,
     /(?<![а-яёa-z0-9])ханты-мансий/i,
     /(?<![а-яёa-z0-9])югр/i,
     /(?<![а-яёa-z0-9])ямало-ненец/i,
@@ -1720,13 +1770,43 @@ export function getRegionalPotaStats() {
     console.warn('[OOPT Service] ⚠️ Failed to query oopt_registry counts:', err.message);
   }
 
+  let candRows = [];
+  try {
+    candRows = db.prepare("SELECT ate, COUNT(*) as cnt FROM oopt_registry WHERE pota_ref IS NULL AND lat IS NOT NULL AND lat != 0 AND lon IS NOT NULL AND lon != 0 AND LOWER(status) = 'действующий' GROUP BY ate").all();
+  } catch (err) {
+    console.warn('[OOPT Service] ⚠️ Failed to query candidate counts:', err.message);
+  }
+
+  let matchedRefs = new Set();
+  try {
+    const mRows = db.prepare('SELECT DISTINCT pota_ref FROM oopt_registry WHERE pota_ref IS NOT NULL').all();
+    matchedRefs = new Set(mRows.map(r => r.pota_ref));
+  } catch (err) {
+    console.warn('[OOPT Service] ⚠️ Failed to query matched pota_refs:', err.message);
+  }
+
   const regionMap = new Map();
   for (const [code, name] of Object.entries(POTA_LOCATION_CANONICAL)) {
     const isRestricted = isPotaRestrictedAte(name) || ['RU-CR', 'RU-SE', 'RU-DN', 'RU-LN2', 'RU-ZP', 'RU-HR'].includes(code);
+    const dx = getDxEntity(name);
+    let entityGroup = 'europe';
+    if (isRestricted) {
+      entityGroup = 'restricted';
+    } else if (dx.includes('Asiatic')) {
+      entityGroup = 'asia';
+    } else {
+      entityGroup = 'europe';
+    }
+
     regionMap.set(code, {
       code,
       name,
+      dxEntity: dx,
+      entityGroup,
       totalParks: 0,
+      matchedParks: 0,
+      unmatchedParks: 0,
+      candidatesCount: 0,
       activatedParks: 0,
       unactivatedParks: 0,
       activationRate: 0,
@@ -1746,6 +1826,7 @@ export function getRegionalPotaStats() {
 
   for (const p of parks) {
     const isAct = (p.activations || 0) > 0;
+    const isMatched = matchedRefs.has(p.reference);
     if (isAct) overallActivated++;
     overallActivations += (p.activations || 0);
     overallQsos += (p.qsos || 0);
@@ -1756,6 +1837,8 @@ export function getRegionalPotaStats() {
       if (regionMap.has(canonicalCode)) {
         const item = regionMap.get(canonicalCode);
         item.totalParks += 1;
+        if (isMatched) item.matchedParks += 1;
+        else item.unmatchedParks += 1;
         if (isAct) item.activatedParks += 1;
         item.totalActivations += (p.activations || 0);
         item.totalQsos += (p.qsos || 0);
@@ -1794,6 +1877,41 @@ export function getRegionalPotaStats() {
 
       if (matches) {
         item.ooptCandidates += row.cnt;
+      }
+    }
+  }
+
+  // Exact territorial matching for active candidate points (grey markers on map)
+  for (const row of candRows) {
+    const a = (row.ate || '').toLowerCase();
+    for (const [code, item] of regionMap.entries()) {
+      if (item.isRestricted) continue;
+
+      let matches = false;
+      if (code === 'RU-MC') {
+        matches = a.startsWith('москва') && !a.includes('московская');
+      } else if (code === 'RU-MS') {
+        matches = a.includes('московская');
+      } else if (code === 'RU-SP') {
+        matches = a.includes('санкт-петербург') && !a.includes('ленинградская');
+      } else if (code === 'RU-LN') {
+        matches = a.includes('ленинградская');
+      } else if (code === 'RU-KM') {
+        matches = a.includes('ханты-мансийский');
+      } else if (code === 'RU-NN') {
+        matches = a.includes('ненецкий') && !a.includes('ямало-ненецкий');
+      } else if (code === 'RU-YN') {
+        matches = a.includes('ямало-ненецкий') || a.includes('ямал');
+      } else if (code === 'RU-FJ') {
+        matches = a.includes('русская арктика') || a.includes('франц');
+      } else if (code === 'RU-OM') {
+        matches = a.includes('омская') && !a.includes('томская') && !a.includes('костромская');
+      } else {
+        matches = a.includes(item.name.toLowerCase());
+      }
+
+      if (matches) {
+        item.candidatesCount += row.cnt;
       }
     }
   }
@@ -3515,11 +3633,14 @@ export function getOoptMapPoints(options = {}) {
   const ruParks = getRussianPotaParks();
   let unmatchedPotaRaw = ruParks.filter(p => !matchedRefs.has(p.reference) && p.lat && p.lon);
   if (region) {
+    const regCode = getPotaLocationCode(region);
     const regLower = region.toLowerCase();
     unmatchedPotaRaw = unmatchedPotaRaw.filter(p => {
-      const loc = (p.locationDesc || p.region || '').toLowerCase();
+      const loc = (p.locationDesc || p.region || '').toUpperCase();
       const name = (p.name || '').toLowerCase();
-      return loc.includes(regLower) || name.includes(regLower);
+      const matchesCode = Boolean(regCode && loc.includes(regCode));
+      const matchesName = loc.toLowerCase().includes(regLower) || name.includes(regLower);
+      return matchesCode || matchesName;
     });
   }
   const unmatchedPota = unmatchedPotaRaw.map(p => ({
@@ -3532,25 +3653,38 @@ export function getOoptMapPoints(options = {}) {
   }));
 
   // 3. Candidates (Grey): pota_ref IS NULL, active, valid coords
-  let candSql = `
-    SELECT nid, title, category, sig, sig_display, ate, lat, lon, area, rusoir_url
-    FROM oopt_registry
-    WHERE pota_ref IS NULL 
-      AND lat IS NOT NULL AND lat != 0 
-      AND lon IS NOT NULL AND lon != 0
-      AND LOWER(status) = 'действующий'
-      AND ${restricted}
-  `;
+  let candSql = '';
   const candParams = [];
   if (region) {
-    candSql += ' AND (ate LIKE ? OR rf_subjects LIKE ?)';
+    // When a specific region is chosen, show all active candidates for that region
+    candSql = `
+      SELECT nid, title, category, sig, sig_display, ate, lat, lon, area, rusoir_url
+      FROM oopt_registry
+      WHERE pota_ref IS NULL 
+        AND lat IS NOT NULL AND lat != 0 
+        AND lon IS NOT NULL AND lon != 0
+        AND LOWER(status) = 'действующий'
+        AND ${restricted}
+        AND (ate LIKE ? OR rf_subjects LIKE ?)
+      ORDER BY CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END, area DESC
+    `;
     candParams.push(`%${region}%`, `%${region}%`);
-    candSql += ' ORDER BY CASE sig WHEN \'federal\' THEN 1 WHEN \'regional\' THEN 2 ELSE 3 END, area DESC';
   } else {
-    // If all Russia: return top 1200 candidate points to maintain high map fluidity
-    const limit = Math.min(3000, Math.max(50, parseInt(options.limitCandidates, 10) || 1200));
-    candSql += ' ORDER BY CASE sig WHEN \'federal\' THEN 1 WHEN \'regional\' THEN 2 ELSE 3 END, area DESC LIMIT ?';
-    candParams.push(limit);
+    // When All Russia is viewed: distribute up to 25 candidates per region uniformly across entire country
+    candSql = `
+      SELECT nid, title, category, sig, sig_display, ate, lat, lon, area, rusoir_url
+      FROM (
+        SELECT nid, title, category, sig, sig_display, ate, lat, lon, area, rusoir_url,
+               ROW_NUMBER() OVER(PARTITION BY ate ORDER BY CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END, area DESC) as rn
+        FROM oopt_registry
+        WHERE pota_ref IS NULL 
+          AND lat IS NOT NULL AND lat != 0 
+          AND lon IS NOT NULL AND lon != 0
+          AND LOWER(status) = 'действующий'
+          AND ${restricted}
+      )
+      WHERE rn <= 25
+    `;
   }
   const candRows = db.prepare(candSql).all(...candParams);
   const candidates = candRows.map(r => ({

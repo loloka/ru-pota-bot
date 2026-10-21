@@ -1081,6 +1081,11 @@ export const startAdminServer = (telegramClient) => {
                       </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
+                      <div class="btn-group btn-group-sm" role="group" id="map-tile-switcher" title="Подложка карты">
+                        <button type="button" class="btn btn-primary active" id="btn-tile-osm" data-tile="osm"><i class="bi bi-map"></i> Схема</button>
+                        <button type="button" class="btn btn-outline-primary" id="btn-tile-satellite" data-tile="satellite"><i class="bi bi-globe-americas"></i> Спутник</button>
+                        <button type="button" class="btn btn-outline-primary" id="btn-tile-topo" data-tile="topo"><i class="bi bi-triangle"></i> Топо</button>
+                      </div>
                       <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-map-oopt-reload" title="Обновить точки">
                         <i class="bi bi-arrow-clockwise"></i> Обновить
                       </button>
@@ -1129,6 +1134,17 @@ export const startAdminServer = (telegramClient) => {
                             <i class="bi bi-file-earmark-spreadsheet"></i> 📥 Скачать 10 для El Jefe
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Restricted Region Disclaimer Alert -->
+                  <div id="map-restricted-alert" class="alert alert-warning border-0 shadow-sm d-none mb-3 py-2 px-3 small">
+                    <div class="d-flex align-items-start gap-2">
+                      <i class="bi bi-exclamation-triangle-fill fs-5 text-warning flex-shrink-0 mt-1"></i>
+                      <div>
+                        <strong>⚠️ Внимание: Региональное ограничение координационного комитета POTA (США)</strong><br>
+                        <span>Международная программа Parks on the Air (POTA) зарегистрирована в США и строго подчиняется нормам американского законодательства. Добавление новых парков и регистрация радиоэкспедиций на территории Республики Крым, г. Севастополя, ДНР, ЛНР, Запорожской и Херсонской областей временно заблокированы регламентом POTA. Реестр ООПТ данных регионов сохранен в локальной базе и будет активирован при снятии ограничений со стороны руководства программы.</span>
                       </div>
                     </div>
                   </div>
@@ -5043,6 +5059,21 @@ export const startAdminServer = (telegramClient) => {
               return;
             }
 
+            var tileOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '© OpenStreetMap contributors',
+              maxZoom: 19
+            });
+
+            var tileSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+              attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+              maxZoom: 19
+            });
+
+            var tileTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+              attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)',
+              maxZoom: 17
+            });
+
             adminOoptMap = L.map('admin-oopt-pota-map', {
               center: [60.0, 95.0],
               zoom: 3,
@@ -5050,16 +5081,46 @@ export const startAdminServer = (telegramClient) => {
               maxZoom: 17
             });
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              attribution: '© OpenStreetMap contributors',
-              maxZoom: 19
-            }).addTo(adminOoptMap);
+            tileOsm.addTo(adminOoptMap);
 
             mapMatchedGroup = L.layerGroup().addTo(adminOoptMap);
             mapUnmatchedGroup = L.layerGroup().addTo(adminOoptMap);
             mapCandidatesGroup = L.layerGroup().addTo(adminOoptMap);
 
             isMapInitialized = true;
+
+            function switchMapTileLayer(tileType) {
+              if (!adminOoptMap) return;
+              if (adminOoptMap.hasLayer(tileOsm)) adminOoptMap.removeLayer(tileOsm);
+              if (adminOoptMap.hasLayer(tileSatellite)) adminOoptMap.removeLayer(tileSatellite);
+              if (adminOoptMap.hasLayer(tileTopo)) adminOoptMap.removeLayer(tileTopo);
+
+              var btnOsm = document.getElementById('btn-tile-osm');
+              var btnSat = document.getElementById('btn-tile-satellite');
+              var btnTopo = document.getElementById('btn-tile-topo');
+
+              [btnOsm, btnSat, btnTopo].forEach(function(b) {
+                if (b) {
+                  b.classList.remove('btn-primary', 'active');
+                  b.classList.add('btn-outline-primary');
+                }
+              });
+
+              if (tileType === 'satellite') {
+                tileSatellite.addTo(adminOoptMap);
+                if (btnSat) { btnSat.classList.remove('btn-outline-primary'); btnSat.classList.add('btn-primary', 'active'); }
+              } else if (tileType === 'topo') {
+                tileTopo.addTo(adminOoptMap);
+                if (btnTopo) { btnTopo.classList.remove('btn-outline-primary'); btnTopo.classList.add('btn-primary', 'active'); }
+              } else {
+                tileOsm.addTo(adminOoptMap);
+                if (btnOsm) { btnOsm.classList.remove('btn-outline-primary'); btnOsm.classList.add('btn-primary', 'active'); }
+              }
+            }
+
+            document.getElementById('btn-tile-osm')?.addEventListener('click', function() { switchMapTileLayer('osm'); });
+            document.getElementById('btn-tile-satellite')?.addEventListener('click', function() { switchMapTileLayer('satellite'); });
+            document.getElementById('btn-tile-topo')?.addEventListener('click', function() { switchMapTileLayer('topo'); });
 
             populateMapRegionsDropdown();
             loadAdminMapPoints('', false);
@@ -5095,6 +5156,25 @@ export const startAdminServer = (telegramClient) => {
 
             document.getElementById('oopt-map-region-select')?.addEventListener('change', function(e) {
               currentMapRegion = e.target.value;
+              var sel = e.target;
+              var selectedOpt = sel.options[sel.selectedIndex];
+              var isRestricted = selectedOpt && selectedOpt.getAttribute('data-restricted') === '1';
+              var alertBox = document.getElementById('map-restricted-alert');
+              var exportBtn = document.getElementById('btn-map-export-10');
+
+              if (isRestricted) {
+                if (alertBox) alertBox.classList.remove('d-none');
+                if (exportBtn) {
+                  exportBtn.disabled = true;
+                  exportBtn.title = 'Экспорт заблокирован в связи с правилами POTA USA для данного региона';
+                }
+              } else {
+                if (alertBox) alertBox.classList.add('d-none');
+                if (exportBtn) {
+                  exportBtn.disabled = false;
+                }
+              }
+
               updateMapExportButtonState();
               loadAdminMapPoints(currentMapRegion, true);
             });
@@ -5103,6 +5183,12 @@ export const startAdminServer = (telegramClient) => {
               var sel = document.getElementById('oopt-map-region-select');
               if (sel) sel.value = '';
               currentMapRegion = '';
+              var alertBox = document.getElementById('map-restricted-alert');
+              if (alertBox) alertBox.classList.add('d-none');
+              var exportBtn = document.getElementById('btn-map-export-10');
+              if (exportBtn) {
+                exportBtn.disabled = false;
+              }
               updateMapExportButtonState();
               adminOoptMap.setView([60.0, 95.0], 3);
               loadAdminMapPoints('', false);
@@ -5127,14 +5213,39 @@ export const startAdminServer = (telegramClient) => {
               if (data && data.regions) {
                 var copy = data.regions.slice();
                 copy.sort(function(a, b) { return a.name.localeCompare(b.name, 'ru'); });
+
+                var groupEurope = document.createElement('optgroup');
+                groupEurope.label = '🇪🇺 Европейская Россия (R1, R2, R3, R4, R6)';
+
+                var groupAsia = document.createElement('optgroup');
+                groupAsia.label = '🌏 Азиатская Россия (R9, R0 — Урал, Сибирь, ДВ)';
+
+                var groupRestricted = document.createElement('optgroup');
+                groupRestricted.label = '⚠️ Новые субъекты РФ (ограничено правилами POTA USA)';
+
                 copy.forEach(function(r) {
-                  if (!r.isRestricted) {
-                    var opt = document.createElement('option');
-                    opt.value = r.name;
-                    opt.textContent = r.name + ' (' + r.code + ')';
-                    sel.appendChild(opt);
+                  var opt = document.createElement('option');
+                  opt.value = r.name;
+                  if (r.isRestricted) {
+                    opt.setAttribute('data-restricted', '1');
+                    opt.textContent = r.name + ' (' + r.code + ') — [ ⚠️ POTA USA ограничено ]';
+                    groupRestricted.appendChild(opt);
+                  } else {
+                    var m = r.matchedParks || 0;
+                    var u = r.unmatchedParks || 0;
+                    var c = r.candidatesCount || 0;
+                    opt.textContent = r.name + ' (' + r.code + ') — [ 🟢 ' + m + ' / 🟠 ' + u + ' / ⚪ ' + c + ' ]';
+                    if (r.entityGroup === 'asia') {
+                      groupAsia.appendChild(opt);
+                    } else {
+                      groupEurope.appendChild(opt);
+                    }
                   }
                 });
+
+                if (groupEurope.children.length > 0) sel.appendChild(groupEurope);
+                if (groupAsia.children.length > 0) sel.appendChild(groupAsia);
+                if (groupRestricted.children.length > 0) sel.appendChild(groupRestricted);
               }
             } catch (err) {
               console.warn('[Admin Map] Could not load regions list:', err);

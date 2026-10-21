@@ -1082,8 +1082,9 @@ export const startAdminServer = (telegramClient) => {
                     </div>
                     <div class="d-flex align-items-center gap-2">
                       <div class="btn-group btn-group-sm" role="group" id="map-tile-switcher" title="Подложка карты">
-                        <button type="button" class="btn btn-primary active" id="btn-tile-osm" data-tile="osm"><i class="bi bi-map"></i> Схема</button>
+                        <button type="button" class="btn btn-primary active" id="btn-tile-2gis" data-tile="2gis"><i class="bi bi-map"></i> 2ГИС</button>
                         <button type="button" class="btn btn-outline-primary" id="btn-tile-satellite" data-tile="satellite"><i class="bi bi-globe-americas"></i> Спутник</button>
+                        <button type="button" class="btn btn-outline-primary" id="btn-tile-osm" data-tile="osm"><i class="bi bi-compass"></i> OSM</button>
                         <button type="button" class="btn btn-outline-primary" id="btn-tile-topo" data-tile="topo"><i class="bi bi-triangle"></i> Топо</button>
                       </div>
                       <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-map-oopt-reload" title="Обновить точки">
@@ -4412,9 +4413,10 @@ export const startAdminServer = (telegramClient) => {
             setTimeout(function() {
               if (!coordPickerMap) {
                 coordPickerMap = L.map('coord-picker-map', { attributionControl: false }).setView([initialLat, initialLon], initialZoom);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                  attribution: '',
-                  maxZoom: 19
+                L.tileLayer('https://tile{s}.maps.2gis.com/tiles?x={x}&y={y}&z={z}', {
+                  subdomains: ['0', '1', '2', '3'],
+                  attribution: '© 2ГИС',
+                  maxZoom: 18
                 }).addTo(coordPickerMap);
 
                 coordPickerMarker = L.marker([initialLat, initialLon], {
@@ -5059,13 +5061,19 @@ export const startAdminServer = (telegramClient) => {
               return;
             }
 
-            var tileOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              attribution: '© OpenStreetMap contributors',
-              maxZoom: 19
+            var tile2Gis = L.tileLayer('https://tile{s}.maps.2gis.com/tiles?x={x}&y={y}&z={z}', {
+              subdomains: ['0', '1', '2', '3'],
+              attribution: '© 2ГИС',
+              maxZoom: 18
             });
 
             var tileSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
               attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+              maxZoom: 19
+            });
+
+            var tileOsm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '© OpenStreetMap contributors',
               maxZoom: 19
             });
 
@@ -5081,7 +5089,7 @@ export const startAdminServer = (telegramClient) => {
               maxZoom: 17
             });
 
-            tileOsm.addTo(adminOoptMap);
+            tile2Gis.addTo(adminOoptMap);
 
             mapMatchedGroup = L.layerGroup().addTo(adminOoptMap);
             mapUnmatchedGroup = L.layerGroup().addTo(adminOoptMap);
@@ -5091,15 +5099,17 @@ export const startAdminServer = (telegramClient) => {
 
             function switchMapTileLayer(tileType) {
               if (!adminOoptMap) return;
-              if (adminOoptMap.hasLayer(tileOsm)) adminOoptMap.removeLayer(tileOsm);
+              if (adminOoptMap.hasLayer(tile2Gis)) adminOoptMap.removeLayer(tile2Gis);
               if (adminOoptMap.hasLayer(tileSatellite)) adminOoptMap.removeLayer(tileSatellite);
+              if (adminOoptMap.hasLayer(tileOsm)) adminOoptMap.removeLayer(tileOsm);
               if (adminOoptMap.hasLayer(tileTopo)) adminOoptMap.removeLayer(tileTopo);
 
-              var btnOsm = document.getElementById('btn-tile-osm');
+              var btn2Gis = document.getElementById('btn-tile-2gis');
               var btnSat = document.getElementById('btn-tile-satellite');
+              var btnOsm = document.getElementById('btn-tile-osm');
               var btnTopo = document.getElementById('btn-tile-topo');
 
-              [btnOsm, btnSat, btnTopo].forEach(function(b) {
+              [btn2Gis, btnSat, btnOsm, btnTopo].forEach(function(b) {
                 if (b) {
                   b.classList.remove('btn-primary', 'active');
                   b.classList.add('btn-outline-primary');
@@ -5109,17 +5119,21 @@ export const startAdminServer = (telegramClient) => {
               if (tileType === 'satellite') {
                 tileSatellite.addTo(adminOoptMap);
                 if (btnSat) { btnSat.classList.remove('btn-outline-primary'); btnSat.classList.add('btn-primary', 'active'); }
+              } else if (tileType === 'osm') {
+                tileOsm.addTo(adminOoptMap);
+                if (btnOsm) { btnOsm.classList.remove('btn-outline-primary'); btnOsm.classList.add('btn-primary', 'active'); }
               } else if (tileType === 'topo') {
                 tileTopo.addTo(adminOoptMap);
                 if (btnTopo) { btnTopo.classList.remove('btn-outline-primary'); btnTopo.classList.add('btn-primary', 'active'); }
               } else {
-                tileOsm.addTo(adminOoptMap);
-                if (btnOsm) { btnOsm.classList.remove('btn-outline-primary'); btnOsm.classList.add('btn-primary', 'active'); }
+                tile2Gis.addTo(adminOoptMap);
+                if (btn2Gis) { btn2Gis.classList.remove('btn-outline-primary'); btn2Gis.classList.add('btn-primary', 'active'); }
               }
             }
 
-            document.getElementById('btn-tile-osm')?.addEventListener('click', function() { switchMapTileLayer('osm'); });
+            document.getElementById('btn-tile-2gis')?.addEventListener('click', function() { switchMapTileLayer('2gis'); });
             document.getElementById('btn-tile-satellite')?.addEventListener('click', function() { switchMapTileLayer('satellite'); });
+            document.getElementById('btn-tile-osm')?.addEventListener('click', function() { switchMapTileLayer('osm'); });
             document.getElementById('btn-tile-topo')?.addEventListener('click', function() { switchMapTileLayer('topo'); });
 
             populateMapRegionsDropdown();

@@ -462,6 +462,15 @@ try {
     console.log('[DB] Migrated oopt_registry table: added details_fetched_at column and backfilled existing entries');
   }
 
+  const hasPotaStatus = ooptColumns.some(col => col.name === 'pota_status');
+  if (!hasPotaStatus) {
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN pota_status TEXT DEFAULT NULL`);
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN pota_submitted_at DATETIME DEFAULT NULL`);
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN pota_submitted_by TEXT DEFAULT NULL`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_oopt_pota_status ON oopt_registry (pota_status)`);
+    console.log('[DB] Migrated oopt_registry table: added pota_status, pota_submitted_at, pota_submitted_by columns');
+  }
+
   // Auto-convert any EPSG:3857 (Spherical Mercator meters) coordinates to WGS84 degrees (Minpriroda API anomalies)
   try {
     const mercatorRows = db.prepare('SELECT nid, lat, lon, bbox FROM oopt_registry WHERE lat > 90 OR lon > 180 OR lat < -90 OR lon < -180').all();

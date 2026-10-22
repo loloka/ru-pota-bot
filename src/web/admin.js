@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
-import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, getOoptMapPoints } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, getOoptMapPoints, markOoptAsSubmitted, unmarkOoptAsSubmitted } from '../services/ooptService.js';
 import {
   auditPotaLinks,
   checkUrlOnline,
@@ -1122,18 +1122,37 @@ export const startAdminServer = (telegramClient) => {
                               </label>
                             </div>
                             <div class="form-check form-check-inline m-0">
+                              <input class="form-check-input" type="checkbox" id="layer-queued-check" checked>
+                              <label class="form-check-label small" for="layer-queued-check">
+                                <span class="badge bg-primary" id="count-queued-badge">0</span> В очереди подачи
+                              </label>
+                            </div>
+                            <div class="form-check form-check-inline m-0">
                               <input class="form-check-input" type="checkbox" id="layer-candidates-check" checked>
                               <label class="form-check-label small" for="layer-candidates-check">
-                                <span class="badge bg-secondary" id="count-candidates-badge">...</span> Кандидаты (не в POTA)
+                                <span class="badge bg-secondary" id="count-candidates-badge">...</span> Кандидаты (свободные)
                               </label>
                             </div>
                           </div>
                         </div>
                         <div class="col-md-3 col-sm-12 text-md-end">
                           <label class="form-label small fw-bold mb-1 d-block">Пакетная выгрузка El Jefe:</label>
-                          <button type="button" class="btn btn-sm btn-success w-100" id="btn-map-export-10" title="Скачать CSV из 10 новых кандидатов выбранного региона">
-                            <i class="bi bi-file-earmark-spreadsheet"></i> 📥 Скачать 10 для El Jefe
-                          </button>
+                          <div class="d-flex align-items-center justify-content-md-end gap-1 flex-wrap">
+                            <div class="btn-group btn-group-sm w-100" role="group">
+                              <button type="button" class="btn btn-success" id="btn-map-export-10" title="Скачать CSV из 10 кандидатов выбранного региона">
+                                <i class="bi bi-file-earmark-spreadsheet"></i> 10 шт
+                              </button>
+                              <button type="button" class="btn btn-outline-success" id="btn-map-export-all" title="Скачать CSV со ВСЕМИ свободными кандидатами выбранного региона">
+                                <i class="bi bi-download"></i> Все свободные
+                              </button>
+                            </div>
+                            <div class="form-check form-check-inline m-0 text-start" title="Автоматически пометить выгруженные объекты как находящиеся в очереди подачи">
+                              <input class="form-check-input" type="checkbox" id="export-auto-queue-check" checked>
+                              <label class="form-check-label small text-muted" for="export-auto-queue-check" style="font-size: 11px;">
+                                ☑️ В очередь
+                              </label>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1164,6 +1183,10 @@ export const startAdminServer = (telegramClient) => {
                       <div class="d-flex align-items-center mb-1">
                         <span style="display:inline-block; width:12px; height:12px; background:#ffc107; border:1.5px solid #d39e00; border-radius:50%; margin-right:6px; flex-shrink:0;"></span>
                         <span><strong>Оранжевый:</strong> Парк POTA без привязки к ООПТ</span>
+                      </div>
+                      <div class="d-flex align-items-center mb-1">
+                        <span style="display:inline-block; width:12px; height:12px; background:#0d6efd; border:1.5px solid #0a58ca; border-radius:50%; margin-right:6px; flex-shrink:0;"></span>
+                        <span><strong>Синий:</strong> В очереди на добавление (подано в POTA)</span>
                       </div>
                       <div class="d-flex align-items-center">
                         <span style="display:inline-block; width:12px; height:12px; background:#adb5bd; border:1.5px solid #495057; border-radius:50%; margin-right:6px; flex-shrink:0;"></span>
@@ -2627,9 +2650,12 @@ export const startAdminServer = (telegramClient) => {
                   ? ' <span class="badge bg-info text-dark border border-info ms-1" title="Проектируемая / перспективная ООПТ"><i class="bi bi-clock-history"></i> Проектируемый</span>'
                   : '';
 
-                var potaBadge = r.pota_ref
-                  ? ' <a href="https://next.pota.app/park/' + r.pota_ref + '" target="_blank" class="badge bg-success text-decoration-none ms-1" title="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check-circle-fill"></i> В POTA: ' + r.pota_ref + '</a>'
-                  : '';
+                var potaBadge = '';
+                if (r.pota_ref) {
+                  potaBadge = ' <a href="https://next.pota.app/park/' + r.pota_ref + '" target="_blank" class="badge bg-success text-decoration-none ms-1" title="' + escapeHtmlClient(r.pota_name || '') + '"><i class="bi bi-check-circle-fill"></i> В POTA: ' + r.pota_ref + '</a>';
+                } else if (r.pota_status === 'submitted') {
+                  potaBadge = ' <span class="badge bg-primary text-white ms-1" title="В очереди подачи. ' + (r.pota_submitted_by ? 'Подал: ' + escapeHtmlClient(r.pota_submitted_by) : '') + (r.pota_submitted_at ? ' (' + r.pota_submitted_at.slice(0, 10) + ')' : '') + '"><i class="bi bi-clock-history"></i> В очереди</span>';
+                }
 
                 var parentRefAttr = (r.parent_pota && r.parent_pota.reference) ? r.parent_pota.reference : '';
                 var parentNameAttr = (r.parent_pota && r.parent_pota.name) ? escapeHtmlClient(r.parent_pota.name) : '';
@@ -5048,6 +5074,7 @@ export const startAdminServer = (telegramClient) => {
           var isMapInitialized = false;
           var mapMatchedGroup = null;
           var mapUnmatchedGroup = null;
+          var mapQueuedGroup = null;
           var mapCandidatesGroup = null;
           var currentMapRegion = '';
           var isMapPointsLoading = false;
@@ -5093,6 +5120,7 @@ export const startAdminServer = (telegramClient) => {
 
             mapMatchedGroup = L.layerGroup().addTo(adminOoptMap);
             mapUnmatchedGroup = L.layerGroup().addTo(adminOoptMap);
+            mapQueuedGroup = L.layerGroup().addTo(adminOoptMap);
             mapCandidatesGroup = L.layerGroup().addTo(adminOoptMap);
 
             isMapInitialized = true;
@@ -5139,7 +5167,7 @@ export const startAdminServer = (telegramClient) => {
             populateMapRegionsDropdown();
             loadAdminMapPoints('', false);
 
-            container.addEventListener('click', function(e) {
+            container.addEventListener('click', async function(e) {
               var btn = e.target.closest('.btn-copy-map-title');
               if (btn) {
                 var text = decodeURIComponent(btn.getAttribute('data-title') || '');
@@ -5148,6 +5176,54 @@ export const startAdminServer = (telegramClient) => {
                   if (typeof Swal !== 'undefined') {
                     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Название скопировано', timer: 1500, showConfirmButton: false });
                   }
+                }
+              }
+
+              var markBtn = e.target.closest('.btn-queue-mark');
+              if (markBtn) {
+                var nid = parseInt(markBtn.getAttribute('data-nid'), 10);
+                if (!nid) return;
+                try {
+                  markBtn.disabled = true;
+                  markBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                  var res = await fetch('/api/admin/oopt/queue/mark', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nids: [nid], submittedBy: 'Координатор (Карта)' })
+                  });
+                  var result = await res.json();
+                  if (result.success) {
+                    if (typeof Swal !== 'undefined') {
+                      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Объект переведён в очередь подачи (синий)', timer: 1500, showConfirmButton: false });
+                    }
+                    loadAdminMapPoints(currentMapRegion, false);
+                  }
+                } catch (err) {
+                  alert('Ошибка: ' + err.message);
+                }
+              }
+
+              var unmarkBtn = e.target.closest('.btn-queue-unmark');
+              if (unmarkBtn) {
+                var nid = parseInt(unmarkBtn.getAttribute('data-nid'), 10);
+                if (!nid) return;
+                try {
+                  unmarkBtn.disabled = true;
+                  unmarkBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                  var res = await fetch('/api/admin/oopt/queue/unmark', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nids: [nid] })
+                  });
+                  var result = await res.json();
+                  if (result.success) {
+                    if (typeof Swal !== 'undefined') {
+                      Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Снят с очереди — возвращён в свободные кандидаты (серый)', timer: 1500, showConfirmButton: false });
+                    }
+                    loadAdminMapPoints(currentMapRegion, false);
+                  }
+                } catch (err) {
+                  alert('Ошибка: ' + err.message);
                 }
               }
             });
@@ -5162,6 +5238,11 @@ export const startAdminServer = (telegramClient) => {
               if (e.target.checked) adminOoptMap.addLayer(mapUnmatchedGroup);
               else adminOoptMap.removeLayer(mapUnmatchedGroup);
             });
+            document.getElementById('layer-queued-check')?.addEventListener('change', function(e) {
+              if (!adminOoptMap) return;
+              if (e.target.checked) adminOoptMap.addLayer(mapQueuedGroup);
+              else adminOoptMap.removeLayer(mapQueuedGroup);
+            });
             document.getElementById('layer-candidates-check')?.addEventListener('change', function(e) {
               if (!adminOoptMap) return;
               if (e.target.checked) adminOoptMap.addLayer(mapCandidatesGroup);
@@ -5175,6 +5256,7 @@ export const startAdminServer = (telegramClient) => {
               var isRestricted = selectedOpt && selectedOpt.getAttribute('data-restricted') === '1';
               var alertBox = document.getElementById('map-restricted-alert');
               var exportBtn = document.getElementById('btn-map-export-10');
+              var exportAllBtn = document.getElementById('btn-map-export-all');
 
               if (isRestricted) {
                 if (alertBox) alertBox.classList.remove('d-none');
@@ -5182,11 +5264,14 @@ export const startAdminServer = (telegramClient) => {
                   exportBtn.disabled = true;
                   exportBtn.title = 'Экспорт заблокирован в связи с правилами POTA USA для данного региона';
                 }
+                if (exportAllBtn) {
+                  exportAllBtn.disabled = true;
+                  exportAllBtn.title = 'Экспорт заблокирован в связи с правилами POTA USA для данного региона';
+                }
               } else {
                 if (alertBox) alertBox.classList.add('d-none');
-                if (exportBtn) {
-                  exportBtn.disabled = false;
-                }
+                if (exportBtn) exportBtn.disabled = false;
+                if (exportAllBtn) exportAllBtn.disabled = false;
               }
 
               updateMapExportButtonState();
@@ -5200,9 +5285,9 @@ export const startAdminServer = (telegramClient) => {
               var alertBox = document.getElementById('map-restricted-alert');
               if (alertBox) alertBox.classList.add('d-none');
               var exportBtn = document.getElementById('btn-map-export-10');
-              if (exportBtn) {
-                exportBtn.disabled = false;
-              }
+              var exportAllBtn = document.getElementById('btn-map-export-all');
+              if (exportBtn) exportBtn.disabled = false;
+              if (exportAllBtn) exportAllBtn.disabled = false;
               updateMapExportButtonState();
               adminOoptMap.setView([60.0, 95.0], 3);
               loadAdminMapPoints('', false);
@@ -5212,9 +5297,25 @@ export const startAdminServer = (telegramClient) => {
               loadAdminMapPoints(currentMapRegion, false);
             });
 
-            document.getElementById('btn-map-export-10')?.addEventListener('click', function() {
+            function triggerElJefeExport(limit) {
               var regParam = currentMapRegion ? '&region=' + encodeURIComponent(currentMapRegion) : '';
-              window.location.href = '/api/admin/oopt/export-eljefe-csv?limit=10' + regParam;
+              var autoQueue = document.getElementById('export-auto-queue-check')?.checked;
+              var markParam = autoQueue ? '&mark=1' : '';
+              var downloadUrl = '/api/admin/oopt/export-eljefe-csv?limit=' + limit + regParam + markParam;
+              window.location.href = downloadUrl;
+              if (autoQueue) {
+                setTimeout(function() {
+                  loadAdminMapPoints(currentMapRegion, false);
+                }, 1000);
+              }
+            }
+
+            document.getElementById('btn-map-export-10')?.addEventListener('click', function() {
+              triggerElJefeExport(10);
+            });
+
+            document.getElementById('btn-map-export-all')?.addEventListener('click', function() {
+              triggerElJefeExport('all');
             });
           }
 
@@ -5247,8 +5348,9 @@ export const startAdminServer = (telegramClient) => {
                   } else {
                     var m = r.matchedParks || 0;
                     var u = r.unmatchedParks || 0;
+                    var q = r.queuedCount || 0;
                     var c = r.candidatesCount || 0;
-                    opt.textContent = r.name + ' (' + r.code + ') — [ 🟢 ' + m + ' / 🟠 ' + u + ' / ⚪ ' + c + ' ]';
+                    opt.textContent = r.name + ' (' + r.code + ') — [ 🟢 ' + m + ' / 🟠 ' + u + ' / 🔵 ' + q + ' / ⚪ ' + c + ' ]';
                     if (r.entityGroup === 'asia') {
                       groupAsia.appendChild(opt);
                     } else {
@@ -5267,15 +5369,27 @@ export const startAdminServer = (telegramClient) => {
           }
 
           function updateMapExportButtonState() {
-            var btn = document.getElementById('btn-map-export-10');
-            if (!btn) return;
+            var btn10 = document.getElementById('btn-map-export-10');
+            var btnAll = document.getElementById('btn-map-export-all');
             if (currentMapRegion) {
               var shortName = currentMapRegion.split(' ')[0];
-              btn.innerHTML = '<i class="bi bi-file-earmark-spreadsheet"></i> 📥 Скачать 10 (' + shortName + ')';
-              btn.title = 'Скачать CSV из 10 новых кандидатов для ' + currentMapRegion + ' (El Jefe)';
+              if (btn10) {
+                btn10.innerHTML = '<i class="bi bi-file-earmark-spreadsheet"></i> 10 шт (' + shortName + ')';
+                btn10.title = 'Скачать CSV из 10 новых кандидатов для ' + currentMapRegion + ' (El Jefe)';
+              }
+              if (btnAll) {
+                btnAll.innerHTML = '<i class="bi bi-download"></i> Все свободные (' + shortName + ')';
+                btnAll.title = 'Скачать CSV со ВСЕМИ свободными кандидатами региона ' + currentMapRegion + ' (El Jefe)';
+              }
             } else {
-              btn.innerHTML = '<i class="bi bi-file-earmark-spreadsheet"></i> 📥 Скачать 10 для El Jefe';
-              btn.title = 'Скачать CSV из 10 новых кандидатов (El Jefe)';
+              if (btn10) {
+                btn10.innerHTML = '<i class="bi bi-file-earmark-spreadsheet"></i> 10 шт';
+                btn10.title = 'Скачать CSV из 10 кандидатов (El Jefe)';
+              }
+              if (btnAll) {
+                btnAll.innerHTML = '<i class="bi bi-download"></i> Все свободные';
+                btnAll.title = 'Скачать CSV со всеми свободными кандидатами (El Jefe)';
+              }
             }
           }
 
@@ -5283,18 +5397,21 @@ export const startAdminServer = (telegramClient) => {
             if (!counts) return;
             var elMatched = document.getElementById('count-matched-badge');
             var elUnmatched = document.getElementById('count-unmatched-badge');
+            var elQueued = document.getElementById('count-queued-badge');
             var elCandidates = document.getElementById('count-candidates-badge');
             var elNav = document.getElementById('nav-map-oopt-count');
             if (elMatched) elMatched.textContent = counts.matched || 0;
             if (elUnmatched) elUnmatched.textContent = counts.unmatchedPota || 0;
+            if (elQueued) elQueued.textContent = counts.queued || 0;
             if (elCandidates) elCandidates.textContent = counts.candidates || 0;
-            if (elNav) elNav.textContent = (counts.matched || 0) + (counts.unmatchedPota || 0);
+            if (elNav) elNav.textContent = (counts.matched || 0) + (counts.unmatchedPota || 0) + (counts.queued || 0);
           }
 
           function renderMapPoints(data, fitBounds) {
             if (!adminOoptMap) return;
             mapMatchedGroup.clearLayers();
             mapUnmatchedGroup.clearLayers();
+            mapQueuedGroup.clearLayers();
             mapCandidatesGroup.clearLayers();
 
             var bounds = [];
@@ -5354,14 +5471,52 @@ export const startAdminServer = (telegramClient) => {
               bounds.push([u.lat, u.lon]);
             });
 
-            // 3. Candidates (Grey)
+            // 3. Queued (Blue)
+            (data.queued || []).forEach(function(q) {
+              var areaHtml = q.area ? '<div style="color:#666; font-size:11px; margin-bottom:6px;">📏 Площадь: ' + Number(q.area).toLocaleString('ru-RU') + ' га</div>' : '';
+              var siteBtn = q.site ? '<a href="' + q.site + '" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #0d6efd; border-radius:3px; color:#0d6efd;">NextGIS</a>' : '';
+              var safeTitle = encodeURIComponent(q.title || '');
+              var copyBtn = '<button class="btn btn-xs btn-outline-secondary btn-copy-map-title" data-title="' + safeTitle + '" style="font-size:10px; padding:2px 8px; border:1px solid #6c757d; border-radius:3px; background:none; cursor:pointer;">Копировать</button>';
+              var unmarkBtn = '<button class="btn btn-xs btn-outline-danger btn-queue-unmark" data-nid="' + q.nid + '" style="font-size:10px; padding:2px 8px; border:1px solid #dc3545; border-radius:3px; background:none; cursor:pointer;" title="Убрать из очереди и вернуть в свободные кандидаты">↩️ Снять с очереди</button>';
+
+              var submitterInfo = q.submittedAt ? '<div style="color:#0a58ca; font-size:11px; margin-bottom:4px;">⏱️ Подано: ' + q.submittedAt.slice(0, 10) + (q.submittedBy ? ' (' + q.submittedBy + ')' : '') + '</div>' : '';
+
+              var popupHtml = '<div style="font-family:sans-serif; min-width:240px; font-size:12px;">' +
+                '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#0d6efd;">' +
+                  q.title +
+                '</div>' +
+                '<div style="color:#0d6efd; font-weight:600; margin-bottom:4px;">🔵 В очереди на добавление в POTA</div>' +
+                submitterInfo +
+                '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (q.category || 'ООПТ') + ' (' + (q.sigDisplay || q.sig) + ')</div>' +
+                '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (q.ate || '') + '</div>' +
+                areaHtml +
+                '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
+                  siteBtn +
+                  copyBtn +
+                  unmarkBtn +
+                '</div>' +
+              '</div>';
+
+              var marker = L.circleMarker([q.lat, q.lon], {
+                radius: 6,
+                color: '#0a58ca',
+                fillColor: '#0d6efd',
+                fillOpacity: 0.85,
+                weight: 1.5
+              }).bindPopup(popupHtml);
+              mapQueuedGroup.addLayer(marker);
+              bounds.push([q.lat, q.lon]);
+            });
+
+            // 4. Candidates (Grey)
             (data.candidates || []).forEach(function(c) {
               var areaHtml = c.area ? '<div style="color:#666; font-size:11px; margin-bottom:6px;">📏 Площадь: ' + Number(c.area).toLocaleString('ru-RU') + ' га</div>' : '';
               var siteBtn = c.site ? '<a href="' + c.site + '" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #0d6efd; border-radius:3px; color:#0d6efd;">NextGIS</a>' : '';
               var safeTitle = encodeURIComponent(c.title || '');
               var copyBtn = '<button class="btn btn-xs btn-outline-secondary btn-copy-map-title" data-title="' + safeTitle + '" style="font-size:10px; padding:2px 8px; border:1px solid #6c757d; border-radius:3px; background:none; cursor:pointer;">Копировать</button>';
+              var markBtn = '<button class="btn btn-xs btn-outline-primary btn-queue-mark" data-nid="' + c.nid + '" style="font-size:10px; padding:2px 8px; border:1px solid #0d6efd; border-radius:3px; background:none; cursor:pointer;" title="Пометить объект как отправленный в POTA (синий цвет)">📥 В очередь</button>';
 
-              var popupHtml = '<div style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
+              var popupHtml = '<div style="font-family:sans-serif; min-width:240px; font-size:12px;">' +
                 '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#495057;">' +
                   c.title +
                 '</div>' +
@@ -5369,9 +5524,10 @@ export const startAdminServer = (telegramClient) => {
                 '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (c.category || 'ООПТ') + ' (' + (c.sigDisplay || c.sig) + ')</div>' +
                 '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (c.ate || '') + '</div>' +
                 areaHtml +
-                '<div style="display:flex; gap:6px; margin-top:8px;">' +
+                '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
                   siteBtn +
                   copyBtn +
+                  markBtn +
                 '</div>' +
               '</div>';
 
@@ -6167,11 +6323,14 @@ export const startAdminServer = (telegramClient) => {
   // Official POTA El Jefe Bulk Import CSV
   app.get('/api/admin/oopt/export-eljefe-csv', requireAuth, (req, res) => {
     try {
+      const markSubmitted = req.query.mark === '1' || req.query.mark === 'true';
       const csv = exportElJefePotaCsv({
         limit: req.query.limit,
         region: req.query.region,
         category: req.query.category,
-        sig: req.query.sig
+        sig: req.query.sig,
+        markSubmitted,
+        submittedBy: req.session?.username ? `${req.session.username} (CSV Export)` : 'Manu R2BBX (CSV Export)'
       });
       const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -6179,6 +6338,30 @@ export const startAdminServer = (telegramClient) => {
       res.send(csv);
     } catch (err) {
       console.error('[Admin] Export El Jefe CSV error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Submission Queue Management API
+  app.post('/api/admin/oopt/queue/mark', requireAuth, (req, res) => {
+    try {
+      const { nids, submittedBy } = req.body;
+      const author = submittedBy || req.session?.username || 'Admin';
+      const result = markOoptAsSubmitted(nids, author);
+      res.json({ success: true, ...result });
+    } catch (err) {
+      console.error('[Admin] Queue mark error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/oopt/queue/unmark', requireAuth, (req, res) => {
+    try {
+      const { nids } = req.body;
+      const result = unmarkOoptAsSubmitted(nids);
+      res.json({ success: true, ...result });
+    } catch (err) {
+      console.error('[Admin] Queue unmark error:', err);
       res.status(500).json({ error: err.message });
     }
   });

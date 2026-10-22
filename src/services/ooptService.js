@@ -618,6 +618,10 @@ export function getOoptList({
     conditions.push(`pota_ref IS NOT NULL`);
   } else if (pota === 'not_in_pota' || pota === '0') {
     conditions.push(`pota_ref IS NULL`);
+  } else if (pota === 'queued') {
+    conditions.push(`pota_ref IS NULL AND pota_status = 'submitted'`);
+  } else if (pota === 'candidate') {
+    conditions.push(`pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted')`);
   }
 
   if (min_area && !isNaN(parseFloat(min_area))) {
@@ -659,7 +663,8 @@ export function getOoptList({
   const selectSql = `
     SELECT 
       nid, title, sig, sig_display, status, category, agency, ate, start_date, area,
-      lat, lon, profile, pota_ref, pota_name, rusoir_url, rusoir_name, cluster_count, clusters
+      lat, lon, profile, pota_ref, pota_name, pota_status, pota_submitted_at, pota_submitted_by,
+      rusoir_url, rusoir_name, cluster_count, clusters
     FROM oopt_registry
     ${whereClause}
     ${orderByClause}
@@ -736,6 +741,7 @@ export function getOoptStats() {
   const regional = db.prepare(`SELECT COUNT(*) as count FROM oopt_registry WHERE sig = 'regional' AND ${restrictedCondition}`).get()?.count || 0;
   const local = db.prepare(`SELECT COUNT(*) as count FROM oopt_registry WHERE sig = 'local' AND ${restrictedCondition}`).get()?.count || 0;
   const inPota = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE pota_ref IS NOT NULL").get()?.count || 0;
+  const queued = db.prepare(`SELECT COUNT(*) as count FROM oopt_registry WHERE pota_ref IS NULL AND pota_status = 'submitted' AND ${restrictedCondition}`).get()?.count || 0;
   const reorganized = db.prepare(`SELECT COUNT(*) as count FROM oopt_registry WHERE status = 'реорганизованный' AND ${restrictedCondition}`).get()?.count || 0;
   const restrictedCount = totalAll - total;
 
@@ -822,6 +828,7 @@ export function getOoptStats() {
     regional,
     local,
     inPota,
+    queued,
     potaRuTotal,
     unmatchedPotaCount,
     reorganized,
@@ -1772,9 +1779,16 @@ export function getRegionalPotaStats() {
 
   let candRows = [];
   try {
-    candRows = db.prepare("SELECT ate, COUNT(*) as cnt FROM oopt_registry WHERE pota_ref IS NULL AND lat IS NOT NULL AND lat != 0 AND lon IS NOT NULL AND lon != 0 AND LOWER(status) = 'действующий' GROUP BY ate").all();
+    candRows = db.prepare("SELECT ate, COUNT(*) as cnt FROM oopt_registry WHERE pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted') AND lat IS NOT NULL AND lat != 0 AND lon IS NOT NULL AND lon != 0 AND LOWER(status) = 'действующий' GROUP BY ate").all();
   } catch (err) {
     console.warn('[OOPT Service] ⚠️ Failed to query candidate counts:', err.message);
+  }
+
+  let queuedRows = [];
+  try {
+    queuedRows = db.prepare("SELECT ate, COUNT(*) as cnt FROM oopt_registry WHERE pota_ref IS NULL AND pota_status = 'submitted' AND lat IS NOT NULL AND lat != 0 AND lon IS NOT NULL AND lon != 0 GROUP BY ate").all();
+  } catch (err) {
+    console.warn('[OOPT Service] ⚠️ Failed to query queued counts:', err.message);
   }
 
   let matchedRefs = new Set();
@@ -1807,6 +1821,7 @@ export function getRegionalPotaStats() {
       matchedParks: 0,
       unmatchedParks: 0,
       candidatesCount: 0,
+      queuedCount: 0,
       activatedParks: 0,
       unactivatedParks: 0,
       activationRate: 0,
@@ -1916,6 +1931,41 @@ export function getRegionalPotaStats() {
     }
   }
 
+  // Exact territorial matching for queued points (blue markers on map)
+  for (const row of queuedRows) {
+    const a = (row.ate || '').toLowerCase();
+    for (const [code, item] of regionMap.entries()) {
+      if (item.isRestricted) continue;
+
+      let matches = false;
+      if (code === 'RU-MC') {
+        matches = a.startsWith('москва') && !a.includes('московская');
+      } else if (code === 'RU-MS') {
+        matches = a.includes('московская');
+      } else if (code === 'RU-SP') {
+        matches = a.includes('санкт-петербург') && !a.includes('ленинградская');
+      } else if (code === 'RU-LN') {
+        matches = a.includes('ленинградская');
+      } else if (code === 'RU-KM') {
+        matches = a.includes('ханты-мансийский');
+      } else if (code === 'RU-NN') {
+        matches = a.includes('ненецкий') && !a.includes('ямало-ненецкий');
+      } else if (code === 'RU-YN') {
+        matches = a.includes('ямало-ненецкий') || a.includes('ямал');
+      } else if (code === 'RU-FJ') {
+        matches = a.includes('русская арктика') || a.includes('франц');
+      } else if (code === 'RU-OM') {
+        matches = a.includes('омская') && !a.includes('томская') && !a.includes('костромская');
+      } else {
+        matches = a.includes(item.name.toLowerCase());
+      }
+
+      if (matches) {
+        item.queuedCount += row.cnt;
+      }
+    }
+  }
+
   // Special case: Franz Josef Land (RU-FJ) is covered by 1 mega-reserve (RU-0065 Russian Arctic)
   if (regionMap.has('RU-FJ')) {
     const fj = regionMap.get('RU-FJ');
@@ -1992,6 +2042,8 @@ export function getRegionalPotaStats() {
       under10ParksCount,
       totalRegions: regionsList.filter(r => !r.isRestricted).length,
       totalPotentialParks,
+      totalQueued: regionsList.reduce((acc, r) => acc + (r.queuedCount || 0), 0),
+      totalCandidates: regionsList.reduce((acc, r) => acc + (r.candidatesCount || 0), 0),
       overallCoverageRate,
       matureRegionsCount,
       lowCoverageCount
@@ -3499,18 +3551,66 @@ export function exportUnmatchedPotaCsv() {
 }
 
 /**
+ * Marks OOPT records as submitted to POTA committee (Queue status)
+ * @param {number|number[]} nids 
+ * @param {string} submittedBy 
+ * @returns {{ updated: number, nids: number[] }}
+ */
+export function markOoptAsSubmitted(nids, submittedBy = 'Manu R2BBX') {
+  if (!nids) return { updated: 0, nids: [] };
+  const rawList = Array.isArray(nids) ? nids : [nids];
+  const nidList = rawList.map(n => parseInt(n, 10)).filter(n => !isNaN(n) && n > 0);
+  if (nidList.length === 0) return { updated: 0, nids: [] };
+
+  const now = new Date().toISOString();
+  const placeholders = nidList.map(() => '?').join(',');
+  const stmt = db.prepare(`
+    UPDATE oopt_registry
+    SET pota_status = 'submitted', pota_submitted_at = ?, pota_submitted_by = ?
+    WHERE nid IN (${placeholders}) AND pota_ref IS NULL
+  `);
+  const result = stmt.run(now, submittedBy, ...nidList);
+  cachedStats = null;
+  return { updated: result.changes, nids: nidList };
+}
+
+/**
+ * Removes OOPT records from submission queue (returns them to candidates)
+ * @param {number|number[]} nids 
+ * @returns {{ updated: number, nids: number[] }}
+ */
+export function unmarkOoptAsSubmitted(nids) {
+  if (!nids) return { updated: 0, nids: [] };
+  const rawList = Array.isArray(nids) ? nids : [nids];
+  const nidList = rawList.map(n => parseInt(n, 10)).filter(n => !isNaN(n) && n > 0);
+  if (nidList.length === 0) return { updated: 0, nids: [] };
+
+  const placeholders = nidList.map(() => '?').join(',');
+  const stmt = db.prepare(`
+    UPDATE oopt_registry
+    SET pota_status = NULL, pota_submitted_at = NULL, pota_submitted_by = NULL
+    WHERE nid IN (${placeholders})
+  `);
+  const result = stmt.run(...nidList);
+  cachedStats = null;
+  return { updated: result.changes, nids: nidList };
+}
+
+/**
  * Generates official POTA El Jefe bulk import CSV for candidate OOPT parks
- * @param {Object} options - { limit: number, region: string, category: string, sig: string }
+ * @param {Object} options - { limit: number|string, region: string, category: string, sig: string, markSubmitted: boolean, submittedBy: string }
  * @returns {string} CSV content
  */
 export function exportElJefePotaCsv(options = {}) {
-  const limit = Math.min(1000, Math.max(1, parseInt(options.limit, 10) || 50));
+  const isAll = options.limit === 'all' || options.limit === 0 || options.limit === '0';
+  const limit = isAll ? 5000 : Math.min(1000, Math.max(1, parseInt(options.limit, 10) || 50));
   const restricted = "ate NOT LIKE '%Крым%' AND ate NOT LIKE '%Севастополь%' AND ate NOT LIKE '%Донецк%' AND ate NOT LIKE '%Луганск%' AND ate NOT LIKE '%Запорож%' AND ate NOT LIKE '%Херсон%'";
 
   let sql = `
     SELECT nid, title, category, sig, sig_display, status, ate, rf_subjects, lat, lon, area, rusoir_url
     FROM oopt_registry
     WHERE pota_ref IS NULL 
+      AND (pota_status IS NULL OR pota_status != 'submitted')
       AND lat IS NOT NULL AND lat != 0 
       AND lon IS NOT NULL AND lon != 0
       AND LOWER(status) = 'действующий' 
@@ -3535,6 +3635,12 @@ export function exportElJefePotaCsv(options = {}) {
   params.push(limit);
 
   const rows = db.prepare(sql).all(...params);
+
+  // If markSubmitted is requested, mark exported records in DB as submitted to queue
+  if (options.markSubmitted && rows.length > 0) {
+    const nids = rows.map(r => r.nid);
+    markOoptAsSubmitted(nids, options.submittedBy || 'Manu R2BBX (El Jefe Export)');
+  }
 
   const escapeCsv = (val) => {
     if (val === null || val === undefined) return '';
@@ -3591,7 +3697,8 @@ export function exportElJefePotaCsv(options = {}) {
  * Returns geo-points for the Interactive OOPT / POTA Coverage Map in Web Admin:
  * 1. matched (Green): POTA parks linked with OOPT records
  * 2. unmatchedPota (Orange): POTA parks in Russia not linked to OOPT
- * 3. candidates (Grey): Active OOPT records not in POTA (candidates for El Jefe)
+ * 3. queued (Blue): OOPT candidate records marked as submitted to POTA
+ * 4. candidates (Grey): Active OOPT records not in POTA (candidates for El Jefe)
  *
  * @param {Object} options - { region: string, sig: string, limitCandidates: number }
  */
@@ -3652,15 +3759,48 @@ export function getOoptMapPoints(options = {}) {
     website: p.website || ''
   }));
 
-  // 3. Candidates (Grey): pota_ref IS NULL, active, valid coords
+  // 3. Queued (Blue): pota_ref IS NULL AND pota_status = 'submitted'
+  let queuedSql = `
+    SELECT nid, title, category, sig, sig_display, ate, lat, lon, area, rusoir_url, pota_status, pota_submitted_at, pota_submitted_by
+    FROM oopt_registry
+    WHERE pota_ref IS NULL 
+      AND pota_status = 'submitted'
+      AND lat IS NOT NULL AND lat != 0 
+      AND lon IS NOT NULL AND lon != 0
+  `;
+  const queuedParams = [];
+  if (region) {
+    queuedSql += ' AND (ate LIKE ? OR rf_subjects LIKE ?)';
+    queuedParams.push(`%${region}%`, `%${region}%`);
+  }
+  queuedSql += ` ORDER BY pota_submitted_at DESC, area DESC`;
+  const queuedRows = db.prepare(queuedSql).all(...queuedParams);
+  const queued = queuedRows.map(r => ({
+    nid: r.nid,
+    title: r.title,
+    category: r.category,
+    sig: r.sig,
+    sigDisplay: r.sig_display || (r.sig === 'federal' ? 'Федеральное' : 'Региональное'),
+    ate: r.ate,
+    lat: parseFloat(r.lat),
+    lon: parseFloat(r.lon),
+    area: r.area ? Number(r.area) : null,
+    potaStatus: r.pota_status,
+    submittedAt: r.pota_submitted_at,
+    submittedBy: r.pota_submitted_by,
+    site: r.nid <= 66061 ? `https://ooptaari.nextgis.ru/node/${r.nid}` : (r.rusoir_url || 'https://карта.оцзк.рф/')
+  }));
+
+  // 4. Candidates (Grey): pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted'), active, valid coords
   let candSql = '';
   const candParams = [];
   if (region) {
-    // When a specific region is chosen, show all active candidates for that region
+    // When a specific region is chosen, show all active unsubmitted candidates for that region
     candSql = `
       SELECT nid, title, category, sig, sig_display, ate, lat, lon, area, rusoir_url
       FROM oopt_registry
       WHERE pota_ref IS NULL 
+        AND (pota_status IS NULL OR pota_status != 'submitted')
         AND lat IS NOT NULL AND lat != 0 
         AND lon IS NOT NULL AND lon != 0
         AND LOWER(status) = 'действующий'
@@ -3678,6 +3818,7 @@ export function getOoptMapPoints(options = {}) {
                ROW_NUMBER() OVER(PARTITION BY ate ORDER BY CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END, area DESC) as rn
         FROM oopt_registry
         WHERE pota_ref IS NULL 
+          AND (pota_status IS NULL OR pota_status != 'submitted')
           AND lat IS NOT NULL AND lat != 0 
           AND lon IS NOT NULL AND lon != 0
           AND LOWER(status) = 'действующий'
@@ -3703,12 +3844,14 @@ export function getOoptMapPoints(options = {}) {
   return {
     matched,
     unmatchedPota,
+    queued,
     candidates,
     counts: {
       matched: matched.length,
       unmatchedPota: unmatchedPota.length,
+      queued: queued.length,
       candidates: candidates.length,
-      total: matched.length + unmatchedPota.length + candidates.length
+      total: matched.length + unmatchedPota.length + queued.length + candidates.length
     }
   };
 }
@@ -3732,4 +3875,6 @@ export default {
   exportUnmatchedPotaCsv,
   exportElJefePotaCsv,
   getOoptMapPoints,
+  markOoptAsSubmitted,
+  unmarkOoptAsSubmitted,
 };

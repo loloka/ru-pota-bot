@@ -414,6 +414,8 @@ export function ensureOoptRegistryPopulated() {
   try {
     const countRow = db.prepare("SELECT COUNT(*) as count FROM oopt_registry").get();
     const currentCount = countRow ? countRow.count : 0;
+    const coordsRow = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE lat IS NOT NULL AND lat != 0").get();
+    const coordsCount = coordsRow ? coordsRow.count : 0;
 
     if (fs.existsSync(FALLBACK_OOPT_GZ_PATH)) {
       const decompressed = zlib.gunzipSync(fs.readFileSync(FALLBACK_OOPT_GZ_PATH));
@@ -424,9 +426,35 @@ export function ensureOoptRegistryPopulated() {
         console.log(`[OOPT Service] 🔄 Upgrading OOPT registry from fallback dataset (${currentCount} -> ${fallbackCount} records)...`);
         
         const insertStmt = db.prepare(`
-          INSERT OR REPLACE INTO oopt_registry (
-            nid, title, sig, sig_display, status, category, agency, ate, start_date, area, area_aquatory, area_protection_zone, updated_at
-          ) VALUES (@nid, @title, @sig, @sig_display, @status, @category, @agency, @ate, @start_date, @area, @area_aquatory, @area_protection_zone, CURRENT_TIMESTAMP)
+          INSERT INTO oopt_registry (
+            nid, title, sig, sig_display, status, category, agency, ate, start_date, area, area_aquatory, area_protection_zone,
+            lat, lon, bbox, profile, rf_subjects, rusoir_url, rusoir_name, cluster_count, clusters, details_fetched_at, updated_at
+          ) VALUES (
+            @nid, @title, @sig, @sig_display, @status, @category, @agency, @ate, @start_date, @area, @area_aquatory, @area_protection_zone,
+            @lat, @lon, @bbox, @profile, @rf_subjects, @rusoir_url, @rusoir_name, @cluster_count, @clusters, @details_fetched_at, CURRENT_TIMESTAMP
+          )
+          ON CONFLICT(nid) DO UPDATE SET
+            title = excluded.title,
+            sig = excluded.sig,
+            sig_display = excluded.sig_display,
+            status = excluded.status,
+            category = excluded.category,
+            agency = excluded.agency,
+            ate = excluded.ate,
+            start_date = excluded.start_date,
+            area = excluded.area,
+            area_aquatory = excluded.area_aquatory,
+            area_protection_zone = excluded.area_protection_zone,
+            lat = CASE WHEN oopt_registry.lat IS NULL OR oopt_registry.lat = 0 THEN excluded.lat ELSE oopt_registry.lat END,
+            lon = CASE WHEN oopt_registry.lon IS NULL OR oopt_registry.lon = 0 THEN excluded.lon ELSE oopt_registry.lon END,
+            bbox = CASE WHEN oopt_registry.bbox IS NULL THEN excluded.bbox ELSE oopt_registry.bbox END,
+            profile = CASE WHEN oopt_registry.profile IS NULL THEN excluded.profile ELSE oopt_registry.profile END,
+            rf_subjects = CASE WHEN oopt_registry.rf_subjects IS NULL THEN excluded.rf_subjects ELSE oopt_registry.rf_subjects END,
+            rusoir_url = CASE WHEN oopt_registry.rusoir_url IS NULL THEN excluded.rusoir_url ELSE oopt_registry.rusoir_url END,
+            rusoir_name = CASE WHEN oopt_registry.rusoir_name IS NULL THEN excluded.rusoir_name ELSE oopt_registry.rusoir_name END,
+            cluster_count = CASE WHEN oopt_registry.cluster_count IS NULL THEN excluded.cluster_count ELSE oopt_registry.cluster_count END,
+            clusters = CASE WHEN oopt_registry.clusters IS NULL THEN excluded.clusters ELSE oopt_registry.clusters END,
+            details_fetched_at = CASE WHEN oopt_registry.details_fetched_at IS NULL THEN excluded.details_fetched_at ELSE oopt_registry.details_fetched_at END
         `);
 
         const transaction = db.transaction((items) => {
@@ -445,6 +473,16 @@ export function ensureOoptRegistryPopulated() {
               area: typeof item.area === 'number' ? item.area : null,
               area_aquatory: typeof item.area_aquatory === 'number' ? item.area_aquatory : null,
               area_protection_zone: typeof item.area_protection_zone === 'number' ? item.area_protection_zone : null,
+              lat: item.lat || null,
+              lon: item.lon || null,
+              bbox: item.bbox ? (typeof item.bbox === 'string' ? item.bbox : JSON.stringify(item.bbox)) : null,
+              profile: item.profile || null,
+              rf_subjects: item.rf_subjects || null,
+              rusoir_url: item.rusoir_url || null,
+              rusoir_name: item.rusoir_name || null,
+              cluster_count: item.cluster_count || 0,
+              clusters: item.clusters ? (typeof item.clusters === 'string' ? item.clusters : JSON.stringify(item.clusters)) : null,
+              details_fetched_at: item.details_fetched_at || null
             });
           }
         });
@@ -466,8 +504,48 @@ export function ensureOoptRegistryPopulated() {
 
         const newCount = db.prepare("SELECT COUNT(*) as count FROM oopt_registry").get()?.count || 0;
         console.log(`[OOPT Service] ✅ OOPT registry successfully upgraded to ${newCount} records!`);
+      } else if (coordsCount < 5000 && fallbackCount > 0) {
+        console.log(`[OOPT Service] 🔄 Backfilling missing coordinates in OOPT registry (${coordsCount} / ${fallbackCount} have coords)...`);
+        const updateCoordsStmt = db.prepare(`
+          UPDATE oopt_registry
+          SET lat = CASE WHEN lat IS NULL OR lat = 0 THEN @lat ELSE lat END,
+              lon = CASE WHEN lon IS NULL OR lon = 0 THEN @lon ELSE lon END,
+              bbox = CASE WHEN bbox IS NULL THEN @bbox ELSE bbox END,
+              profile = CASE WHEN profile IS NULL THEN @profile ELSE profile END,
+              rf_subjects = CASE WHEN rf_subjects IS NULL THEN @rf_subjects ELSE rf_subjects END,
+              rusoir_url = CASE WHEN rusoir_url IS NULL THEN @rusoir_url ELSE rusoir_url END,
+              rusoir_name = CASE WHEN rusoir_name IS NULL THEN @rusoir_name ELSE rusoir_name END,
+              cluster_count = CASE WHEN cluster_count IS NULL THEN @cluster_count ELSE cluster_count END,
+              clusters = CASE WHEN clusters IS NULL THEN @clusters ELSE clusters END,
+              details_fetched_at = CASE WHEN details_fetched_at IS NULL THEN @details_fetched_at ELSE details_fetched_at END
+          WHERE nid = @nid
+        `);
+        const tx = db.transaction((rows) => {
+          for (const r of rows) {
+            updateCoordsStmt.run({
+              nid: r.nid,
+              lat: r.lat || null,
+              lon: r.lon || null,
+              bbox: r.bbox ? (typeof r.bbox === 'string' ? r.bbox : JSON.stringify(r.bbox)) : null,
+              profile: r.profile || null,
+              rf_subjects: r.rf_subjects || null,
+              rusoir_url: r.rusoir_url || null,
+              rusoir_name: r.rusoir_name || null,
+              cluster_count: r.cluster_count || 0,
+              clusters: r.clusters ? (typeof r.clusters === 'string' ? r.clusters : JSON.stringify(r.clusters)) : null,
+              details_fetched_at: r.details_fetched_at || null
+            });
+          }
+        });
+        tx(gzRaw.rows);
+        const updatedCoords = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE lat IS NOT NULL AND lat != 0").get()?.count || 0;
+        console.log(`[OOPT Service] ✅ Backfilled coordinates: ${updatedCoords} / ${fallbackCount} now have valid geo-points!`);
+        try {
+          syncPotaMatches();
+        } catch (_) {}
       }
     }
+    cachedStats = null;
   } catch (err) {
     console.warn('[OOPT Service] ⚠️ Could not auto-populate OOPT registry on startup:', err.message);
   }
@@ -476,6 +554,54 @@ export function ensureOoptRegistryPopulated() {
 export function isPotaRestrictedAte(ate = '') {
   if (!ate) return false;
   return /крым|севастопол|донецк|луганск|запорож|херсон/i.test(ate);
+}
+
+/**
+ * Builds resilient SQL condition for regional filtering across ate and rf_subjects columns.
+ * Supports canonical names, codes (RU-XX), and handles regional boundary nuances.
+ */
+export function getRegionSqlCondition(regionStr, alias = '') {
+  if (!regionStr || !regionStr.trim()) return null;
+  const colAte = alias ? `${alias}.ate` : 'ate';
+  const colRf = alias ? `${alias}.rf_subjects` : 'rf_subjects';
+  const reg = regionStr.trim();
+  const canonicalName = POTA_LOCATION_CANONICAL[reg.toUpperCase()] || reg;
+  const lower = canonicalName.toLowerCase();
+
+  if (lower.includes('ненецк') && !lower.includes('ямал')) {
+    return { sql: `(${colAte} LIKE '%Ненецк%' AND ${colAte} NOT LIKE '%Ямал%')`, params: [] };
+  }
+  if (lower.includes('ямал')) {
+    return { sql: `(${colAte} LIKE '%Ямал%' OR ${colAte} LIKE '%Ямало-Ненецк%')`, params: [] };
+  }
+  if (lower.includes('ханты-мансийск') || reg.toUpperCase() === 'RU-KM') {
+    return { sql: `${colAte} LIKE '%Ханты-Мансийск%'`, params: [] };
+  }
+  if (lower.includes('омск') && !lower.includes('томск') && !lower.includes('костром')) {
+    return { sql: `(${colAte} LIKE '%Омск%' AND ${colAte} NOT LIKE '%Томск%' AND ${colAte} NOT LIKE '%Костром%')`, params: [] };
+  }
+  if (lower.startsWith('москва') && !lower.includes('московская')) {
+    return { sql: `(${colAte} LIKE '%Москва%' AND ${colAte} NOT LIKE '%Московская%')`, params: [] };
+  }
+  if (lower.includes('санкт-петербург') && !lower.includes('ленинградская')) {
+    return { sql: `(${colAte} LIKE '%Санкт-Петербург%' AND ${colAte} NOT LIKE '%Ленинградская%')`, params: [] };
+  }
+  if (lower.includes('ленинградская')) {
+    return { sql: `${colAte} LIKE '%Ленинградская%'`, params: [] };
+  }
+  if (lower.includes('московская')) {
+    return { sql: `${colAte} LIKE '%Московская%'`, params: [] };
+  }
+
+  // Strip generic administrative words: республика, край, область, автономный округ, АО, etc.
+  const clean = canonicalName
+    .replace(/(республика|край|область|автономный|округ|город|федеральный|значения|АО|\(.*\))/gi, '')
+    .trim();
+
+  if (clean.length >= 3) {
+    return { sql: `(${colAte} LIKE ? OR ${colRf} LIKE ?)`, params: [`%${clean}%`, `%${clean}%`] };
+  }
+  return { sql: `(${colAte} LIKE ? OR ${colRf} LIKE ?)`, params: [`%${reg}%`, `%${reg}%`] };
 }
 
 const GENERIC_DESCRIPTORS = new Set([
@@ -3619,8 +3745,11 @@ export function exportElJefePotaCsv(options = {}) {
   const params = [];
 
   if (options.region) {
-    sql += ' AND (ate LIKE ? OR rf_subjects LIKE ?)';
-    params.push(`%${options.region}%`, `%${options.region}%`);
+    const regCond = getRegionSqlCondition(options.region);
+    if (regCond) {
+      sql += ` AND ${regCond.sql}`;
+      params.push(...regCond.params);
+    }
   }
   if (options.category) {
     sql += ' AND category LIKE ?';
@@ -3705,6 +3834,7 @@ export function exportElJefePotaCsv(options = {}) {
 export function getOoptMapPoints(options = {}) {
   const restricted = "ate NOT LIKE '%Крым%' AND ate NOT LIKE '%Севастополь%' AND ate NOT LIKE '%Донецк%' AND ate NOT LIKE '%Луганск%' AND ate NOT LIKE '%Запорож%' AND ate NOT LIKE '%Херсон%'";
   const region = (options.region || '').trim();
+  const regionCond = region ? getRegionSqlCondition(region) : null;
 
   // 1. Matched (Green): pota_ref IS NOT NULL
   let matchedSql = `
@@ -3715,9 +3845,9 @@ export function getOoptMapPoints(options = {}) {
       AND lon IS NOT NULL AND lon != 0
   `;
   const matchedParams = [];
-  if (region) {
-    matchedSql += ' AND (ate LIKE ? OR rf_subjects LIKE ?)';
-    matchedParams.push(`%${region}%`, `%${region}%`);
+  if (regionCond) {
+    matchedSql += ` AND ${regionCond.sql}`;
+    matchedParams.push(...regionCond.params);
   }
   const matchedRows = db.prepare(matchedSql).all(...matchedParams);
   const matched = matchedRows.map(r => ({
@@ -3769,9 +3899,9 @@ export function getOoptMapPoints(options = {}) {
       AND lon IS NOT NULL AND lon != 0
   `;
   const queuedParams = [];
-  if (region) {
-    queuedSql += ' AND (ate LIKE ? OR rf_subjects LIKE ?)';
-    queuedParams.push(`%${region}%`, `%${region}%`);
+  if (regionCond) {
+    queuedSql += ` AND ${regionCond.sql}`;
+    queuedParams.push(...regionCond.params);
   }
   queuedSql += ` ORDER BY pota_submitted_at DESC, area DESC`;
   const queuedRows = db.prepare(queuedSql).all(...queuedParams);
@@ -3805,10 +3935,12 @@ export function getOoptMapPoints(options = {}) {
         AND lon IS NOT NULL AND lon != 0
         AND LOWER(status) = 'действующий'
         AND ${restricted}
-        AND (ate LIKE ? OR rf_subjects LIKE ?)
+        ${regionCond ? `AND ${regionCond.sql}` : ''}
       ORDER BY CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END, area DESC
     `;
-    candParams.push(`%${region}%`, `%${region}%`);
+    if (regionCond) {
+      candParams.push(...regionCond.params);
+    }
   } else {
     // When All Russia is viewed: distribute up to 25 candidates per region uniformly across entire country
     candSql = `

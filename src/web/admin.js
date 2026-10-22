@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
-import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, getOoptMapPoints, markOoptAsSubmitted, unmarkOoptAsSubmitted } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, getOoptMapPoints, markOoptAsSubmitted, unmarkOoptAsSubmitted, ensureOoptRegistryPopulated } from '../services/ooptService.js';
 import {
   auditPotaLinks,
   checkUrlOnline,
@@ -6256,10 +6256,21 @@ export const startAdminServer = (telegramClient) => {
 
   app.post('/api/admin/oopt/sync', requireAuth, async (req, res) => {
     try {
+      ensureOoptRegistryPopulated();
       const result = await syncOoptRegistry();
       res.json(result);
     } catch (err) {
       console.error('[Admin] OOPT sync error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/oopt/backfill', requireAuth, (req, res) => {
+    try {
+      ensureOoptRegistryPopulated();
+      res.json({ success: true, message: 'Координаты ООПТ успешно синхронизированы из резервного датасета!' });
+    } catch (err) {
+      console.error('[Admin] OOPT backfill error:', err);
       res.status(500).json({ error: err.message });
     }
   });

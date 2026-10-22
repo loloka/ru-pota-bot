@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -469,6 +470,57 @@ try {
     db.exec(`ALTER TABLE oopt_registry ADD COLUMN pota_submitted_by TEXT DEFAULT NULL`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_oopt_pota_status ON oopt_registry (pota_status)`);
     console.log('[DB] Migrated oopt_registry table: added pota_status, pota_submitted_at, pota_submitted_by columns');
+  }
+
+  // Auto-backfill missing coordinates from offline dataset (oopt_fallback.json.gz) if database has < 5,000 geocoded OOPT
+  try {
+    const coordsCount = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE lat IS NOT NULL AND lat != 0").get()?.count || 0;
+    if (coordsCount < 5000) {
+      const gzPath = path.resolve(__dirname, '../data/oopt_fallback.json.gz');
+      if (fs.existsSync(gzPath)) {
+        console.log(`[DB] 🔄 Auto-backfilling missing OOPT coordinates from fallback dataset (${coordsCount} / 11,244 geocoded)...`);
+        const decompressed = zlib.gunzipSync(fs.readFileSync(gzPath));
+        const gzRaw = JSON.parse(decompressed.toString('utf8'));
+        if (gzRaw && Array.isArray(gzRaw.rows)) {
+          const updateStmt = db.prepare(`
+            UPDATE oopt_registry
+            SET lat = CASE WHEN lat IS NULL OR lat = 0 THEN @lat ELSE lat END,
+                lon = CASE WHEN lon IS NULL OR lon = 0 THEN @lon ELSE lon END,
+                bbox = CASE WHEN bbox IS NULL THEN @bbox ELSE bbox END,
+                profile = CASE WHEN profile IS NULL THEN @profile ELSE profile END,
+                rf_subjects = CASE WHEN rf_subjects IS NULL THEN @rf_subjects ELSE rf_subjects END,
+                rusoir_url = CASE WHEN rusoir_url IS NULL THEN @rusoir_url ELSE rusoir_url END,
+                rusoir_name = CASE WHEN rusoir_name IS NULL THEN @rusoir_name ELSE rusoir_name END,
+                cluster_count = CASE WHEN cluster_count IS NULL THEN @cluster_count ELSE cluster_count END,
+                clusters = CASE WHEN clusters IS NULL THEN @clusters ELSE clusters END,
+                details_fetched_at = CASE WHEN details_fetched_at IS NULL THEN @details_fetched_at ELSE details_fetched_at END
+            WHERE nid = @nid
+          `);
+          const tx = db.transaction((rows) => {
+            for (const r of rows) {
+              updateStmt.run({
+                nid: r.nid,
+                lat: r.lat || null,
+                lon: r.lon || null,
+                bbox: r.bbox ? (typeof r.bbox === 'string' ? r.bbox : JSON.stringify(r.bbox)) : null,
+                profile: r.profile || null,
+                rf_subjects: r.rf_subjects || null,
+                rusoir_url: r.rusoir_url || null,
+                rusoir_name: r.rusoir_name || null,
+                cluster_count: r.cluster_count || 0,
+                clusters: r.clusters ? (typeof r.clusters === 'string' ? r.clusters : JSON.stringify(r.clusters)) : null,
+                details_fetched_at: r.details_fetched_at || null
+              });
+            }
+          });
+          tx(gzRaw.rows);
+          const newCoordsCount = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE lat IS NOT NULL AND lat != 0").get()?.count || 0;
+          console.log(`[DB] ✅ OOPT coordinates successfully auto-migrated! Now ${newCoordsCount} records have valid coordinates.`);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[DB] ⚠️ OOPT coordinates auto-backfill warning:', err.message);
   }
 
   // Auto-convert any EPSG:3857 (Spherical Mercator meters) coordinates to WGS84 degrees (Minpriroda API anomalies)

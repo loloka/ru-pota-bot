@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
-import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, getOoptMapPoints, markOoptAsSubmitted, unmarkOoptAsSubmitted, ensureOoptRegistryPopulated } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, getOoptMapPoints, markOoptAsSubmitted, unmarkOoptAsSubmitted, ensureOoptRegistryPopulated, unlinkOoptFromPota, linkOoptToPota, getMatchDiagnostics } from '../services/ooptService.js';
 import {
   auditPotaLinks,
   checkUrlOnline,
@@ -1681,6 +1681,122 @@ export const startAdminServer = (telegramClient) => {
           </div>
         </div>
 
+        <!-- Modal: OOPT vs POTA Match Diagnostics & Inspector -->
+        <div class="modal fade" id="modal-oopt-diagnostics" tabindex="-1" aria-labelledby="modalDiagnosticsLabel" aria-hidden="true" style="z-index: 1065;">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+              <div class="modal-header bg-dark text-white py-2 px-3">
+                <h6 class="modal-title mb-0" id="modalDiagnosticsLabel">
+                  <i class="bi bi-search"></i> 🔬 Инспектор сопоставления ООПТ и POTA
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body p-3">
+                <!-- Search / Select inputs -->
+                <div class="card bg-light border-0 mb-3 p-2">
+                  <div class="row g-2 align-items-center">
+                    <div class="col-md-5">
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white fw-bold">NID ООПТ</span>
+                        <input type="number" class="form-control font-monospace" id="diag-input-nid" placeholder="например, 23420">
+                      </div>
+                    </div>
+                    <div class="col-md-5">
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white fw-bold">POTA Реф</span>
+                        <input type="text" class="form-control font-monospace text-uppercase" id="diag-input-ref" placeholder="например, RU-0153">
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <button type="button" class="btn btn-primary btn-sm w-100" id="btn-run-diagnostics">
+                        <i class="bi bi-play-fill"></i> Анализ
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="diag-loading" class="text-center py-4" style="display: none;">
+                  <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                  <span class="ms-2 small text-muted">Анализ критериев сопоставления...</span>
+                </div>
+
+                <div id="diag-content" style="display: none;">
+                  <!-- Verdict Banner -->
+                  <div id="diag-verdict-alert" class="alert mb-3 py-2 px-3 small fw-bold"></div>
+
+                  <!-- Two Columns Comparison -->
+                  <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                      <div class="card h-100 border-success-subtle bg-light-subtle">
+                        <div class="card-header py-1 px-2 bg-success text-white small fw-bold d-flex justify-content-between align-items-center">
+                          <span>🌲 Объект ООПТ РФ</span>
+                          <span id="diag-oopt-nid-badge" class="badge bg-white text-success font-monospace"></span>
+                        </div>
+                        <div class="card-body p-2 small">
+                          <div class="fw-bold mb-1 text-success" id="diag-oopt-title" style="font-size: 13px;"></div>
+                          <div class="text-muted mb-1" id="diag-oopt-cat"></div>
+                          <div class="text-muted mb-1" id="diag-oopt-ate"></div>
+                          <div class="text-muted mb-1" id="diag-oopt-coords"></div>
+                          <div class="mt-2" id="diag-oopt-links"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="col-md-6">
+                      <div class="card h-100 border-primary-subtle bg-light-subtle">
+                        <div class="card-header py-1 px-2 bg-primary text-white small fw-bold d-flex justify-content-between align-items-center">
+                          <span>📡 Парк POTA</span>
+                          <span id="diag-pota-ref-badge" class="badge bg-white text-primary font-monospace"></span>
+                        </div>
+                        <div class="card-body p-2 small">
+                          <div class="fw-bold mb-1 text-primary" id="diag-pota-name" style="font-size: 13px;"></div>
+                          <div class="text-muted mb-1" id="diag-pota-loc"></div>
+                          <div class="text-muted mb-1" id="diag-pota-coords"></div>
+                          <div class="mt-2" id="diag-pota-links"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Distance & Scoring Details -->
+                  <div class="row g-2 mb-3">
+                    <div class="col-md-5">
+                      <div class="card h-100 border">
+                        <div class="card-header py-1 px-2 bg-light small fw-bold">
+                          📍 Дистанция между точками
+                        </div>
+                        <div class="card-body p-2 small" id="diag-distance-box"></div>
+                      </div>
+                    </div>
+                    <div class="col-md-7">
+                      <div class="card h-100 border">
+                        <div class="card-header py-1 px-2 bg-light small fw-bold">
+                          ⚖️ Детализация скоринга (Порог: 45)
+                        </div>
+                        <div class="card-body p-2 small" id="diag-scoring-box"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Token Comparison Table -->
+                  <div class="card border">
+                    <div class="card-header py-1 px-2 bg-light small fw-bold">
+                      🔤 Анализ токенов и совпадений слов
+                    </div>
+                    <div class="card-body p-2 small">
+                      <div id="diag-tokens-matches"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer py-2 px-3 bg-light d-flex justify-content-between">
+                <div id="diag-action-buttons" class="d-flex gap-2"></div>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрыть</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <script>
@@ -2677,7 +2793,7 @@ export const startAdminServer = (telegramClient) => {
                   '<td><small>' + escapeHtmlClient(r.category || '') + '</small></td>' +
                   '<td><small class="text-muted">' + escapeHtmlClient(r.ate || '') + '</small></td>' +
                   '<td>' + (r.area ? Number(r.area).toLocaleString('ru-RU') + ' га' : '—') + '</td>' +
-                  '<td>' + submitterBtn + '</td>' +
+                  '<td><div class="d-inline-flex align-items-center gap-1">' + submitterBtn + (' <button type="button" class="btn btn-sm btn-outline-info btn-oopt-diagnostics" data-nid="' + r.nid + '"' + (r.pota_ref ? ' data-ref="' + r.pota_ref + '"' : '') + ' title="Инспектор сопоставления"><i class="bi bi-search"></i></button>') + (r.pota_ref ? ' <button type="button" class="btn btn-sm btn-outline-danger btn-oopt-unlink" data-nid="' + r.nid + '" data-ref="' + r.pota_ref + '" title="Отвязать ООПТ от ' + r.pota_ref + '"><i class="bi bi-scissors"></i></button>' : '') + '</div></td>' +
                 '</tr>';
               }).join('');
 
@@ -4105,8 +4221,307 @@ export const startAdminServer = (telegramClient) => {
             }
           });
 
-          // Open Submitter Modal
+          // OOPT vs POTA Match Inspector & Manual Link / Unlink
+          window.openOoptDiagnostics = async function(nid, ref) {
+            var modalEl = document.getElementById('modal-oopt-diagnostics');
+            if (!modalEl) return;
+            var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            if (nid !== undefined && nid !== null) document.getElementById('diag-input-nid').value = nid;
+            if (ref !== undefined && ref !== null) document.getElementById('diag-input-ref').value = ref;
+            modal.show();
+            if (nid || ref) {
+              window.runDiagnosticsFetch(document.getElementById('diag-input-nid').value, document.getElementById('diag-input-ref').value);
+            }
+          };
+
+          window.runDiagnosticsFetch = async function(nid, ref) {
+            var loadingEl = document.getElementById('diag-loading');
+            var contentEl = document.getElementById('diag-content');
+            if (loadingEl) loadingEl.style.display = 'block';
+            if (contentEl) contentEl.style.display = 'none';
+
+            try {
+              var params = new URLSearchParams();
+              if (nid) params.set('nid', String(nid).trim());
+              if (ref) params.set('ref', String(ref).trim().toUpperCase());
+              var res = await fetch('/api/admin/oopt/match-diagnostics?' + params.toString());
+              var data = await res.json();
+              if (data.error) throw new Error(data.error);
+
+              // Verdict Alert
+              var verdictEl = document.getElementById('diag-verdict-alert');
+              if (verdictEl) {
+                verdictEl.className = 'alert mb-3 py-2 px-3 small fw-bold ' + 
+                  (data.isCurrentlyMatched ? 'alert-success' : (data.scoring && data.scoring.properNameMatch && data.scoring.totalScore >= 45 ? 'alert-warning' : 'alert-secondary'));
+                verdictEl.textContent = data.verdict;
+              }
+
+              // OOPT Card
+              var oTitle = document.getElementById('diag-oopt-title');
+              var oNidBadge = document.getElementById('diag-oopt-nid-badge');
+              var oCat = document.getElementById('diag-oopt-cat');
+              var oAte = document.getElementById('diag-oopt-ate');
+              var oCoords = document.getElementById('diag-oopt-coords');
+              var oLinks = document.getElementById('diag-oopt-links');
+
+              if (data.oopt) {
+                if (oNidBadge) oNidBadge.textContent = 'NID ' + data.oopt.nid;
+                if (oTitle) oTitle.textContent = data.oopt.title;
+                if (oCat) oCat.innerHTML = '<strong>Категория:</strong> ' + (data.oopt.category || 'ООПТ');
+                if (oAte) oAte.innerHTML = '<strong>Регион:</strong> ' + (data.oopt.ate || '—');
+                if (oCoords) oCoords.innerHTML = '<strong>Координаты:</strong> ' + (data.oopt.lat && data.oopt.lon ? data.oopt.lat.toFixed(5) + ', ' + data.oopt.lon.toFixed(5) : '<span class="text-danger">нет</span>');
+                if (oLinks) {
+                  var siteA = data.oopt.site ? '<a href="' + data.oopt.site + '" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:11px;">NextGIS #' + data.oopt.nid + '</a>' : '';
+                  oLinks.innerHTML = siteA;
+                }
+              } else {
+                if (oNidBadge) oNidBadge.textContent = '—';
+                if (oTitle) oTitle.textContent = 'Объект ООПТ не выбран';
+                if (oCat) oCat.textContent = '';
+                if (oAte) oAte.textContent = '';
+                if (oCoords) oCoords.textContent = '';
+                if (oLinks) oLinks.textContent = '';
+              }
+
+              // POTA Card
+              var pName = document.getElementById('diag-pota-name');
+              var pRefBadge = document.getElementById('diag-pota-ref-badge');
+              var pLoc = document.getElementById('diag-pota-loc');
+              var pCoords = document.getElementById('diag-pota-coords');
+              var pLinks = document.getElementById('diag-pota-links');
+
+              if (data.pota) {
+                if (pRefBadge) pRefBadge.textContent = data.pota.reference;
+                if (pName) pName.textContent = data.pota.name;
+                if (pLoc) pLoc.innerHTML = '<strong>Регион:</strong> ' + (data.pota.region || '—');
+                if (pCoords) pCoords.innerHTML = '<strong>Координаты:</strong> ' + (data.pota.lat && data.pota.lon ? data.pota.lat.toFixed(5) + ', ' + data.pota.lon.toFixed(5) : '<span class="text-danger">нет</span>');
+                if (pLinks) {
+                  var potaCard = '<a href="https://pota.app/#/park/' + data.pota.reference + '" target="_blank" class="btn btn-xs btn-outline-success me-1" style="font-size:11px;">Карточка POTA</a>';
+                  var potaSite = data.pota.website ? '<a href="' + data.pota.website + '" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:11px;">Сайт</a>' : '';
+                  pLinks.innerHTML = potaCard + potaSite;
+                }
+              } else {
+                if (pRefBadge) pRefBadge.textContent = '—';
+                if (pName) pName.textContent = 'Парк POTA не выбран';
+                if (pLoc) pLoc.textContent = '';
+                if (pCoords) pCoords.textContent = '';
+                if (pLinks) pLinks.textContent = '';
+              }
+
+              // Distance Box
+              var distBox = document.getElementById('diag-distance-box');
+              if (distBox) {
+                if (data.distanceKm !== null && data.distanceKm !== undefined) {
+                  var distBadgeClass = data.distanceKm <= 20 ? 'bg-success' : 'bg-danger';
+                  var warnText = data.distanceKm > 20 ? '<div class="text-danger fw-bold mt-1">⚠️ Превышает безопасный лимит 20 км! Автосопоставление отклонено.</div>' : '<div class="text-success small mt-1">✅ Дистанция в пределах нормы (&le; 20 км).</div>';
+                  distBox.innerHTML = '<div class="d-flex align-items-center gap-2">' +
+                    '<span class="badge ' + distBadgeClass + ' fs-6">' + data.distanceKm.toFixed(2) + ' км</span>' +
+                    '<span class="text-muted">(' + Math.round(data.distanceKm * 1000) + ' м)</span>' +
+                  '</div>' + warnText;
+                } else {
+                  distBox.innerHTML = '<div class="text-muted">Координаты не заданы у одного из объектов.</div>';
+                }
+              }
+
+              // Scoring Box
+              var scoreBox = document.getElementById('diag-scoring-box');
+              if (scoreBox && data.scoring) {
+                var s = data.scoring;
+                var passBadge = s.totalScore >= 45 ? '<span class="badge bg-success ms-1">Проходной набран</span>' : '<span class="badge bg-secondary ms-1">Ниже порога (45)</span>';
+                var propBadge = s.properNameMatch ? '<span class="badge bg-success">✅ Топоним совпал</span>' : '<span class="badge bg-danger">❌ Нет совпадений топонима</span>';
+                scoreBox.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-1">' +
+                  '<span>Итоговый балл: <strong class="fs-6">' + s.totalScore + '</strong> / 45</span>' +
+                  '<div>' + passBadge + ' ' + propBadge + '</div>' +
+                '</div>' +
+                '<div class="table-responsive"><table class="table table-sm table-bordered mb-0 text-center" style="font-size:11px;">' +
+                  '<thead class="table-light"><tr><th>Ссылка NextGIS</th><th>Слова / Токены</th><th>Дистанция</th><th>Категория</th><th>Итого</th></tr></thead>' +
+                  '<tbody><tr>' +
+                    '<td>' + (s.urlPoints > 0 ? '+' + s.urlPoints : '0') + '</td>' +
+                    '<td>' + (s.nameScore > 0 ? '+' + s.nameScore : '0') + '</td>' +
+                    '<td>' + (s.distancePoints !== 0 ? (s.distancePoints > 0 ? '+' + s.distancePoints : s.distancePoints) : '0') + '</td>' +
+                    '<td>' + (s.categoryPoints > 0 ? '+' + s.categoryPoints : '0') + '</td>' +
+                    '<td class="fw-bold">' + s.totalScore + '</td>' +
+                  '</tr></tbody>' +
+                '</table></div>';
+              }
+
+              // Token Table
+              var tokenBox = document.getElementById('diag-tokens-matches');
+              if (tokenBox) {
+                if (data.tokens && data.tokens.matches && data.tokens.matches.length > 0) {
+                  var tRows = data.tokens.matches.map(function(tm) {
+                    var typeBadge = tm.isDescriptor ? '<span class="badge bg-light text-dark border">🏷️ Дескриптор</span>' : '<span class="badge bg-success">🏛️ Топоним</span>';
+                    return '<tr>' +
+                      '<td><code>' + tm.potaToken + '</code> <small class="text-muted">(' + tm.potaStem + ')</small></td>' +
+                      '<td><code>' + tm.ooptToken + '</code> <small class="text-muted">(' + tm.ooptStem + ')</small></td>' +
+                      '<td>' + typeBadge + '</td>' +
+                      '<td class="fw-bold text-success">+' + tm.points + '</td>' +
+                    '</tr>';
+                  }).join('');
+                  tokenBox.innerHTML = '<div class="table-responsive"><table class="table table-sm table-striped mb-0" style="font-size:11px;">' +
+                    '<thead><tr><th>Слово POTA (стемм)</th><th>Слово ООПТ (стемм)</th><th>Тип слова</th><th>Баллы</th></tr></thead>' +
+                    '<tbody>' + tRows + '</tbody>' +
+                  '</table></div>';
+                } else {
+                  tokenBox.innerHTML = '<div class="text-muted small">Совпадающих корней слов не обнаружено. POTA слова: [' + ((data.tokens && data.tokens.pota) || []).join(', ') + '], ООПТ слова: [' + ((data.tokens && data.tokens.oopt) || []).slice(0, 8).join(', ') + '...]</div>';
+                }
+              }
+
+              // Action Buttons
+              var actBox = document.getElementById('diag-action-buttons');
+              if (actBox) {
+                actBox.innerHTML = '';
+                if (data.isCurrentlyMatched && data.oopt && data.pota) {
+                  var btnUnlink = document.createElement('button');
+                  btnUnlink.className = 'btn btn-sm btn-danger';
+                  btnUnlink.innerHTML = '<i class="bi bi-scissors"></i> Отвязать ООПТ от ' + data.pota.reference;
+                  btnUnlink.onclick = function() { window.unlinkOoptAction(data.oopt.nid, data.pota.reference, true); };
+                  actBox.appendChild(btnUnlink);
+                } else if (!data.isCurrentlyMatched && data.oopt && data.pota) {
+                  var btnLink = document.createElement('button');
+                  btnLink.className = 'btn btn-sm btn-success';
+                  btnLink.innerHTML = '<i class="bi bi-link-45deg"></i> Связать ООПТ #' + data.oopt.nid + ' с ' + data.pota.reference;
+                  btnLink.onclick = function() { window.linkOoptAction(data.oopt.nid, data.pota.reference, true); };
+                  actBox.appendChild(btnLink);
+                }
+              }
+
+              if (contentEl) contentEl.style.display = 'block';
+            } catch (err) {
+              alert('Ошибка диагностики: ' + err.message);
+            } finally {
+              if (loadingEl) loadingEl.style.display = 'none';
+            }
+          };
+
+          window.unlinkOoptAction = async function(nid, ref, refreshDiag) {
+            if (!nid) return;
+            var conf = confirm('Отвязать объект ООПТ (NID ' + nid + ') от парка POTA ' + (ref || '') + '?\\nТочка вернётся в свободные кандидаты (серый цвет).');
+            if (!conf) return;
+            try {
+              var res = await fetch('/api/admin/oopt/unlink', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nid: nid })
+              });
+              var data = await res.json();
+              if (data.success) {
+                if (typeof Swal !== 'undefined') {
+                  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Объект отвязан от POTA', timer: 2000, showConfirmButton: false });
+                } else {
+                  alert('Успешно отвязано!');
+                }
+                if (refreshDiag && typeof window.runDiagnosticsFetch === 'function') {
+                  window.runDiagnosticsFetch(nid, ref);
+                }
+                if (typeof loadAdminMapPoints === 'function') {
+                  var curReg = typeof currentMapRegion !== 'undefined' ? currentMapRegion : '';
+                  loadAdminMapPoints(curReg, false);
+                }
+                if (typeof loadAdminOopt === 'function') {
+                  var curP = typeof ooptCurrentPage !== 'undefined' ? ooptCurrentPage : 1;
+                  loadAdminOopt(curP);
+                }
+                if (typeof loadAdminOoptStats === 'function') loadAdminOoptStats();
+              } else {
+                alert('Ошибка: ' + (data.error || 'Не удалось отвязать'));
+              }
+            } catch (err) {
+              alert('Ошибка сети: ' + err.message);
+            }
+          };
+
+          window.linkOoptAction = async function(nid, ref, refreshDiag) {
+            if (!nid) return;
+            var targetRef = ref;
+            if (!targetRef) {
+              targetRef = prompt('Введите референс POTA (например, RU-0502):', 'RU-');
+            }
+            if (!targetRef || !targetRef.trim()) return;
+            targetRef = targetRef.trim().toUpperCase();
+
+            try {
+              var res = await fetch('/api/admin/oopt/link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nid: nid, pota_ref: targetRef })
+              });
+              var data = await res.json();
+              if (data.success) {
+                if (typeof Swal !== 'undefined') {
+                  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Привязано к ' + targetRef + ' (' + data.potaName + ')', timer: 2500, showConfirmButton: false });
+                } else {
+                  alert('Успешно привязано к ' + targetRef);
+                }
+                if (refreshDiag && typeof window.runDiagnosticsFetch === 'function') {
+                  window.runDiagnosticsFetch(nid, targetRef);
+                }
+                if (typeof loadAdminMapPoints === 'function') {
+                  var curReg = typeof currentMapRegion !== 'undefined' ? currentMapRegion : '';
+                  loadAdminMapPoints(curReg, false);
+                }
+                if (typeof loadAdminOopt === 'function') {
+                  var curP = typeof ooptCurrentPage !== 'undefined' ? ooptCurrentPage : 1;
+                  loadAdminOopt(curP);
+                }
+                if (typeof loadAdminOoptStats === 'function') loadAdminOoptStats();
+              } else {
+                alert('Ошибка: ' + (data.error || 'Не удалось привязать'));
+              }
+            } catch (err) {
+              alert('Ошибка сети: ' + err.message);
+            }
+          };
+
+          document.getElementById('btn-run-diagnostics')?.addEventListener('click', function() {
+            var nid = document.getElementById('diag-input-nid')?.value;
+            var ref = document.getElementById('diag-input-ref')?.value;
+            window.runDiagnosticsFetch(nid, ref);
+          });
+          document.getElementById('diag-input-nid')?.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              window.runDiagnosticsFetch(this.value, document.getElementById('diag-input-ref')?.value);
+            }
+          });
+          document.getElementById('diag-input-ref')?.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              window.runDiagnosticsFetch(document.getElementById('diag-input-nid')?.value, this.value);
+            }
+          });
+
+          // Open Submitter Modal & Diagnostics Click Delegation
           document.addEventListener('click', async function(e) {
+            var diagBtn = e.target.closest('.btn-oopt-diagnostics');
+            if (diagBtn) {
+              var nid = diagBtn.getAttribute('data-nid') || '';
+              var ref = diagBtn.getAttribute('data-ref') || '';
+              if (typeof window.openOoptDiagnostics === 'function') {
+                window.openOoptDiagnostics(nid, ref);
+              }
+              return;
+            }
+
+            var unlinkBtn = e.target.closest('.btn-oopt-unlink');
+            if (unlinkBtn) {
+              var nid = parseInt(unlinkBtn.getAttribute('data-nid'), 10);
+              var ref = unlinkBtn.getAttribute('data-ref') || '';
+              if (typeof window.unlinkOoptAction === 'function') {
+                window.unlinkOoptAction(nid, ref);
+              }
+              return;
+            }
+
+            var linkBtn = e.target.closest('.btn-oopt-link');
+            if (linkBtn) {
+              var nid = parseInt(linkBtn.getAttribute('data-nid'), 10);
+              if (typeof window.linkOoptAction === 'function') {
+                window.linkOoptAction(nid, '', false);
+              }
+              return;
+            }
+
             var btn = e.target.closest('.open-submitter-btn');
             if (btn) {
               try {
@@ -5226,6 +5641,32 @@ export const startAdminServer = (telegramClient) => {
                   alert('Ошибка: ' + err.message);
                 }
               }
+
+              var diagBtn = e.target.closest('.btn-oopt-diagnostics');
+              if (diagBtn) {
+                var nid = diagBtn.getAttribute('data-nid') || '';
+                var ref = diagBtn.getAttribute('data-ref') || '';
+                if (typeof window.openOoptDiagnostics === 'function') {
+                  window.openOoptDiagnostics(nid, ref);
+                }
+              }
+
+              var unlinkBtn = e.target.closest('.btn-oopt-unlink');
+              if (unlinkBtn) {
+                var nid = parseInt(unlinkBtn.getAttribute('data-nid'), 10);
+                var ref = unlinkBtn.getAttribute('data-ref') || '';
+                if (typeof window.unlinkOoptAction === 'function') {
+                  window.unlinkOoptAction(nid, ref);
+                }
+              }
+
+              var linkBtn = e.target.closest('.btn-oopt-link');
+              if (linkBtn) {
+                var nid = parseInt(linkBtn.getAttribute('data-nid'), 10);
+                if (typeof window.linkOoptAction === 'function') {
+                  window.linkOoptAction(nid, '', false);
+                }
+              }
             });
 
             document.getElementById('layer-matched-check')?.addEventListener('change', function(e) {
@@ -5420,7 +5861,9 @@ export const startAdminServer = (telegramClient) => {
             (data.matched || []).forEach(function(m) {
               var areaHtml = m.area ? '<div style="color:#666; font-size:11px; margin-bottom:6px;">📏 Площадь: ' + Number(m.area).toLocaleString('ru-RU') + ' га</div>' : '';
               var siteBtn = m.site ? '<a href="' + m.site + '" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #0d6efd; border-radius:3px; color:#0d6efd;">NextGIS</a>' : '';
-              var popupHtml = '<div style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
+              var diagBtn = '<button class="btn btn-xs btn-outline-info btn-oopt-diagnostics" data-nid="' + m.nid + '" data-ref="' + m.ref + '" style="font-size:10px; padding:2px 8px; border:1px solid #0dcaf0; border-radius:3px; background:none; cursor:pointer;" title="Инспектор сопоставления">🔍 Инспектор</button>';
+              var unlinkBtn = '<button class="btn btn-xs btn-outline-danger btn-oopt-unlink" data-nid="' + m.nid + '" data-ref="' + m.ref + '" style="font-size:10px; padding:2px 8px; border:1px solid #dc3545; border-radius:3px; background:none; cursor:pointer;" title="Отвязать ООПТ от парка POTA">✂️ Отвязать</button>';
+              var popupHtml = '<div style="font-family:sans-serif; min-width:240px; font-size:12px;">' +
                 '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#198754;">' +
                   '<span style="background:#d1e7dd; padding:1px 6px; border-radius:4px; font-size:11px; margin-right:4px;">' + m.ref + '</span> ' + m.title +
                 '</div>' +
@@ -5428,9 +5871,11 @@ export const startAdminServer = (telegramClient) => {
                 '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (m.category || 'ООПТ') + ' (' + (m.sigDisplay || m.sig) + ')</div>' +
                 '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (m.ate || '') + '</div>' +
                 areaHtml +
-                '<div style="display:flex; gap:6px; margin-top:8px;">' +
+                '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
                   '<a href="https://pota.app/#/park/' + m.ref + '" target="_blank" class="btn btn-xs btn-outline-success" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #198754; border-radius:3px; color:#198754;">Карточка POTA</a>' +
                   siteBtn +
+                  diagBtn +
+                  unlinkBtn +
                 '</div>' +
               '</div>';
 
@@ -5448,15 +5893,17 @@ export const startAdminServer = (telegramClient) => {
             // 2. Unmatched POTA (Orange)
             (data.unmatchedPota || []).forEach(function(u) {
               var siteBtn = u.website ? '<a href="' + u.website + '" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #6c757d; border-radius:3px; color:#495057;">Сайт</a>' : '';
-              var popupHtml = '<div style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
+              var diagBtn = '<button class="btn btn-xs btn-outline-info btn-oopt-diagnostics" data-ref="' + u.ref + '" style="font-size:10px; padding:2px 8px; border:1px solid #0dcaf0; border-radius:3px; background:none; cursor:pointer;" title="Сравнить с кандидатами ООПТ">🔍 Инспектор</button>';
+              var popupHtml = '<div style="font-family:sans-serif; min-width:240px; font-size:12px;">' +
                 '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#d39e00;">' +
                   '<span style="background:#fff3cd; color:#664d03; padding:1px 6px; border-radius:4px; font-size:11px; margin-right:4px;">' + u.ref + '</span> ' + u.name +
                 '</div>' +
                 '<div style="color:#b02a37; font-weight:600; margin-bottom:4px;">⚠️ Не сопоставлен с реестром ООПТ РФ</div>' +
                 '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (u.location || '') + '</div>' +
-                '<div style="display:flex; gap:6px; margin-top:8px;">' +
+                '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
                   '<a href="https://pota.app/#/park/' + u.ref + '" target="_blank" class="btn btn-xs btn-outline-warning" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #d39e00; border-radius:3px; color:#664d03;">Карточка POTA</a>' +
                   siteBtn +
+                  diagBtn +
                 '</div>' +
               '</div>';
 
@@ -5477,6 +5924,7 @@ export const startAdminServer = (telegramClient) => {
               var siteBtn = q.site ? '<a href="' + q.site + '" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #0d6efd; border-radius:3px; color:#0d6efd;">NextGIS</a>' : '';
               var safeTitle = encodeURIComponent(q.title || '');
               var copyBtn = '<button class="btn btn-xs btn-outline-secondary btn-copy-map-title" data-title="' + safeTitle + '" style="font-size:10px; padding:2px 8px; border:1px solid #6c757d; border-radius:3px; background:none; cursor:pointer;">Копировать</button>';
+              var diagBtn = '<button class="btn btn-xs btn-outline-info btn-oopt-diagnostics" data-nid="' + q.nid + '" style="font-size:10px; padding:2px 8px; border:1px solid #0dcaf0; border-radius:3px; background:none; cursor:pointer;" title="Инспектор сопоставления">🔍 Инспектор</button>';
               var unmarkBtn = '<button class="btn btn-xs btn-outline-danger btn-queue-unmark" data-nid="' + q.nid + '" style="font-size:10px; padding:2px 8px; border:1px solid #dc3545; border-radius:3px; background:none; cursor:pointer;" title="Убрать из очереди и вернуть в свободные кандидаты">↩️ Снять с очереди</button>';
 
               var submitterInfo = q.submittedAt ? '<div style="color:#0a58ca; font-size:11px; margin-bottom:4px;">⏱️ Подано: ' + q.submittedAt.slice(0, 10) + (q.submittedBy ? ' (' + q.submittedBy + ')' : '') + '</div>' : '';
@@ -5493,6 +5941,7 @@ export const startAdminServer = (telegramClient) => {
                 '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
                   siteBtn +
                   copyBtn +
+                  diagBtn +
                   unmarkBtn +
                 '</div>' +
               '</div>';
@@ -5515,6 +5964,8 @@ export const startAdminServer = (telegramClient) => {
               var safeTitle = encodeURIComponent(c.title || '');
               var copyBtn = '<button class="btn btn-xs btn-outline-secondary btn-copy-map-title" data-title="' + safeTitle + '" style="font-size:10px; padding:2px 8px; border:1px solid #6c757d; border-radius:3px; background:none; cursor:pointer;">Копировать</button>';
               var markBtn = '<button class="btn btn-xs btn-outline-primary btn-queue-mark" data-nid="' + c.nid + '" style="font-size:10px; padding:2px 8px; border:1px solid #0d6efd; border-radius:3px; background:none; cursor:pointer;" title="Пометить объект как отправленный в POTA (синий цвет)">📥 В очередь</button>';
+              var linkBtn = '<button class="btn btn-xs btn-outline-success btn-oopt-link" data-nid="' + c.nid + '" data-title="' + safeTitle + '" style="font-size:10px; padding:2px 8px; border:1px solid #198754; border-radius:3px; background:none; cursor:pointer;" title="Вручную связать этот объект с парком POTA">🔗 Связать с POTA</button>';
+              var diagBtn = '<button class="btn btn-xs btn-outline-info btn-oopt-diagnostics" data-nid="' + c.nid + '" style="font-size:10px; padding:2px 8px; border:1px solid #0dcaf0; border-radius:3px; background:none; cursor:pointer;" title="Инспектор сопоставления">🔍 Инспектор</button>';
 
               var popupHtml = '<div style="font-family:sans-serif; min-width:240px; font-size:12px;">' +
                 '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#495057;">' +
@@ -5528,6 +5979,8 @@ export const startAdminServer = (telegramClient) => {
                   siteBtn +
                   copyBtn +
                   markBtn +
+                  linkBtn +
+                  diagBtn +
                 '</div>' +
               '</div>';
 
@@ -6373,6 +6826,41 @@ export const startAdminServer = (telegramClient) => {
       res.json({ success: true, ...result });
     } catch (err) {
       console.error('[Admin] Queue unmark error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Manual POTA Unlink / Link API
+  app.post('/api/admin/oopt/unlink', requireAuth, (req, res) => {
+    try {
+      const { nid } = req.body;
+      const result = unlinkOoptFromPota(nid);
+      res.json(result);
+    } catch (err) {
+      console.error('[Admin] Unlink error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/admin/oopt/link', requireAuth, (req, res) => {
+    try {
+      const { nid, pota_ref } = req.body;
+      const result = linkOoptToPota(nid, pota_ref);
+      res.json(result);
+    } catch (err) {
+      console.error('[Admin] Link error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Match Diagnostics & Inspector API
+  app.get('/api/admin/oopt/match-diagnostics', requireAuth, (req, res) => {
+    try {
+      const { nid, ref } = req.query;
+      const result = getMatchDiagnostics(nid, ref);
+      res.json(result);
+    } catch (err) {
+      console.error('[Admin] Diagnostics error:', err);
       res.status(500).json({ error: err.message });
     }
   });

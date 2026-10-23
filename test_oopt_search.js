@@ -34,6 +34,12 @@ const resTeberdaZap = getOoptList({ search: 'тебердинский запов
 assert(resTeberdaZap.total >= 1, 'Search for "тебердинский заповедник" must fallback to distinct name and find Тебердинский');
 console.log('✅ PASS: getOoptList handles generic descriptor terms ("тебердинский заповедник") via smart fallback');
 
+// 5b. Test search for specific multi-word query: "озеро северное" does NOT return unrelated records from North-Western district
+const resLakeNorth = getOoptList({ search: 'озеро северное' });
+assert(resLakeNorth.total >= 1, 'Search for "озеро северное" should find matching records');
+assert(resLakeNorth.rows.every(r => (r.title.toLowerCase().includes('озер') || r.title.toLowerCase().includes('озер')) && r.title.toLowerCase().includes('северн')), 'All returned records must strictly contain lake and north in title');
+console.log('✅ PASS: getOoptList strictly requires all non-generic words ("озеро северное") without matching unrelated regions');
+
 // 6. Test search by NID numeric string
 const resNid = getOoptList({ search: '23496' });
 assert.strictEqual(resNid.total, 1);

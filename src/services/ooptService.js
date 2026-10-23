@@ -659,13 +659,14 @@ export function getOoptList({
       const conds = [];
       const parms = [];
       for (const info of tokensList) {
-        const term = `%${info.stem}%`;
         if (info.isNum) {
-          conds.push(`(nid = ? OR title LIKE ? OR ate LIKE ? OR agency LIKE ? OR category LIKE ? OR pota_ref LIKE ? OR pota_name LIKE ?)`);
-          parms.push(parseInt(info.token, 10), term, term, term, term, term, term);
+          conds.push(`(nid = ? OR title LIKE ? OR pota_ref LIKE ? OR pota_name LIKE ?)`);
+          const term = `%${info.token}%`;
+          parms.push(parseInt(info.token, 10), term, term, term);
         } else {
-          conds.push(`(title LIKE ? OR ate LIKE ? OR agency LIKE ? OR category LIKE ? OR pota_ref LIKE ? OR pota_name LIKE ?)`);
-          parms.push(term, term, term, term, term, term);
+          conds.push(`(title LIKE ? OR category LIKE ? OR pota_ref LIKE ? OR pota_name LIKE ?)`);
+          const term = `%${info.stem}%`;
+          parms.push(term, term, term, term);
         }
       }
       return { conds, parms };
@@ -680,7 +681,7 @@ export function getOoptList({
       const testMatch = db.prepare(testSql).get(...allParms);
       if (!testMatch) {
         const distinctTokens = tokensInfo.filter(t => !t.isGeneric);
-        if (distinctTokens.length > 0) {
+        if (distinctTokens.length > 0 && distinctTokens.length < tokensInfo.length) {
           const { conds: fallbackConds, parms: fallbackParms } = buildTokenConditions(distinctTokens);
           chosenConds = fallbackConds;
           chosenParms = fallbackParms;
@@ -3190,16 +3191,32 @@ const STOP_WORDS = new Set([
   'отделение', 'филиал', 'институт', 'академия', 'наук', 'район', 'область', 'край', 'республика', 'округ'
 ]);
 
-const DESCRIPTOR_WORDS = new Set([
-  'dolina', 'reka', 'reki', 'reke', 'reku', 'prud', 'pruda', 'ozero', 'ozera', 'ostrov', 'ostrova',
-  'bereg', 'berega', 'gora', 'gory', 'kamen', 'kamni', 'mys', 'kosa', 'balka', 'balki', 'yar', 'log',
-  'ruchey', 'ruchi', 'istok', 'ustye', 'vodopad', 'klyuch', 'rodnik', 'rodniki', 'kholm', 'sopka', 'sopki',
+const RAW_DESCRIPTOR_WORDS = [
+  // Hydro
+  'dolina', 'reka', 'reki', 'reky', 'reke', 'reku', 'rekoi', 'rek', 'river', 'rivers', 'stream', 'creek', 'brook',
+  'prud', 'pruda', 'prudy', 'pond', 'ponds', 'ozero', 'ozera', 'ozery', 'lake', 'lakes',
+  'ostrov', 'ostrova', 'island', 'islands', 'isle',
+  'bereg', 'berega', 'beregovoy', 'naberezhnaya', 'naberezhna', 'shore', 'coast', 'embankment',
+  'ruchey', 'ruchi', 'istok', 'ustye', 'uste', 'ust', 'poima', 'source', 'mouth', 'channel', 'protoka',
+  'vodopad', 'klyuch', 'rodnik', 'rodniki', 'spring', 'springs', 'waterfall',
+  'boloto', 'bolota', 'bog', 'marsh', 'swamp', 'mokrid', 'torfyanik',
+  'bay', 'gulf', 'zaliv', 'guba', 'bukhta',
+  // Relief / Landscape
+  'gora', 'gory', 'kamen', 'kamni', 'mys', 'kosa', 'balka', 'balki', 'yar', 'log',
+  'kholm', 'sopka', 'sopki', 'mountain', 'mount', 'hill', 'heights', 'cape', 'spit', 'cave', 'tract',
+  'beam', 'field', 'wild', 'gully', 'ravine', 'steppe', 'peski', 'duny', 'urochishche', 'urochishcha', 'pole', 'polya',
+  // Flora / Forestry
   'lesopark', 'dacha', 'lesnichestvo', 'leskhoz', 'les', 'lesa', 'bor', 'bora', 'roshcha', 'dubrava',
-  'sad', 'peski', 'boloto', 'bolota', 'urochishche', 'urochishcha', 'pole', 'polya',
-  'river', 'lake', 'pond', 'island', 'shore', 'coast', 'valley', 'bog', 'marsh', 'swamp',
-  'bay', 'gulf', 'spring', 'forest', 'wood', 'woods', 'grove', 'mountain', 'mount', 'hill', 'heights',
-  'cape', 'spit', 'waterfall', 'cave', 'tract', 'creek', 'brook', 'beam', 'field', 'wild', 'gully', 'ravine', 'steppe'
-]);
+  'sad', 'forest', 'wood', 'woods', 'grove', 'kvartal', 'uchastok', 'trakt',
+  // Urban / Administrative
+  'bulvar', 'boulevard', 'prospekt', 'avenue', 'ulitsa', 'street', 'ploshchad', 'square',
+  // Common qualifiers/adjectives that falsely collide across languages (e.g. Star vs Старый)
+  'star', 'stary', 'staryy', 'staraya', 'staroe', 'starye', 'starom', 'starogo', 'old', 'ancient',
+  'nov', 'novy', 'novyy', 'novaya', 'novoe', 'novye', 'novom', 'novogo', 'new',
+  'bolsh', 'bolshoy', 'bolshaya', 'bolshoe', 'bolshie', 'velik', 'velikiy', 'great', 'big', 'large',
+  'mal', 'maly', 'malyy', 'malaya', 'maloe', 'malye', 'small', 'little',
+  'verkh', 'verkhniy', 'verkhnyaya', 'nizh', 'nizhniy', 'nizhnyaya', 'sred', 'sredniy', 'upper', 'lower', 'middle'
+];
 
 function normalizeStem(token) {
   if (!token) return '';
@@ -3211,6 +3228,22 @@ function normalizeStem(token) {
   s = s.replace(/ts|tz|cz/g, 'c');
   s = s.replace(/(yevo|yovo|evo|ovo|ivo|skiy|sky|skoy|skaya|skoe|nyy|naya|noe|nyn|ov|ev|in|ye|oe|aya|ogo|omu|ey|oy|a|e|o|u|y)$/, '');
   return s;
+}
+
+const DESCRIPTOR_WORDS = new Set();
+for (const w of RAW_DESCRIPTOR_WORDS) {
+  const wl = w.toLowerCase();
+  DESCRIPTOR_WORDS.add(wl);
+  DESCRIPTOR_WORDS.add(normalizeStem(wl));
+  DESCRIPTOR_WORDS.add(wl.replace(/i/g, 'y'));
+  DESCRIPTOR_WORDS.add(normalizeStem(wl.replace(/i/g, 'y')));
+}
+
+function isDescriptor(token, stem) {
+  if (!token) return false;
+  const t = token.toLowerCase();
+  const s = (stem || normalizeStem(token)).toLowerCase();
+  return DESCRIPTOR_WORDS.has(t) || DESCRIPTOR_WORDS.has(s);
 }
 
 function cleanTokens(str) {
@@ -3377,27 +3410,28 @@ export function syncPotaMatches() {
       if (pLat && pLon && o.lat && o.lon) {
         const dist = getDistanceKm(pLat, pLon, o.lat, o.lon);
         if (dist !== null) {
+          // Guard: If no direct NextGIS node/slug hint, reject pairs further than 20 km to prevent cross-city false matches
+          if (!targetNid && !targetSlug && dist > 20) continue;
           if (dist > 120) continue;
           if (dist < 1.5) score += 50;
           else if (dist < 5) score += 35;
-          else if (dist < 15) score += 20;
-          else if (dist < 30) score += 10;
-          else if (dist > 80) score -= 30;
+          else if (dist < 15) score += 15;
+          else if (dist > 30) score -= 30;
         }
       }
 
       // Token matching
       for (const pt of pTokens) {
-        const isDesc = DESCRIPTOR_WORDS.has(pt);
         const pStem = normalizeStem(pt);
+        const isDesc = isDescriptor(pt, pStem);
 
         for (const ot of o.tokens) {
-          const oIsDesc = DESCRIPTOR_WORDS.has(ot);
           const oStem = normalizeStem(ot);
+          const oIsDesc = isDescriptor(ot, oStem);
 
           if (pt === ot) {
             if (isDesc || oIsDesc) {
-              score += 15;
+              score += 10;
             } else {
               score += 50;
               properNameMatch = true;
@@ -3406,22 +3440,20 @@ export function syncPotaMatches() {
           } else if (pStem.length >= 3 && oStem.length >= 3) {
             if (pStem === oStem) {
               if (isDesc || oIsDesc) {
-                score += 12;
+                score += 8;
               } else {
                 score += 45;
                 properNameMatch = true;
               }
               break;
             } else if (pStem.startsWith(oStem) || oStem.startsWith(pStem)) {
-              if (pStem.length >= 3 && oStem.length >= 3) {
-                if (isDesc || oIsDesc) {
-                  score += 8;
-                } else {
-                  score += 30;
-                  properNameMatch = true;
-                }
-                break;
+              if (isDesc || oIsDesc) {
+                score += 5;
+              } else {
+                score += 30;
+                properNameMatch = true;
               }
+              break;
             }
           }
         }
@@ -3987,6 +4019,241 @@ export function getOoptMapPoints(options = {}) {
   };
 }
 
+export function unlinkOoptFromPota(nid) {
+  const nidNum = parseInt(nid, 10);
+  if (!nidNum) throw new Error('Некорректный NID объекта');
+  const row = db.prepare('SELECT nid, title, pota_ref, pota_name FROM oopt_registry WHERE nid = ?').get(nidNum);
+  if (!row) throw new Error(`Объект ООПТ с NID ${nidNum} не найден`);
+  
+  db.prepare('UPDATE oopt_registry SET pota_ref = NULL, pota_name = NULL WHERE nid = ?').run(nidNum);
+  cachedStats = null;
+  return { success: true, nid: nidNum, unlinked_ref: row.pota_ref, unlinked_name: row.pota_name };
+}
+
+export function linkOoptToPota(nid, potaRef) {
+  const nidNum = parseInt(nid, 10);
+  if (!nidNum) throw new Error('Некорректный NID объекта');
+  const row = db.prepare('SELECT nid, title, ate, lat, lon FROM oopt_registry WHERE nid = ?').get(nidNum);
+  if (!row) throw new Error(`Объект ООПТ с NID ${nidNum} не найден`);
+
+  const cleanRef = (potaRef || '').trim().toUpperCase();
+  if (!cleanRef.startsWith('RU-')) {
+    throw new Error('Референс POTA должен начинаться с RU- (например, RU-0502)');
+  }
+
+  const ruParks = getRussianPotaParks();
+  const potaPark = ruParks.find(p => p.reference === cleanRef);
+  const potaName = potaPark ? potaPark.name : cleanRef;
+
+  db.prepare('UPDATE oopt_registry SET pota_ref = ?, pota_name = ? WHERE nid = ?').run(cleanRef, potaName, nidNum);
+  cachedStats = null;
+  return { success: true, nid: nidNum, pota_ref: cleanRef, pota_name: potaName };
+}
+
+export function getMatchDiagnostics(nid, ref) {
+  let oopt = null;
+  if (nid) {
+    const nidNum = parseInt(nid, 10);
+    oopt = db.prepare('SELECT * FROM oopt_registry WHERE nid = ?').get(nidNum);
+  }
+  const ruParks = getRussianPotaParks();
+  let pota = null;
+  if (ref) {
+    pota = ruParks.find(p => p.reference === ref.trim().toUpperCase());
+  } else if (oopt && oopt.pota_ref) {
+    pota = ruParks.find(p => p.reference === oopt.pota_ref);
+  }
+
+  if (!oopt && !pota) {
+    throw new Error('Укажите NID объекта ООПТ или референс POTA');
+  }
+
+  // If only OOPT is given and it has no pota_ref, find the closest POTA park by coordinates
+  if (oopt && !pota) {
+    let bestDist = Infinity;
+    let closestPota = null;
+    for (const p of ruParks) {
+      if (p.lat && p.lon && oopt.lat && oopt.lon) {
+        const d = getDistanceKm(parseFloat(p.lat), parseFloat(p.lon), parseFloat(oopt.lat), parseFloat(oopt.lon));
+        if (d !== null && d < bestDist) {
+          bestDist = d;
+          closestPota = p;
+        }
+      }
+    }
+    pota = closestPota;
+  }
+
+  // If only POTA is given, find currently matched OOPT or closest OOPT
+  if (pota && !oopt) {
+    oopt = db.prepare('SELECT * FROM oopt_registry WHERE pota_ref = ?').get(pota.reference);
+    if (!oopt && pota.lat && pota.lon) {
+      oopt = db.prepare(`
+        SELECT *, ((lat - @lat)*(lat - @lat) + (lon - @lon)*(lon - @lon)) as d2
+        FROM oopt_registry
+        WHERE lat IS NOT NULL AND lat != 0
+        ORDER BY d2 ASC
+        LIMIT 1
+      `).get({ lat: pota.lat, lon: pota.lon });
+    }
+  }
+
+  const pLat = parseFloat(pota?.lat) || null;
+  const pLon = parseFloat(pota?.lon) || null;
+  const oLat = parseFloat(oopt?.lat) || null;
+  const oLon = parseFloat(oopt?.lon) || null;
+
+  let distanceKm = null;
+  if (pLat && pLon && oLat && oLon) {
+    distanceKm = getDistanceKm(pLat, pLon, oLat, oLon);
+  }
+
+  const pTokens = cleanTokens(pota?.name || '');
+  const oTokens = cleanTokens(oopt?.title || '');
+  const pTokensRaw = (pota?.name || '').toLowerCase().replace(/[-–—"«»()—–,.:;/]/g, ' ').split(/\s+/).filter(Boolean);
+  const oTokensRaw = (oopt?.title || '').toLowerCase().replace(/[-–—"«»()—–,.:;/]/g, ' ').split(/\s+/).filter(Boolean);
+
+  const tokenMatches = [];
+  let nameScore = 0;
+  let properNameMatch = false;
+
+  for (const pt of pTokens) {
+    const isDesc = isDescriptor(pt);
+    const pStem = normalizeStem(pt);
+    for (const ot of oTokens) {
+      const isODesc = isDescriptor(ot);
+      const oStem = normalizeStem(ot);
+      if (pt === ot) {
+        const pts = isDesc || isODesc ? 10 : 50;
+        tokenMatches.push({
+          potaToken: pt,
+          ooptToken: ot,
+          type: 'точное',
+          isDescriptor: isDesc || isODesc,
+          points: pts
+        });
+        nameScore += pts;
+        if (!isDesc && !isODesc) properNameMatch = true;
+      } else if (pStem.length >= 3 && oStem.length >= 3 && pStem === oStem) {
+        const pts = isDesc || isODesc ? 8 : 45;
+        tokenMatches.push({
+          potaToken: pt,
+          ooptToken: ot,
+          type: 'корень',
+          stem: pStem,
+          isDescriptor: isDesc || isODesc,
+          points: pts
+        });
+        nameScore += pts;
+        if (!isDesc && !isODesc) properNameMatch = true;
+      }
+    }
+  }
+
+  // Direct NextGIS URL / Node ID / Slug
+  let urlMatch = false;
+  let urlPoints = 0;
+  const parkWebsite = pota?.website || '';
+  if (parkWebsite && oopt) {
+    const decoded = decodeURIComponent(parkWebsite);
+    const nodeM = decoded.match(/node\/(\d+)/);
+    if (nodeM && parseInt(nodeM[1], 10) === oopt.nid) {
+      urlMatch = true;
+      urlPoints = 500;
+      properNameMatch = true;
+    }
+    const slugM = decoded.match(/\/oopt\/([^/?#]+)/);
+    if (slugM) {
+      const targetSlug = slugM[1].replace(/[-_.,]/g, ' ').toLowerCase().replace(/\s+/g, ' ').trim();
+      const oSlug = (oopt.title || '').replace(/[-_.,]/g, ' ').toLowerCase().replace(/\s+/g, ' ').trim();
+      if (oSlug.includes(targetSlug) || targetSlug.includes(oSlug)) {
+        urlMatch = true;
+        urlPoints = 100;
+        properNameMatch = true;
+      }
+    }
+  }
+
+  // Distance score
+  let distancePoints = 0;
+  if (distanceKm !== null) {
+    if (distanceKm < 1.5) distancePoints = 50;
+    else if (distanceKm < 5) distancePoints = 35;
+    else if (distanceKm < 15) distancePoints = 15;
+    else if (distanceKm > 30) distancePoints = -30;
+  }
+
+  // Category score
+  let categoryPoints = 0;
+  const pCatLower = (pota?.name || '').toLowerCase();
+  const oCatLower = (oopt?.category || '').toLowerCase();
+  if (pCatLower.includes('national park') && oCatLower.includes('национальный парк')) categoryPoints = 20;
+  else if (pCatLower.includes('reserve') && oCatLower.includes('заповедник')) categoryPoints = 20;
+  else if (pCatLower.includes('sanctuary') && oCatLower.includes('заказник')) categoryPoints = 20;
+  else if (pCatLower.includes('monument') && oCatLower.includes('памятник')) categoryPoints = 15;
+
+  const totalScore = urlPoints + nameScore + distancePoints + categoryPoints;
+  const isCurrentlyMatched = oopt?.pota_ref === pota?.reference;
+  const wouldAutoMatch = properNameMatch && totalScore >= 45 && (urlMatch || distanceKm === null || distanceKm <= 20);
+
+  let verdict = '';
+  if (isCurrentlyMatched) {
+    verdict = `🟢 Сопоставлено: Объект привязан к парку ${pota.reference} (Итоговый скор: ${totalScore}).`;
+  } else if (wouldAutoMatch) {
+    const occupied = db.prepare('SELECT nid, title FROM oopt_registry WHERE pota_ref = ? AND nid != ?').get(pota.reference, oopt?.nid || 0);
+    if (occupied) {
+      verdict = `⚪ Не сопоставлено автоматически: Парк ${pota.reference} уже сопоставлен 1-к-1 с NID ${occupied.nid} («${occupied.title}»). Вы можете связать этот объект вручную кнопкой «Связать с POTA» (мульти-ООПТ).`;
+    } else {
+      verdict = `🟡 Кандидат на сопоставление (Скор: ${totalScore} >= 45, дистанция: ${distanceKm !== null ? distanceKm.toFixed(2) + ' км' : 'нет координат'}).`;
+    }
+  } else {
+    const reasons = [];
+    if (!properNameMatch) reasons.push('нет совпадений имени собственного (топонима)');
+    if (distanceKm !== null && distanceKm > 20 && !urlMatch) reasons.push(`дистанция ${distanceKm.toFixed(1)} км превышает лимит 20 км`);
+    if (totalScore < 45) reasons.push(`скор ${totalScore} ниже проходного 45`);
+    verdict = `⚪ Разделено алгоритмом: ${reasons.join(', ')}.`;
+  }
+
+  return {
+    oopt: oopt ? {
+      nid: oopt.nid,
+      title: oopt.title,
+      category: oopt.category,
+      ate: oopt.ate,
+      area: oopt.area,
+      lat: oopt.lat,
+      lon: oopt.lon,
+      pota_ref: oopt.pota_ref,
+      pota_name: oopt.pota_name,
+      site: oopt.rusoir_url || (oopt.nid ? `https://ooptaari.nextgis.ru/node/${oopt.nid}` : null)
+    } : null,
+    pota: pota ? {
+      reference: pota.reference,
+      name: pota.name,
+      region: pota.region || pota.locationDesc,
+      lat: pota.lat,
+      lon: pota.lon,
+      website: pota.website
+    } : null,
+    distanceKm: distanceKm !== null ? Number(distanceKm.toFixed(3)) : null,
+    tokens: {
+      pota: pTokensRaw,
+      oopt: oTokensRaw,
+      matches: tokenMatches
+    },
+    scoring: {
+      urlPoints,
+      nameScore,
+      distancePoints,
+      categoryPoints,
+      totalScore,
+      properNameMatch
+    },
+    verdict,
+    isCurrentlyMatched
+  };
+}
+
 export default {
   syncOoptRegistry,
   syncPotaParksWithApi,
@@ -4008,4 +4275,7 @@ export default {
   getOoptMapPoints,
   markOoptAsSubmitted,
   unmarkOoptAsSubmitted,
+  unlinkOoptFromPota,
+  linkOoptToPota,
+  getMatchDiagnostics,
 };

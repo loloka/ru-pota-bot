@@ -675,7 +675,7 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
                       onClick={(e) => {
                         e.stopPropagation();
                         telegram.haptic.impact('light');
-                        onNavigate('map', { focusParkRef: spot.park });
+                        onNavigate('map', { focusParkRef: spot.park, spotTarget: spot });
                       }}
                       className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 transition"
                       title={language === 'RU' ? 'Показать парк на карте' : 'Show park on map'}

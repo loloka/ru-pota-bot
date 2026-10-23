@@ -104,7 +104,7 @@ export default function App() {
       });
     }
     if (tabId === 'map' && params.focusParkRef) {
-      setMapTarget(params.focusParkRef);
+      setMapTarget(params.spotTarget || params.focusParkRef);
     }
     setActiveTab(tabId);
 

@@ -383,66 +383,128 @@ export default function MapTab({
   useEffect(() => {
     if (!mapTarget) return;
 
-    // Case 1: mapTarget is an OOPT candidate object
+    // Case 1: mapTarget is an OOPT candidate object OR a Live Spot object
     if (typeof mapTarget === 'object' && mapTarget !== null) {
-      const lat = parseFloat(mapTarget.lat);
-      const lon = parseFloat(mapTarget.lon);
+      if (mapTarget.type === 'oopt' || mapTarget.nid) {
+        const lat = parseFloat(mapTarget.lat);
+        const lon = parseFloat(mapTarget.lon);
 
-      if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
-        const ooptTarget = {
-          type: 'oopt',
-          reference: mapTarget.pota_ref || (mapTarget.nid ? `ООПТ #${mapTarget.nid}` : 'Кандидат POTA'),
-          name: mapTarget.name || mapTarget.title || 'Объект ООПТ',
-          lat: lat,
-          lon: lon,
-          region: mapTarget.region || mapTarget.ate || '',
-          category: mapTarget.category || '',
-          sig: mapTarget.sig || mapTarget.sig_display || '',
-          status: mapTarget.status || '',
-          nid: mapTarget.nid,
-          oopt: mapTarget,
-        };
+        if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
+          const ooptTarget = {
+            type: 'oopt',
+            reference: mapTarget.pota_ref || (mapTarget.nid ? `ООПТ #${mapTarget.nid}` : 'Кандидат POTA'),
+            name: mapTarget.name || mapTarget.title || 'Объект ООПТ',
+            lat: lat,
+            lon: lon,
+            region: mapTarget.region || mapTarget.ate || '',
+            category: mapTarget.category || '',
+            sig: mapTarget.sig || mapTarget.sig_display || '',
+            status: mapTarget.status || '',
+            nid: mapTarget.nid,
+            oopt: mapTarget,
+          };
 
-        const applyOoptFocus = () => {
-          const map = mapInstanceRef.current;
-          if (!map) return;
-          map.invalidateSize();
+          const applyOoptFocus = () => {
+            const map = mapInstanceRef.current;
+            if (!map) return;
+            map.invalidateSize();
 
-          // Remove previous temporary marker
-          if (customOoptMarkerRef.current) {
-            customOoptMarkerRef.current.remove();
-          }
+            // Remove previous temporary marker
+            if (customOoptMarkerRef.current) {
+              customOoptMarkerRef.current.remove();
+            }
 
-          // Glowing purple pine pin for Candidate OOPT
-          const ooptPinHtml = `
-            <div class="relative flex items-center justify-center cursor-pointer select-none">
-              <div class="absolute -inset-2 rounded-full bg-purple-500/40 animate-ping"></div>
-              <div class="w-10 h-10 rounded-full bg-purple-600 border-2 border-white flex items-center justify-center text-white shadow-2xl font-bold text-base hover:scale-110 transition-transform">
-                🌲
+            // Glowing purple pine pin for Candidate OOPT
+            const ooptPinHtml = `
+              <div class="relative flex items-center justify-center cursor-pointer select-none">
+                <div class="absolute -inset-2 rounded-full bg-purple-500/40 animate-ping"></div>
+                <div class="w-10 h-10 rounded-full bg-purple-600 border-2 border-white flex items-center justify-center text-white shadow-2xl font-bold text-base hover:scale-110 transition-transform">
+                  🌲
+                </div>
               </div>
-            </div>
-          `;
+            `;
 
-          const pinIcon = L.divIcon({
-            html: ooptPinHtml,
-            className: 'custom-oopt-candidate-pin',
-            iconSize: [40, 40],
-            iconAnchor: [20, 20],
-          });
+            const pinIcon = L.divIcon({
+              html: ooptPinHtml,
+              className: 'custom-oopt-candidate-pin',
+              iconSize: [40, 40],
+              iconAnchor: [20, 20],
+            });
 
-          const marker = L.marker([lat, lon], { icon: pinIcon }).addTo(map);
-          marker.on('click', () => {
+            const marker = L.marker([lat, lon], { icon: pinIcon }).addTo(map);
+            marker.on('click', () => {
+              focusItem(ooptTarget, 14);
+            });
+            customOoptMarkerRef.current = marker;
+
             focusItem(ooptTarget, 14);
-          });
-          customOoptMarkerRef.current = marker;
+            if (onClearMapTarget) onClearMapTarget();
+          };
 
-          focusItem(ooptTarget, 14);
-          if (onClearMapTarget) onClearMapTarget();
-        };
+          const timer = setTimeout(applyOoptFocus, 250);
+          return () => clearTimeout(timer);
+        }
+      } else if (mapTarget.park || mapTarget.callsign) {
+        // Direct Live Spot Object (e.g. from Cluster "На карте")
+        const lat = parseFloat(mapTarget.lat || mapTarget.latitude);
+        const lon = parseFloat(mapTarget.lon || mapTarget.longitude);
 
-        const timer = setTimeout(applyOoptFocus, 250);
-        return () => clearTimeout(timer);
+        if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
+          const spotTarget = {
+            reference: mapTarget.park || mapTarget.reference,
+            name: mapTarget.parkName || mapTarget.name || (language === 'EN' ? 'POTA Park' : 'Заповедник POTA'),
+            lat,
+            lon,
+            region: mapTarget.location || mapTarget.region || '',
+            grid: mapTarget.grid || '',
+            isActive: true,
+            activeStation: true,
+            activeCallsign: mapTarget.callsign,
+            activeFreq: mapTarget.freq,
+            activeMode: mapTarget.mode,
+          };
+
+          const applySpotFocus = () => {
+            const map = mapInstanceRef.current;
+            if (!map) return;
+            map.invalidateSize();
+
+            if (customOoptMarkerRef.current) {
+              customOoptMarkerRef.current.remove();
+            }
+
+            const spotPinHtml = `
+              <div class="relative flex items-center justify-center cursor-pointer select-none">
+                <div class="absolute -inset-2 rounded-full bg-emerald-500/50 animate-ping"></div>
+                <div class="w-10 h-10 rounded-full bg-emerald-500 shadow-glow-pill ring-2 ring-white flex items-center justify-center text-slate-950 shadow-2xl font-bold text-base hover:scale-110 transition-transform">
+                  📡
+                </div>
+              </div>
+            `;
+
+            const pinIcon = L.divIcon({
+              html: spotPinHtml,
+              className: 'custom-world-spot-pin',
+              iconSize: [40, 40],
+              iconAnchor: [20, 20],
+            });
+
+            const marker = L.marker([lat, lon], { icon: pinIcon }).addTo(map);
+            marker.on('click', () => {
+              focusItem(spotTarget, 13);
+            });
+            customOoptMarkerRef.current = marker;
+
+            setSearchQuery(spotTarget.reference || '');
+            focusItem(spotTarget, 13);
+            if (onClearMapTarget) onClearMapTarget();
+          };
+
+          const timer = setTimeout(applySpotFocus, 250);
+          return () => clearTimeout(timer);
+        }
       }
+
       if (onClearMapTarget) onClearMapTarget();
       return;
     }
@@ -475,16 +537,48 @@ export default function MapTab({
       try {
         const res = await api.lookupPark(clean);
         if (res && res.lat && res.lon) {
+          const lat = parseFloat(res.lat);
+          const lon = parseFloat(res.lon);
           const customItem = {
             reference: res.reference || clean,
-            name: res.name || 'Заповедник POTA',
-            lat: parseFloat(res.lat),
-            lon: parseFloat(res.lon),
-            region: res.region || '',
+            name: res.name || (language === 'EN' ? 'POTA Reserve' : 'Заповедник POTA'),
+            lat: lat,
+            lon: lon,
+            region: res.region || res.locationName || '',
             grid: res.grid || '',
+            activations: res.activations || 0,
+            qsos: res.qsos || 0,
             isActive: Boolean(res.isActive),
             activeStation: res.activeStation || null,
           };
+
+          if (customOoptMarkerRef.current) {
+            customOoptMarkerRef.current.remove();
+          }
+
+          const isAct = Boolean(customItem.isActive);
+          const worldPinHtml = `
+            <div class="relative flex items-center justify-center cursor-pointer select-none">
+              ${isAct ? '<div class="absolute -inset-2 rounded-full bg-emerald-500/50 animate-ping"></div>' : ''}
+              <div class="w-10 h-10 rounded-full ${isAct ? 'bg-emerald-500 shadow-glow-pill ring-2 ring-white' : 'bg-emerald-600 border-2 border-white'} flex items-center justify-center text-slate-950 shadow-2xl font-bold text-base hover:scale-110 transition-transform">
+                ${isAct ? '📡' : '🌲'}
+              </div>
+            </div>
+          `;
+
+          const pinIcon = L.divIcon({
+            html: worldPinHtml,
+            className: 'custom-world-park-pin',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+          });
+
+          const marker = L.marker([lat, lon], { icon: pinIcon }).addTo(map);
+          marker.on('click', () => {
+            focusItem(customItem, 13);
+          });
+          customOoptMarkerRef.current = marker;
+
           setSearchQuery(clean);
           focusItem(customItem, 13);
         }
@@ -497,7 +591,7 @@ export default function MapTab({
 
     const timer = setTimeout(applyFocus, 250);
     return () => clearTimeout(timer);
-  }, [mapTarget, parks, loading, focusItem, onClearMapTarget]);
+  }, [mapTarget, parks, loading, focusItem, onClearMapTarget, language]);
 
   // Handle Search Typing with debounced Airfield lookup
   const handleSearchChange = (val) => {

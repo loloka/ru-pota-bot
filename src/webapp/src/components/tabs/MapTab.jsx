@@ -1359,6 +1359,18 @@ export default function MapTab({
             </button>
           </div>
 
+          {/* Candidate OOPT Notice */}
+          {selectedItem.type === 'oopt' && (
+            <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-purple-500/10 dark:bg-purple-950/40 border border-purple-500/30 text-[11px] text-purple-800 dark:text-purple-300 shadow-sm animate-fade-in">
+              <span className="text-base select-none shrink-0">💡</span>
+              <p className="leading-tight">
+                {language === 'RU'
+                  ? 'Потенциальная референция — объект из реестра ООПТ РФ. Вы можете подать заявку на добавление в POTA!'
+                  : 'Potential reference — area from Russian protected registry. You can submit it to POTA!'}
+              </p>
+            </div>
+          )}
+
           {/* Active Broadcast Info */}
           {selectedItem.isActive && selectedItem.activeStation && (
             <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs">
@@ -1447,10 +1459,13 @@ export default function MapTab({
                 type="button"
                 onClick={() => {
                   telegram.haptic.impact('medium');
+                  try {
+                    sessionStorage.setItem('rupota_oopt_filters', JSON.stringify({ search: selectedItem.name, page: 1, limit: 20 }));
+                  } catch (_) {}
                   onNavigate('oopt');
                 }}
                 className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 transition active:scale-95 shadow-sm"
-                title="Перейти в реестр ООПТ для просмотра шаблона заявки"
+                title="Перейти в реестр ООПТ для просмотра карточки и шаблона заявки"
               >
                 <span>В каталог</span>
                 <ExternalLink className="w-3.5 h-3.5" />

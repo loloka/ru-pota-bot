@@ -133,11 +133,19 @@ export default function MapTab({
   const baseTileRef = useRef(null);
   const wmsLayersRef = useRef({});
   const markersLayerRef = useRef(null);
+  const candidatesLayerRef = useRef(null);
   const razaLayerRef = useRef(null);
   const newRdaLayerRef = useRef(null);
   const customOoptMarkerRef = useRef(null);
 
   const [parks, setParks] = useState([]);
+  const [candidates, setCandidates] = useState([]);
+  const [showCandidates, setShowCandidates] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rupota_map_show_candidates');
+      return saved === null ? true : saved === 'true';
+    } catch (_) { return true; }
+  });
   const [razaZones, setRazaZones] = useState([]);
   const [airfieldResults, setAirfieldResults] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -242,6 +250,9 @@ export default function MapTab({
     // Layer groups
     const markersGroup = L.layerGroup().addTo(map);
     markersLayerRef.current = markersGroup;
+
+    const candidatesGroup = L.layerGroup().addTo(map);
+    candidatesLayerRef.current = candidatesGroup;
 
     const razaGroup = L.layerGroup().addTo(map);
     razaLayerRef.current = razaGroup;
@@ -626,6 +637,118 @@ export default function MapTab({
     });
   }, [parks, searchQuery, filterActiveOnly, focusItem]);
 
+  // ========================================================
+  // 5b. Fetch & Render OOPT Candidate Markers (Grey Points)
+  // ========================================================
+  const fetchCandidates = useCallback(async (mapInstance) => {
+    const map = mapInstance || mapInstanceRef.current;
+    if (!map || !showCandidates) return;
+
+    try {
+      const zoom = map.getZoom();
+      if (zoom >= 7) {
+        const bounds = map.getBounds();
+        const bbox = `${bounds.getSouth().toFixed(4)},${bounds.getWest().toFixed(4)},${bounds.getNorth().toFixed(4)},${bounds.getEast().toFixed(4)}`;
+        const res = await api.getOoptMapCandidates({ bbox });
+        if (res && res.candidates) {
+          setCandidates(res.candidates);
+        }
+      } else {
+        const res = await api.getOoptMapCandidates({ top: true });
+        if (res && res.candidates) {
+          setCandidates(res.candidates);
+        }
+      }
+    } catch (err) {
+      console.warn('[MapTab] Error fetching OOPT map candidates:', err);
+    }
+  }, [showCandidates]);
+
+  // Sync candidates on map movement or visibility toggle
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (!showCandidates) {
+      if (candidatesLayerRef.current) candidatesLayerRef.current.clearLayers();
+      return;
+    }
+
+    fetchCandidates(map);
+
+    let debounceTimer = null;
+    const onMapMove = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchCandidates(map);
+      }, 350);
+    };
+
+    map.on('moveend', onMapMove);
+    return () => {
+      clearTimeout(debounceTimer);
+      map.off('moveend', onMapMove);
+    };
+  }, [showCandidates, fetchCandidates]);
+
+  // Render Grey Candidate Markers
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const candidatesGroup = candidatesLayerRef.current;
+    if (!map || !candidatesGroup) return;
+
+    candidatesGroup.clearLayers();
+    if (!showCandidates || candidates.length === 0) return;
+
+    const query = searchQuery.trim().toUpperCase();
+    const visible = candidates.filter(cand => {
+      if (query) {
+        return (
+          cand.title.toUpperCase().includes(query) ||
+          (cand.region && cand.region.toUpperCase().includes(query))
+        );
+      }
+      return true;
+    });
+
+    visible.forEach(cand => {
+      if (!cand.lat || !cand.lon) return;
+
+      const markerHtml = `
+        <div class="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-400 dark:border-slate-500 flex items-center justify-center text-slate-500 dark:text-slate-400 shadow-md text-[10px] cursor-pointer hover:scale-125 transition transform -translate-x-1/2 -translate-y-1/2 select-none" title="${cand.title}">
+          <span class="opacity-80">🌲</span>
+        </div>
+      `;
+
+      const customIcon = L.divIcon({
+        html: markerHtml,
+        className: 'custom-oopt-cand-pin',
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      });
+
+      const marker = L.marker([cand.lat, cand.lon], { icon: customIcon });
+
+      marker.on('click', () => {
+        focusItem({
+          type: 'oopt',
+          reference: `ООПТ #${cand.nid}`,
+          name: cand.title,
+          category: cand.category,
+          sig: cand.sig,
+          region: cand.region,
+          lat: cand.lat,
+          lon: cand.lon,
+          area: cand.area,
+          nid: cand.nid,
+          oopt: cand,
+        }, 13);
+      });
+
+      candidatesGroup.addLayer(marker);
+    });
+  }, [candidates, showCandidates, searchQuery, focusItem]);
+
   // Render RAZA zone markers when RAZA layer is active
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -742,6 +865,14 @@ export default function MapTab({
         p.reference.toUpperCase().includes(query) ||
         p.name.toUpperCase().includes(query) ||
         (p.region && p.region.toUpperCase().includes(query))
+      ).slice(0, 4)
+    : [];
+
+  const ooptMatches = (showCandidates && query)
+    ? candidates.filter(c =>
+        c.title.toUpperCase().includes(query) ||
+        (c.region && c.region.toUpperCase().includes(query)) ||
+        String(c.nid) === query.replace(/^ООПТ\s*#?/, '')
       ).slice(0, 4)
     : [];
 
@@ -870,8 +1001,8 @@ export default function MapTab({
           </button>
         </div>
 
-        {/* Live Search Suggestions Dropdown (POTA + RDA + RAZA + Airfields) */}
-        {showSuggestions && (parkMatches.length > 0 || rdaMatches.length > 0 || razaMatches.length > 0 || airfieldMatches.length > 0) && (
+        {/* Live Search Suggestions Dropdown (POTA + OOPT Candidates + RDA + RAZA + Airfields) */}
+        {showSuggestions && (parkMatches.length > 0 || ooptMatches.length > 0 || rdaMatches.length > 0 || razaMatches.length > 0 || airfieldMatches.length > 0) && (
           <div className="w-full max-h-60 overflow-y-auto rounded-2xl glass-card p-1.5 shadow-2xl border border-slate-300 dark:border-slate-800 space-y-1 animate-slide-up z-30">
             {/* POTA Parks */}
             {parkMatches.map((p) => (
@@ -897,6 +1028,40 @@ export default function MapTab({
                     {p.region}
                   </span>
                 )}
+              </div>
+            ))}
+
+            {/* OOPT Candidates */}
+            {ooptMatches.map((o) => (
+              <div
+                key={'oopt-' + o.nid}
+                onClick={() => focusItem({
+                  type: 'oopt',
+                  reference: `ООПТ #${o.nid}`,
+                  name: o.title,
+                  category: o.category,
+                  sig: o.sig,
+                  region: o.region,
+                  lat: o.lat,
+                  lon: o.lon,
+                  area: o.area,
+                  nid: o.nid,
+                  oopt: o,
+                }, 13)}
+                className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-500/10 cursor-pointer transition active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-mono font-bold text-[11px] px-2 py-0.5 rounded bg-slate-600 text-white shrink-0 flex items-center gap-1">
+                    <span>⚪</span>
+                    <span>ООПТ #{o.nid}</span>
+                  </span>
+                  <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                    {o.title}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 shrink-0 ml-2">
+                  {o.region}
+                </span>
               </div>
             ))}
 
@@ -1067,6 +1232,28 @@ export default function MapTab({
               {language === 'RU' ? 'Парков: ' : 'Parks: '}
               <b className="text-emerald-600 dark:text-emerald-400 font-mono">{parks.length}</b>
             </span>
+
+            {/* Candidate OOPT Toggle Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                telegram.haptic.impact('light');
+                setShowCandidates(!showCandidates);
+              }}
+              className={`ml-1 pl-2 border-l border-slate-300 dark:border-slate-700 font-semibold flex items-center gap-1.5 transition ${
+                showCandidates
+                  ? 'text-slate-700 dark:text-slate-200'
+                  : 'text-slate-400 line-through opacity-60'
+              }`}
+              title={language === 'RU' ? 'Кликните, чтобы показать/скрыть кандидатов ООПТ' : 'Toggle candidate OOPT markers'}
+            >
+              <span className={`w-2 h-2 rounded-full ${showCandidates ? 'bg-slate-400' : 'bg-slate-500'} shrink-0`}></span>
+              <span>
+                {language === 'RU' ? 'Кандидатов: ' : 'Candidates: '}
+                <b className="font-mono">{showCandidates ? candidates.length : 0}</b>
+              </span>
+            </button>
+
             {activeLayers.raza && razaZones.length > 0 && (
               <span className="ml-1 pl-2 border-l border-slate-300 dark:border-slate-700 font-semibold text-amber-600 dark:text-amber-400">
                 ⚡ RAZA: <b className="font-mono">{razaZones.length}</b>
@@ -1100,8 +1287,8 @@ export default function MapTab({
                     <span>{selectedItem.icao}</span>
                   </span>
                 ) : selectedItem.type === 'oopt' ? (
-                  <span className="font-mono font-extrabold text-sm px-2.5 py-0.5 rounded-lg bg-purple-600 text-white flex items-center gap-1.5 shadow-md">
-                    <span>🌲</span>
+                  <span className="font-mono font-extrabold text-sm px-2.5 py-0.5 rounded-lg bg-slate-600 text-white flex items-center gap-1.5 shadow-md">
+                    <span>⚪</span>
                     <span>{selectedItem.reference}</span>
                   </span>
                 ) : (
@@ -1111,8 +1298,8 @@ export default function MapTab({
                 )}
 
                 {selectedItem.type === 'oopt' && selectedItem.category && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25 truncate max-w-[200px]">
-                    {selectedItem.category}
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-500/25 truncate max-w-[200px]">
+                    {selectedItem.category} {selectedItem.sig ? `• ${selectedItem.sig}` : ''}
                   </span>
                 )}
 
@@ -1234,7 +1421,7 @@ export default function MapTab({
               </a>
             )}
 
-            {/* OOPT & RDA Quick Copy Coordinates */}
+              {/* OOPT & RDA Quick Copy Coordinates */}
             {(selectedItem.type === 'oopt' || selectedItem.type === 'rda') && (
               <button
                 type="button"
@@ -1246,11 +1433,27 @@ export default function MapTab({
                 className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition active:scale-95 ${
                   selectedItem.type === 'rda'
                     ? 'text-black bg-[#fff83b] hover:bg-yellow-300 border border-[#d90077]'
-                    : 'text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30'
+                    : 'text-slate-800 dark:text-slate-200 bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700'
                 }`}
-                title="Скопировать координаты центра района"
+                title="Скопировать координаты"
               >
                 <span>Координаты</span>
+              </button>
+            )}
+
+            {/* OOPT Quick Catalog Button */}
+            {selectedItem.type === 'oopt' && onNavigate && (
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('medium');
+                  onNavigate('oopt');
+                }}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 transition active:scale-95 shadow-sm"
+                title="Перейти в реестр ООПТ для просмотра шаблона заявки"
+              >
+                <span>В каталог</span>
+                <ExternalLink className="w-3.5 h-3.5" />
               </button>
             )}
 
@@ -1338,6 +1541,47 @@ export default function MapTab({
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Objects & Candidates Layer Toggle */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <span>🌲</span>
+                  <span>Объекты и референции</span>
+                </span>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    telegram.haptic.selection();
+                    setShowCandidates(!showCandidates);
+                  }}
+                  className={`w-full p-2.5 rounded-xl text-xs transition flex items-center justify-between border ${
+                    showCandidates
+                      ? 'bg-slate-100/90 dark:bg-slate-800/90 text-slate-900 dark:text-white border-slate-400/50 shadow-sm'
+                      : 'bg-slate-50 dark:bg-slate-900/40 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-800 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 text-left truncate">
+                    <span className="text-base select-none">⚪</span>
+                    <div className="truncate">
+                      <span className={`font-bold block truncate ${showCandidates ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
+                        {language === 'RU' ? 'Кандидаты ООПТ РФ' : 'Russian Protected Areas (Candidates)'}
+                      </span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
+                        {language === 'RU' ? 'Серые точки — потенциальные парки POTA' : 'Grey points — potential POTA parks'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ml-2 ${
+                    showCandidates 
+                      ? 'bg-slate-500/20 text-slate-700 dark:text-slate-300 border border-slate-500/30' 
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                  }`}>
+                    {showCandidates ? (language === 'RU' ? 'ВКЛ' : 'ON') : (language === 'RU' ? 'ВЫКЛ' : 'OFF')}
+                  </span>
+                </button>
               </div>
 
               {/* R1CF WMS Overlays Toggles */}

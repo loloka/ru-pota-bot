@@ -2356,6 +2356,89 @@ export function createTmaRouter(telegramClient) {
     }
   });
 
+  // Map candidates layer for Telegram Mini App
+  router.get('/oopt/map-candidates', (req, res) => {
+    try {
+      const { bbox, search, top } = req.query;
+      const restricted = "ate NOT LIKE '%Крым%' AND ate NOT LIKE '%Севастополь%' AND ate NOT LIKE '%Донецк%' AND ate NOT LIKE '%Луганск%' AND ate NOT LIKE '%Запорож%' AND ate NOT LIKE '%Херсон%'";
+
+      let sql = '';
+      const params = [];
+
+      if (search && search.trim()) {
+        const q = `%${search.trim()}%`;
+        sql = `
+          SELECT nid, title, category, sig_display, ate as region, lat, lon, area
+          FROM oopt_registry
+          WHERE pota_ref IS NULL
+            AND (pota_status IS NULL OR pota_status != 'submitted')
+            AND lat IS NOT NULL AND lat != 0
+            AND lon IS NOT NULL AND lon != 0
+            AND LOWER(status) = 'действующий'
+            AND ${restricted}
+            AND (title LIKE ? OR ate LIKE ?)
+          ORDER BY CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END, area DESC
+          LIMIT 50
+        `;
+        params.push(q, q);
+      } else if (bbox) {
+        const parts = bbox.split(',').map(Number);
+        if (parts.length === 4 && parts.every(n => !isNaN(n))) {
+          const [minLat, minLon, maxLat, maxLon] = parts;
+          sql = `
+            SELECT nid, title, category, sig_display, ate as region, lat, lon, area
+            FROM oopt_registry
+            WHERE pota_ref IS NULL
+              AND (pota_status IS NULL OR pota_status != 'submitted')
+              AND lat BETWEEN ? AND ?
+              AND lon BETWEEN ? AND ?
+              AND LOWER(status) = 'действующий'
+              AND ${restricted}
+            ORDER BY CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END, area DESC
+            LIMIT 400
+          `;
+          params.push(Math.min(minLat, maxLat), Math.max(minLat, maxLat), Math.min(minLon, maxLon), Math.max(minLon, maxLon));
+        }
+      }
+
+      if (!sql) {
+        // Country-wide overview: top 15 candidates per region
+        sql = `
+          SELECT nid, title, category, sig_display, ate as region, lat, lon, area
+          FROM (
+            SELECT nid, title, category, sig_display, ate, lat, lon, area,
+                   ROW_NUMBER() OVER(PARTITION BY ate ORDER BY CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END, area DESC) as rn
+            FROM oopt_registry
+            WHERE pota_ref IS NULL 
+              AND (pota_status IS NULL OR pota_status != 'submitted')
+              AND lat IS NOT NULL AND lat != 0 
+              AND lon IS NOT NULL AND lon != 0
+              AND LOWER(status) = 'действующий'
+              AND ${restricted}
+          )
+          WHERE rn <= 15
+        `;
+      }
+
+      const rows = db.prepare(sql).all(...params);
+      const candidates = rows.map(r => ({
+        nid: r.nid,
+        title: r.title,
+        category: r.category || 'ООПТ',
+        sig: r.sig_display || 'Региональное',
+        region: r.region || '',
+        lat: parseFloat(r.lat),
+        lon: parseFloat(r.lon),
+        area: r.area ? Number(r.area) : null
+      }));
+
+      res.json({ candidates });
+    } catch (err) {
+      console.error('[TMA API] Error fetching OOPT map candidates:', err.message);
+      res.status(500).json({ error: err.message, candidates: [] });
+    }
+  });
+
   router.get('/oopt/translate', async (req, res) => {
     try {
       const text = req.query.text || '';

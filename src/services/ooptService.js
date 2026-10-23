@@ -4273,7 +4273,7 @@ async function getMinprirodaSession() {
   const res = await axios.get(OOPT_BASE_URL + '/', {
     timeout: 10000,
     headers: {
-      'User-Agent': 'RU-POTA-Bot/1.16.123 (Telegram Bot; Node.js)'
+      'User-Agent': 'RU-POTA-Bot/1.16.124 (Telegram Bot; Node.js)'
     }
   });
 

@@ -294,6 +294,19 @@ export const api = {
   },
 
   /**
+   * Get candidate OOPT points for the interactive map
+   * @param {{ bbox?: string, search?: string, top?: boolean }} params
+   */
+  async getOoptMapCandidates(params = {}) {
+    const query = new URLSearchParams();
+    if (params.bbox) query.set('bbox', params.bbox);
+    if (params.search) query.set('search', params.search);
+    if (params.top) query.set('top', '1');
+    const qs = query.toString();
+    return request(`/oopt/map-candidates${qs ? `?${qs}` : ''}`);
+  },
+
+  /**
    * Get full detail card for an individual ООПТ
    */
   async getOoptDetails(nid) {

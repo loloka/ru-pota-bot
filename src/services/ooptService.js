@@ -273,12 +273,11 @@ export async function syncOoptRegistry() {
     const rows = data.rows;
     console.log(`[OOPT Service] 📥 Downloaded ${rows.length} records in ${((Date.now() - startTime) / 1000).toFixed(1)}s. Writing to SQLite...`);
 
-    // Backup json file for offline guarantee + compressed git fallback
+    // Backup json file for offline guarantee (preserve FALLBACK_OOPT_GZ_PATH which has geocoded coords)
     try {
       const backupDir = path.resolve('data');
       if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
       fs.writeFileSync(path.join(backupDir, 'oopt_registry_backup.json'), JSON.stringify(data, null, 2), 'utf8');
-      fs.writeFileSync(FALLBACK_OOPT_GZ_PATH, zlib.gzipSync(Buffer.from(JSON.stringify(data))), 'utf8');
     } catch (e) {
       console.warn('[OOPT Service] ⚠️ Backup file write warning:', e.message);
     }

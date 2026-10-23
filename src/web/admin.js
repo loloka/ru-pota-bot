@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
-import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, getOoptMapPoints, markOoptAsSubmitted, unmarkOoptAsSubmitted, ensureOoptRegistryPopulated, unlinkOoptFromPota, linkOoptToPota, getMatchDiagnostics } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, getOoptMapPoints, markOoptAsSubmitted, unmarkOoptAsSubmitted, ensureOoptRegistryPopulated, unlinkOoptFromPota, linkOoptToPota, getMatchDiagnostics, getOoptBoundary } from '../services/ooptService.js';
 import {
   auditPotaLinks,
   checkUrlOnline,
@@ -1188,9 +1188,18 @@ export const startAdminServer = (telegramClient) => {
                         <span style="display:inline-block; width:12px; height:12px; background:#0d6efd; border:1.5px solid #0a58ca; border-radius:50%; margin-right:6px; flex-shrink:0;"></span>
                         <span><strong>Синий:</strong> В очереди на добавление (подано в POTA)</span>
                       </div>
-                      <div class="d-flex align-items-center">
+                      <div class="d-flex align-items-center mb-1">
                         <span style="display:inline-block; width:12px; height:12px; background:#adb5bd; border:1.5px solid #495057; border-radius:50%; margin-right:6px; flex-shrink:0;"></span>
                         <span><strong>Серый:</strong> Свободный кандидат ООПТ (не в POTA)</span>
+                      </div>
+                      <hr class="my-1 text-muted opacity-25">
+                      <div class="d-flex align-items-center mb-1">
+                        <span style="display:inline-block; width:12px; height:12px; background:#e0245e38; border:1.5px solid #d63384; border-radius:2px; margin-right:6px; flex-shrink:0;"></span>
+                        <span><strong>Малиновый:</strong> Границы ООПТ Минприроды</span>
+                      </div>
+                      <div class="d-flex align-items-center">
+                        <span style="display:inline-block; width:12px; height:12px; background:#8957e5; border:1.5px solid #6f42c1; border-radius:50%; margin-right:6px; flex-shrink:0;"></span>
+                        <span><strong>Фиолетовый:</strong> Минприроды (смещение)</span>
                       </div>
                     </div>
                   </div>
@@ -4272,7 +4281,8 @@ export const startAdminServer = (telegramClient) => {
                 if (oCoords) oCoords.innerHTML = '<strong>Координаты:</strong> ' + (data.oopt.lat && data.oopt.lon ? data.oopt.lat.toFixed(5) + ', ' + data.oopt.lon.toFixed(5) : '<span class="text-danger">нет</span>');
                 if (oLinks) {
                   var siteA = data.oopt.site ? '<a href="' + data.oopt.site + '" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:11px;">NextGIS #' + data.oopt.nid + '</a>' : '';
-                  oLinks.innerHTML = siteA;
+                  var boundaryBadge = data.hasBoundary === true ? '<span class="badge ms-1" style="font-size:10px; background-color:#d63384; color:#fff;">📐 Есть полигон Минприроды</span>' : (data.hasBoundary === false ? '<span class="badge bg-secondary ms-1" style="font-size:10px;">Точечный объект</span>' : '');
+                  oLinks.innerHTML = siteA + boundaryBadge;
                 }
               } else {
                 if (oNidBadge) oNidBadge.textContent = '—';
@@ -5491,6 +5501,8 @@ export const startAdminServer = (telegramClient) => {
           var mapUnmatchedGroup = null;
           var mapQueuedGroup = null;
           var mapCandidatesGroup = null;
+          var mapBoundaryGroup = null;
+          var activeBoundaryNid = null;
           var currentMapRegion = '';
           var isMapPointsLoading = false;
 
@@ -5537,6 +5549,115 @@ export const startAdminServer = (telegramClient) => {
             mapUnmatchedGroup = L.layerGroup().addTo(adminOoptMap);
             mapQueuedGroup = L.layerGroup().addTo(adminOoptMap);
             mapCandidatesGroup = L.layerGroup().addTo(adminOoptMap);
+            mapBoundaryGroup = L.featureGroup().addTo(adminOoptMap);
+
+            adminOoptMap.on('popupopen', function(e) {
+              if (mapBoundaryGroup) mapBoundaryGroup.clearLayers();
+              var marker = e.popup._source;
+              if (!marker) return;
+
+              // Orange points: unmatched POTA, no boundary per user instructions
+              if (marker.pointType === 'unmatched') {
+                return;
+              }
+
+              var nid = marker.ooptNid;
+              if (nid) {
+                showOoptBoundaryOnMap(nid, e.popup, marker);
+              }
+            });
+
+            adminOoptMap.on('popupclose', function(e) {
+              activeBoundaryNid = null;
+              if (mapBoundaryGroup) mapBoundaryGroup.clearLayers();
+            });
+
+            function formatDisplacement(m) {
+              if (!m && m !== 0) return '0 м';
+              if (m >= 1000) {
+                return (m / 1000).toFixed(1) + ' км';
+              }
+              return m + ' м';
+            }
+
+            async function showOoptBoundaryOnMap(nid, popup, marker) {
+              activeBoundaryNid = nid;
+              var container = document.getElementById('boundary-status-' + nid);
+              if (container) {
+                container.innerHTML = '<div style="color:#6c757d; font-size:11px; margin-top:4px;"><span class="spinner-border spinner-border-sm" style="width:10px; height:10px;"></span> Запрос границ с Минприроды...</div>';
+              }
+
+              try {
+                var res = await fetch('/api/admin/oopt/' + nid + '/boundary');
+                var data = await res.json();
+
+                if (activeBoundaryNid !== nid) return;
+
+                if (mapBoundaryGroup) {
+                  mapBoundaryGroup.clearLayers();
+                }
+
+                var statusHtml = '';
+
+                if (data.hasBoundary && data.geometry) {
+                  var polyLayer = L.geoJSON(data.geometry, {
+                    style: {
+                      color: '#d63384',
+                      weight: 2.5,
+                      opacity: 0.9,
+                      fillColor: '#e0245e',
+                      fillOpacity: 0.22
+                    }
+                  });
+                  mapBoundaryGroup.addLayer(polyLayer);
+
+                  statusHtml += '<div style="color:#d63384; font-size:11px; font-weight:600; margin-top:4px; display:flex; align-items:center; justify-content:space-between; gap:4px;">' +
+                    '<span>📐 Границы Минприроды</span>' +
+                    '<button type="button" class="btn btn-xs btn-outline-danger btn-zoom-boundary" style="font-size:10px; padding:1px 6px; border:1px solid #d63384; border-radius:3px; color:#d63384; background:none; cursor:pointer;" title="Показать весь полигон ООПТ">🔍 Весь полигон</button>' +
+                  '</div>';
+                } else {
+                  statusHtml += '<div style="color:#6c757d; font-size:11px; margin-top:4px;">ℹ️ На карте Минприроды границы отсутствуют (точечный объект)</div>';
+                }
+
+                if (data.isDisplaced && data.minprirodaCoords && marker && marker.getLatLng) {
+                  var potaLL = marker.getLatLng();
+                  var mpLL = [data.minprirodaCoords.lat, data.minprirodaCoords.lon];
+
+                  var mpMarker = L.circleMarker(mpLL, {
+                    radius: 5,
+                    color: '#6f42c1',
+                    fillColor: '#8957e5',
+                    fillOpacity: 0.9,
+                    weight: 2
+                  }).bindTooltip('Минприроды: ' + data.minprirodaCoords.lat.toFixed(5) + ', ' + data.minprirodaCoords.lon.toFixed(5) + ' (смещение ' + formatDisplacement(data.displacementMeters) + ')', { permanent: false });
+                  mapBoundaryGroup.addLayer(mpMarker);
+
+                  var dashLine = L.polyline([potaLL, mpLL], {
+                    color: '#e0245e',
+                    weight: 2,
+                    dashArray: '5, 8',
+                    opacity: 0.85
+                  }).bindTooltip('Смещение: ' + formatDisplacement(data.displacementMeters), { permanent: false });
+                  mapBoundaryGroup.addLayer(dashLine);
+
+                  statusHtml += '<div style="color:#b02a37; font-size:11px; font-weight:600; margin-top:3px; background:#f8d7da; padding:2px 6px; border-radius:3px;">' +
+                    '⚠️ Смещение координат: ' + formatDisplacement(data.displacementMeters) + ' (POTA 🟢 vs Минприроды 🟣)' +
+                  '</div>';
+                }
+
+                if (container) {
+                  container.innerHTML = statusHtml;
+                  if (popup && popup.update) popup.update();
+                }
+
+              } catch (err) {
+                console.warn('[Admin Map] Error loading boundary for NID ' + nid + ':', err);
+                if (activeBoundaryNid === nid && container) {
+                  container.innerHTML = '<div style="color:#dc3545; font-size:11px; margin-top:4px;">⚠️ Не удалось загрузить границы с Минприроды</div>';
+                  if (popup && popup.update) popup.update();
+                }
+              }
+            }
 
             isMapInitialized = true;
 
@@ -5665,6 +5786,15 @@ export const startAdminServer = (telegramClient) => {
                 var nid = parseInt(linkBtn.getAttribute('data-nid'), 10);
                 if (typeof window.linkOoptAction === 'function') {
                   window.linkOoptAction(nid, '', false);
+                }
+              }
+
+              var zoomBoundaryBtn = e.target.closest('.btn-zoom-boundary');
+              if (zoomBoundaryBtn) {
+                if (mapBoundaryGroup && mapBoundaryGroup.getLayers().length > 0) {
+                  try {
+                    adminOoptMap.fitBounds(mapBoundaryGroup.getBounds(), { padding: [30, 30], maxZoom: 15 });
+                  } catch (_) {}
                 }
               }
             });
@@ -5871,6 +6001,7 @@ export const startAdminServer = (telegramClient) => {
                 '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (m.category || 'ООПТ') + ' (' + (m.sigDisplay || m.sig) + ')</div>' +
                 '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (m.ate || '') + '</div>' +
                 areaHtml +
+                '<div id="boundary-status-' + m.nid + '" style="margin-top:6px; font-size:11px;"></div>' +
                 '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
                   '<a href="https://pota.app/#/park/' + m.ref + '" target="_blank" class="btn btn-xs btn-outline-success" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #198754; border-radius:3px; color:#198754;">Карточка POTA</a>' +
                   siteBtn +
@@ -5886,6 +6017,9 @@ export const startAdminServer = (telegramClient) => {
                 fillOpacity: 0.85,
                 weight: 1.5
               }).bindPopup(popupHtml);
+              marker.ooptNid = m.nid;
+              marker.potaRef = m.ref;
+              marker.pointType = 'matched';
               mapMatchedGroup.addLayer(marker);
               bounds.push([m.lat, m.lon]);
             });
@@ -5914,6 +6048,7 @@ export const startAdminServer = (telegramClient) => {
                 fillOpacity: 0.9,
                 weight: 2
               }).bindPopup(popupHtml);
+              marker.pointType = 'unmatched';
               mapUnmatchedGroup.addLayer(marker);
               bounds.push([u.lat, u.lon]);
             });
@@ -5938,6 +6073,7 @@ export const startAdminServer = (telegramClient) => {
                 '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (q.category || 'ООПТ') + ' (' + (q.sigDisplay || q.sig) + ')</div>' +
                 '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (q.ate || '') + '</div>' +
                 areaHtml +
+                '<div id="boundary-status-' + q.nid + '" style="margin-top:6px; font-size:11px;"></div>' +
                 '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
                   siteBtn +
                   copyBtn +
@@ -5953,6 +6089,8 @@ export const startAdminServer = (telegramClient) => {
                 fillOpacity: 0.85,
                 weight: 1.5
               }).bindPopup(popupHtml);
+              marker.ooptNid = q.nid;
+              marker.pointType = 'queued';
               mapQueuedGroup.addLayer(marker);
               bounds.push([q.lat, q.lon]);
             });
@@ -5975,6 +6113,7 @@ export const startAdminServer = (telegramClient) => {
                 '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (c.category || 'ООПТ') + ' (' + (c.sigDisplay || c.sig) + ')</div>' +
                 '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (c.ate || '') + '</div>' +
                 areaHtml +
+                '<div id="boundary-status-' + c.nid + '" style="margin-top:6px; font-size:11px;"></div>' +
                 '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
                   siteBtn +
                   copyBtn +
@@ -5991,6 +6130,8 @@ export const startAdminServer = (telegramClient) => {
                 fillOpacity: 0.75,
                 weight: 1
               }).bindPopup(popupHtml);
+              marker.ooptNid = c.nid;
+              marker.pointType = 'candidate';
               mapCandidatesGroup.addLayer(marker);
               bounds.push([c.lat, c.lon]);
             });
@@ -6861,6 +7002,18 @@ export const startAdminServer = (telegramClient) => {
       res.json(result);
     } catch (err) {
       console.error('[Admin] Diagnostics error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // OOPT Boundary & Displacement API (Minpriroda GeoServer / WFS)
+  app.get(['/api/admin/oopt/:nid/boundary', '/api/admin/oopt/boundary'], async (req, res) => {
+    try {
+      const nid = req.params.nid || req.query.nid;
+      const result = await getOoptBoundary(nid);
+      res.json(result);
+    } catch (err) {
+      console.error('[Admin] Boundary API error:', err);
       res.status(500).json({ error: err.message });
     }
   });

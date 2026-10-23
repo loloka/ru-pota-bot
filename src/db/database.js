@@ -472,6 +472,18 @@ try {
     console.log('[DB] Migrated oopt_registry table: added pota_status, pota_submitted_at, pota_submitted_by columns');
   }
 
+  // Table for on-demand cached OOPT boundary polygons and geometries from Minpriroda
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS oopt_boundaries (
+      nid INTEGER PRIMARY KEY,
+      has_boundary INTEGER NOT NULL,
+      geometry TEXT,
+      minpriroda_lat REAL,
+      minpriroda_lon REAL,
+      fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   // Auto-backfill missing coordinates from offline dataset (oopt_fallback.json.gz) if database has < 5,000 geocoded OOPT
   try {
     const coordsCount = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE lat IS NOT NULL AND lat != 0").get()?.count || 0;

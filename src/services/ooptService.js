@@ -4214,6 +4214,9 @@ export function getMatchDiagnostics(nid, ref) {
     verdict = `⚪ Разделено алгоритмом: ${reasons.join(', ')}.`;
   }
 
+  const boundaryInfo = db.prepare('SELECT has_boundary FROM oopt_boundaries WHERE nid = ?').get(oopt?.nid || 0);
+  const hasBoundary = boundaryInfo ? Boolean(boundaryInfo.has_boundary) : null;
+
   return {
     oopt: oopt ? {
       nid: oopt.nid,
@@ -4236,6 +4239,7 @@ export function getMatchDiagnostics(nid, ref) {
       website: pota.website
     } : null,
     distanceKm: distanceKm !== null ? Number(distanceKm.toFixed(3)) : null,
+    hasBoundary,
     tokens: {
       pota: pTokensRaw,
       oopt: oTokensRaw,
@@ -4251,6 +4255,180 @@ export function getMatchDiagnostics(nid, ref) {
     },
     verdict,
     isCurrentlyMatched
+  };
+}
+
+let minprirodaSession = {
+  csrfToken: null,
+  cookie: null,
+  expiresAt: 0
+};
+
+async function getMinprirodaSession() {
+  const now = Date.now();
+  if (minprirodaSession.csrfToken && minprirodaSession.cookie && minprirodaSession.expiresAt > now) {
+    return minprirodaSession;
+  }
+
+  const res = await axios.get(OOPT_BASE_URL + '/', {
+    timeout: 10000,
+    headers: {
+      'User-Agent': 'RU-POTA-Bot/1.16.123 (Telegram Bot; Node.js)'
+    }
+  });
+
+  const cookies = res.headers['set-cookie']?.map(c => c.split(';')[0]).join('; ') || '';
+  const m = res.data.match(/name="csrf-token" content="([^"]+)"/);
+  const csrfToken = m ? m[1] : '';
+
+  minprirodaSession = {
+    csrfToken,
+    cookie: cookies,
+    expiresAt: now + 3600000
+  };
+
+  return minprirodaSession;
+}
+
+/**
+ * Fetches boundary polygon (GeoJSON) and displacement analysis for an OOPT NID
+ * @param {number} nid
+ * @returns {Promise<object>}
+ */
+export async function getOoptBoundary(nid) {
+  if (!nid) {
+    return { nid: null, hasBoundary: false, geometry: null, message: 'NID не указан' };
+  }
+
+  const numNid = parseInt(nid, 10);
+  if (!numNid) {
+    return { nid: null, hasBoundary: false, geometry: null, message: 'Некорректный NID' };
+  }
+
+  // 1. Get OOPT record from SQLite
+  const oopt = db.prepare('SELECT nid, title, category, ate, lat, lon, pota_ref, pota_name FROM oopt_registry WHERE nid = ?').get(numNid);
+  if (!oopt) {
+    return { nid: numNid, hasBoundary: false, geometry: null, message: 'Объект не найден в реестре ООПТ РФ' };
+  }
+
+  let hasBoundary = false;
+  let geometry = null;
+  let mpLat = oopt.lat;
+  let mpLon = oopt.lon;
+
+  // 2. Check local SQLite cache oopt_boundaries
+  const cached = db.prepare('SELECT has_boundary, geometry, minpriroda_lat, minpriroda_lon FROM oopt_boundaries WHERE nid = ?').get(numNid);
+  if (cached) {
+    hasBoundary = Boolean(cached.has_boundary);
+    try {
+      geometry = cached.geometry ? JSON.parse(cached.geometry) : null;
+    } catch (_) {
+      geometry = null;
+    }
+    if (cached.minpriroda_lat && cached.minpriroda_lon) {
+      mpLat = cached.minpriroda_lat;
+      mpLon = cached.minpriroda_lon;
+    }
+  } else {
+    // 3. Fetch from Minpriroda GeoServer proxy
+    try {
+      const session = await getMinprirodaSession();
+      const proxyUrl = `${OOPT_BASE_URL}/proxy_geoserver_request/`;
+      const wfsQuery = `ows?service=WFS&version=1.1.0&request=GetFeature&typeName=oopt:oopt_wth_details&outputFormat=application/json&srsName=EPSG:4326&CQL_FILTER=nid=${numNid}`;
+
+      let res;
+      try {
+        res = await axios.post(proxyUrl, { url: wfsQuery }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': session.csrfToken,
+            'Cookie': session.cookie,
+            'Referer': `${OOPT_BASE_URL}/`
+          },
+          timeout: 15000
+        });
+      } catch (postErr) {
+        if (postErr.response?.status === 403 || postErr.response?.status === 401) {
+          minprirodaSession.csrfToken = null;
+          const freshSession = await getMinprirodaSession();
+          res = await axios.post(proxyUrl, { url: wfsQuery }, {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': freshSession.csrfToken,
+              'Cookie': freshSession.cookie,
+              'Referer': `${OOPT_BASE_URL}/`
+            },
+            timeout: 15000
+          });
+        } else {
+          throw postErr;
+        }
+      }
+
+      const features = res.data?.features || [];
+      if (features.length > 0 && features[0].geometry) {
+        hasBoundary = true;
+        geometry = features[0].geometry;
+      }
+
+      // Save to SQLite cache
+      db.prepare(`
+        INSERT OR REPLACE INTO oopt_boundaries (nid, has_boundary, geometry, minpriroda_lat, minpriroda_lon, fetched_at)
+        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `).run(numNid, hasBoundary ? 1 : 0, geometry ? JSON.stringify(geometry) : null, mpLat, mpLon);
+
+    } catch (err) {
+      console.warn(`[OOPT Service] ⚠️ Error fetching boundary for NID ${numNid} from Minpriroda:`, err.message);
+      return {
+        nid: numNid,
+        title: oopt.title,
+        pota_ref: oopt.pota_ref,
+        pota_name: oopt.pota_name,
+        hasBoundary: false,
+        geometry: null,
+        minprirodaCoords: (mpLat && mpLon) ? { lat: mpLat, lon: mpLon } : null,
+        potaCoords: null,
+        displacementMeters: 0,
+        isDisplaced: false,
+        message: 'Не удалось загрузить границы с карты Минприроды (' + err.message + ')'
+      };
+    }
+  }
+
+  // 4. Calculate POTA coordinates & displacement if matched
+  let potaCoords = null;
+  let displacementMeters = 0;
+  let isDisplaced = false;
+
+  if (oopt.pota_ref) {
+    const parks = getRussianPotaParks() || [];
+    const potaPark = parks.find(p => p.reference === oopt.pota_ref);
+    if (potaPark && potaPark.lat && potaPark.lon) {
+      potaCoords = { lat: Number(potaPark.lat), lon: Number(potaPark.lon) };
+      if (mpLat && mpLon) {
+        const distKm = getDistanceKm(potaCoords.lat, potaCoords.lon, mpLat, mpLon);
+        if (distKm !== null) {
+          displacementMeters = Math.round(distKm * 1000);
+          if (displacementMeters > 30) {
+            isDisplaced = true;
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    nid: numNid,
+    title: oopt.title,
+    pota_ref: oopt.pota_ref,
+    pota_name: oopt.pota_name,
+    hasBoundary,
+    geometry,
+    minprirodaCoords: (mpLat && mpLon) ? { lat: mpLat, lon: mpLon } : null,
+    potaCoords,
+    displacementMeters,
+    isDisplaced,
+    message: hasBoundary ? 'Границы ООПТ получены с Минприроды' : 'На карте Минприроды границы отсутствуют (только точечный объект)'
   };
 }
 
@@ -4278,4 +4456,5 @@ export default {
   unlinkOoptFromPota,
   linkOoptToPota,
   getMatchDiagnostics,
+  getOoptBoundary,
 };

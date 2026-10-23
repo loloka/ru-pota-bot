@@ -1,5 +1,24 @@
 # История изменений (Changelog)
 
+## [1.16.125] - 2026-10-24 (Full English Localization for OOPT Registry & Map Overlays)
+### Новые функции и улучшения
+- **Полная локализация (i18n) вкладки «ООПТ» и слоёв карты на английский язык** (`src/webapp/src/services/i18n.js`, `src/webapp/src/components/tabs/OoptTab.jsx`, `src/webapp/src/components/tabs/MapTab.jsx`, `src/webapp/src/components/modals/OoptModal.jsx`):
+  - При переключении языка приложения на `EN` через кнопку в шапке весь интерфейс реестра ООПТ и управления слоями карты автоматически переходит на чистый международный английский.
+  - **Вкладка ООПТ:**
+    - Заголовок и описание: `Russian Protected Areas (OOPT)` и официальное описание реестра.
+    - Статистические карточки: `Total in Registry`, `Federal`, `Regional`, `Local`, `In POTA DB`.
+    - Фильтры и поиск: `Search by name...`, `All available POTA regions`, `All reserve categories`, `Per page:`.
+    - Бейджи и кнопки действий: `POTA Proposal`, `Details`, `Copied`, `Coordinates...`, `Unavailable`.
+    - Пагинация: `Showing X–Y of Z`, `Page X of Y`, `Go to page:`, `Go`.
+    - Подсказка по правилам POTA: подробное разъяснение на английском, почему в программу допускаются только объекты с официальным охранным статусом (ООПТ).
+  - **Вкладка «Карта»:**
+    - Локализация меню слоёв подложки: `Base Map (Tiles)` (2GIS, Light OSM, Satellite, Dark Canvas).
+    - Локализация радиолюбительских WMS-слоёв R1CF: RDA Districts, RAZA Reserves, RAFA Airfields, QTH Maidenhead Grid, SOTA Summits, RLHA Lighthouses.
+    - Локализация шторки кандидата ООПТ: бейдж `⚪ POTA Candidate`, подсказка о подаче заявки, кнопки `Coordinates` и `In Catalog`.
+  - **Модальное окно карточки ООПТ (`OoptModal`):**
+    - Вкладки: `📋 POTA Proposal (R2BBX)` и `🌲 Reserve Passport`.
+    - Кнопки: `Back to OOPT Catalog`, `Back to List`, `Registry ID:`.
+
 ## [1.16.124] - 2026-10-23 (OOPT Candidate Markers & Potential POTA References on Mini App Map)
 ### Новые функции и улучшения
 - **Слой «Серые точки» (Кандидаты ООПТ РФ) на карте Telegram Mini App** (`src/webapp/src/components/tabs/MapTab.jsx`, `src/web/tmaApi.js`):

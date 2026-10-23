@@ -36,7 +36,7 @@ const getInitialFilterState = () => {
   return null;
 };
 
-export default function OoptTab({ onNavigateToMap }) {
+export default function OoptTab({ language = 'RU', t = (k) => k, onNavigateToMap }) {
   // Restore filters if previously selected
   const initial = useRef(getInitialFilterState()).current;
 
@@ -223,20 +223,20 @@ export default function OoptTab({ onNavigateToMap }) {
     if (sig === 'federal') {
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-          🏛️ {display || 'Федеральное'}
+          🏛️ {language === 'RU' ? (display || 'Федеральное') : 'Federal'}
         </span>
       );
     }
     if (sig === 'regional') {
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-          🌲 {display || 'Региональное'}
+          🌲 {language === 'RU' ? (display || 'Региональное') : 'Regional'}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-        🏡 {display || 'Местное'}
+        🏡 {language === 'RU' ? (display || 'Местное') : 'Local'}
       </span>
     );
   };
@@ -252,14 +252,14 @@ export default function OoptTab({ onNavigateToMap }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xl">🌲</span>
-              <h1 className="text-base font-extrabold tracking-tight">Реестр ООПТ России</h1>
+              <h1 className="text-base font-extrabold tracking-tight">{t('oopt_header_title')}</h1>
             </div>
             <span className="text-xs bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full font-semibold">
-              {stats?.total ? `${stats.total.toLocaleString('ru-RU')} объектов` : '11 342'}
+              {stats?.total ? `${stats.total.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US')} ${t('oopt_objects_count')}` : '11 342'}
             </span>
           </div>
           <p className="text-xs text-emerald-100 mt-1 leading-snug">
-            Официальная база охраняемых природных территорий РФ. Быстрый поиск, сверка с базой POTA и генерация заявок для координатора (R2BBX).
+            {t('oopt_header_desc')}
           </p>
         </div>
       </div>
@@ -273,11 +273,11 @@ export default function OoptTab({ onNavigateToMap }) {
               ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-900 dark:text-emerald-200 shadow-xs'
               : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:border-slate-300'
           }`}
-          title="Все объекты реестра ООПТ"
+          title={t('oopt_stat_total')}
         >
-          <div className="text-[10px] text-slate-400 font-medium">Всего в реестре</div>
+          <div className="text-[10px] text-slate-400 font-medium">{t('oopt_stat_total')}</div>
           <div className="text-sm font-extrabold text-slate-900 dark:text-white">
-            {stats?.total ? stats.total.toLocaleString('ru-RU') : '11 342'}
+            {stats?.total ? stats.total.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US') : '11 342'}
           </div>
         </div>
 
@@ -288,11 +288,11 @@ export default function OoptTab({ onNavigateToMap }) {
               ? 'bg-purple-500/15 border-purple-500/50 text-purple-900 dark:text-purple-200 shadow-xs'
               : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:border-purple-300'
           }`}
-          title="Объекты федерального значения"
+          title={t('oopt_stat_federal')}
         >
-          <div className="text-[10px] text-purple-500 dark:text-purple-400 font-medium">🏛️ Федеральные</div>
+          <div className="text-[10px] text-purple-500 dark:text-purple-400 font-medium">{t('oopt_stat_federal')}</div>
           <div className="text-sm font-extrabold text-purple-700 dark:text-purple-300">
-            {stats?.federal ? stats.federal.toLocaleString('ru-RU') : '361'}
+            {stats?.federal ? stats.federal.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US') : '361'}
           </div>
         </div>
 
@@ -303,11 +303,11 @@ export default function OoptTab({ onNavigateToMap }) {
               ? 'bg-emerald-500/15 border-emerald-500/50 text-emerald-900 dark:text-emerald-200 shadow-xs'
               : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:border-emerald-300'
           }`}
-          title="Объекты регионального значения"
+          title={t('oopt_stat_regional')}
         >
-          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">🌲 Региональные</div>
+          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">{t('oopt_stat_regional')}</div>
           <div className="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">
-            {stats?.regional ? stats.regional.toLocaleString('ru-RU') : '10 432'}
+            {stats?.regional ? stats.regional.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US') : '10 432'}
           </div>
         </div>
 
@@ -318,11 +318,11 @@ export default function OoptTab({ onNavigateToMap }) {
               ? 'bg-amber-500/15 border-amber-500/50 text-amber-900 dark:text-amber-200 shadow-xs'
               : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:border-amber-300'
           }`}
-          title="Объекты местного значения"
+          title={t('oopt_stat_local')}
         >
-          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">🏡 Местные</div>
+          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">{t('oopt_stat_local')}</div>
           <div className="text-sm font-extrabold text-amber-700 dark:text-amber-300">
-            {stats?.local ? stats.local.toLocaleString('ru-RU') : '549'}
+            {stats?.local ? stats.local.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US') : '549'}
           </div>
         </div>
 
@@ -333,13 +333,13 @@ export default function OoptTab({ onNavigateToMap }) {
               ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
               : 'bg-emerald-500/10 dark:bg-emerald-950/40 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-500/20'
           }`}
-          title="Нажмите, чтобы показать объекты уже добавленные в базу POTA"
+          title={t('oopt_stat_in_pota')}
         >
           <div className={`text-[10px] font-bold ${potaFilter === 'in_pota' ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}`}>
-            ✅ В базе POTA
+            {t('oopt_stat_in_pota')}
           </div>
           <div className={`text-sm font-extrabold ${potaFilter === 'in_pota' ? 'text-white' : 'text-emerald-700 dark:text-emerald-300'}`}>
-            {stats?.inPota ? stats.inPota.toLocaleString('ru-RU') : '304'}
+            {stats?.inPota ? stats.inPota.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US') : '304'}
           </div>
         </div>
       </div>
@@ -351,20 +351,20 @@ export default function OoptTab({ onNavigateToMap }) {
           <div className="flex-1 space-y-1.5">
             <div className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center justify-between flex-wrap gap-1">
               <span className="flex items-center gap-1.5">
-                <span>Вашего парка ещё нет в POTA?</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold">Подать заявку</span>
+                <span>{t('oopt_help_title')}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold">{t('oopt_help_apply_btn')}</span>
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                Координатор: <a href="mailto:r2bbx.mua@gmail.com" className="font-medium text-emerald-600 dark:text-emerald-400 hover:underline">r2bbx.mua@gmail.com</a>
+                {t('oopt_help_coordinator')} <a href="mailto:r2bbx.mua@gmail.com" className="font-medium text-emerald-600 dark:text-emerald-400 hover:underline">r2bbx.mua@gmail.com</a>
               </span>
             </div>
 
             <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
-              Выберите территорию из реестра, нажмите <span className="font-semibold text-emerald-600 dark:text-emerald-400">«📋 Заявка для R2BBX»</span> и отправьте готовый текст координатору <a href="https://t.me/ManuUmAn" target="_blank" rel="noreferrer" className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">@ManuUmAn</a> или на почту <a href="mailto:r2bbx.mua@gmail.com" className="font-bold text-slate-700 dark:text-slate-300 underline">r2bbx.mua@gmail.com</a> (либо в <a href="https://t.me/+Pek5olQhfPdiZDIy" target="_blank" rel="noreferrer" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">чат RU-POTA</a>).
+              {t('oopt_help_instruction_prefix')} <span className="font-semibold text-emerald-600 dark:text-emerald-400">{t('oopt_help_instruction_btn')}</span> {t('oopt_help_instruction_suffix')} <a href="https://t.me/ManuUmAn" target="_blank" rel="noreferrer" className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">@ManuUmAn</a> {t('oopt_help_or_mail')} <a href="mailto:r2bbx.mua@gmail.com" className="font-bold text-slate-700 dark:text-slate-300 underline">r2bbx.mua@gmail.com</a> ({language === 'RU' ? 'либо в ' : 'or in '}<a href="https://t.me/+Pek5olQhfPdiZDIy" target="_blank" rel="noreferrer" className="font-bold text-blue-600 dark:text-blue-400 hover:underline">RU-POTA chat</a>).
             </div>
 
             <div className="pt-1.5 border-t border-emerald-500/10 text-[10.5px] text-slate-500 dark:text-slate-400 leading-normal">
-              🌲 <strong className="text-slate-700 dark:text-slate-300">Почему только ООПТ?</strong> По международным правилам POTA допускаются <u>исключительно</u> природные территории с официальным охранным статусом регионального или федерального значения (заповедники, нацпарки, заказники, памятники природы). Обычные городские скверы и парки развлечений международная программа POTA строго отклоняет.
+              🌲 <strong className="text-slate-700 dark:text-slate-300">{t('oopt_help_why_title')}</strong> {t('oopt_help_why_desc')}
             </div>
           </div>
         </div>
@@ -380,7 +380,7 @@ export default function OoptTab({ onNavigateToMap }) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Поиск по названию, заказнику..."
+            placeholder={t('oopt_search_ph')}
             className="w-full pl-10 pr-10 py-2 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 shadow-sm"
           />
           {search && (
@@ -400,17 +400,17 @@ export default function OoptTab({ onNavigateToMap }) {
             onChange={(e) => { setRegionFilter(e.target.value); setPage(1); }}
             className="w-full py-2 px-2.5 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 shadow-sm truncate"
           >
-            <option value="">Все доступные для POTA регионы ({stats?.regions?.length || 83})</option>
+            <option value="">{t('oopt_all_regions')} ({stats?.regions?.length || 83})</option>
             {stats?.regions?.map((r) => (
               <option key={r} value={r}>
                 {r}
               </option>
             ))}
             {stats?.restrictedRegions && stats.restrictedRegions.length > 0 && (
-              <optgroup label="⛔ Временно недоступно для POTA">
+              <optgroup label={t('oopt_restricted_regions_group')}>
                 {stats.restrictedRegions.map((r) => (
                   <option key={r} value={r}>
-                    {r} (временно недоступно)
+                    {r} {language === 'RU' ? '(временно недоступно)' : '(temporarily restricted)'}
                   </option>
                 ))}
               </optgroup>
@@ -424,8 +424,8 @@ export default function OoptTab({ onNavigateToMap }) {
         <div className="p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5 shadow-sm animate-fade-in">
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <div className="leading-relaxed">
-            <span className="font-bold">Приём заявок временно закрыт: </span>
-            по объектам данного региона добавление в международную программу POTA приостановлено международным комитетом POTA по соображениям безопасности.
+            <span className="font-bold">{t('oopt_restricted_alert_title')}</span>
+            {t('oopt_restricted_alert_desc')}
           </div>
         </div>
       )}
@@ -441,7 +441,7 @@ export default function OoptTab({ onNavigateToMap }) {
               : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/60'
           }`}
         >
-          Все {stats?.total ? `(${stats.total.toLocaleString('ru-RU')})` : ''}
+          {t('oopt_chip_all')} {stats?.total ? `(${stats.total.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US')})` : ''}
         </button>
 
         <button
@@ -453,7 +453,7 @@ export default function OoptTab({ onNavigateToMap }) {
               : 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 border border-slate-200 dark:border-slate-700/60'
           }`}
         >
-          🏛️ Федеральные {stats?.federal ? `(${stats.federal})` : ''}
+          {t('oopt_chip_federal')} {stats?.federal ? `(${stats.federal})` : ''}
         </button>
 
         <button
@@ -465,7 +465,7 @@ export default function OoptTab({ onNavigateToMap }) {
               : 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-700/60'
           }`}
         >
-          🌲 Региональные {stats?.regional ? `(${stats.regional.toLocaleString('ru-RU')})` : ''}
+          {t('oopt_chip_regional')} {stats?.regional ? `(${stats.regional.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US')})` : ''}
         </button>
 
         <button
@@ -477,7 +477,7 @@ export default function OoptTab({ onNavigateToMap }) {
               : 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 border border-slate-200 dark:border-slate-700/60'
           }`}
         >
-          🏡 Местные {stats?.local ? `(${stats.local})` : ''}
+          {t('oopt_chip_local')} {stats?.local ? `(${stats.local})` : ''}
         </button>
 
         <button
@@ -489,7 +489,7 @@ export default function OoptTab({ onNavigateToMap }) {
               : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
           }`}
         >
-          ✨ В POTA {stats?.inPota ? `(${stats.inPota})` : ''}
+          {t('oopt_chip_in_pota')} {stats?.inPota ? `(${stats.inPota})` : ''}
         </button>
       </div>
 
@@ -501,7 +501,7 @@ export default function OoptTab({ onNavigateToMap }) {
           onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
           className="flex-1 max-w-[65%] py-1.5 px-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
         >
-          <option value="">Все категории объектов</option>
+          <option value="">{t('oopt_all_categories')}</option>
           {stats?.categories?.map((cat) => (
             <option key={cat.category} value={cat.category}>
               {cat.category} ({cat.count})
@@ -511,7 +511,7 @@ export default function OoptTab({ onNavigateToMap }) {
 
         {/* Limit select */}
         <div className="flex items-center gap-1.5 shrink-0 text-slate-500 dark:text-slate-400">
-          <span>По:</span>
+          <span>{t('oopt_per_page')}</span>
           <select
             value={limit}
             onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
@@ -527,10 +527,10 @@ export default function OoptTab({ onNavigateToMap }) {
       {/* Pagination Bar Top (info & quick buttons) */}
       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 py-1.5 px-1">
         <span>
-          Показано: <strong className="text-slate-800 dark:text-slate-200">{startIndex}–{endIndex}</strong> из {total.toLocaleString('ru-RU')}
+          {t('oopt_shown')} <strong className="text-slate-800 dark:text-slate-200">{startIndex}–{endIndex}</strong> {t('oopt_from')} {total.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US')}
         </span>
         <span className="font-semibold">
-          Стр. {page} из {totalPages}
+          {t('oopt_page')} {page} {t('oopt_from')} {totalPages}
         </span>
       </div>
 
@@ -538,15 +538,15 @@ export default function OoptTab({ onNavigateToMap }) {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-          <span className="text-xs">Загрузка каталога ООПТ...</span>
+          <span className="text-xs">{t('oopt_loading')}</span>
         </div>
       ) : items.length === 0 ? (
         /* Empty State */
         <div className="text-center py-14 p-4 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
           <Trees className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Ничего не найдено</h3>
+          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">{t('oopt_not_found_title')}</h3>
           <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-            Попробуйте изменить поисковый запрос или сбросить фильтры.
+            {t('oopt_not_found_desc')}
           </p>
           {(search || sigFilter || categoryFilter || regionFilter || potaFilter) && (
             <button
@@ -554,7 +554,7 @@ export default function OoptTab({ onNavigateToMap }) {
               onClick={handleResetFilters}
               className="mt-3 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
             >
-              Сбросить фильтры
+              {t('oopt_reset_filters_btn')}
             </button>
           )}
         </div>
@@ -579,7 +579,7 @@ export default function OoptTab({ onNavigateToMap }) {
                   {item.pota_ref && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
                       <Sparkles className="w-3 h-3 text-emerald-500" />
-                      В POTA: {item.pota_ref}
+                      {t('oopt_badge_in_pota')} {item.pota_ref}
                     </span>
                   )}
                 </div>
@@ -596,7 +596,7 @@ export default function OoptTab({ onNavigateToMap }) {
               {/* Region */}
               <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500 dark:text-slate-400">
                 <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                <span className="truncate">{item.ate || 'Регион не указан'}</span>
+                <span className="truncate">{item.ate || t('oopt_no_region')}</span>
               </div>
 
               {/* Meta information & Quick Buttons */}
@@ -605,13 +605,13 @@ export default function OoptTab({ onNavigateToMap }) {
                   {item.area ? (
                     <span className="flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300">
                       <Maximize2 className="w-3 h-3 text-emerald-500" />
-                      {Number(item.area).toLocaleString('ru-RU')} га
+                      {Number(item.area).toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US')} {t('oopt_ha')}
                     </span>
                   ) : null}
                   {item.start_date && (
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-teal-500" />
-                      {item.start_date.substring(0, 4)} г.
+                      {item.start_date.substring(0, 4)} {t('oopt_year')}
                     </span>
                   )}
                 </div>
@@ -621,15 +621,15 @@ export default function OoptTab({ onNavigateToMap }) {
                   {item.pota_restricted ? (
                     <span 
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/80 cursor-default"
-                      title="Приём заявок для данного региона временно приостановлен комитетом POTA"
+                      title={language === 'RU' ? "Приём заявок для данного региона временно приостановлен комитетом POTA" : "Submissions temporarily restricted by POTA"}
                     >
-                      ⛔ Недоступно
+                      {t('oopt_btn_restricted')}
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={(e) => handleQuickCopy(e, item)}
-                      title={item.pota_ref ? `Парк уже в POTA (${item.pota_ref})` : "Скопировать готовую заявку для R2BBX"}
+                      title={item.pota_ref ? `POTA: ${item.pota_ref}` : (language === 'RU' ? "Скопировать готовую заявку для R2BBX" : "Copy ready proposal template")}
                       disabled={copyLoadingId === item.nid}
                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
                         copiedId === item.nid
@@ -649,12 +649,12 @@ export default function OoptTab({ onNavigateToMap }) {
                         <Copy className="w-3 h-3" />
                       )}
                       {copiedId === item.nid
-                        ? 'Скопировано'
+                        ? t('oopt_btn_copied')
                         : copyLoadingId === item.nid
-                        ? 'Координаты...'
+                        ? t('oopt_btn_coords')
                         : item.pota_ref
                         ? `POTA: ${item.pota_ref}`
-                        : 'Заявка POTA'}
+                        : t('oopt_btn_pota_proposal')}
                     </button>
                   )}
 
@@ -663,7 +663,7 @@ export default function OoptTab({ onNavigateToMap }) {
                     onClick={() => setSelectedOopt(item)}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                   >
-                    Подробнее
+                    {t('oopt_btn_details')}
                   </button>
                 </div>
               </div>
@@ -683,7 +683,7 @@ export default function OoptTab({ onNavigateToMap }) {
               disabled={page === 1}
               onClick={() => handlePageChange(1)}
               className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-slate-700"
-              title="Первая страница"
+              title={t('oopt_pagination_first')}
             >
               <ChevronsLeft className="w-4 h-4" />
             </button>
@@ -694,7 +694,7 @@ export default function OoptTab({ onNavigateToMap }) {
               disabled={page === 1}
               onClick={() => handlePageChange(page - 1)}
               className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-slate-700"
-              title="Предыдущая"
+              title={t('oopt_pagination_prev')}
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -732,7 +732,7 @@ export default function OoptTab({ onNavigateToMap }) {
               disabled={page === totalPages}
               onClick={() => handlePageChange(page + 1)}
               className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-slate-700"
-              title="Следующая"
+              title={t('oopt_pagination_next')}
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -743,7 +743,7 @@ export default function OoptTab({ onNavigateToMap }) {
               disabled={page === totalPages}
               onClick={() => handlePageChange(totalPages)}
               className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-slate-700"
-              title="Последняя страница"
+              title={t('oopt_pagination_last')}
             >
               <ChevronsRight className="w-4 h-4" />
             </button>
@@ -751,7 +751,7 @@ export default function OoptTab({ onNavigateToMap }) {
 
           {/* Jump to page form */}
           <form onSubmit={handleJumpSubmit} className="flex items-center justify-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs text-slate-500">
-            <span>Перейти к стр:</span>
+            <span>{t('oopt_jump_to_page')}</span>
             <input
               type="number"
               min="1"
@@ -761,12 +761,12 @@ export default function OoptTab({ onNavigateToMap }) {
               placeholder={String(page)}
               className="w-16 px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-center font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
-            <span>из {totalPages}</span>
+            <span>{t('oopt_from')} {totalPages}</span>
             <button
               type="submit"
               className="px-2.5 py-1 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 active:scale-95 transition-all"
             >
-              ОК
+              {t('oopt_jump_ok')}
             </button>
           </form>
         </div>
@@ -776,6 +776,7 @@ export default function OoptTab({ onNavigateToMap }) {
       {selectedOopt && (
         <OoptModal
           oopt={selectedOopt}
+          language={language}
           onClose={() => setSelectedOopt(null)}
           onShowOnMap={(item) => {
             setSelectedOopt(null);

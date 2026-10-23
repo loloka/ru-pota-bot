@@ -32,22 +32,26 @@ import ParkModal from '../modals/ParkModal.jsx';
 const BASE_MAPS = {
   twogis: {
     name: '2ГИС (Россия)',
+    nameEn: '2GIS (Russia)',
     url: 'https://tile{s}.maps.2gis.com/tiles?x={x}&y={y}&z={z}',
     subdomains: ['0', '1', '2', '3'],
     maxZoom: 18,
   },
   osm: {
     name: 'Светлая (OSM)',
+    nameEn: 'Light (OSM)',
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     maxZoom: 19,
   },
   satellite: {
     name: 'Спутник',
+    nameEn: 'Satellite',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     maxZoom: 18,
   },
   dark: {
     name: 'Тёмная',
+    nameEn: 'Dark Canvas',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
     maxZoom: 16,
   },
@@ -58,7 +62,9 @@ const WMS_LAYERS_CONFIG = [
   { 
     id: 'rda', 
     name: 'Районы RDA (2025)', 
+    nameEn: 'RDA Districts (2025)',
     desc: 'Границы и шифры районов РФ (CB-02, NS-05)',
+    descEn: 'Russian District Award borders & codes',
     layer: 'RDA_2025X', 
     style: 'rda_centroid_rx', 
     defaultOn: true,
@@ -68,7 +74,9 @@ const WMS_LAYERS_CONFIG = [
   { 
     id: 'raza', 
     name: 'Аномальные зоны RAZA', 
+    nameEn: 'RAZA Nature Reserves',
     desc: 'Заповедные и аномальные зоны (зум 5+)',
+    descEn: 'Protected & special zones (zoom 5+)',
     layer: 'RAZAX', 
     style: 'razax', 
     defaultOn: false,
@@ -78,7 +86,9 @@ const WMS_LAYERS_CONFIG = [
   { 
     id: 'rafa', 
     name: 'Аэродромы RAFA', 
+    nameEn: 'RAFA Airfields',
     desc: 'Аэродромы и вертодромы (зум 6+)',
+    descEn: 'Airfields and helipads (zoom 6+)',
     layer: 'aopax', 
     style: 'rafax', 
     defaultOn: false,
@@ -88,7 +98,9 @@ const WMS_LAYERS_CONFIG = [
   { 
     id: 'qth', 
     name: 'QTH Локаторы (WW Grid)', 
+    nameEn: 'QTH Maidenhead Grid',
     desc: 'Сетка квадратов Maidenhead (зум 7+)',
+    descEn: 'Maidenhead locator grid (zoom 7+)',
     layer: 'QTH', 
     style: 'QTH', 
     defaultOn: false,
@@ -98,7 +110,9 @@ const WMS_LAYERS_CONFIG = [
   { 
     id: 'sota', 
     name: 'Вершины SOTA', 
+    nameEn: 'SOTA Summits',
     desc: 'Горные вершины для радиосвязи (зум 5+)',
+    descEn: 'Summits on the Air (zoom 5+)',
     layer: 'SOTAX', 
     style: 'sotax', 
     defaultOn: false,
@@ -108,7 +122,9 @@ const WMS_LAYERS_CONFIG = [
   { 
     id: 'rlha', 
     name: 'Маяки RLHA', 
+    nameEn: 'RLHA Lighthouses',
     desc: 'Маяки России по дипломной программе (зум 4+)',
+    descEn: 'Russian lighthouses award (zoom 4+)',
     layer: 'RLHAX', 
     style: 'rlhax', 
     defaultOn: false,
@@ -1449,7 +1465,7 @@ export default function MapTab({
                 }`}
                 title="Скопировать координаты"
               >
-                <span>Координаты</span>
+                <span>{language === 'EN' ? 'Coordinates' : 'Координаты'}</span>
               </button>
             )}
 
@@ -1467,7 +1483,7 @@ export default function MapTab({
                 className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 transition active:scale-95 shadow-sm"
                 title="Перейти в реестр ООПТ для просмотра карточки и шаблона заявки"
               >
-                <span>В каталог</span>
+                <span>{language === 'EN' ? 'In Catalog' : 'В каталог'}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </button>
             )}
@@ -1530,12 +1546,13 @@ export default function MapTab({
               <div className="space-y-2">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <span>🗺️</span>
-                  <span>Базовая карта (подложка)</span>
+                  <span>{language === 'EN' ? 'Base Map (Tiles)' : 'Базовая карта (подложка)'}</span>
                 </span>
                 
                 <div className="grid grid-cols-2 gap-2">
                   {Object.entries(BASE_MAPS).map(([key, cfg]) => {
                     const isSelected = baseMapType === key;
+                    const displayName = language === 'EN' ? (cfg.nameEn || cfg.name) : cfg.name;
                     return (
                       <button
                         key={key}
@@ -1550,7 +1567,7 @@ export default function MapTab({
                             : 'bg-slate-100 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800'
                         }`}
                       >
-                        <span className="truncate">{cfg.name}</span>
+                        <span className="truncate">{displayName}</span>
                         {isSelected && <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                       </button>
                     );
@@ -1562,7 +1579,7 @@ export default function MapTab({
               <div className="space-y-1.5">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <span>🌲</span>
-                  <span>Объекты и референции</span>
+                  <span>{language === 'EN' ? 'Objects & References' : 'Объекты и референции'}</span>
                 </span>
                 
                 <button
@@ -1604,20 +1621,22 @@ export default function MapTab({
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                     <span>🛰️</span>
-                    <span>Специальные радиолюбительские слои (R1CF)</span>
+                    <span>{language === 'EN' ? 'Special Ham Radio Layers (R1CF)' : 'Специальные радиолюбительские слои (R1CF)'}</span>
                   </span>
                   <button
                     type="button"
                     onClick={resetLayersToDefault}
                     className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
                   >
-                    По умолчанию
+                    {language === 'EN' ? 'Default' : 'По умолчанию'}
                   </button>
                 </div>
 
                 <div className="space-y-1.5">
                   {WMS_LAYERS_CONFIG.map((cfg) => {
                     const isActive = Boolean(activeLayers[cfg.id]);
+                    const cfgName = language === 'EN' ? (cfg.nameEn || cfg.name) : cfg.name;
+                    const cfgDesc = language === 'EN' ? (cfg.descEn || cfg.desc) : cfg.desc;
                     return (
                       <button
                         key={cfg.id}
@@ -1633,10 +1652,10 @@ export default function MapTab({
                           <span className="text-base select-none">{cfg.icon}</span>
                           <div className="truncate">
                             <span className={`font-bold block truncate ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
-                              {cfg.name}
+                              {cfgName}
                             </span>
                             <span className="text-[10px] text-slate-500 dark:text-slate-400 block truncate">
-                              {cfg.desc}
+                              {cfgDesc}
                             </span>
                           </div>
                         </div>
@@ -1657,13 +1676,15 @@ export default function MapTab({
               <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-700 dark:text-blue-300 flex items-start gap-2">
                 <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
                 <p>
-                  Слои QTH, аэродромов и вершин автоматически проявляются при приближении карты к объекту (зум 6+).
+                  {language === 'EN'
+                    ? 'QTH grid, airfield, and summit overlays automatically appear when zooming in (zoom 6+).'
+                    : 'Слои QTH, аэродромов и вершин автоматически проявляются при приближении карты к объекту (зум 6+).'}
                 </p>
               </div>
             </div>
 
             <p className="text-[10px] text-center text-slate-400 dark:text-slate-500 pt-1 shrink-0">
-              Геосервер: map.r1cf.ru • Проекция EPSG:3857
+              {language === 'EN' ? 'Geoserver: map.r1cf.ru • EPSG:3857 projection' : 'Геосервер: map.r1cf.ru • Проекция EPSG:3857'}
             </p>
           </div>
         </div>,

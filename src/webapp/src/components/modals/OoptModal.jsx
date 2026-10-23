@@ -44,7 +44,7 @@ const POTA_QUICK_TYPES = [
   'UNESCO Biosphere Reserve'
 ];
 
-export default function OoptModal({ oopt, onClose, onShowOnMap }) {
+export default function OoptModal({ oopt, language = 'RU', onClose, onShowOnMap }) {
   const [activeTab, setActiveTab] = useState('submitter'); // 'submitter' | 'passport'
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -328,7 +328,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-            📋 Заявка POTA (R2BBX)
+            {language === 'EN' ? '📋 POTA Proposal (R2BBX)' : '📋 Заявка POTA (R2BBX)'}
           </button>
           <button
             type="button"
@@ -340,7 +340,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
             }`}
           >
             <Trees className="w-3.5 h-3.5 text-slate-400" />
-            🌲 Паспорт ООПТ
+            {language === 'EN' ? '🌲 Reserve Passport' : '🌲 Паспорт ООПТ'}
           </button>
         </div>
 
@@ -1219,7 +1219,7 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
                   className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all active:scale-98 border border-slate-200/80 dark:border-slate-700/80 shadow-xs"
                 >
                   <ArrowLeft className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                  <span>Вернуться к списку ООПТ</span>
+                  <span>{language === 'EN' ? 'Back to OOPT Catalog' : 'Вернуться к списку ООПТ'}</span>
                 </button>
               </div>
             </div>
@@ -1234,10 +1234,10 @@ export default function OoptModal({ oopt, onClose, onShowOnMap }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-200/80 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 font-semibold transition-all active:scale-95 shadow-xs"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Назад к списку</span>
+            <span>{language === 'EN' ? 'Back to List' : 'Назад к списку'}</span>
           </button>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-            ID в реестре: <strong>{current.nid}</strong>
+            {language === 'EN' ? 'Registry ID:' : 'ID в реестре:'} <strong>{current.nid}</strong>
           </span>
         </div>
       </div>

@@ -1,5 +1,14 @@
 # История изменений (Changelog)
 
+## [1.16.127] - 2026-10-24 (Localization of RU-POTA Hub Drawer & CW Morse Code Trainers)
+### Новые функции и улучшения
+- **Полная локализация (i18n) бокового меню RU-POTA Hub и тренажеров морзе** (`src/webapp/src/components/layout/Header.jsx`):
+  - При переключении интерфейса на английский язык (`EN`) боковая шторка навигации теперь полностью переведена:
+    - Разделы: `Cartography`, `Community & On-Air`, `POTA Portals`, `CW Morse Code Trainers`.
+    - Ссылки и описания: `RU-POTA Community Chat`, `Live Spots Feed Channel`, `POTA Next Portal (Beta)`, `Official POTA Website`, `Rules & Documentation`.
+    - Тренажеры телеграфа: `MorseWave (Morse Code Trainer)` с описанием `morse.r9old.ru • Beginner CW copying & ear training` и `MorseWalker (CW Pro: Pileup & POTA)` с описанием `morse.r9o.ru • Park activator pileup simulator`.
+    - Подвал шторки: `Author: R9OGL`, `Feedback, suggestions & bugs: @r9ogl`.
+
 ## [1.16.126] - 2026-10-24 (Worldwide Spot Pins & Dynamic Leaflet Rendering)
 ### Новые функции и улучшения
 - **Динамическое отображение маркеров для международных спотов со всего мира** (`src/webapp/src/components/tabs/MapTab.jsx`, `src/webapp/src/components/tabs/ClusterTab.jsx`, `src/webapp/src/App.jsx`):

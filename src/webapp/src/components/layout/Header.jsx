@@ -51,7 +51,7 @@ export default function Header({
               }
             }}
             className="flex items-center gap-2.5 cursor-pointer select-none group"
-            title="Меню приложения"
+            title={language === 'RU' ? 'Меню приложения' : 'App Menu'}
           >
             <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 dark:bg-slate-800/80 border border-emerald-500/30 shadow-glow-emerald group-hover:scale-105 transition-transform p-1 overflow-hidden">
               <img src="/app/pota-logo.png" alt="POTA Logo" className="w-full h-full object-contain select-none" />
@@ -78,8 +78,8 @@ export default function Header({
               type="button"
               onClick={() => handleAction(onToggleTheme)}
               className="relative p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-colors active:scale-95"
-              title="Переключить тему"
-              aria-label="Переключить тему"
+              title={language === 'RU' ? 'Переключить тему' : 'Toggle Theme'}
+              aria-label={language === 'RU' ? 'Переключить тему' : 'Toggle Theme'}
             >
               {theme === 'dark' ? (
                 <Moon className="w-4 h-4 text-emerald-400" />
@@ -99,7 +99,7 @@ export default function Header({
               }}
               className="relative p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-colors active:scale-95"
               title={language === 'RU' ? 'Входящие споты и подписки' : 'Alerts & Subscriptions'}
-              aria-label="Входящие споты и подписки"
+              aria-label={language === 'RU' ? 'Входящие споты и подписки' : 'Alerts & Subscriptions'}
             >
               <Bell className="w-4 h-4" />
               {notificationCount > 0 && (
@@ -114,8 +114,8 @@ export default function Header({
               type="button"
               onClick={() => handleAction(onToggleLanguage)}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-colors active:scale-95"
-              title="Сменить язык"
-              aria-label="Сменить язык"
+              title={language === 'RU' ? 'Сменить язык' : 'Switch Language'}
+              aria-label={language === 'RU' ? 'Сменить язык' : 'Switch Language'}
             >
               <Languages className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
               <span className="font-bold">{language}</span>
@@ -129,8 +129,8 @@ export default function Header({
                 setMenuOpen(true);
               }}
               className="p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-colors active:scale-95 ml-0.5"
-              title="Меню"
-              aria-label="Меню"
+              title={language === 'RU' ? 'Меню' : 'Menu'}
+              aria-label={language === 'RU' ? 'Меню' : 'Menu'}
             >
               <Menu className="w-4 h-4" />
             </button>
@@ -174,7 +174,7 @@ export default function Header({
                 {/* Карты */}
                 <div className="space-y-1.5">
                   <span className="text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase px-1">
-                    Картография
+                    {language === 'RU' ? 'Картография' : 'Cartography'}
                   </span>
                   <button 
                     type="button"
@@ -188,7 +188,7 @@ export default function Header({
                     <div className="flex items-center gap-2.5">
                       <span className="text-base select-none">🗺️</span>
                       <span className="font-bold text-amber-700 dark:text-amber-400">
-                        Карты OsmAnd (Офлайн)
+                        {language === 'RU' ? 'Карты OsmAnd (Офлайн)' : 'OsmAnd Maps (Offline)'}
                       </span>
                     </div>
                     <ExternalLink className="w-3.5 h-3.5 text-amber-500" />
@@ -198,7 +198,7 @@ export default function Header({
                 {/* Сообщество и активность */}
                 <div className="space-y-1.5 pt-1">
                   <span className="text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase px-1">
-                    Сообщество и Эфир
+                    {language === 'RU' ? 'Сообщество и Эфир' : 'Community & On-Air'}
                   </span>
                   <div className="space-y-1">
                     <a 
@@ -210,7 +210,9 @@ export default function Header({
                     >
                       <div className="flex items-center gap-2.5">
                         <span className="text-base select-none">💬</span>
-                        <span className="font-semibold">Чат сообщества RU-POTA</span>
+                        <span className="font-semibold">
+                          {language === 'RU' ? 'Чат сообщества RU-POTA' : 'RU-POTA Community Chat'}
+                        </span>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                     </a>
@@ -224,7 +226,9 @@ export default function Header({
                     >
                       <div className="flex items-center gap-2.5">
                         <span className="text-base select-none">📡</span>
-                        <span className="font-semibold">Канал спотов активности</span>
+                        <span className="font-semibold">
+                          {language === 'RU' ? 'Канал спотов активности' : 'Live Spots Feed Channel'}
+                        </span>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                     </a>
@@ -234,7 +238,7 @@ export default function Header({
                 {/* Официальные ресурсы POTA */}
                 <div className="space-y-1.5 pt-1">
                   <span className="text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase px-1">
-                    Порталы POTA
+                    {language === 'RU' ? 'Порталы POTA' : 'POTA Portals'}
                   </span>
                   <div className="space-y-1">
                     <a 
@@ -246,7 +250,9 @@ export default function Header({
                     >
                       <div className="flex items-center gap-2.5">
                         <span className="text-base select-none">✨</span>
-                        <span className="font-semibold">Портал POTA Next (Beta)</span>
+                        <span className="font-semibold">
+                          {language === 'RU' ? 'Портал POTA Next (Beta)' : 'POTA Next Portal (Beta)'}
+                        </span>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                     </a>
@@ -260,7 +266,9 @@ export default function Header({
                     >
                       <div className="flex items-center gap-2.5">
                         <span className="text-base select-none">🌐</span>
-                        <span className="font-semibold">Официальный сайт POTA</span>
+                        <span className="font-semibold">
+                          {language === 'RU' ? 'Официальный сайт POTA' : 'Official POTA Website'}
+                        </span>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                     </a>
@@ -274,7 +282,9 @@ export default function Header({
                     >
                       <div className="flex items-center gap-2.5">
                         <span className="text-base select-none">📖</span>
-                        <span className="font-semibold">Правила и справка</span>
+                        <span className="font-semibold">
+                          {language === 'RU' ? 'Правила и справка' : 'Rules & Documentation'}
+                        </span>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                     </a>
@@ -284,7 +294,7 @@ export default function Header({
                 {/* Тренажеры азбуки Морзе */}
                 <div className="space-y-1.5 pt-1">
                   <span className="text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase px-1">
-                    Тренажеры CW (Азбука Морзе)
+                    {language === 'RU' ? 'Тренажеры CW (Азбука Морзе)' : 'CW Morse Code Trainers'}
                   </span>
                   <div className="space-y-1">
                     <a 
@@ -298,10 +308,10 @@ export default function Header({
                         <span className="text-base select-none">📻</span>
                         <div>
                           <span className="font-bold text-emerald-700 dark:text-emerald-400 block leading-tight">
-                            MorseWave (Тренажер Морзе)
+                            {language === 'RU' ? 'MorseWave (Тренажер Морзе)' : 'MorseWave (Morse Code Trainer)'}
                           </span>
                           <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                            morse.r9old.ru • Обучение приёму с нуля
+                            {language === 'RU' ? 'morse.r9old.ru • Обучение приёму с нуля' : 'morse.r9old.ru • Beginner CW copying & ear training'}
                           </span>
                         </div>
                       </div>
@@ -319,10 +329,10 @@ export default function Header({
                         <span className="text-base select-none">⚡</span>
                         <div>
                           <span className="font-bold text-blue-700 dark:text-blue-400 block leading-tight">
-                            MorseWalker (CW Pro: Пайлапы и POTA)
+                            {language === 'RU' ? 'MorseWalker (CW Pro: Пайлапы и POTA)' : 'MorseWalker (CW Pro: Pileup & POTA)'}
                           </span>
                           <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                            morse.r9o.ru • Режим передачи парков
+                            {language === 'RU' ? 'morse.r9o.ru • Режим передачи парков' : 'morse.r9o.ru • Park activator pileup simulator'}
                           </span>
                         </div>
                       </div>
@@ -357,10 +367,11 @@ export default function Header({
                 RU-POTA Bot &amp; TMA v{__APP_VERSION__}
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                Автор: <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">R9OGL</span>
+                {language === 'RU' ? 'Автор:' : 'Author:'}{' '}
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">R9OGL</span>
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                По предложениям, багам и вопросам:{" "}
+                {language === 'RU' ? 'По предложениям, багам и вопросам:' : 'Feedback, suggestions & bugs:'}{' '}
                 <a 
                   href="https://t.me/r9ogl" 
                   target="_blank" 

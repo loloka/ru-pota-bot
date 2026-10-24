@@ -613,7 +613,7 @@ export default function ProfileTab({
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('dash_activations')}</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                <span className="font-mono font-bold text-slate-900 dark:text-white tnum">
                   {stats?.activations || 0}
                   {stats?.attempts?.activations && stats.attempts.activations > (stats.activations || 0) && (
                     <span className="text-[10px] text-slate-400 font-normal ml-1">
@@ -624,16 +624,16 @@ export default function ProfileTab({
               </div>
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('dash_unique_parks')}</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">{stats?.uniqueParks || 0}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white tnum">{stats?.uniqueParks || 0}</span>
               </div>
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('dash_qsos')}</span>
-                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{stats?.qsos || 0}</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 tnum">{stats?.qsos || 0}</span>
               </div>
               {stats?.activations > 0 && stats?.qsos > 0 && (
                 <div className="flex justify-between text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800/60 text-[11px]">
                   <span>{language === 'RU' ? 'Среднее/выезд:' : 'Avg QSO/act:'}</span>
-                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300 tnum">
                     {((stats.qsos || 0) / Math.max(stats.activations || 1, 1)).toFixed(1)}
                   </span>
                 </div>
@@ -652,11 +652,11 @@ export default function ProfileTab({
             <div className="space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('profile_hunted_parks')}</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">{stats?.workedParks || 0}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white tnum">{stats?.workedParks || 0}</span>
               </div>
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{language === 'RU' ? 'Связей (QSO):' : 'Hunter QSOs:'}</span>
-                <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{stats?.dxcc || 0}</span>
+                <span className="font-mono font-bold text-blue-600 dark:text-blue-400 tnum">{stats?.dxcc || 0}</span>
               </div>
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{language === 'RU' ? 'Дипломов POTA:' : 'POTA Awards:'}</span>

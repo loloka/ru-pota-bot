@@ -206,9 +206,9 @@ export default function ParkModal({
 
             <p className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap">
               <span>{current.region || current.locationDesc || 'POTA'}</span>
-              {current.grid ? <span>• QTH: <b className="font-mono text-slate-300">{current.grid}</b></span> : null}
+              {current.grid ? <span>• QTH: <b className="font-mono text-slate-300 tnum">{current.grid}</b></span> : null}
               {current.lat && current.lon ? (
-                <span>• {Number(current.lat).toFixed(4)}, {Number(current.lon).toFixed(4)}</span>
+                <span className="font-mono tnum">• {Number(current.lat).toFixed(4)}, {Number(current.lon).toFixed(4)}</span>
               ) : null}
             </p>
           </div>
@@ -216,7 +216,7 @@ export default function ParkModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition"
+            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition active:scale-90 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -242,7 +242,7 @@ export default function ParkModal({
                     </span>
                   </div>
                   <p className="text-[11px] text-emerald-300 font-mono">
-                    {current.activeSpot.freq} MHz
+                    <span className="tnum font-bold">{current.activeSpot.freq}</span>&nbsp;MHz
                     {current.activeSpot.comments ? ` • ${current.activeSpot.comments}` : ''}
                   </p>
                 </div>
@@ -254,21 +254,21 @@ export default function ParkModal({
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/60">
               <span className="text-[10px] text-slate-400 block">{language === 'RU' ? 'Активаций' : 'Activations'}</span>
-              <span className="font-mono font-bold text-sm text-emerald-400">
+              <span className="font-mono font-bold text-sm text-emerald-400 tnum">
                 {current.activations || 0}
               </span>
             </div>
 
             <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/60">
               <span className="text-[10px] text-slate-400 block">{language === 'RU' ? 'Всего QSO' : 'Total QSOs'}</span>
-              <span className="font-mono font-bold text-sm text-cyan-400">
+              <span className="font-mono font-bold text-sm text-cyan-400 tnum">
                 {current.qsos || 0}
               </span>
             </div>
 
             <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/60">
               <span className="text-[10px] text-slate-400 block">{language === 'RU' ? 'Попыток' : 'Attempts'}</span>
-              <span className="font-mono font-bold text-sm text-amber-400">
+              <span className="font-mono font-bold text-sm text-amber-400 tnum">
                 {current.attempts || current.activations || 0}
               </span>
             </div>
@@ -755,7 +755,7 @@ export default function ParkModal({
             type="button"
             onClick={handleToggleSub}
             disabled={subscribing}
-            className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold transition active:scale-95 ${
+            className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-150 active:scale-96 cursor-pointer ${
               isSubscribed
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
@@ -782,7 +782,7 @@ export default function ParkModal({
               telegram.haptic.impact('medium');
               if (onOpenRoute) onOpenRoute(current);
             }}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-bold text-xs text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-glow-emerald transition active:scale-95"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl font-bold text-xs text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-glow-emerald transition-all duration-150 active:scale-96 cursor-pointer"
           >
             <Navigation className="w-4 h-4" />
             <span>{language === 'RU' ? 'Маршрут' : 'Directions'}</span>
@@ -795,7 +795,7 @@ export default function ParkModal({
               telegram.haptic.impact('light');
               if (onOpenOsmAnd) onOpenOsmAnd(current);
             }}
-            className="flex items-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition active:scale-95"
+            className="flex items-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all duration-150 active:scale-96 cursor-pointer"
             title="Офлайн гид OsmAnd"
           >
             <Smartphone className="w-4 h-4 text-amber-400" />
@@ -806,7 +806,7 @@ export default function ParkModal({
           <button
             type="button"
             onClick={handleCopyCoords}
-            className="p-2.5 rounded-xl text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition active:scale-95"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all duration-150 active:scale-96 cursor-pointer"
             title={copied ? 'Скопировано!' : 'Скопировать координаты'}
           >
             {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
@@ -817,7 +817,7 @@ export default function ParkModal({
             href={`https://next.pota.app/park/${parkRef}`}
             target="_blank"
             rel="noreferrer"
-            className="p-2.5 rounded-xl text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition active:scale-95"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all duration-150 active:scale-96 cursor-pointer"
             title="Открыть на next.pota.app"
           >
             <ExternalLink className="w-4 h-4" />

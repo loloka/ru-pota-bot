@@ -314,11 +314,19 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
           </div>
 
           {loadingPlans && plans.length === 0 ? (
-            <div className="p-10 text-center glass-card rounded-2xl space-y-2">
-              <RefreshCw className="w-6 h-6 mx-auto text-blue-500 animate-spin" />
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {language === 'RU' ? 'Загрузка официальных планов POTA...' : 'Loading official POTA schedules...'}
-              </p>
+            <div className="space-y-2.5">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="p-3.5 rounded-2xl glass-card space-y-2 animate-pulse border border-slate-200/50 dark:border-slate-800/80">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-4 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                      <div className="w-14 h-4 bg-blue-500/10 dark:bg-blue-500/20 rounded" />
+                    </div>
+                    <div className="w-16 h-4 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                  </div>
+                  <div className="w-4/5 h-3.5 bg-slate-200 dark:bg-slate-700/40 rounded" />
+                </div>
+              ))}
             </div>
           ) : plans.length === 0 ? (
             <div className="p-8 text-center glass-card rounded-2xl space-y-3">
@@ -477,9 +485,30 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
         )}
 
         {loading && spots.length === 0 ? (
-          <div className="p-10 text-center glass-card rounded-2xl space-y-2">
-            <RefreshCw className="w-6 h-6 mx-auto text-emerald-500 dark:text-emerald-400 animate-spin" />
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t('cluster_connecting')}</p>
+          <div className="space-y-2.5">
+            {[1, 2, 3].map((i) => (
+              <div 
+                key={i} 
+                className="p-3.5 rounded-2xl glass-card space-y-2.5 animate-pulse border border-slate-200/50 dark:border-slate-800/80"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-4 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                    <div className="w-24 h-5 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                    <div className="w-10 h-4 bg-blue-500/10 dark:bg-blue-500/20 rounded" />
+                  </div>
+                  <div className="w-16 h-5 bg-emerald-500/10 dark:bg-emerald-500/20 rounded" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-16 h-4 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                  <div className="w-3/5 h-4 bg-slate-200 dark:bg-slate-700/40 rounded" />
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <div className="w-20 h-3 bg-slate-200 dark:bg-slate-700/30 rounded" />
+                  <div className="w-24 h-3 bg-slate-200 dark:bg-slate-700/30 rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : spots.length === 0 ? (
           <div className="p-8 text-center glass-card rounded-2xl space-y-3">

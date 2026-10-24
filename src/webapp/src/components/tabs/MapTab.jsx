@@ -1260,17 +1260,17 @@ export default function MapTab({
               dismissLayersHint();
               setShowLayersSheet(true);
             }}
-            className="absolute right-12 top-0 z-30 flex items-center gap-2 px-3 py-2 rounded-2xl bg-emerald-600 text-white shadow-2xl border border-emerald-400 text-xs font-bold animate-pulse cursor-pointer whitespace-nowrap"
+            className="absolute right-12 top-0 z-30 flex items-center gap-2 px-3 py-2 rounded-2xl bg-emerald-600 text-white shadow-glow-emerald border border-emerald-400 text-xs font-bold cursor-pointer whitespace-nowrap animate-fade-in"
           >
-            <span>Тут вы можете настроить слои</span>
-            <span className="text-base animate-bounce">👉</span>
+            <span>{language === 'RU' ? 'Настроить слои RDA / RAZA' : 'Configure RDA / RAZA map layers'}</span>
+            <span className="text-base select-none">👉</span>
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 dismissLayersHint();
               }}
-              className="p-0.5 rounded-full hover:bg-emerald-700 text-emerald-100"
+              className="p-0.5 rounded-full hover:bg-emerald-700 text-emerald-100 transition active:scale-90 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -1285,8 +1285,8 @@ export default function MapTab({
             dismissLayersHint();
             setShowLayersSheet(true);
           }}
-          className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-300 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 shadow-xl hover:border-emerald-500/50 transition active:scale-95"
-          title="Слои карты и подложки"
+          className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-300 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 shadow-xl hover:border-emerald-500/50 transition-all duration-150 active:scale-96 cursor-pointer"
+          title={language === 'RU' ? 'Слои карты и подложки' : 'Map layers & basemap'}
         >
           <Layers className="w-4 h-4 text-emerald-500" />
         </button>
@@ -1298,8 +1298,8 @@ export default function MapTab({
             telegram.haptic.impact('light');
             setShowOsmAndModal(true);
           }}
-          className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-300 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 shadow-xl hover:border-amber-500/50 transition active:scale-95"
-          title="Офлайн-карты OsmAnd PlusM (APK)"
+          className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border border-slate-300 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 shadow-xl hover:border-amber-500/50 transition-all duration-150 active:scale-96 cursor-pointer"
+          title={language === 'RU' ? 'Офлайн-карты OsmAnd PlusM (APK)' : 'OsmAnd Offline Maps (APK)'}
         >
           <Smartphone className="w-4 h-4 text-amber-500" />
         </button>

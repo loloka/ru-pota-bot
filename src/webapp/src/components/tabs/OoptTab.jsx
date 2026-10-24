@@ -276,7 +276,7 @@ export default function OoptTab({ language = 'RU', t = (k) => k, onNavigateToMap
           title={t('oopt_stat_total')}
         >
           <div className="text-[10px] text-slate-400 font-medium">{t('oopt_stat_total')}</div>
-          <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+          <div className="text-sm font-extrabold text-slate-900 dark:text-white font-mono tnum">
             {stats?.total ? stats.total.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US') : '11 342'}
           </div>
         </div>
@@ -291,7 +291,7 @@ export default function OoptTab({ language = 'RU', t = (k) => k, onNavigateToMap
           title={t('oopt_stat_federal')}
         >
           <div className="text-[10px] text-purple-500 dark:text-purple-400 font-medium">{t('oopt_stat_federal')}</div>
-          <div className="text-sm font-extrabold text-purple-700 dark:text-purple-300">
+          <div className="text-sm font-extrabold text-purple-700 dark:text-purple-300 font-mono tnum">
             {stats?.federal ? stats.federal.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US') : '361'}
           </div>
         </div>
@@ -306,7 +306,7 @@ export default function OoptTab({ language = 'RU', t = (k) => k, onNavigateToMap
           title={t('oopt_stat_regional')}
         >
           <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">{t('oopt_stat_regional')}</div>
-          <div className="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">
+          <div className="text-sm font-extrabold text-emerald-700 dark:text-emerald-300 font-mono tnum">
             {stats?.regional ? stats.regional.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US') : '10 432'}
           </div>
         </div>
@@ -321,7 +321,7 @@ export default function OoptTab({ language = 'RU', t = (k) => k, onNavigateToMap
           title={t('oopt_stat_local')}
         >
           <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">{t('oopt_stat_local')}</div>
-          <div className="text-sm font-extrabold text-amber-700 dark:text-amber-300">
+          <div className="text-sm font-extrabold text-amber-700 dark:text-amber-300 font-mono tnum">
             {stats?.local ? stats.local.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US') : '549'}
           </div>
         </div>
@@ -338,7 +338,7 @@ export default function OoptTab({ language = 'RU', t = (k) => k, onNavigateToMap
           <div className={`text-[10px] font-bold ${potaFilter === 'in_pota' ? 'text-emerald-100' : 'text-emerald-600 dark:text-emerald-400'}`}>
             {t('oopt_stat_in_pota')}
           </div>
-          <div className={`text-sm font-extrabold ${potaFilter === 'in_pota' ? 'text-white' : 'text-emerald-700 dark:text-emerald-300'}`}>
+          <div className={`text-sm font-extrabold font-mono tnum ${potaFilter === 'in_pota' ? 'text-white' : 'text-emerald-700 dark:text-emerald-300'}`}>
             {stats?.inPota ? stats.inPota.toLocaleString(language === 'RU' ? 'ru-RU' : 'en-US') : '304'}
           </div>
         </div>
@@ -715,7 +715,7 @@ export default function OoptTab({ language = 'RU', t = (k) => k, onNavigateToMap
                   key={p}
                   type="button"
                   onClick={() => handlePageChange(p)}
-                  className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-semibold transition-all ${
+                  className={`min-w-[32px] h-8 px-2 rounded-lg text-xs font-semibold font-mono tnum transition-all duration-150 active:scale-96 cursor-pointer ${
                     isCurrent
                       ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                       : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
@@ -731,7 +731,7 @@ export default function OoptTab({ language = 'RU', t = (k) => k, onNavigateToMap
               type="button"
               disabled={page === totalPages}
               onClick={() => handlePageChange(page + 1)}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-slate-700"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-150 active:scale-96 cursor-pointer"
               title={t('oopt_pagination_next')}
             >
               <ChevronRight className="w-4 h-4" />
@@ -742,7 +742,7 @@ export default function OoptTab({ language = 'RU', t = (k) => k, onNavigateToMap
               type="button"
               disabled={page === totalPages}
               onClick={() => handlePageChange(totalPages)}
-              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-slate-700"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-150 active:scale-96 cursor-pointer"
               title={t('oopt_pagination_last')}
             >
               <ChevronsRight className="w-4 h-4" />
@@ -759,12 +759,12 @@ export default function OoptTab({ language = 'RU', t = (k) => k, onNavigateToMap
               value={jumpPage}
               onChange={(e) => setJumpPage(e.target.value)}
               placeholder={String(page)}
-              className="w-16 px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-center font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-16 px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-center font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 tnum transition-all"
             />
-            <span>{t('oopt_from')} {totalPages}</span>
+            <span>{t('oopt_from')} <span className="font-mono tnum">{totalPages}</span></span>
             <button
               type="submit"
-              className="px-2.5 py-1 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 active:scale-95 transition-all"
+              className="px-2.5 py-1 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-all duration-150 active:scale-96 cursor-pointer"
             >
               {t('oopt_jump_ok')}
             </button>

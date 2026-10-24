@@ -433,9 +433,9 @@ export default function DashboardTab({
 
             <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 space-y-1">
               <div className="flex items-center justify-between">
-                <span className="font-mono font-bold text-lg text-slate-900 dark:text-white">{effectiveActiveSpot.reference}</span>
-                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                  {getDisplayFreq(effectiveActiveSpot)} MHz {effectiveActiveSpot.mode}
+                <span className="font-mono font-bold text-lg text-slate-900 dark:text-white tnum">{effectiveActiveSpot.reference}</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 tnum">
+                  {getDisplayFreq(effectiveActiveSpot)}&nbsp;MHz {effectiveActiveSpot.mode}
                 </span>
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300 truncate">
@@ -444,7 +444,7 @@ export default function DashboardTab({
               </p>
               {effectiveActiveSpot.comment && (
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 italic truncate">
-                  "{effectiveActiveSpot.comment}"
+                  {language === 'RU' ? `«${effectiveActiveSpot.comment}»` : `“${effectiveActiveSpot.comment}”`}
                 </p>
               )}
             </div>
@@ -654,10 +654,10 @@ export default function DashboardTab({
                     highlightCallsign: st.callsign 
                   });
                 }}
-                className="min-w-[185px] p-3 rounded-xl glass-card hover:border-emerald-500/50 cursor-pointer transition active:scale-95 select-none shrink-0"
+                className={`min-w-[185px] p-3 rounded-xl glass-card hover:border-emerald-500/50 cursor-pointer select-none shrink-0 ${
+                  isGrabbing ? 'pointer-events-none' : 'active:scale-96 transition-all duration-150'
+                }`}
               >
-
-
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm select-none">{st.country}</span>
@@ -669,7 +669,7 @@ export default function DashboardTab({
                 </div>
                 <div className="mt-1 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-mono font-medium truncate">
                   <MapPin className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{st.park}</span>
+                  <span className="truncate tnum">{st.park}</span>
                   {st.parkName && (
                     <span className="text-slate-500 dark:text-slate-400 font-sans font-normal text-[11px] truncate">
                       • {st.parkName}
@@ -677,8 +677,8 @@ export default function DashboardTab({
                   )}
                 </div>
                 <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                  <span>{st.freq} MHz</span>
-                  <span className="text-[10px]">{formatTimeAgoLocale(st.diffMinutes, st.timeAgo, language)}</span>
+                  <span className="tnum font-semibold">{st.freq}&nbsp;MHz</span>
+                  <span className="text-[10px] tnum">{formatTimeAgoLocale(st.diffMinutes, st.timeAgo, language)}</span>
                 </div>
 
               </div>
@@ -704,7 +704,7 @@ export default function DashboardTab({
             }
             onNavigate('profile');
           }}
-          className="p-3.5 rounded-2xl glass-card hover:border-emerald-500/40 cursor-pointer transition active:scale-95"
+          className="p-3.5 rounded-2xl glass-card hover:border-emerald-500/40 cursor-pointer transition-all duration-150 active:scale-96"
         >
           <div className="flex items-center justify-between">
             <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -717,15 +717,15 @@ export default function DashboardTab({
             <div className="mt-2 space-y-1 text-[11px]">
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('dash_activations')}</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">{stats?.activations || 0}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white tnum">{stats?.activations || 0}</span>
               </div>
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('dash_unique_parks')}</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">{stats?.uniqueParks || 0}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white tnum">{stats?.uniqueParks || 0}</span>
               </div>
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('dash_qsos')}</span>
-                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{stats?.qsos || 0}</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 tnum">{stats?.qsos || 0}</span>
               </div>
             </div>
           ) : (
@@ -750,7 +750,7 @@ export default function DashboardTab({
             }
             onNavigate('subscriptions');
           }}
-          className="p-3.5 rounded-2xl glass-card hover:border-blue-500/40 cursor-pointer transition active:scale-95"
+          className="p-3.5 rounded-2xl glass-card hover:border-blue-500/40 cursor-pointer transition-all duration-150 active:scale-96"
         >
           <div className="flex items-center justify-between">
             <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
@@ -763,7 +763,7 @@ export default function DashboardTab({
             <div className="mt-2 space-y-1 text-[11px]">
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('dash_total_subs')}</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">{subscriptionsCount}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white tnum">{subscriptionsCount}</span>
               </div>
               <div className="flex justify-between text-slate-500 dark:text-slate-400">
                 <span>{t('dash_dm_alerts')}</span>
@@ -783,8 +783,8 @@ export default function DashboardTab({
       {/* Spot Modal */}
       {spotModalOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => !submitting && setSpotModalOpen(false)} />
-          <div className="relative w-full max-w-sm glass-card rounded-2xl p-5 shadow-2xl space-y-4 animate-slide-up">
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm animate-fade-in" onClick={() => !submitting && setSpotModalOpen(false)} />
+          <div className="relative w-full max-w-sm glass-card rounded-2xl p-5 shadow-2xl space-y-4 animate-scale-in">
             <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
               <h3 className="font-bold text-slate-900 dark:text-white text-base">
                 {isEditingActiveSpot ? t('modal_edit_spot_title') : t('modal_spot_title')}
@@ -822,7 +822,7 @@ export default function DashboardTab({
                     type="text" 
                     value={operatorCallsign}
                     onChange={(e) => setOperatorCallsign(e.target.value.toUpperCase())}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:border-emerald-500 outline-none text-sm font-bold tracking-wider"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none text-sm font-bold tracking-wider transition-all duration-150"
                     placeholder={user?.callsign || "R9OGL"}
                     required
                   />
@@ -844,7 +844,7 @@ export default function DashboardTab({
                   type="text" 
                   value={parkRef}
                   onChange={(e) => setParkRef(e.target.value.toUpperCase())}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:border-emerald-500 outline-none"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all duration-150"
                   placeholder="RU-0073"
                   required
                 />
@@ -857,7 +857,7 @@ export default function DashboardTab({
                     type="text" 
                     value={freq}
                     onChange={(e) => setFreq(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono focus:border-emerald-500 outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all duration-150"
                     placeholder="14144 / 14.144"
                     required
                   />
@@ -867,7 +867,7 @@ export default function DashboardTab({
                   <select 
                     value={mode}
                     onChange={(e) => setMode(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-medium focus:border-emerald-500 outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-medium focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all duration-150"
                   >
                     <option value="SSB">SSB</option>
                     <option value="CW">CW</option>
@@ -886,7 +886,7 @@ export default function DashboardTab({
                     type="text" 
                     value={rda}
                     onChange={(e) => setRda(e.target.value.toUpperCase())}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:border-emerald-500 outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white font-mono uppercase focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all duration-150"
                     placeholder="NS-03 / MA-01"
                   />
                 </div>
@@ -896,7 +896,7 @@ export default function DashboardTab({
                     type="text" 
                     value={pwr}
                     onChange={(e) => setPwr(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:border-emerald-500 outline-none"
+                    className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all duration-150"
                     placeholder={t('modal_pwr_ph')}
                   />
                 </div>
@@ -908,7 +908,7 @@ export default function DashboardTab({
                   type="text" 
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:border-emerald-500 outline-none"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all duration-150"
                   placeholder={t('modal_comment_ph')}
                 />
               </div>

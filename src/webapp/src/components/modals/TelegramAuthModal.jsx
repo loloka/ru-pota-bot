@@ -209,7 +209,7 @@ export default function TelegramAuthModal({
               <div className="leading-tight">
                 <p className="font-bold">{isRu ? 'Ожидание нажатия Start в боте...' : 'Waiting for Start in Telegram...'}</p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  {isRu ? 'Откройте бота и нажмите "Начать" внизу экрана' : 'Open bot and tap "Start" button'}
+                  {isRu ? 'Откройте бота и нажмите «Запустить» внизу экрана' : 'Open bot and tap "Start" button'}
                 </p>
               </div>
             </div>
@@ -235,7 +235,7 @@ export default function TelegramAuthModal({
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="123456"
-                className="w-full text-center tracking-[0.4em] font-mono text-base font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl py-2 px-3 text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:tracking-normal focus:border-sky-500 outline-none"
+                className="w-full text-center tracking-[0.4em] font-mono text-base font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl py-2 px-3 text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:tracking-normal focus:border-sky-500 focus:ring-2 focus:ring-sky-500/25 outline-none transition-all duration-150 tnum"
               />
               <span className="absolute left-3 top-2.5 text-slate-400 pointer-events-none">
                 <KeyRound className="w-4 h-4" />
@@ -258,7 +258,7 @@ export default function TelegramAuthModal({
             <button
               type="submit"
               disabled={code.length !== 6 || verifyingCode || codeSuccess}
-              className="w-full py-2 px-4 rounded-xl font-bold text-xs text-white bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 border border-slate-600 transition active:scale-95 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full py-2 px-4 rounded-xl font-bold text-xs text-white bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 border border-slate-600 transition-all duration-150 active:scale-96 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1.5"
             >
               {verifyingCode ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />

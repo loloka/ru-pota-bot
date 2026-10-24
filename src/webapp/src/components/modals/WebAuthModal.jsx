@@ -183,7 +183,7 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
                     value={callsign}
                     onChange={(e) => setCallsign(e.target.value.toUpperCase().replace(/[\/\\ ]/g, ''))}
                     placeholder="R9OGL"
-                    className="w-full bg-slate-200/60 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 font-mono font-bold uppercase focus:border-emerald-500/60 outline-none"
+                    className="w-full bg-slate-200/60 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 font-mono font-bold uppercase focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all duration-150"
                     required
                     autoFocus
                   />
@@ -201,7 +201,7 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
                     value={email}
                     onChange={(e) => setEmail(e.target.value.trim())}
                     placeholder="operator@example.com"
-                    className="w-full bg-slate-200/60 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:border-emerald-500/60 outline-none font-sans"
+                    className="w-full bg-slate-200/60 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none font-sans transition-all duration-150"
                     required
                   />
                 </div>
@@ -283,7 +283,7 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
                   }
                 }}
                 placeholder="123456"
-                className="w-full bg-slate-200/80 dark:bg-slate-900/90 border-2 border-emerald-500/50 rounded-2xl py-3 text-center text-2xl tracking-[12px] font-mono font-black text-emerald-600 dark:text-emerald-400 focus:border-emerald-500 outline-none shadow-glow-pill"
+                className="w-full bg-slate-200/80 dark:bg-slate-900/90 border-2 border-emerald-500/50 rounded-2xl py-3 text-center text-2xl tracking-[12px] font-mono font-black text-emerald-600 dark:text-emerald-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 outline-none shadow-glow-pill transition-all duration-150 tnum"
                 required
                 autoFocus
               />
@@ -293,7 +293,7 @@ export default function WebAuthModal({ isOpen, onClose, onSuccess, language = 'R
               <button
                 type="submit"
                 disabled={loading || code.length < 6}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-slate-950 bg-emerald-400 hover:bg-emerald-300 disabled:opacity-50 shadow-glow-emerald transition active:scale-95 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm text-slate-950 bg-emerald-400 hover:bg-emerald-300 disabled:opacity-50 shadow-glow-emerald transition-all duration-150 active:scale-96 cursor-pointer"
               >
                 {loading ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />

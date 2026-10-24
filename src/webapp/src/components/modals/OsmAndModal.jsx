@@ -279,7 +279,7 @@ export default function OsmAndModal({ onClose, language = 'RU' }) {
                       <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
                         {layer.name}
                       </span>
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 tnum">
                         {layer.code}
                       </span>
                     </div>

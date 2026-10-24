@@ -309,7 +309,7 @@ export default function ProfileTab({
                   </span>
                 )}
                 {stats?.grid && (
-                  <span className="inline-flex items-center gap-1 font-mono font-bold px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-[10px]">
+                  <span className="inline-flex items-center gap-1 font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-[10px] tnum">
                     <Compass className="w-2.5 h-2.5" />
                     <span>{stats.grid}</span>
                   </span>
@@ -471,7 +471,7 @@ export default function ProfileTab({
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <h4 className="text-xs font-bold text-slate-900 dark:text-white">Telegram-аккаунт</h4>
-                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
                         {language === 'RU' ? 'Привязан ✅' : 'Connected ✅'}
                       </span>
                     </div>
@@ -526,7 +526,7 @@ export default function ProfileTab({
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-bold text-slate-900 dark:text-white font-mono truncate">{user.email}</span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
                     {language === 'RU' ? 'Подтверждён ✅' : 'Verified ✅'}
                   </span>
                 </div>
@@ -710,7 +710,7 @@ export default function ProfileTab({
                       {award.endorsements.map(end => (
                         <span 
                           key={end} 
-                          className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25"
+                          className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25"
                         >
                           <Sparkles className="w-2.5 h-2.5 text-emerald-500" />
                           <span>{end}</span>
@@ -773,7 +773,7 @@ export default function ProfileTab({
                         <span>{act.reference}</span>
                       </button>
                       {act.location && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
                           {act.location}
                         </span>
                       )}

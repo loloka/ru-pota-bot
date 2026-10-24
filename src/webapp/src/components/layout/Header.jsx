@@ -77,7 +77,7 @@ export default function Header({
             <button
               type="button"
               onClick={() => handleAction(onToggleTheme)}
-              className="relative p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-colors active:scale-95"
+              className="relative min-w-[38px] min-h-[38px] p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-all duration-150 active:scale-96 flex items-center justify-center cursor-pointer"
               title={language === 'RU' ? 'Переключить тему' : 'Toggle Theme'}
               aria-label={language === 'RU' ? 'Переключить тему' : 'Toggle Theme'}
             >
@@ -97,13 +97,13 @@ export default function Header({
                   onOpenSubscriptions();
                 }
               }}
-              className="relative p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-colors active:scale-95"
+              className="relative min-w-[38px] min-h-[38px] p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-all duration-150 active:scale-96 flex items-center justify-center cursor-pointer"
               title={language === 'RU' ? 'Входящие споты и подписки' : 'Alerts & Subscriptions'}
               aria-label={language === 'RU' ? 'Входящие споты и подписки' : 'Alerts & Subscriptions'}
             >
               <Bell className="w-4 h-4" />
               {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-md animate-pulse">
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-mono font-bold text-white shadow-md tnum">
                   {notificationCount > 99 ? '99+' : notificationCount}
                 </span>
               )}
@@ -113,7 +113,7 @@ export default function Header({
             <button
               type="button"
               onClick={() => handleAction(onToggleLanguage)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-colors active:scale-95"
+              className="flex items-center gap-1 min-h-[38px] px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-all duration-150 active:scale-96 cursor-pointer"
               title={language === 'RU' ? 'Сменить язык' : 'Switch Language'}
               aria-label={language === 'RU' ? 'Сменить язык' : 'Switch Language'}
             >
@@ -128,7 +128,7 @@ export default function Header({
                 handleAction();
                 setMenuOpen(true);
               }}
-              className="p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-colors active:scale-95 ml-0.5"
+              className="min-w-[38px] min-h-[38px] p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-200/70 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/60 transition-all duration-150 active:scale-96 flex items-center justify-center cursor-pointer ml-0.5"
               title={language === 'RU' ? 'Меню' : 'Menu'}
               aria-label={language === 'RU' ? 'Меню' : 'Menu'}
             >
@@ -143,12 +143,12 @@ export default function Header({
         <div className="fixed inset-0 z-50 flex">
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity" 
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm animate-fade-in" 
             onClick={() => setMenuOpen(false)} 
           />
-          {/* Drawer Content */}
+          {/* Drawer Content - Tactical slide from right */}
           <div 
-            className="relative ml-auto w-4/5 max-w-sm h-full bg-white dark:bg-[#0d1424] border-l border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between shadow-2xl animate-slide-up"
+            className="relative ml-auto w-4/5 max-w-sm h-full bg-white dark:bg-[#0d1424] border-l border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between shadow-2xl animate-drawer-right"
             style={{ paddingTop: 'calc(var(--app-safe-top, 0px) + 1.5rem)' }}
           >
             <div>
@@ -308,10 +308,10 @@ export default function Header({
                         <span className="text-base select-none">📻</span>
                         <div>
                           <span className="font-bold text-emerald-700 dark:text-emerald-400 block leading-tight">
-                            {language === 'RU' ? 'MorseWave (Тренажер Морзе)' : 'MorseWave (Morse Code Trainer)'}
+                            {language === 'RU' ? '«MorseWave» — тренажёр Морзе' : 'MorseWave (Morse Code Trainer)'}
                           </span>
                           <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                            {language === 'RU' ? 'morse.r9old.ru • Обучение приёму с нуля' : 'morse.r9old.ru • Beginner CW copying & ear training'}
+                            {language === 'RU' ? 'morse.r9old.ru — обучение приёму с нуля' : 'morse.r9old.ru • Beginner CW copying & ear training'}
                           </span>
                         </div>
                       </div>
@@ -329,10 +329,10 @@ export default function Header({
                         <span className="text-base select-none">⚡</span>
                         <div>
                           <span className="font-bold text-blue-700 dark:text-blue-400 block leading-tight">
-                            {language === 'RU' ? 'MorseWalker (CW Pro: Пайлапы и POTA)' : 'MorseWalker (CW Pro: Pileup & POTA)'}
+                            {language === 'RU' ? '«MorseWalker» — CW Pro: пайлапы и POTA' : 'MorseWalker (CW Pro: Pileup & POTA)'}
                           </span>
                           <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                            {language === 'RU' ? 'morse.r9o.ru • Режим передачи парков' : 'morse.r9o.ru • Park activator pileup simulator'}
+                            {language === 'RU' ? 'morse.r9o.ru — симулятор активатора парков' : 'morse.r9o.ru • Park activator pileup simulator'}
                           </span>
                         </div>
                       </div>

@@ -237,7 +237,7 @@ export default function ParkModal({
                     <span className="font-mono font-extrabold text-sm text-white">
                       {current.activeSpot.callsign}
                     </span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/30 text-emerald-300 font-mono">
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 font-mono">
                       {current.activeSpot.mode}
                     </span>
                   </div>
@@ -287,7 +287,7 @@ export default function ParkModal({
                   <span className="font-bold text-xs text-white">
                     {language === 'RU' ? 'Ваша активность в парке' : 'Your park activity'}
                   </span>
-                  <span className="font-mono font-extrabold text-xs px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <span className="font-mono font-extrabold text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                     {userCallsign}
                   </span>
                 </div>
@@ -511,7 +511,7 @@ export default function ParkModal({
                             >
                               <span>{item.callsign}</span>
                               {isCurrentUser && (
-                                <span className="text-[9px] font-sans font-bold px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950">
+                                <span className="text-[9px] font-sans font-bold px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950">
                                   {language === 'RU' ? 'ВЫ' : 'YOU'}
                                 </span>
                               )}
@@ -610,9 +610,9 @@ export default function ParkModal({
 
                           {/* Modes breakdown */}
                           <div className="flex items-center gap-1.5 text-[9px] font-mono text-slate-400 mt-1">
-                            {act.cw > 0 && <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300">CW:{act.cw}</span>}
-                            {act.data > 0 && <span className="px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-300">FT8:{act.data}</span>}
-                            {act.phone > 0 && <span className="px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300">SSB:{act.phone}</span>}
+                            {act.cw > 0 && <span className="px-1 py-0.5 rounded bg-amber-500/20 text-amber-300 tnum">CW:{act.cw}</span>}
+                            {act.data > 0 && <span className="px-1 py-0.5 rounded bg-cyan-500/20 text-cyan-300 tnum">FT8:{act.data}</span>}
+                            {act.phone > 0 && <span className="px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-300 tnum">SSB:{act.phone}</span>}
                           </div>
                         </div>
 

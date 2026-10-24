@@ -497,7 +497,7 @@ export default function PotaLookupWidget({
                   >
                     <Car className="w-3.5 h-3.5" />
                     <span>{language === 'RU' ? 'Поездки' : 'Activations'}</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-mono">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-mono tnum">
                       {callsignData.recentActivations.length}
                     </span>
                   </button>
@@ -518,7 +518,7 @@ export default function PotaLookupWidget({
                   >
                     <Radio className="w-3.5 h-3.5" />
                     <span>{language === 'RU' ? 'Охотник' : 'Hunter'}</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-400 font-mono">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-400 font-mono tnum">
                       {callsignData.recentHunts.length}
                     </span>
                   </button>
@@ -618,9 +618,9 @@ export default function PotaLookupWidget({
                                   {act.park}
                                 </p>
                                 <div className="flex items-center gap-1 text-[9px] font-mono text-slate-500 shrink-0">
-                                  {act.cw > 0 && <span className="bg-slate-100 dark:bg-slate-700/60 px-1 py-0.2 rounded">CW:{act.cw}</span>}
-                                  {act.data > 0 && <span className="bg-slate-100 dark:bg-slate-700/60 px-1 py-0.2 rounded">FT8:{act.data}</span>}
-                                  {act.phone > 0 && <span className="bg-slate-100 dark:bg-slate-700/60 px-1 py-0.2 rounded">SSB:{act.phone}</span>}
+                                  {act.cw > 0 && <span className="bg-slate-100 dark:bg-slate-700/60 px-1 py-0.5 rounded tnum">CW:{act.cw}</span>}
+                                  {act.data > 0 && <span className="bg-slate-100 dark:bg-slate-700/60 px-1 py-0.5 rounded tnum">FT8:{act.data}</span>}
+                                  {act.phone > 0 && <span className="bg-slate-100 dark:bg-slate-700/60 px-1 py-0.5 rounded tnum">SSB:{act.phone}</span>}
                                 </div>
                               </div>
                             </div>
@@ -670,7 +670,7 @@ export default function PotaLookupWidget({
                                 <span className="font-mono font-bold text-slate-900 dark:text-white">
                                   {hunt.callsign}
                                 </span>
-                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono font-bold">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 font-mono font-bold tnum">
                                   {hunt.band} {hunt.mode}
                                 </span>
                               </div>

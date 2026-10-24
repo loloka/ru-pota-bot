@@ -419,7 +419,7 @@ export default function SubscriptionsTab({
           <Bell className="w-4 h-4" />
           <span>{t('subs_feed_tab')}</span>
           {unreadNotifsCount > 0 && (
-            <span className="min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">
+            <span className="min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-mono font-bold rounded-full flex items-center justify-center shadow-sm tnum">
               {unreadNotifsCount > 99 ? '99+' : unreadNotifsCount}
             </span>
           )}
@@ -440,7 +440,7 @@ export default function SubscriptionsTab({
           <Sparkles className="w-4 h-4" />
           <span>{t('subs_rules_tab')}</span>
           {totalRulesCount > 0 && (
-            <span className="min-w-[18px] h-[18px] px-1 bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold rounded-full flex items-center justify-center">
+            <span className="min-w-[18px] h-[18px] px-1 bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-mono font-bold rounded-full flex items-center justify-center tnum">
               {totalRulesCount}
             </span>
           )}
@@ -596,8 +596,8 @@ export default function SubscriptionsTab({
                       {(notif.frequency || notif.mode) && (
                         <div className="text-right shrink-0">
                           {notif.frequency && (
-                            <div className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                              {notif.frequency} kHz
+                            <div className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 tnum">
+                              {notif.frequency}&nbsp;kHz
                             </div>
                           )}
                           {notif.mode && (

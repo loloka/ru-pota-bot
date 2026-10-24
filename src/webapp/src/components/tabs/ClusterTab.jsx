@@ -552,13 +552,13 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
                     )}
                   </div>
 
-                  <div className="text-right">
-                    <span className={`font-mono font-extrabold text-sm ${
-                      isFocused ? 'text-emerald-700 dark:text-emerald-300 text-base' : 'text-emerald-600 dark:text-emerald-400'
+                  <div className="text-right shrink-0">
+                    <span className={`font-mono font-extrabold text-sm tracking-tight tnum ${
+                      isFocused ? 'text-emerald-700 dark:text-emerald-300' : 'text-emerald-600 dark:text-emerald-400'
                     }`}>
-                      {spot.freq} MHz
+                      {spot.freq}&nbsp;<span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">MHz</span>
                     </span>
-                    <span className="block text-[10px] text-slate-500 dark:text-slate-400">
+                    <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-mono tnum">
                       {formatTimeAgoLocale(spot.diffMinutes, spot.timeAgo, language)}
                     </span>
                   </div>
@@ -572,7 +572,7 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
                 }`}>
                   <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-800 dark:text-emerald-300">
                     <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span className="bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                    <span className="bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 tnum">
                       {spot.park}
                     </span>
                     {spot.parkName && (
@@ -605,7 +605,7 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
                     {spot.grid && (
                       <>
                         <span className="text-slate-300 dark:text-slate-600 select-none">•</span>
-                        <span className="inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300/80 dark:border-slate-700 shrink-0">
+                        <span className="inline-flex items-center gap-1 font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300/80 dark:border-slate-700 shrink-0 tnum">
                           🧭 {spot.grid}
                         </span>
                       </>
@@ -617,9 +617,9 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
                 {spot.comment && (
                   <div className="flex items-start gap-1.5 text-xs text-slate-700 dark:text-slate-300">
                     <MessageSquare className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
-                    <span className="italic truncate">"{spot.comment}"</span>
+                    <span className="italic truncate">{language === 'RU' ? `«${spot.comment}»` : `“${spot.comment}”`}</span>
                     {spot.spotter && (
-                      <span className="text-slate-400 dark:text-slate-500 text-[11px] font-mono shrink-0 ml-auto">
+                      <span className="text-slate-400 dark:text-slate-500 text-[11px] font-mono shrink-0 ml-auto tnum">
                         {t('cluster_by')} {spot.spotter}
                       </span>
                     )}
@@ -648,10 +648,10 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
                             e.stopPropagation();
                             handleUnsubscribe(spot.callsign);
                           }}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-rose-700 dark:text-rose-300 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 transition shadow-sm"
+                          className="flex items-center gap-1.5 min-h-[32px] px-3 py-1 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 transition-all duration-150 active:scale-96 shadow-sm cursor-pointer"
                           title={language === 'RU' ? 'Отписаться от позывного' : 'Unfollow callsign'}
                         >
-                          <BellOff className="w-3 h-3 text-rose-500 shrink-0" />
+                          <BellOff className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                           <span>{t('cluster_unfollow_btn')}</span>
                         </button>
                       ) : (
@@ -661,10 +661,10 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
                             e.stopPropagation();
                             handleSubscribe(spot.callsign);
                           }}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-white/80 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition"
+                          className="flex items-center gap-1.5 min-h-[32px] px-3 py-1 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-300 bg-white/80 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition-all duration-150 active:scale-96 cursor-pointer"
                           title={language === 'RU' ? 'Следить за позывным' : 'Follow callsign'}
                         >
-                          <Bell className="w-3 h-3 text-amber-500 dark:text-amber-400 shrink-0" />
+                          <Bell className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
                           <span>{t('cluster_follow_btn')}</span>
                         </button>
                       );
@@ -677,10 +677,10 @@ export default function ClusterTab({ user, onNavigate, onRequireAuth, clusterFil
                         telegram.haptic.impact('light');
                         onNavigate('map', { focusParkRef: spot.park, spotTarget: spot });
                       }}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 transition"
+                      className="flex items-center gap-1.5 min-h-[32px] px-3 py-1 rounded-xl text-xs font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 transition-all duration-150 active:scale-96 cursor-pointer"
                       title={language === 'RU' ? 'Показать парк на карте' : 'Show park on map'}
                     >
-                      <Compass className="w-3 h-3" />
+                      <Compass className="w-3.5 h-3.5" />
                       <span>{t('cluster_on_map_btn')}</span>
                     </button>
                   </div>

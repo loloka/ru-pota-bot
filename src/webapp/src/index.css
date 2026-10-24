@@ -30,10 +30,20 @@
     background-color: #f1f5f9;
     color: #0f172a;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
     transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  /* Tactical Tabular numbers for radio frequencies, clocks, and coordinates */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
   }
 
   .dark body,
@@ -175,21 +185,38 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Focused / Selected Spot Card styling for Light & Dark themes */
+/* Focused / Selected Spot Card styling with ZERO layout shift */
 .spot-card-focused {
+  position: relative;
+  overflow: hidden;
   background: #ecfdf5 !important;
-  border: 2px solid #059669 !important;
-  border-left: 6px solid #059669 !important;
-  box-shadow: 0 10px 25px -4px rgba(5, 150, 105, 0.25), 0 4px 6px -2px rgba(5, 150, 105, 0.15) !important;
+  border-color: #059669 !important;
+  box-shadow: 0 0 0 1px #059669, 0 10px 25px -4px rgba(5, 150, 105, 0.25) !important;
   transform: translateY(-2px);
+}
+
+.spot-card-focused::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: #059669;
+  border-top-left-radius: inherit;
+  border-bottom-left-radius: inherit;
 }
 
 .dark .spot-card-focused {
   background: rgba(16, 185, 129, 0.12) !important;
-  border: 2px solid #10b981 !important;
-  border-left: 6px solid #10b981 !important;
-  box-shadow: 0 0 25px -2px rgba(16, 185, 129, 0.45), inset 0 0 15px rgba(16, 185, 129, 0.08) !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 1px #10b981, 0 0 25px -2px rgba(16, 185, 129, 0.45), inset 0 0 15px rgba(16, 185, 129, 0.08) !important;
   transform: translateY(-2px);
+}
+
+.dark .spot-card-focused::before {
+  background-color: #10b981;
+  box-shadow: 0 0 10px #10b981;
 }
 
 

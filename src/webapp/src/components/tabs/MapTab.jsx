@@ -1102,7 +1102,7 @@ export default function MapTab({
             <Radio className="w-3.5 h-3.5" />
             <span>{language === 'RU' ? 'В эфире' : 'On Air'}</span>
             {activeCount > 0 && (
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold tnum ${
                 filterActiveOnly ? 'bg-slate-950 text-emerald-400' : 'bg-emerald-500 text-slate-950'
               }`}>
                 {activeCount}

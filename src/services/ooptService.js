@@ -563,38 +563,92 @@ export function getRegionSqlCondition(regionStr, alias = '') {
   if (!regionStr || !regionStr.trim()) return null;
   const colAte = alias ? `${alias}.ate` : 'ate';
   const colRf = alias ? `${alias}.rf_subjects` : 'rf_subjects';
+  const colTitle = alias ? `${alias}.title` : 'title';
   const reg = regionStr.trim();
   const canonicalName = POTA_LOCATION_CANONICAL[reg.toUpperCase()] || reg;
   const lower = canonicalName.toLowerCase();
+  const code = reg.toUpperCase();
 
+  // 1. Special DXCC / Island entity: Franz Josef Land (RU-FJ)
+  if (lower.includes('франца-иосифа') || lower.includes('русская арктика') || code === 'RU-FJ') {
+    return {
+      sql: `(${colTitle} LIKE '%Франца-Иосифа%' OR ${colTitle} LIKE '%Русская Арктика%' OR ${colAte} LIKE '%Франца-Иосифа%' OR ${colRf} LIKE '%Франца-Иосифа%')`,
+      params: []
+    };
+  }
+
+  // 2. Altai Krai vs Altai Republic collision protection
+  if (lower.includes('алтайский') || code === 'RU-AL') {
+    return { sql: `${colAte} LIKE '%Алтайский%'`, params: [] };
+  }
+  if (lower.includes('республика алтай') || lower === 'алтай' || code === 'RU-GA') {
+    return {
+      sql: `(${colAte} LIKE '%Республика Алтай%' OR ${colAte} LIKE '%Алтай Респ%' OR (${colAte} LIKE '%Алтай%' AND ${colAte} NOT LIKE '%Алтайский%'))`,
+      params: []
+    };
+  }
+
+  // 3. Sakhalin vs Sakha (Yakutia) substring collision protection
+  if (lower.includes('сахалин') || code === 'RU-SL') {
+    return { sql: `${colAte} LIKE '%Сахалин%'`, params: [] };
+  }
+  if (lower.includes('якутия') || lower.includes('саха') || code === 'RU-SK') {
+    return {
+      sql: `(${colAte} LIKE '%Якутия%' OR (${colAte} LIKE '%Саха%' AND ${colAte} NOT LIKE '%Сахалин%'))`,
+      params: []
+    };
+  }
+
+  // 4. Novgorod vs Nizhny Novgorod collision & "город" stripping protection
+  if (lower.includes('нижегород') || code === 'RU-NZ') {
+    return { sql: `${colAte} LIKE '%Нижегород%'`, params: [] };
+  }
+  if (lower.includes('новгород') || code === 'RU-NG') {
+    return { sql: `(${colAte} LIKE '%Новгород%' AND ${colAte} NOT LIKE '%Нижегород%')`, params: [] };
+  }
+  if (lower.includes('белгород') || code === 'RU-BL') {
+    return { sql: `${colAte} LIKE '%Белгород%'`, params: [] };
+  }
+
+  // 5. Nenets vs Yamalo-Nenets
   if (lower.includes('ненецк') && !lower.includes('ямал')) {
     return { sql: `(${colAte} LIKE '%Ненецк%' AND ${colAte} NOT LIKE '%Ямал%')`, params: [] };
   }
   if (lower.includes('ямал')) {
     return { sql: `(${colAte} LIKE '%Ямал%' OR ${colAte} LIKE '%Ямало-Ненецк%')`, params: [] };
   }
-  if (lower.includes('ханты-мансийск') || reg.toUpperCase() === 'RU-KM') {
+
+  // 6. Khanty-Mansiysk
+  if (lower.includes('ханты-мансийск') || code === 'RU-KM') {
     return { sql: `${colAte} LIKE '%Ханты-Мансийск%'`, params: [] };
   }
+
+  // 7. Omsk vs Tomsk vs Kostroma
   if (lower.includes('омск') && !lower.includes('томск') && !lower.includes('костром')) {
     return { sql: `(${colAte} LIKE '%Омск%' AND ${colAte} NOT LIKE '%Томск%' AND ${colAte} NOT LIKE '%Костром%')`, params: [] };
   }
+
+  // 8. Moscow vs Moscow Oblast
   if (lower.startsWith('москва') && !lower.includes('московская')) {
     return { sql: `(${colAte} LIKE '%Москва%' AND ${colAte} NOT LIKE '%Московская%')`, params: [] };
   }
+  if (lower.includes('московская')) {
+    return { sql: `${colAte} LIKE '%Московская%'`, params: [] };
+  }
+
+  // 9. St. Petersburg vs Leningrad Oblast
   if (lower.includes('санкт-петербург') && !lower.includes('ленинградская')) {
     return { sql: `(${colAte} LIKE '%Санкт-Петербург%' AND ${colAte} NOT LIKE '%Ленинградская%')`, params: [] };
   }
   if (lower.includes('ленинградская')) {
     return { sql: `${colAte} LIKE '%Ленинградская%'`, params: [] };
   }
-  if (lower.includes('московская')) {
-    return { sql: `${colAte} LIKE '%Московская%'`, params: [] };
-  }
 
-  // Strip generic administrative words: республика, край, область, автономный округ, АО, etc.
+  // Strip generic administrative words with word boundaries or leading/trailing position:
+  // NEVER match "город" inside "Белгородская", "Нижегородская", etc.
   const clean = canonicalName
-    .replace(/(республика|край|область|автономный|округ|город|федеральный|значения|АО|\(.*\))/gi, '')
+    .replace(/(^|\s)(республика|край|область|автономный|округ|город|федеральный|значения|АО)(\s|$)/gi, ' ')
+    .replace(/\(.*\)/g, '')
     .trim();
 
   if (clean.length >= 3) {
@@ -1987,36 +2041,64 @@ export function getRegionalPotaStats() {
     }
   }
 
+  function isRegionAteMatch(code, item, a) {
+    if (code === 'RU-MC') {
+      return a.startsWith('москва') && !a.includes('московская');
+    }
+    if (code === 'RU-MS') {
+      return a.includes('московская');
+    }
+    if (code === 'RU-SP') {
+      return a.includes('санкт-петербург') && !a.includes('ленинградская');
+    }
+    if (code === 'RU-LN') {
+      return a.includes('ленинградская');
+    }
+    if (code === 'RU-KM') {
+      return a.includes('ханты-мансийский');
+    }
+    if (code === 'RU-NN') {
+      return a.includes('ненецкий') && !a.includes('ямало-ненецкий');
+    }
+    if (code === 'RU-YN') {
+      return a.includes('ямало-ненецкий') || a.includes('ямал');
+    }
+    if (code === 'RU-FJ') {
+      return false; // Handled separately via direct title queries
+    }
+    if (code === 'RU-OM') {
+      return a.includes('омская') && !a.includes('томская') && !a.includes('костромская');
+    }
+    if (code === 'RU-AL') {
+      return a.includes('алтайский');
+    }
+    if (code === 'RU-GA') {
+      return a.includes('алтай') && !a.includes('алтайский');
+    }
+    if (code === 'RU-SL') {
+      return a.includes('сахалин');
+    }
+    if (code === 'RU-SK') {
+      return (a.includes('якутия') || a.includes('саха')) && !a.includes('сахалин');
+    }
+    if (code === 'RU-NZ') {
+      return a.includes('нижегородская');
+    }
+    if (code === 'RU-NG') {
+      return a.includes('новгородская') && !a.includes('нижегородская');
+    }
+    if (code === 'RU-BL') {
+      return a.includes('белгородская');
+    }
+    return a.includes(item.name.toLowerCase());
+  }
+
   // Exact territorial matching against oopt_registry ATE
   for (const row of ooptRows) {
     const a = (row.ate || '').toLowerCase();
     for (const [code, item] of regionMap.entries()) {
       if (item.isRestricted) continue;
-
-      let matches = false;
-      if (code === 'RU-MC') {
-        matches = a.startsWith('москва') && !a.includes('московская');
-      } else if (code === 'RU-MS') {
-        matches = a.includes('московская');
-      } else if (code === 'RU-SP') {
-        matches = a.includes('санкт-петербург') && !a.includes('ленинградская');
-      } else if (code === 'RU-LN') {
-        matches = a.includes('ленинградская');
-      } else if (code === 'RU-KM') {
-        matches = a.includes('ханты-мансийский');
-      } else if (code === 'RU-NN') {
-        matches = a.includes('ненецкий') && !a.includes('ямало-ненецкий');
-      } else if (code === 'RU-YN') {
-        matches = a.includes('ямало-ненецкий') || a.includes('ямал');
-      } else if (code === 'RU-FJ') {
-        matches = a.includes('русская арктика') || a.includes('франц');
-      } else if (code === 'RU-OM') {
-        matches = a.includes('омская') && !a.includes('томская') && !a.includes('костромская');
-      } else {
-        matches = a.includes(item.name.toLowerCase());
-      }
-
-      if (matches) {
+      if (isRegionAteMatch(code, item, a)) {
         item.ooptCandidates += row.cnt;
       }
     }
@@ -2027,31 +2109,7 @@ export function getRegionalPotaStats() {
     const a = (row.ate || '').toLowerCase();
     for (const [code, item] of regionMap.entries()) {
       if (item.isRestricted) continue;
-
-      let matches = false;
-      if (code === 'RU-MC') {
-        matches = a.startsWith('москва') && !a.includes('московская');
-      } else if (code === 'RU-MS') {
-        matches = a.includes('московская');
-      } else if (code === 'RU-SP') {
-        matches = a.includes('санкт-петербург') && !a.includes('ленинградская');
-      } else if (code === 'RU-LN') {
-        matches = a.includes('ленинградская');
-      } else if (code === 'RU-KM') {
-        matches = a.includes('ханты-мансийский');
-      } else if (code === 'RU-NN') {
-        matches = a.includes('ненецкий') && !a.includes('ямало-ненецкий');
-      } else if (code === 'RU-YN') {
-        matches = a.includes('ямало-ненецкий') || a.includes('ямал');
-      } else if (code === 'RU-FJ') {
-        matches = a.includes('русская арктика') || a.includes('франц');
-      } else if (code === 'RU-OM') {
-        matches = a.includes('омская') && !a.includes('томская') && !a.includes('костромская');
-      } else {
-        matches = a.includes(item.name.toLowerCase());
-      }
-
-      if (matches) {
+      if (isRegionAteMatch(code, item, a)) {
         item.candidatesCount += row.cnt;
       }
     }
@@ -2062,33 +2120,28 @@ export function getRegionalPotaStats() {
     const a = (row.ate || '').toLowerCase();
     for (const [code, item] of regionMap.entries()) {
       if (item.isRestricted) continue;
-
-      let matches = false;
-      if (code === 'RU-MC') {
-        matches = a.startsWith('москва') && !a.includes('московская');
-      } else if (code === 'RU-MS') {
-        matches = a.includes('московская');
-      } else if (code === 'RU-SP') {
-        matches = a.includes('санкт-петербург') && !a.includes('ленинградская');
-      } else if (code === 'RU-LN') {
-        matches = a.includes('ленинградская');
-      } else if (code === 'RU-KM') {
-        matches = a.includes('ханты-мансийский');
-      } else if (code === 'RU-NN') {
-        matches = a.includes('ненецкий') && !a.includes('ямало-ненецкий');
-      } else if (code === 'RU-YN') {
-        matches = a.includes('ямало-ненецкий') || a.includes('ямал');
-      } else if (code === 'RU-FJ') {
-        matches = a.includes('русская арктика') || a.includes('франц');
-      } else if (code === 'RU-OM') {
-        matches = a.includes('омская') && !a.includes('томская') && !a.includes('костромская');
-      } else {
-        matches = a.includes(item.name.toLowerCase());
-      }
-
-      if (matches) {
+      if (isRegionAteMatch(code, item, a)) {
         item.queuedCount += row.cnt;
       }
+    }
+  }
+
+  // Handle Franz Josef Land (RU-FJ) whose OOPT records are listed under Arkhangelsk ATE but belong to RU-FJ
+  const fjItem = regionMap.get('RU-FJ');
+  if (fjItem) {
+    const fjTotal = db.prepare("SELECT COUNT(*) as cnt FROM oopt_registry WHERE title LIKE '%Франца-Иосифа%' OR title LIKE '%Русская Арктика%'").get()?.cnt || 0;
+    const fjCand = db.prepare("SELECT COUNT(*) as cnt FROM oopt_registry WHERE (title LIKE '%Франца-Иосифа%' OR title LIKE '%Русская Арктика%') AND pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted') AND LOWER(status) = 'действующий'").get()?.cnt || 0;
+    const fjQueued = db.prepare("SELECT COUNT(*) as cnt FROM oopt_registry WHERE (title LIKE '%Франца-Иосифа%' OR title LIKE '%Русская Арктика%') AND pota_ref IS NULL AND pota_status = 'submitted'").get()?.cnt || 0;
+    fjItem.ooptCandidates = fjTotal;
+    fjItem.candidatesCount = fjCand;
+    fjItem.queuedCount = fjQueued;
+
+    // Deduct from Arkhangelsk (RU-AR) to avoid double counting
+    const arItem = regionMap.get('RU-AR');
+    if (arItem) {
+      arItem.ooptCandidates = Math.max(0, arItem.ooptCandidates - fjTotal);
+      arItem.candidatesCount = Math.max(0, arItem.candidatesCount - fjCand);
+      arItem.queuedCount = Math.max(0, arItem.queuedCount - fjQueued);
     }
   }
 
@@ -4291,6 +4344,46 @@ async function getMinprirodaSession() {
 }
 
 /**
+ * Calculates accurate centroid [lat, lon] from GeoJSON Polygon, MultiPolygon or Point
+ * @param {object} geometry GeoJSON object
+ * @returns {{lat: number, lon: number}|null}
+ */
+export function calculateGeometryCentroid(geometry) {
+  if (!geometry || !geometry.coordinates) return null;
+  let sumLat = 0, sumLon = 0, count = 0;
+
+  function processRing(ring) {
+    if (!Array.isArray(ring)) return;
+    for (const pt of ring) {
+      if (Array.isArray(pt) && pt.length >= 2) {
+        const lon = parseFloat(pt[0]);
+        const lat = parseFloat(pt[1]);
+        if (!isNaN(lon) && !isNaN(lat)) {
+          sumLon += lon;
+          sumLat += lat;
+          count++;
+        }
+      }
+    }
+  }
+
+  if (geometry.type === 'Polygon') {
+    if (geometry.coordinates.length > 0) processRing(geometry.coordinates[0]);
+  } else if (geometry.type === 'MultiPolygon') {
+    for (const poly of geometry.coordinates) {
+      if (poly && poly.length > 0) processRing(poly[0]);
+    }
+  } else if (geometry.type === 'Point' && geometry.coordinates.length >= 2) {
+    return { lat: parseFloat(geometry.coordinates[1]), lon: parseFloat(geometry.coordinates[0]) };
+  }
+
+  if (count > 0) {
+    return { lat: parseFloat((sumLat / count).toFixed(5)), lon: parseFloat((sumLon / count).toFixed(5)) };
+  }
+  return null;
+}
+
+/**
  * Fetches boundary polygon (GeoJSON) and displacement analysis for an OOPT NID
  * @param {number} nid
  * @returns {Promise<object>}
@@ -4325,7 +4418,16 @@ export async function getOoptBoundary(nid) {
     } catch (_) {
       geometry = null;
     }
-    if (cached.minpriroda_lat && cached.minpriroda_lon) {
+    if (geometry) {
+      const centroid = calculateGeometryCentroid(geometry);
+      if (centroid) {
+        mpLat = centroid.lat;
+        mpLon = centroid.lon;
+      } else if (cached.minpriroda_lat && cached.minpriroda_lon) {
+        mpLat = cached.minpriroda_lat;
+        mpLon = cached.minpriroda_lon;
+      }
+    } else if (cached.minpriroda_lat && cached.minpriroda_lon) {
       mpLat = cached.minpriroda_lat;
       mpLon = cached.minpriroda_lon;
     }
@@ -4369,6 +4471,11 @@ export async function getOoptBoundary(nid) {
       if (features.length > 0 && features[0].geometry) {
         hasBoundary = true;
         geometry = features[0].geometry;
+        const centroid = calculateGeometryCentroid(geometry);
+        if (centroid) {
+          mpLat = centroid.lat;
+          mpLon = centroid.lon;
+        }
       }
 
       // Save to SQLite cache

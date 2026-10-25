@@ -678,6 +678,19 @@ try {
       UPDATE oopt_registry SET pota_ref = 'RU-0025', pota_name = 'Meschyorsky National Park' WHERE nid = 6709 AND (pota_ref IS NULL OR pota_ref != 'RU-0025');
       UPDATE oopt_registry SET pota_ref = 'RU-0031', pota_name = 'Pleshcheyevo Ozero National Park' WHERE nid = 6714 AND (pota_ref IS NULL OR pota_ref != 'RU-0031');
       UPDATE oopt_registry SET pota_ref = 'RU-0324', pota_name = 'Bird Harbor Nature Park' WHERE nid = 7091 AND (pota_ref IS NULL OR pota_ref != 'RU-0324');
+      
+      -- Fix NID 38306 (Вязовская ковыльная степь) coordinates in Samara and link to RU-1722
+      UPDATE oopt_registry SET lat = 52.67581, lon = 50.57111, pota_ref = 'RU-1722', pota_name = 'Вязовская ковыльная степь Natural Monument' WHERE nid = 38306;
+      UPDATE oopt_boundaries SET minpriroda_lat = 52.67581, minpriroda_lon = 50.57111 WHERE nid = 38306;
+      
+      -- Fix NID 81 (Русская Арктика) linking to RU-0061 (ZFI) instead of RU-0034
+      UPDATE oopt_registry SET pota_ref = 'RU-0061', pota_name = 'Russian Arctic National Park' WHERE nid = 81;
+      
+      -- Fix NID 64976 (Пёзский заказник) linking to RU-0034
+      UPDATE oopt_registry SET pota_ref = 'RU-0034', pota_name = 'Pyozsky State Natural Reserve' WHERE nid = 64976;
+
+      -- Link NID 34504 (Костромская слобода) to RU-1723
+      UPDATE oopt_registry SET pota_ref = 'RU-1723', pota_name = 'Костромская слобода Recreation Site' WHERE nid = 34504;
     `);
   } catch (_) {}
 

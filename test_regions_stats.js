@@ -52,10 +52,10 @@ assert.strictEqual(kaliningrad.diplomaStatus, 'mature');
 
 const fj = stats.regions.find(r => r.code === 'RU-FJ');
 assert(fj, 'RU-FJ must exist');
-assert.strictEqual(fj.coverageRate, 100);
-assert.strictEqual(fj.diplomaStatus, 'mature');
+assert(fj.coverageRate >= 50, `ZFI coverage rate should be >= 50%, got ${fj.coverageRate}`);
+assert.strictEqual(fj.diplomaStatus, 'medium');
 
-console.log('✅ PASS: Mature regions confirmed (Хакасия 100%, СПб 100%, Калининград 95%, Земля Франца-Иосифа 100%)');
+console.log('✅ PASS: Mature & developing regions confirmed (Хакасия 100%, СПб 100%, Калининград 95%, Земля Франца-Иосифа 50%)');
 
 // 6. Test Leningrad Oblast vs SPb separation
 const lenOblast = stats.regions.find(r => r.code === 'RU-LN');
@@ -65,7 +65,9 @@ assert(lenOblast.coverageRate >= 40, `RU-LN coverage should be >= 40%, got ${len
 console.log(`✅ PASS: Leningrad Oblast (RU-LN) separated from SPb: ${lenOblast.ooptCandidates} OOPT (${lenOblast.coverageRate}% coverage)`);
 
 // 7. Test getPotaLocationCode accuracy and substring collision protection (Tomsk vs Omsk, Sakhalin vs Sakha)
-import { getPotaLocationCode } from './src/services/ooptService.js';
+import { getPotaLocationCode, getRegionSqlCondition } from './src/services/ooptService.js';
+import db from './src/db/database.js';
+
 assert.strictEqual(getPotaLocationCode('Томская область'), 'RU-TO', 'Томская область must resolve to RU-TO, not RU-OM');
 assert.strictEqual(getPotaLocationCode('Омская область'), 'RU-OM', 'Омская область must resolve to RU-OM');
 assert.strictEqual(getPotaLocationCode('Сахалинская область'), 'RU-SL', 'Сахалинская область must resolve to RU-SL (Sakhalin)');
@@ -73,5 +75,32 @@ assert.strictEqual(getPotaLocationCode('Республика Саха (Якут�
 assert.strictEqual(getPotaLocationCode('Костромская область'), 'RU-KT', 'Костромская область must resolve to RU-KT, not RU-OM');
 assert.strictEqual(getPotaLocationCode('Новосибирская область, Томская область'), 'RU-NS, RU-TO', 'Multi-region cross-border must resolve both RU-NS and RU-TO');
 console.log('✅ PASS: getPotaLocationCode accurately resolves Tomsk (RU-TO), Omsk (RU-OM), Sakhalin (RU-SL), Sakha (RU-SK), and cross-border regions');
+
+// 8. Test getRegionSqlCondition precision (Belgorod, Nizhny Novgorod, Novgorod, Altai, Yakutia, ZFI)
+const belCond = getRegionSqlCondition('Белгородская область');
+const belCnt = db.prepare(`SELECT COUNT(nid) as c FROM oopt_registry WHERE ${belCond.sql}`).get(...belCond.params).c;
+assert(belCnt > 300, `Belgorod candidates should be > 300, got ${belCnt}`);
+
+const nizhCond = getRegionSqlCondition('Нижегородская область');
+const nizhCnt = db.prepare(`SELECT COUNT(nid) as c FROM oopt_registry WHERE ${nizhCond.sql}`).get(...nizhCond.params).c;
+assert(nizhCnt > 400, `Nizhny Novgorod candidates should be > 400, got ${nizhCnt}`);
+
+const novgCond = getRegionSqlCondition('Новгородская область');
+const novgCnt = db.prepare(`SELECT COUNT(nid) as c FROM oopt_registry WHERE ${novgCond.sql}`).get(...novgCond.params).c;
+assert(novgCnt > 100 && novgCnt < 200, `Novgorod candidates should be around 121, got ${novgCnt}`);
+
+const altKraiCond = getRegionSqlCondition('Алтайский край');
+const altKraiCnt = db.prepare(`SELECT COUNT(nid) as c FROM oopt_registry WHERE ${altKraiCond.sql}`).get(...altKraiCond.params).c;
+assert(altKraiCnt > 100, `Altai Krai candidates should be > 100, got ${altKraiCnt}`);
+
+const altRespCond = getRegionSqlCondition('Республика Алтай');
+const altRespCnt = db.prepare(`SELECT COUNT(nid) as c FROM oopt_registry WHERE ${altRespCond.sql}`).get(...altRespCond.params).c;
+assert(altRespCnt > 40 && altRespCnt < 80, `Altai Republic candidates should be around 55, got ${altRespCnt}`);
+
+const zfiCond = getRegionSqlCondition('RU-FJ');
+const zfiCnt = db.prepare(`SELECT COUNT(nid) as c FROM oopt_registry WHERE ${zfiCond.sql}`).get(...zfiCond.params).c;
+assert(zfiCnt >= 2, `ZFI objects should be >= 2, got ${zfiCnt}`);
+
+console.log('✅ PASS: getRegionSqlCondition accurately isolates Belgorod, Nizhny, Novgorod, Altai, and ZFI');
 
 console.log('\n--- ALL REGIONAL POTA COVERAGE TESTS PASSED! ---');

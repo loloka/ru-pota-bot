@@ -3499,6 +3499,8 @@ export const startAdminServer = (telegramClient) => {
             'ханты-мансийский': 'RU-KM',
             'ямало-ненецкий': 'RU-YN',
             'ненецкий': 'RU-NN',
+            'земля франца-иосифа': 'RU-FJ',
+            'русская арктика': 'RU-FJ',
             'франца-иосифа': 'RU-FJ',
             'новосибирская': 'RU-NS',
             'омская': 'RU-OM',
@@ -4406,8 +4408,23 @@ export const startAdminServer = (telegramClient) => {
 
           window.unlinkOoptAction = async function(nid, ref, refreshDiag) {
             if (!nid) return;
-            var conf = confirm('Отвязать объект ООПТ (NID ' + nid + ') от парка POTA ' + (ref || '') + '?\\nТочка вернётся в свободные кандидаты (серый цвет).');
-            if (!conf) return;
+            if (typeof Swal !== 'undefined') {
+              var resSwal = await Swal.fire({
+                title: 'Отвязать от POTA?',
+                text: 'Отвязать объект ООПТ (NID ' + nid + ') от парка POTA ' + (ref || '') + '? Точка вернётся в свободные кандидаты (серый цвет).',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Да, отвязать',
+                cancelButtonText: 'Отмена'
+              });
+              if (!resSwal.isConfirmed) return;
+            } else {
+              var conf = confirm('Отвязать объект ООПТ (NID ' + nid + ') от парка POTA ' + (ref || '') + '?\\nТочка вернётся в свободные кандидаты (серый цвет).');
+              if (!conf) return;
+            }
+
             try {
               var res = await fetch('/api/admin/oopt/unlink', {
                 method: 'POST',
@@ -4434,10 +4451,18 @@ export const startAdminServer = (telegramClient) => {
                 }
                 if (typeof loadAdminOoptStats === 'function') loadAdminOoptStats();
               } else {
-                alert('Ошибка: ' + (data.error || 'Не удалось отвязать'));
+                if (typeof Swal !== 'undefined') {
+                  Swal.fire({ icon: 'error', title: 'Ошибка', text: data.error || 'Не удалось отвязать' });
+                } else {
+                  alert('Ошибка: ' + (data.error || 'Не удалось отвязать'));
+                }
               }
             } catch (err) {
-              alert('Ошибка сети: ' + err.message);
+              if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Ошибка сети', text: err.message });
+              } else {
+                alert('Ошибка сети: ' + err.message);
+              }
             }
           };
 
@@ -4445,7 +4470,28 @@ export const startAdminServer = (telegramClient) => {
             if (!nid) return;
             var targetRef = ref;
             if (!targetRef) {
-              targetRef = prompt('Введите референс POTA (например, RU-0502):', 'RU-');
+              if (typeof Swal !== 'undefined') {
+                var promptSwal = await Swal.fire({
+                  title: 'Связать ООПТ с POTA',
+                  text: 'Введите референс парка POTA (например, RU-0502):',
+                  input: 'text',
+                  inputValue: 'RU-',
+                  inputPlaceholder: 'RU-XXXX',
+                  showCancelButton: true,
+                  confirmButtonText: 'Связать',
+                  cancelButtonText: 'Отмена',
+                  confirmButtonColor: '#198754',
+                  inputValidator: function(value) {
+                    if (!value || !value.trim().toUpperCase().startsWith('RU-') || value.trim().length < 5) {
+                      return 'Введите корректный референс RU-XXXX';
+                    }
+                  }
+                });
+                if (!promptSwal.isConfirmed || !promptSwal.value) return;
+                targetRef = promptSwal.value;
+              } else {
+                targetRef = prompt('Введите референс POTA (например, RU-0502):', 'RU-');
+              }
             }
             if (!targetRef || !targetRef.trim()) return;
             targetRef = targetRef.trim().toUpperCase();
@@ -4476,10 +4522,18 @@ export const startAdminServer = (telegramClient) => {
                 }
                 if (typeof loadAdminOoptStats === 'function') loadAdminOoptStats();
               } else {
-                alert('Ошибка: ' + (data.error || 'Не удалось привязать'));
+                if (typeof Swal !== 'undefined') {
+                  Swal.fire({ icon: 'error', title: 'Ошибка привязки', text: data.error || 'Не удалось привязать' });
+                } else {
+                  alert('Ошибка: ' + (data.error || 'Не удалось привязать'));
+                }
               }
             } catch (err) {
-              alert('Ошибка сети: ' + err.message);
+              if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Ошибка сети', text: err.message });
+              } else {
+                alert('Ошибка сети: ' + err.message);
+              }
             }
           };
 

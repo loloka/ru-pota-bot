@@ -2376,6 +2376,7 @@ export function createTmaRouter(telegramClient) {
             AND lon IS NOT NULL AND lon != 0
             AND LOWER(status) = 'действующий'
             AND ${restricted}
+            AND (sig IS NULL OR sig != 'local')
             AND (title LIKE ? OR ate LIKE ?)
           ORDER BY CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END, area DESC
           LIMIT 50
@@ -2394,6 +2395,7 @@ export function createTmaRouter(telegramClient) {
               AND lon BETWEEN ? AND ?
               AND LOWER(status) = 'действующий'
               AND ${restricted}
+              AND (sig IS NULL OR sig != 'local')
             ORDER BY CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END, area DESC
             LIMIT 400
           `;
@@ -2415,6 +2417,7 @@ export function createTmaRouter(telegramClient) {
               AND lon IS NOT NULL AND lon != 0
               AND LOWER(status) = 'действующий'
               AND ${restricted}
+              AND (sig IS NULL OR sig != 'local')
           )
           WHERE rn <= 15
         `;

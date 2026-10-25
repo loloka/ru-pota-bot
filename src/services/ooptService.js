@@ -1959,7 +1959,7 @@ export function getRegionalPotaStats() {
 
   let candRows = [];
   try {
-    candRows = db.prepare("SELECT ate, COUNT(*) as cnt FROM oopt_registry WHERE pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted') AND lat IS NOT NULL AND lat != 0 AND lon IS NOT NULL AND lon != 0 AND LOWER(status) = 'действующий' GROUP BY ate").all();
+    candRows = db.prepare("SELECT ate, COUNT(*) as cnt FROM oopt_registry WHERE pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted') AND lat IS NOT NULL AND lat != 0 AND lon IS NOT NULL AND lon != 0 AND LOWER(status) = 'действующий' AND (sig IS NULL OR sig != 'local') GROUP BY ate").all();
   } catch (err) {
     console.warn('[OOPT Service] ⚠️ Failed to query candidate counts:', err.message);
   }
@@ -3842,6 +3842,9 @@ export function exportElJefePotaCsv(options = {}) {
   if (options.sig) {
     sql += ' AND sig = ?';
     params.push(options.sig);
+  } else if (!options.includeLocal) {
+    // Exclude 'local' (местного значения) from bulk El Jefe CSV exports per POTA rules
+    sql += " AND (sig IS NULL OR sig != 'local')";
   }
 
   sql += ' ORDER BY CASE sig WHEN \'federal\' THEN 1 WHEN \'regional\' THEN 2 ELSE 3 END, area DESC LIMIT ?';
@@ -4006,6 +4009,10 @@ export function getOoptMapPoints(options = {}) {
   }));
 
   // 4. Candidates (Grey): pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted'), active, valid coords
+  // By default, exclude 'local' (местного значения) OOPTs from candidate pins and bulk proposals per POTA rules
+  const allowLocal = Boolean(options.includeLocal || options.sig === 'local');
+  const localFilter = allowLocal ? '' : "AND (sig IS NULL OR sig != 'local')";
+
   let candSql = '';
   const candParams = [];
   if (region) {
@@ -4019,6 +4026,7 @@ export function getOoptMapPoints(options = {}) {
         AND lon IS NOT NULL AND lon != 0
         AND LOWER(status) = 'действующий'
         AND ${restricted}
+        ${localFilter}
         ${regionCond ? `AND ${regionCond.sql}` : ''}
       ORDER BY CASE sig WHEN 'federal' THEN 1 WHEN 'regional' THEN 2 ELSE 3 END, area DESC
     `;
@@ -4039,6 +4047,7 @@ export function getOoptMapPoints(options = {}) {
           AND lon IS NOT NULL AND lon != 0
           AND LOWER(status) = 'действующий'
           AND ${restricted}
+          ${localFilter}
       )
       WHERE rn <= 25
     `;

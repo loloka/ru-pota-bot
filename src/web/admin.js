@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
-import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, getOoptMapPoints, markOoptAsSubmitted, unmarkOoptAsSubmitted, ensureOoptRegistryPopulated, unlinkOoptFromPota, linkOoptToPota, getMatchDiagnostics, getOoptBoundary } from '../services/ooptService.js';
+import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, exportPlaceholderLinksCsv, getOoptMapPoints, markOoptAsSubmitted, unmarkOoptAsSubmitted, resetOoptQueue, updateOoptUrl, importOoptUrlsFromCsv, ensureOoptRegistryPopulated, unlinkOoptFromPota, linkOoptToPota, getMatchDiagnostics, getOoptBoundary } from '../services/ooptService.js';
 import {
   auditPotaLinks,
   checkUrlOnline,
@@ -942,6 +942,8 @@ export const startAdminServer = (telegramClient) => {
                     <div class="d-flex gap-2 flex-wrap">
                       <a href="/app" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-phone"></i> Открыть в Mini App</a>
                       <a href="/api/admin/oopt/export-eljefe-csv?limit=50" class="btn btn-sm btn-outline-success" id="btn-export-eljefe-csv" title="Скачать CSV файл в официальном формате POTA El Jefe для пакетной загрузки новых парков (WD4DAN)"><i class="bi bi-file-earmark-spreadsheet"></i> 📥 Выгрузка для El Jefe (POTA)</a>
+                      <a href="/api/admin/oopt/export-placeholder-links-csv" class="btn btn-sm btn-outline-warning" id="btn-export-placeholder-csv" title="Скачать CSV объектов ООПТ с заглушкой ссылки на карту (карта.оцзк.рф) для поиска и привязки официальных паспортов"><i class="bi bi-link-45deg"></i> ⚠️ ООПТ с заглушкой карты (<span id="placeholder-links-count-badge">...</span>)</a>
+                      <button type="button" class="btn btn-sm btn-outline-danger" id="btn-header-reset-queue" title="Сбросить статус 'В очереди' (синие точки) обратно в кандидаты (серые)"><i class="bi bi-arrow-counterclockwise"></i> Сбросить очередь (<span id="header-queue-count-badge">...</span>)</button>
                       <a href="/api/admin/pota/unmatched/download" class="btn btn-sm btn-outline-warning" id="btn-export-unmatched-pota" title="Скачать CSV со списком парков POTA RU, которые не привязаны к реестру ООПТ (для координатора Manu R2BBX)"><i class="bi bi-file-earmark-arrow-down"></i> Выгрузка непривязанных (<span id="unmatched-pota-count-badge">...</span> POTA)</a>
                       <button type="button" class="btn btn-sm btn-outline-primary" id="btn-sync-oopt"><i class="bi bi-arrow-repeat"></i> Синхронизировать с карта.оцзк.рф</button>
                       <button type="button" class="btn btn-sm btn-success" id="btn-sync-pota-oopt" title="Обновить базу парков POTA с api.pota.app и привязать к ООПТ"><i class="bi bi-cloud-arrow-down-fill"></i> Синхронизировать парки POTA</button>
@@ -1032,6 +1034,8 @@ export const startAdminServer = (telegramClient) => {
                       <select class="form-select" id="oopt-status-select">
                         <option value="">Все статусы</option>
                         <option value="active">✅ Только действующие</option>
+                        <option value="placeholder_link">⚠️ Заглушка ссылки (карта.оцзк.рф)</option>
+                        <option value="queued">🔵 В очереди подачи (синие)</option>
                         <option value="reorganized">⚠️ Реорганизованные / утерянные</option>
                         <option value="planned">🔮 Проектируемые / перспективные</option>
                       </select>
@@ -1146,12 +1150,23 @@ export const startAdminServer = (telegramClient) => {
                                 <i class="bi bi-download"></i> Все свободные
                               </button>
                             </div>
-                            <div class="form-check form-check-inline m-0 text-start" title="Автоматически пометить выгруженные объекты как находящиеся в очереди подачи">
-                              <input class="form-check-input" type="checkbox" id="export-auto-queue-check" checked>
-                              <label class="form-check-label small text-muted" for="export-auto-queue-check" style="font-size: 11px;">
-                                ☑️ В очередь
-                              </label>
+                            <div class="d-flex justify-content-between align-items-center w-100 mt-1">
+                              <div class="form-check form-check-inline m-0 text-start" title="Автоматически пометить выгруженные объекты как находящиеся в очереди подачи">
+                                <input class="form-check-input" type="checkbox" id="export-auto-queue-check" checked>
+                                <label class="form-check-label small text-muted" for="export-auto-queue-check" style="font-size: 11px;">
+                                  ☑️ В очередь
+                                </label>
+                              </div>
+                              <div class="form-check form-check-inline m-0 text-start" title="Включать уже поданные (синие) объекты в CSV выгрузку (для повторной генерации)">
+                                <input class="form-check-input" type="checkbox" id="export-include-submitted-check">
+                                <label class="form-check-label small text-muted" for="export-include-submitted-check" style="font-size: 11px;">
+                                  + Поданные
+                                </label>
+                              </div>
                             </div>
+                            <button type="button" class="btn btn-xs btn-outline-primary w-100 mt-1 py-1" id="btn-map-reset-queue" title="Сбросить статус 'В очереди' (синие точки) обратно в кандидаты (серые точки)">
+                              <i class="bi bi-arrow-counterclockwise"></i> Сбросить синие (в кандидаты)
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1613,6 +1628,7 @@ export const startAdminServer = (telegramClient) => {
                     <div class="input-group input-group-sm">
                       <input type="text" class="form-control" id="subm-site" placeholder="https://ooptaari.nextgis.ru/node/... или сайт парка" required>
                       <button class="btn btn-outline-secondary btn-copy-coord" type="button" data-target="subm-site" title="Скопировать ссылку"><i class="bi bi-clipboard"></i></button>
+                      <button class="btn btn-outline-primary" type="button" id="btn-save-subm-site" title="Сохранить ссылку в базу данных для этого ООПТ"><i class="bi bi-save"></i> Сохранить</button>
                     </div>
                     <div id="subm-site-notice" class="mt-1" style="display:none;"></div>
                     <div class="form-text small text-muted">Приоритет: собственный сайт парка или NextGIS по требованию R2BBX. Википедия, VK и коммерческие ресурсы не принимаются.</div>
@@ -2648,6 +2664,14 @@ export const startAdminServer = (telegramClient) => {
                     subEl.textContent = 'из ' + stats.potaRuTotal + ' RU (' + stats.unmatchedPotaCount + ' вне ООПТ)';
                   }
                 }
+                if (stats.queued !== undefined) {
+                  const headerQueueEl = document.getElementById('header-queue-count-badge');
+                  if (headerQueueEl) headerQueueEl.textContent = stats.queued;
+                }
+                if (stats.placeholderLinksCount !== undefined) {
+                  const badgePlaceholder = document.getElementById('placeholder-links-count-badge');
+                  if (badgePlaceholder) badgePlaceholder.textContent = stats.placeholderLinksCount;
+                }
 
                 const headerTotalEl = document.getElementById('oopt-header-total-count');
                 if (headerTotalEl && (stats.totalAll || stats.total)) {
@@ -2782,6 +2806,10 @@ export const startAdminServer = (telegramClient) => {
                   potaBadge = ' <span class="badge bg-primary text-white ms-1" title="В очереди подачи. ' + (r.pota_submitted_by ? 'Подал: ' + escapeHtmlClient(r.pota_submitted_by) : '') + (r.pota_submitted_at ? ' (' + r.pota_submitted_at.slice(0, 10) + ')' : '') + '"><i class="bi bi-clock-history"></i> В очереди</span>';
                 }
 
+                var placeholderBadge = (r.nid > 66061 && (!r.rusoir_url || r.rusoir_url.includes('карта.оцзк')))
+                  ? ' <span class="badge bg-warning text-dark border border-warning ms-1" title="Используется ссылка-заглушка на карту Минприроды (нет прямого паспорта)"><i class="bi bi-link-45deg"></i> Заглушка ссылки</span>'
+                  : '';
+
                 var parentRefAttr = (r.parent_pota && r.parent_pota.reference) ? r.parent_pota.reference : '';
                 var parentNameAttr = (r.parent_pota && r.parent_pota.name) ? escapeHtmlClient(r.parent_pota.name) : '';
                 var parentNotesAttr = (r.parent_pota && r.parent_pota.notes) ? escapeHtmlClient(r.parent_pota.notes) : '';
@@ -2797,7 +2825,7 @@ export const startAdminServer = (telegramClient) => {
 
                 return '<tr>' +
                   '<td><code>' + r.nid + '</code></td>' +
-                  '<td><strong>' + escapeHtmlClient(r.title) + '</strong>' + reorgBadge + plannedBadge + potaBadge + '</td>' +
+                  '<td><strong>' + escapeHtmlClient(r.title) + '</strong>' + reorgBadge + plannedBadge + potaBadge + placeholderBadge + '</td>' +
                   '<td>' + sigBadge + '</td>' +
                   '<td><small>' + escapeHtmlClient(r.category || '') + '</small></td>' +
                   '<td><small class="text-muted">' + escapeHtmlClient(r.ate || '') + '</small></td>' +
@@ -5926,7 +5954,9 @@ export const startAdminServer = (telegramClient) => {
               var regParam = currentMapRegion ? '&region=' + encodeURIComponent(currentMapRegion) : '';
               var autoQueue = document.getElementById('export-auto-queue-check')?.checked;
               var markParam = autoQueue ? '&mark=1' : '';
-              var downloadUrl = '/api/admin/oopt/export-eljefe-csv?limit=' + limit + regParam + markParam;
+              var includeSubmitted = document.getElementById('export-include-submitted-check')?.checked;
+              var incParam = includeSubmitted ? '&includeSubmitted=1' : '';
+              var downloadUrl = '/api/admin/oopt/export-eljefe-csv?limit=' + limit + regParam + markParam + incParam;
               window.location.href = downloadUrl;
               if (autoQueue) {
                 setTimeout(function() {
@@ -5941,6 +5971,147 @@ export const startAdminServer = (telegramClient) => {
 
             document.getElementById('btn-map-export-all')?.addEventListener('click', function() {
               triggerElJefeExport('all');
+            });
+
+            async function performQueueReset(region, isAll) {
+              try {
+                var res = await fetch('/api/admin/oopt/queue/reset', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ region: region, all: isAll })
+                });
+                var result = await res.json();
+                if (result.success) {
+                  if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                      icon: 'success',
+                      title: 'Очередь сброшена!',
+                      text: 'Объектов переведено обратно в кандидаты (серые): ' + (result.updated || 0),
+                      timer: 2000,
+                      showConfirmButton: false
+                    });
+                  } else {
+                    alert('Сброшено объектов: ' + (result.updated || 0));
+                  }
+                  loadAdminMapPoints(currentMapRegion, false);
+                  loadAdminOoptStats();
+                } else {
+                  alert('Ошибка сброса: ' + (result.error || 'Неизвестная ошибка'));
+                }
+              } catch (err) {
+                alert('Сетевая ошибка: ' + err.message);
+              }
+            }
+
+            document.getElementById('btn-map-reset-queue')?.addEventListener('click', function() {
+              if (currentMapRegion) {
+                if (typeof Swal !== 'undefined') {
+                  Swal.fire({
+                    title: 'Сброс очереди подачи (синие точки)',
+                    html: '<p>Снять статус <strong>"В очереди"</strong> и вернуть точки в <strong>серые кандидаты</strong>?</p>' +
+                          '<p class="small text-muted">Выбран регион: <b>' + escapeHtmlClient(currentMapRegion) + '</b>. Вы можете сбросить только этот регион или все объекты по всей России.</p>',
+                    icon: 'question',
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: 'Только ' + escapeHtmlClient(currentMapRegion),
+                    denyButtonText: 'Для ВСЕХ регионов РФ',
+                    cancelButtonText: 'Отмена',
+                    confirmButtonColor: '#0d6efd',
+                    denyButtonColor: '#dc3545'
+                  }).then(function(r) {
+                    if (r.isConfirmed) {
+                      performQueueReset(currentMapRegion, false);
+                    } else if (r.isDenied) {
+                      performQueueReset('', true);
+                    }
+                  });
+                } else {
+                  if (confirm('Сбросить очередь для ' + currentMapRegion + '?')) {
+                    performQueueReset(currentMapRegion, false);
+                  }
+                }
+              } else {
+                if (typeof Swal !== 'undefined') {
+                  Swal.fire({
+                    title: 'Сбросить ВСЕ синие точки по всей России?',
+                    html: '<p>Все объекты в очереди подачи будут возвращены в <strong>серые кандидаты</strong> и снова станут доступны для повторной генерации выгрузок.</p>',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Да, сбросить все',
+                    cancelButtonText: 'Отмена',
+                    confirmButtonColor: '#dc3545'
+                  }).then(function(r) {
+                    if (r.isConfirmed) {
+                      performQueueReset('', true);
+                    }
+                  });
+                } else {
+                  if (confirm('Сбросить ВСЕ синие точки по всей России?')) {
+                    performQueueReset('', true);
+                  }
+                }
+              }
+            });
+
+            document.getElementById('btn-header-reset-queue')?.addEventListener('click', function() {
+              if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                  title: 'Сбросить ВСЕ объекты из очереди подачи?',
+                  html: '<p>Все объекты со статусом <strong>"В очереди"</strong> по всей РФ будут возвращены в статус <strong>свободных кандидатов (серые точки)</strong>.</p>',
+                  icon: 'warning',
+                  showCancelButton: true,
+                  confirmButtonText: 'Да, сбросить всю очередь',
+                  cancelButtonText: 'Отмена',
+                  confirmButtonColor: '#dc3545'
+                }).then(function(r) {
+                  if (r.isConfirmed) {
+                    performQueueReset('', true);
+                  }
+                });
+              } else {
+                if (confirm('Сбросить ВСЕ объекты из очереди подачи?')) {
+                  performQueueReset('', true);
+                }
+              }
+            });
+
+            document.getElementById('btn-save-subm-site')?.addEventListener('click', async function() {
+              var nid = document.getElementById('subm-nid')?.value;
+              var url = document.getElementById('subm-site')?.value?.trim();
+              if (!nid) {
+                alert('Не выбран объект ООПТ');
+                return;
+              }
+              if (!url) {
+                alert('Введите URL ссылку');
+                return;
+              }
+              try {
+                var btn = this;
+                var origText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                var res = await fetch('/api/admin/oopt/update-link', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ nid: nid, url: url })
+                });
+                var data = await res.json();
+                btn.disabled = false;
+                btn.innerHTML = origText;
+                if (data.success) {
+                  if (typeof Swal !== 'undefined') {
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Ссылка сохранена в базе данных!', timer: 2000, showConfirmButton: false });
+                  } else {
+                    alert('Ссылка сохранена!');
+                  }
+                  loadAdminOoptStats();
+                } else {
+                  alert('Ошибка сохранения: ' + (data.error || 'Неизвестная ошибка'));
+                }
+              } catch (err) {
+                alert('Сетевая ошибка: ' + err.message);
+              }
             });
           }
 
@@ -6983,12 +7154,14 @@ export const startAdminServer = (telegramClient) => {
   app.get('/api/admin/oopt/export-eljefe-csv', requireAuth, (req, res) => {
     try {
       const markSubmitted = req.query.mark === '1' || req.query.mark === 'true';
+      const includeSubmitted = req.query.includeSubmitted === '1' || req.query.includeSubmitted === 'true' || req.query.includeQueued === '1';
       const csv = exportElJefePotaCsv({
         limit: req.query.limit,
         region: req.query.region,
         category: req.query.category,
         sig: req.query.sig,
         markSubmitted,
+        includeSubmitted,
         submittedBy: req.session?.username ? `${req.session.username} (CSV Export)` : 'Manu R2BBX (CSV Export)'
       });
       const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
@@ -6997,6 +7170,44 @@ export const startAdminServer = (telegramClient) => {
       res.send(csv);
     } catch (err) {
       console.error('[Admin] Export El Jefe CSV error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Coordinator Tool: Export OOPT Records with Fallback Map Placeholder Link (карта.оцзк.рф)
+  app.get('/api/admin/oopt/export-placeholder-links-csv', requireAuth, (req, res) => {
+    try {
+      const csv = exportPlaceholderLinksCsv({ region: req.query.region });
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${timestamp}-oopt-placeholder-links.csv"`);
+      res.send(csv);
+    } catch (err) {
+      console.error('[Admin] Export placeholder links CSV error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Direct Update of OOPT Link / Passport URL
+  app.post('/api/admin/oopt/update-link', requireAuth, (req, res) => {
+    try {
+      const { nid, url } = req.body || {};
+      const result = updateOoptUrl(nid, url);
+      res.json({ success: true, ...result });
+    } catch (err) {
+      console.error('[Admin] Update link error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Bulk Import OOPT Links from CSV
+  app.post('/api/admin/oopt/import-links-csv', requireAuth, express.text({ type: ['text/csv', 'text/plain', 'application/csv'], limit: '10mb' }), (req, res) => {
+    try {
+      const csvContent = typeof req.body === 'string' ? req.body : (req.body?.csv || '');
+      const result = importOoptUrlsFromCsv(csvContent);
+      res.json({ success: true, ...result });
+    } catch (err) {
+      console.error('[Admin] Import links CSV error:', err);
       res.status(500).json({ error: err.message });
     }
   });
@@ -7021,6 +7232,18 @@ export const startAdminServer = (telegramClient) => {
       res.json({ success: true, ...result });
     } catch (err) {
       console.error('[Admin] Queue unmark error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Bulk Reset of Submission Queue (Points in Queue -> Candidates)
+  app.post('/api/admin/oopt/queue/reset', requireAuth, (req, res) => {
+    try {
+      const { region, all } = req.body || {};
+      const result = resetOoptQueue({ region, all: Boolean(all) });
+      res.json({ success: true, ...result });
+    } catch (err) {
+      console.error('[Admin] Queue reset error:', err);
       res.status(500).json({ error: err.message });
     }
   });

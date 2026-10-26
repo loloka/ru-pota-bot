@@ -66,8 +66,8 @@ for (const r of rows) {
     p.lon,
     escapeCsv(p.site),
     escapeCsv(p.clarification || (r.area ? `Площадь: ${Number(r.area).toLocaleString('ru-RU')} га` : '')),
-    'Automobile;Foot;Other',
-    'Automobile;Campground;Other;Pedestrian',
+    'Foot;Other',
+    'Other;Pedestrian',
     '1'
   ];
 

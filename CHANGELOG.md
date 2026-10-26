@@ -1,5 +1,23 @@
 # История изменений (Changelog)
 
+## [1.16.132] - 2026-10-26 (Bulk Queue Reset, POTA Access Template Polish & Fallback Links Exporter)
+### Новые функции и улучшения
+- **Оптовый сброс очереди подачи (синие точки → серые кандидаты) (`src/services/ooptService.js`, `src/web/admin.js`):**
+  - Добавлена функция `resetOoptQueue({ region, all })` и эндпоинт `POST /api/admin/oopt/queue/reset`.
+  - На панели карты добавлена кнопка **«Сбросить синие (в кандидаты)»** с возможностью выбора сброса для текущего выбранного региона либо для всей России через диалог SweetAlert2.
+  - В шапке вкладки «Реестр ООПТ» добавлена кнопка **«Сбросить очередь»** со счетчиком объектов в очереди.
+  - В выгрузке El Jefe добавлен флаг `includeSubmitted` (чекбокс «+ Поданные»), позволяющий перегенерировать CSV выгрузку с включением уже поданных объектов без предварительного сброса.
+- **Корректировка шаблона доступа и методов активации в El Jefe CSV (`src/services/ooptService.js`, `tools/generate_eljefe_csv.js`):**
+  - По запросу координатора Manu (R2BBX) исключены «Автомобиль» и «Кемпинг» из глобального шаблона:
+    - `accessMethods`: изменено с `Automobile;Foot;Other` на `Foot;Other`.
+    - `activationMethods`: изменено с `Automobile;Campground;Other;Pedestrian` на `Other;Pedestrian`.
+- **Выгрузка и редактирование ООПТ с заглушкой ссылки на карту (`src/services/ooptService.js`, `src/web/admin.js`):**
+  - Реализован экспорт `exportPlaceholderLinksCsv()` и эндпоинт `GET /api/admin/oopt/export-placeholder-links-csv` для выгрузки 229 объектов ООПТ (активных в POTA, поданных и кандидатов), у которых ссылка ведет на главную интерактивную карту `https://карта.оцзк.рф/`.
+  - В CSV добавлены колонки с готовой ссылкой поиска в Яндекс (`yandex_search_url`) и пустой колонкой `new_passport_url` для быстрого заполнения.
+  - Добавлены эндпоинты `POST /api/admin/oopt/update-link` (сохранение ссылки по NID) и `POST /api/admin/oopt/import-links-csv` (пакетный импорт найденных ссылок).
+  - В модальном окне подготовки заявки добавлена кнопка **«Сохранить»** рядом с полем ссылки объекта.
+  - В таблице реестра ООПТ добавлен статус-фильтр «⚠️ Заглушка ссылки (карта.оцзк.рф)» и визуальный бейдж.
+
 ## [1.16.131] - 2026-10-26 (Filter Out Local Protected Areas from Bulk POTA Proposals & Map)
 ### Новые функции и улучшения
 - **Исключение ООПТ местного значения (`sig = 'local'`) из оптовой подачи El Jefe и карты кандидатов (`src/services/ooptService.js`, `src/web/tmaApi.js`):**

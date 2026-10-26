@@ -761,6 +761,10 @@ export function getOoptList({
       baseConditions.push(`status = 'реорганизованный'`);
     } else if (st === 'planned' || st === 'перспективный' || st === 'проектируемый') {
       baseConditions.push(`(status = 'перспективный' OR status = 'проектируемый')`);
+    } else if (st === 'placeholder_link' || st === 'placeholder') {
+      baseConditions.push(`(nid > 66061 OR rusoir_url LIKE '%карта.оцзк%') AND (rusoir_url IS NULL OR rusoir_url = '' OR rusoir_url LIKE '%карта.оцзк%')`);
+    } else if (st === 'queued') {
+      baseConditions.push(`pota_ref IS NULL AND pota_status = 'submitted'`);
     } else {
       baseConditions.push(`status = ?`);
       baseParams.push(st);
@@ -802,6 +806,8 @@ export function getOoptList({
     conditions.push(`pota_ref IS NULL AND pota_status = 'submitted'`);
   } else if (pota === 'candidate') {
     conditions.push(`pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted')`);
+  } else if (pota === 'placeholder_link' || pota === 'placeholder') {
+    conditions.push(`(nid > 66061 OR rusoir_url LIKE '%карта.оцзк%') AND (rusoir_url IS NULL OR rusoir_url = '' OR rusoir_url LIKE '%карта.оцзк%')`);
   }
 
   if (min_area && !isNaN(parseFloat(min_area))) {
@@ -1000,6 +1006,11 @@ export function getOoptStats() {
   ).size;
   const unmatchedPotaCount = Math.max(0, potaRuTotal - uniqueMatchedPota);
 
+  let placeholderLinksCount = 0;
+  try {
+    placeholderLinksCount = db.prepare("SELECT COUNT(*) as count FROM oopt_registry WHERE (nid > 66061 OR rusoir_url LIKE '%карта.оцзк%') AND (rusoir_url IS NULL OR rusoir_url = '' OR rusoir_url LIKE '%карта.оцзк%')").get()?.count || 0;
+  } catch (_) {}
+
   cachedStats = {
     total,
     totalAll,
@@ -1009,6 +1020,7 @@ export function getOoptStats() {
     local,
     inPota,
     queued,
+    placeholderLinksCount,
     potaRuTotal,
     unmatchedPotaCount,
     reorganized,
@@ -2490,17 +2502,19 @@ export function parseSubmitterFields(item) {
   const lat = item.lat !== null && item.lat !== undefined && item.lat !== '' ? Number(item.lat).toFixed(4) : '';
   const lon = item.lon !== null && item.lon !== undefined && item.lon !== '' ? Number(item.lon).toFixed(4) : '';
 
-  // Priority NextGIS link requested by Manu (R2BBX): node/:id (valid up to NID 66061)
+  // Direct passport URL resolution:
+  // 1. If rusoir_url has a direct valid link (not a fallback map link), use it
+  // 2. For NID <= 66061, use NextGIS node page (valid AARI node repository)
+  // 3. Otherwise, fallback to the interactive map portal https://карта.оцзк.рф/
   let siteUrl = 'https://карта.оцзк.рф/';
-  if (item.nid) {
-    if (Number(item.nid) <= 66061) {
-      siteUrl = `https://ooptaari.nextgis.ru/node/${item.nid}`;
-    } else if (item.rusoir_url) {
-      siteUrl = item.rusoir_url;
-    } else {
-      siteUrl = 'https://карта.оцзк.рф/';
-    }
+  if (item.rusoir_url && !item.rusoir_url.includes('карта.оцзк')) {
+    siteUrl = item.rusoir_url;
+  } else if (item.nid && Number(item.nid) <= 66061) {
+    siteUrl = `https://ooptaari.nextgis.ru/node/${item.nid}`;
+  } else {
+    siteUrl = 'https://карта.оцзк.рф/';
   }
+  const isPlaceholderLink = (siteUrl === 'https://карта.оцзк.рф/' || siteUrl.includes('карта.оцзк'));
 
   // Clarification strictly formatted <= 255 chars
   const clarification = formatClarification(item);
@@ -2518,6 +2532,7 @@ export function parseSubmitterFields(item) {
     lon,
     region,
     siteUrl,
+    isPlaceholderLink,
     clarification,
     pota_ref: item.pota_ref || null,
     pota_name: item.pota_name || null,
@@ -3807,8 +3822,104 @@ export function unmarkOoptAsSubmitted(nids) {
 }
 
 /**
+ * Bulk resets OOPT records from submission queue ('submitted') back to candidates (NULL)
+ * @param {Object} options - { region?: string, all?: boolean }
+ * @returns {{ updated: number }}
+ */
+export function resetOoptQueue(options = {}) {
+  let sql = "UPDATE oopt_registry SET pota_status = NULL, pota_submitted_at = NULL, pota_submitted_by = NULL WHERE pota_status = 'submitted'";
+  const params = [];
+  if (options.region && !options.all) {
+    const regCond = getRegionSqlCondition(options.region);
+    if (regCond) {
+      sql += ` AND ${regCond.sql}`;
+      params.push(...regCond.params);
+    }
+  }
+  const result = db.prepare(sql).run(...params);
+  cachedStats = null;
+  return { updated: result.changes };
+}
+
+/**
+ * Updates direct URL / passport website for an OOPT record (stored in rusoir_url)
+ * @param {number|string} nid
+ * @param {string} url
+ * @returns {{ success: boolean, nid: number, url: string }}
+ */
+export function updateOoptUrl(nid, url) {
+  const nidNum = parseInt(nid, 10);
+  if (!nidNum) throw new Error('Некорректный NID');
+  const cleanUrl = (url || '').trim();
+  db.prepare("UPDATE oopt_registry SET rusoir_url = ?, updated_at = CURRENT_TIMESTAMP WHERE nid = ?").run(cleanUrl || null, nidNum);
+  cachedStats = null;
+  return { success: true, nid: nidNum, url: cleanUrl };
+}
+
+/**
+ * Bulk updates OOPT passport URLs from a CSV file (e.g. edited by coordinator)
+ * @param {string} csvContent
+ * @returns {{ updated: number, totalRows: number }}
+ */
+export function importOoptUrlsFromCsv(csvContent) {
+  if (!csvContent) return { updated: 0, totalRows: 0 };
+  const lines = csvContent.replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (lines.length < 2) return { updated: 0, totalRows: 0 };
+
+  const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+  const nidIdx = header.indexOf('nid');
+  let urlIdx = header.indexOf('new_passport_url');
+  if (urlIdx === -1) urlIdx = header.indexOf('new_url');
+  if (urlIdx === -1) urlIdx = header.indexOf('website');
+  if (urlIdx === -1) urlIdx = header.indexOf('url');
+  if (urlIdx === -1) urlIdx = header.indexOf('link');
+  if (nidIdx === -1 || urlIdx === -1) {
+    throw new Error('В CSV должны присутствовать колонки "nid" и "new_passport_url" (или "new_url")');
+  }
+
+  let updated = 0;
+  const updateStmt = db.prepare("UPDATE oopt_registry SET rusoir_url = ?, updated_at = CURRENT_TIMESTAMP WHERE nid = ?");
+
+  db.transaction(() => {
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      const cells = [];
+      let inQuotes = false;
+      let curr = '';
+      for (let c = 0; c < line.length; c++) {
+        const char = line[c];
+        if (char === '"') {
+          if (inQuotes && line[c + 1] === '"') {
+            curr += '"';
+            c++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          cells.push(curr.trim());
+          curr = '';
+        } else {
+          curr += char;
+        }
+      }
+      cells.push(curr.trim());
+
+      const nid = parseInt(cells[nidIdx], 10);
+      const url = (cells[urlIdx] || '').trim().replace(/^"|"$/g, '');
+      if (nid && url && url.startsWith('http') && !url.includes('карта.оцзк')) {
+        updateStmt.run(url, nid);
+        updated++;
+      }
+    }
+  })();
+
+  cachedStats = null;
+  return { updated, totalRows: lines.length - 1 };
+}
+
+/**
  * Generates official POTA El Jefe bulk import CSV for candidate OOPT parks
- * @param {Object} options - { limit: number|string, region: string, category: string, sig: string, markSubmitted: boolean, submittedBy: string }
+ * @param {Object} options - { limit: number|string, region: string, category: string, sig: string, markSubmitted: boolean, submittedBy: string, includeSubmitted: boolean }
  * @returns {string} CSV content
  */
 export function exportElJefePotaCsv(options = {}) {
@@ -3820,7 +3931,7 @@ export function exportElJefePotaCsv(options = {}) {
     SELECT nid, title, category, sig, sig_display, status, ate, rf_subjects, lat, lon, area, rusoir_url
     FROM oopt_registry
     WHERE pota_ref IS NULL 
-      AND (pota_status IS NULL OR pota_status != 'submitted')
+      ${options.includeSubmitted ? '' : "AND (pota_status IS NULL OR pota_status != 'submitted')"}
       AND lat IS NOT NULL AND lat != 0 
       AND lon IS NOT NULL AND lon != 0
       AND LOWER(status) = 'действующий' 
@@ -3899,14 +4010,114 @@ export function exportElJefePotaCsv(options = {}) {
       p.lon,
       escapeCsv(p.siteUrl || p.site),
       escapeCsv(p.clarification || (r.area ? `Площадь: ${Number(r.area).toLocaleString('ru-RU')} га` : '')),
-      'Automobile;Foot;Other',
-      'Automobile;Campground;Other;Pedestrian',
+      'Foot;Other',
+      'Other;Pedestrian',
       '1'
     ];
     lines.push(record.join(','));
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Generates CSV export of OOPT records that currently have the fallback map landing link (https://карта.оцзк.рф/)
+ * instead of a dedicated passport URL, to help coordinators find and update direct links.
+ * Includes both active POTA parks, submitted in queue, and candidates.
+ * @param {Object} options - { region?: string }
+ * @returns {string} CSV content
+ */
+export function exportPlaceholderLinksCsv(options = {}) {
+  let sql = `
+    SELECT nid, title, category, sig, sig_display, status, ate, rf_subjects, lat, lon, area, rusoir_url, pota_ref, pota_name, pota_status, pota_submitted_at, pota_submitted_by
+    FROM oopt_registry
+    WHERE (nid > 66061 OR rusoir_url LIKE '%карта.оцзк%')
+      AND (rusoir_url IS NULL OR rusoir_url = '' OR rusoir_url LIKE '%карта.оцзк%')
+  `;
+  const params = [];
+  if (options.region) {
+    const regCond = getRegionSqlCondition(options.region);
+    if (regCond) {
+      sql += ` AND ${regCond.sql}`;
+      params.push(...regCond.params);
+    }
+  }
+
+  sql += `
+    ORDER BY 
+      CASE WHEN pota_ref IS NOT NULL THEN 1 WHEN pota_status = 'submitted' THEN 2 ELSE 3 END,
+      ate ASC,
+      title ASC
+  `;
+
+  const rows = db.prepare(sql).all(...params);
+
+  const escapeCsv = (val) => {
+    if (val === null || val === undefined) return '';
+    const str = String(val).replace(/[\r\n]+/g, ' ').trim();
+    if (str.includes(',') || str.includes('"') || str.includes(';') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const headers = [
+    'nid',
+    'pota_ref',
+    'pota_name',
+    'title',
+    'name_en',
+    'category',
+    'sig_display',
+    'region',
+    'dx_entity',
+    'location_code',
+    'system_status',
+    'latitude',
+    'longitude',
+    'area_ha',
+    'current_url',
+    'yandex_search_url',
+    'new_passport_url'
+  ];
+
+  const lines = [headers.join(',')];
+
+  for (const r of rows) {
+    const p = parseSubmitterFields(r);
+    let systemStatus = 'Свободный кандидат';
+    if (r.pota_ref) {
+      systemStatus = `Активен в POTA (${r.pota_ref})`;
+    } else if (r.pota_status === 'submitted') {
+      systemStatus = `В очереди подачи (${r.pota_submitted_by || 'Заявлен'})`;
+    }
+
+    const searchQuery = `${r.title} ${r.ate || ''} ООПТ`;
+    const yandexUrl = `https://yandex.ru/search/?text=${encodeURIComponent(searchQuery)}`;
+
+    const record = [
+      r.nid,
+      escapeCsv(r.pota_ref || ''),
+      escapeCsv(r.pota_name || ''),
+      escapeCsv(r.title || ''),
+      escapeCsv(p.nameEn || ''),
+      escapeCsv(r.category || ''),
+      escapeCsv(r.sig_display || (r.sig === 'federal' ? 'Федеральное' : 'Региональное')),
+      escapeCsv(p.region || r.ate || ''),
+      escapeCsv(p.dxEntity || ''),
+      escapeCsv(p.locationCode || ''),
+      escapeCsv(systemStatus),
+      p.lat,
+      p.lon,
+      r.area ? Number(r.area) : '',
+      'https://карта.оцзк.рф/',
+      escapeCsv(yandexUrl),
+      '' // new_passport_url empty for filling
+    ];
+    lines.push(record.join(','));
+  }
+
+  return '\uFEFF' + lines.join('\r\n');
 }
 
 /**
@@ -3949,7 +4160,7 @@ export function getOoptMapPoints(options = {}) {
     lat: parseFloat(r.lat),
     lon: parseFloat(r.lon),
     area: r.area ? Number(r.area) : null,
-    site: r.nid <= 66061 ? `https://ooptaari.nextgis.ru/node/${r.nid}` : (r.rusoir_url || 'https://карта.оцзк.рф/')
+    site: (r.rusoir_url && !r.rusoir_url.includes('карта.оцзк')) ? r.rusoir_url : (r.nid <= 66061 ? `https://ooptaari.nextgis.ru/node/${r.nid}` : 'https://карта.оцзк.рф/')
   }));
 
   // 2. Unmatched POTA (Orange): from Russian POTA parks without match in oopt_registry
@@ -4005,7 +4216,7 @@ export function getOoptMapPoints(options = {}) {
     potaStatus: r.pota_status,
     submittedAt: r.pota_submitted_at,
     submittedBy: r.pota_submitted_by,
-    site: r.nid <= 66061 ? `https://ooptaari.nextgis.ru/node/${r.nid}` : (r.rusoir_url || 'https://карта.оцзк.рф/')
+    site: (r.rusoir_url && !r.rusoir_url.includes('карта.оцзк')) ? r.rusoir_url : (r.nid <= 66061 ? `https://ooptaari.nextgis.ru/node/${r.nid}` : 'https://карта.оцзк.рф/')
   }));
 
   // 4. Candidates (Grey): pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted'), active, valid coords
@@ -4063,7 +4274,7 @@ export function getOoptMapPoints(options = {}) {
     lat: parseFloat(r.lat),
     lon: parseFloat(r.lon),
     area: r.area ? Number(r.area) : null,
-    site: r.nid <= 66061 ? `https://ooptaari.nextgis.ru/node/${r.nid}` : (r.rusoir_url || 'https://карта.оцзк.рф/')
+    site: (r.rusoir_url && !r.rusoir_url.includes('карта.оцзк')) ? r.rusoir_url : (r.nid <= 66061 ? `https://ooptaari.nextgis.ru/node/${r.nid}` : 'https://карта.оцзк.рф/')
   }));
 
   return {
@@ -4569,6 +4780,10 @@ export default {
   getOoptMapPoints,
   markOoptAsSubmitted,
   unmarkOoptAsSubmitted,
+  resetOoptQueue,
+  updateOoptUrl,
+  importOoptUrlsFromCsv,
+  exportPlaceholderLinksCsv,
   unlinkOoptFromPota,
   linkOoptToPota,
   getMatchDiagnostics,

@@ -5717,8 +5717,8 @@ export const startAdminServer = (telegramClient) => {
                   statusHtml += '<div style="color:#d63384; font-size:11px; font-weight:600; margin-top:4px; display:flex; align-items:center; justify-content:space-between; gap:4px;">' +
                     '<span>📐 Границы Минприроды</span>' +
                     '<div style="display:flex; gap:4px;">' +
-                      '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" style="font-size:10px; padding:1px 6px; border:1px solid #ced4da; border-radius:3px; color:#495057; background:#f8f9fa; cursor:pointer;" title="Свернуть карточку, чтобы открыть границы ООПТ">⭐ Свернуть</button>' +
-                      '<button type="button" class="btn btn-xs btn-outline-danger btn-zoom-boundary" style="font-size:10px; padding:1px 6px; border:1px solid #d63384; border-radius:3px; color:#d63384; background:none; cursor:pointer;" title="Показать весь полигон ООПТ">🔍 Весь полигон</button>' +
+                      '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" onclick="window.toggleOoptCardCollapse(this, event)" style="font-size:10px; padding:1px 6px; border:1px solid #ced4da; border-radius:3px; color:#495057; background:#f8f9fa; cursor:pointer;" title="Свернуть карточку, чтобы открыть границы ООПТ">⭐ Свернуть</button>' +
+                      '<button type="button" class="btn btn-xs btn-outline-danger btn-zoom-boundary" onclick="window.zoomOoptBoundary(event)" style="font-size:10px; padding:1px 6px; border:1px solid #d63384; border-radius:3px; color:#d63384; background:none; cursor:pointer;" title="Показать весь полигон ООПТ">🔍 Весь полигон</button>' +
                     '</div>' +
                   '</div>';
                 } else {
@@ -5805,6 +5805,59 @@ export const startAdminServer = (telegramClient) => {
             document.getElementById('btn-tile-satellite')?.addEventListener('click', function() { switchMapTileLayer('satellite'); });
             document.getElementById('btn-tile-osm')?.addEventListener('click', function() { switchMapTileLayer('osm'); });
             document.getElementById('btn-tile-topo')?.addEventListener('click', function() { switchMapTileLayer('topo'); });
+
+            window.toggleOoptCardCollapse = function(el, e) {
+              if (e) {
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
+                if (typeof e.preventDefault === 'function') e.preventDefault();
+              }
+              if (!el) return;
+              var card = el.closest('.oopt-map-card');
+              if (!card) {
+                var popupContent = el.closest('.leaflet-popup-content') || el.closest('.leaflet-popup');
+                if (popupContent) card = popupContent.querySelector('.oopt-map-card');
+              }
+              if (!card) return;
+
+              var collapsedBar = card.querySelector('.popup-collapsed-bar');
+              var expandedContent = card.querySelector('.popup-expanded-content');
+              if (!collapsedBar || !expandedContent) return;
+
+              var isCollapsed = (expandedContent.style.display === 'none');
+              if (isCollapsed) {
+                expandedContent.style.display = 'block';
+                collapsedBar.style.display = 'none';
+              } else {
+                expandedContent.style.display = 'none';
+                collapsedBar.style.display = 'flex';
+              }
+
+              if (adminOoptMap && adminOoptMap._popup && typeof adminOoptMap._popup.update === 'function') {
+                adminOoptMap._popup.update();
+              }
+            };
+
+            window.zoomOoptBoundary = function(e) {
+              if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+              if (mapBoundaryGroup && mapBoundaryGroup.getLayers().length > 0) {
+                try {
+                  adminOoptMap.fitBounds(mapBoundaryGroup.getBounds(), { padding: [30, 30], maxZoom: 15 });
+                } catch (_) {}
+              }
+            };
+
+            // Global capture-phase listener: catches clicks before Leaflet stopPropagation
+            document.addEventListener('click', function(e) {
+              var btn = e.target.closest('.btn-toggle-card-collapse');
+              var bar = !btn && e.target.closest('.popup-collapsed-bar');
+              if (btn || bar) {
+                window.toggleOoptCardCollapse(btn || bar, e);
+              }
+              var zoomBtn = e.target.closest('.btn-zoom-boundary');
+              if (zoomBtn) {
+                window.zoomOoptBoundary(e);
+              }
+            }, true);
 
             populateMapRegionsDropdown();
             loadAdminMapPoints('', false);
@@ -6265,16 +6318,16 @@ export const startAdminServer = (telegramClient) => {
               var diagBtn = '<button class="btn btn-xs btn-outline-info btn-oopt-diagnostics" data-nid="' + m.nid + '" data-ref="' + m.ref + '" style="font-size:10px; padding:2px 8px; border:1px solid #0dcaf0; border-radius:3px; background:none; cursor:pointer;" title="Инспектор сопоставления">🔍 Инспектор</button>';
               var unlinkBtn = '<button class="btn btn-xs btn-outline-danger btn-oopt-unlink" data-nid="' + m.nid + '" data-ref="' + m.ref + '" style="font-size:10px; padding:2px 8px; border:1px solid #dc3545; border-radius:3px; background:none; cursor:pointer;" title="Отвязать ООПТ от парка POTA">✂️ Отвязать</button>';
               var popupHtml = '<div class="oopt-map-card" style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
-                '<div class="popup-collapsed-bar" style="display:none; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; padding:2px 0;" title="Нажмите, чтобы развернуть карточку">' +
+                '<div class="popup-collapsed-bar" onclick="window.toggleOoptCardCollapse(this, event)" style="display:none; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; padding:2px 0;" title="Нажмите, чтобы развернуть карточку">' +
                   '<span style="font-weight:bold; color:#198754; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">⭐ ' + m.ref + ' ' + (m.title || '') + '</span>' +
-                  '<button type="button" class="btn btn-xs btn-outline-success btn-toggle-card-collapse" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #198754; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢ Развернуть</button>' +
+                  '<button type="button" class="btn btn-xs btn-outline-success btn-toggle-card-collapse" onclick="window.toggleOoptCardCollapse(this, event)" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #198754; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢ Развернуть</button>' +
                 '</div>' +
                 '<div class="popup-expanded-content">' +
                   '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; padding-right:16px;">' +
                     '<div style="font-size:13px; font-weight:bold; color:#198754; line-height:1.25;">' +
                       '<span style="background:#d1e7dd; padding:1px 6px; border-radius:4px; font-size:11px; margin-right:4px;">' + m.ref + '</span> ' + m.title +
                     '</div>' +
-                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #ced4da; border-radius:4px; background:#f8f9fa; cursor:pointer; color:#495057; white-space:nowrap; flex-shrink:0;" title="Свернуть карточку (открыть границы ООПТ)">⭐ Свернуть</button>' +
+                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" onclick="window.toggleOoptCardCollapse(this, event)" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #ced4da; border-radius:4px; background:#f8f9fa; cursor:pointer; color:#495057; white-space:nowrap; flex-shrink:0;" title="Свернуть карточку (открыть границы ООПТ)">⭐ Свернуть</button>' +
                   '</div>' +
                   '<div style="color:#555; margin-bottom:4px;"><strong>POTA:</strong> ' + (m.potaName || m.ref) + '</div>' +
                   '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (m.category || 'ООПТ') + ' (' + (m.sigDisplay || m.sig) + ')</div>' +
@@ -6309,16 +6362,16 @@ export const startAdminServer = (telegramClient) => {
               var siteBtn = u.website ? '<a href="' + u.website + '" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #6c757d; border-radius:3px; color:#495057;">Сайт</a>' : '';
               var diagBtn = '<button class="btn btn-xs btn-outline-info btn-oopt-diagnostics" data-ref="' + u.ref + '" style="font-size:10px; padding:2px 8px; border:1px solid #0dcaf0; border-radius:3px; background:none; cursor:pointer;" title="Сравнить с кандидатами ООПТ">🔍 Инспектор</button>';
               var popupHtml = '<div class="oopt-map-card" style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
-                '<div class="popup-collapsed-bar" style="display:none; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; padding:2px 0;" title="Нажмите, чтобы развернуть карточку">' +
+                '<div class="popup-collapsed-bar" onclick="window.toggleOoptCardCollapse(this, event)" style="display:none; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; padding:2px 0;" title="Нажмите, чтобы развернуть карточку">' +
                   '<span style="font-weight:bold; color:#d39e00; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">⭐ ' + u.ref + ' ' + (u.name || '') + '</span>' +
-                  '<button type="button" class="btn btn-xs btn-outline-warning btn-toggle-card-collapse" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #d39e00; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢ Развернуть</button>' +
+                  '<button type="button" class="btn btn-xs btn-outline-warning btn-toggle-card-collapse" onclick="window.toggleOoptCardCollapse(this, event)" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #d39e00; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢ Развернуть</button>' +
                 '</div>' +
                 '<div class="popup-expanded-content">' +
                   '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; padding-right:16px;">' +
                     '<div style="font-size:13px; font-weight:bold; color:#d39e00; line-height:1.25;">' +
                       '<span style="background:#fff3cd; color:#664d03; padding:1px 6px; border-radius:4px; font-size:11px; margin-right:4px;">' + u.ref + '</span> ' + u.name +
                     '</div>' +
-                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #ced4da; border-radius:4px; background:#f8f9fa; cursor:pointer; color:#495057; white-space:nowrap; flex-shrink:0;" title="Свернуть карточку (открыть границы ООПТ)">⭐ Свернуть</button>' +
+                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" onclick="window.toggleOoptCardCollapse(this, event)" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #ced4da; border-radius:4px; background:#f8f9fa; cursor:pointer; color:#495057; white-space:nowrap; flex-shrink:0;" title="Свернуть карточку (открыть границы ООПТ)">⭐ Свернуть</button>' +
                   '</div>' +
                   '<div style="color:#b02a37; font-weight:600; margin-bottom:4px;">⚠️ Не сопоставлен с реестром ООПТ РФ</div>' +
                   '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (u.location || '') + '</div>' +
@@ -6354,16 +6407,16 @@ export const startAdminServer = (telegramClient) => {
               var submitterInfo = q.submittedAt ? '<div style="color:#0a58ca; font-size:11px; margin-bottom:4px;">⏱️ Подано: ' + q.submittedAt.slice(0, 10) + (q.submittedBy ? ' (' + q.submittedBy + ')' : '') + '</div>' : '';
 
               var popupHtml = '<div class="oopt-map-card" style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
-                '<div class="popup-collapsed-bar" style="display:none; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; padding:2px 0;" title="Нажмите, чтобы развернуть карточку">' +
+                '<div class="popup-collapsed-bar" onclick="window.toggleOoptCardCollapse(this, event)" style="display:none; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; padding:2px 0;" title="Нажмите, чтобы развернуть карточку">' +
                   '<span style="font-weight:bold; color:#0d6efd; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">⭐ ' + (q.title || '') + '</span>' +
-                  '<button type="button" class="btn btn-xs btn-outline-primary btn-toggle-card-collapse" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #0d6efd; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢ Развернуть</button>' +
+                  '<button type="button" class="btn btn-xs btn-outline-primary btn-toggle-card-collapse" onclick="window.toggleOoptCardCollapse(this, event)" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #0d6efd; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢ Развернуть</button>' +
                 '</div>' +
                 '<div class="popup-expanded-content">' +
                   '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; padding-right:16px;">' +
                     '<div style="font-size:13px; font-weight:bold; color:#0d6efd; line-height:1.25;">' +
                       q.title +
                     '</div>' +
-                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #ced4da; border-radius:4px; background:#f8f9fa; cursor:pointer; color:#495057; white-space:nowrap; flex-shrink:0;" title="Свернуть карточку (открыть границы ООПТ)">⭐ Свернуть</button>' +
+                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" onclick="window.toggleOoptCardCollapse(this, event)" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #ced4da; border-radius:4px; background:#f8f9fa; cursor:pointer; color:#495057; white-space:nowrap; flex-shrink:0;" title="Свернуть карточку (открыть границы ООПТ)">⭐ Свернуть</button>' +
                   '</div>' +
                   '<div style="color:#0d6efd; font-weight:600; margin-bottom:4px;">🔵 В очереди на добавление в POTA</div>' +
                   submitterInfo +
@@ -6404,16 +6457,16 @@ export const startAdminServer = (telegramClient) => {
               var diagBtn = '<button class="btn btn-xs btn-outline-info btn-oopt-diagnostics" data-nid="' + c.nid + '" style="font-size:10px; padding:2px 8px; border:1px solid #0dcaf0; border-radius:3px; background:none; cursor:pointer;" title="Инспектор сопоставления">🔍 Инспектор</button>';
 
               var popupHtml = '<div class="oopt-map-card" style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
-                '<div class="popup-collapsed-bar" style="display:none; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; padding:2px 0;" title="Нажмите, чтобы развернуть карточку">' +
+                '<div class="popup-collapsed-bar" onclick="window.toggleOoptCardCollapse(this, event)" style="display:none; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; padding:2px 0;" title="Нажмите, чтобы развернуть карточку">' +
                   '<span style="font-weight:bold; color:#495057; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">⭐ ' + (c.title || '') + '</span>' +
-                  '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #6c757d; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢ Развернуть</button>' +
+                  '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" onclick="window.toggleOoptCardCollapse(this, event)" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #6c757d; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢ Развернуть</button>' +
                 '</div>' +
                 '<div class="popup-expanded-content">' +
                   '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; padding-right:16px;">' +
                     '<div style="font-size:13px; font-weight:bold; color:#495057; line-height:1.25;">' +
                       c.title +
                     '</div>' +
-                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #ced4da; border-radius:4px; background:#f8f9fa; cursor:pointer; color:#495057; white-space:nowrap; flex-shrink:0;" title="Свернуть карточку (открыть границы ООПТ)">⭐ Свернуть</button>' +
+                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" onclick="window.toggleOoptCardCollapse(this, event)" style="font-size:10px; padding:1px 6px; font-weight:bold; border:1px solid #ced4da; border-radius:4px; background:#f8f9fa; cursor:pointer; color:#495057; white-space:nowrap; flex-shrink:0;" title="Свернуть карточку (открыть границы ООПТ)">⭐ Свернуть</button>' +
                   '</div>' +
                   '<div style="color:#6c757d; font-weight:600; margin-bottom:4px;">⚪ Кандидат на добавление в POTA</div>' +
                   '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (c.category || 'ООПТ') + ' (' + (c.sigDisplay || c.sig) + ')</div>' +

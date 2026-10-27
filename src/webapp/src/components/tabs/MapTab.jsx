@@ -171,6 +171,11 @@ export default function MapTab({
   const [filterActiveOnly, setFilterActiveOnly] = useState(false);
   
   const [selectedItem, setSelectedItem] = useState(null); // park or raza or airfield
+  const [isCardCollapsed, setIsCardCollapsed] = useState(false);
+
+  useEffect(() => {
+    setIsCardCollapsed(false);
+  }, [selectedItem?.reference, selectedItem?.nid, selectedItem?.name]);
   const [showParkModal, setShowParkModal] = useState(false);
   const [detailedPark, setDetailedPark] = useState(null);
   const [showRouteModal, setShowRouteModal] = useState(false);
@@ -1376,10 +1381,61 @@ export default function MapTab({
 
       {/* 5. Selected Item Bottom Sheet Card (Park, RAZA or Airfield) */}
       {selectedItem && (
-        <div className="absolute bottom-3 left-3 right-3 z-30 p-4 rounded-2xl glass-card shadow-2xl border border-emerald-500/50 animate-slide-up space-y-3">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <div className="flex items-center gap-2">
+        <div className={`absolute bottom-3 left-3 right-3 z-30 transition-all duration-200 rounded-2xl glass-card shadow-2xl border ${
+          isCardCollapsed 
+            ? 'p-2.5 border-amber-500/60 bg-white/95 dark:bg-slate-900/95 animate-fade-in' 
+            : 'p-4 border-emerald-500/50 space-y-3 animate-slide-up'
+        }`}>
+          {isCardCollapsed ? (
+            <div 
+              onClick={() => {
+                telegram.haptic.impact('light');
+                setIsCardCollapsed(false);
+              }}
+              className="flex items-center justify-between gap-2 cursor-pointer"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-amber-400 text-sm select-none">⭐</span>
+                <span className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                  {selectedItem.reference ? `${selectedItem.reference} • ` : ''}{selectedItem.name}
+                </span>
+                {selectedItem.category && (
+                  <span className="text-[10px] text-slate-500 truncate hidden xs:inline">
+                    ({selectedItem.category})
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    telegram.haptic.impact('light');
+                    setIsCardCollapsed(false);
+                  }}
+                  className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 hover:bg-emerald-500/25 px-2.5 py-1 rounded-lg border border-emerald-500/30 transition flex items-center gap-1"
+                >
+                  <span>Развернуть</span>
+                  <span>⤢</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedItem(null);
+                  }}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  title="Закрыть"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
                 {/* Badge based on type */}
                 {selectedItem.type === 'rda' ? (
                   <span className="font-mono font-extrabold text-sm px-2.5 py-0.5 rounded-lg bg-[#fff83b] text-black border border-[#d90077] flex items-center gap-1 shadow-sm">
@@ -1460,13 +1516,28 @@ export default function MapTab({
               )}
             </div>
 
-            <button
-              type="button"
-              onClick={() => setSelectedItem(null)}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  telegram.haptic.impact('light');
+                  setIsCardCollapsed(true);
+                }}
+                className="px-2 py-1 rounded-xl text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1 text-[11px] font-bold border border-slate-300 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800/80 shadow-sm"
+                title="Свернуть карточку, чтобы открыть карту и границы"
+              >
+                <span>⭐</span>
+                <span>Свернуть</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedItem(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Candidate OOPT Notice */}
@@ -1595,6 +1666,8 @@ export default function MapTab({
               <span>OsmAnd</span>
             </button>
           </div>
+        </>
+      )}
         </div>
       )}
 

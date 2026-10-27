@@ -472,6 +472,21 @@ try {
     console.log('[DB] Migrated oopt_registry table: added pota_status, pota_submitted_at, pota_submitted_by columns');
   }
 
+  const hasPotaManual = ooptColumns.some(col => col.name === 'pota_manual');
+  if (!hasPotaManual) {
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN pota_manual INTEGER DEFAULT 0`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_oopt_pota_manual ON oopt_registry (pota_manual)`);
+    console.log('[DB] Migrated oopt_registry table: added pota_manual column');
+  }
+
+  const hasIsDuplicate = ooptColumns.some(col => col.name === 'is_duplicate');
+  if (!hasIsDuplicate) {
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN is_duplicate INTEGER DEFAULT 0`);
+    db.exec(`ALTER TABLE oopt_registry ADD COLUMN duplicate_of INTEGER DEFAULT NULL`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_oopt_duplicate ON oopt_registry (is_duplicate)`);
+    console.log('[DB] Migrated oopt_registry table: added is_duplicate, duplicate_of columns');
+  }
+
   // Table for on-demand cached OOPT boundary polygons and geometries from Minpriroda
   db.exec(`
     CREATE TABLE IF NOT EXISTS oopt_boundaries (
@@ -674,23 +689,33 @@ try {
       UPDATE oopt_registry SET category = 'государственный природный заказник' WHERE nid = 58456 AND (category IS NULL OR category = '');
       UPDATE oopt_registry SET category = 'памятник природы' WHERE nid = 56585 AND (category IS NULL OR category = '');
       UPDATE oopt_registry SET clusters = NULL WHERE nid IN (32, 235, 6453);
-      UPDATE oopt_registry SET pota_ref = 'RU-0024', pota_name = 'Meshchyora National Park' WHERE nid = 6708 AND (pota_ref IS NULL OR pota_ref != 'RU-0024');
-      UPDATE oopt_registry SET pota_ref = 'RU-0025', pota_name = 'Meschyorsky National Park' WHERE nid = 6709 AND (pota_ref IS NULL OR pota_ref != 'RU-0025');
-      UPDATE oopt_registry SET pota_ref = 'RU-0031', pota_name = 'Pleshcheyevo Ozero National Park' WHERE nid = 6714 AND (pota_ref IS NULL OR pota_ref != 'RU-0031');
-      UPDATE oopt_registry SET pota_ref = 'RU-0324', pota_name = 'Bird Harbor Nature Park' WHERE nid = 7091 AND (pota_ref IS NULL OR pota_ref != 'RU-0324');
+      UPDATE oopt_registry SET pota_ref = 'RU-0024', pota_name = 'Meshchyora National Park', pota_manual = 1 WHERE nid = 6708;
+      UPDATE oopt_registry SET pota_ref = 'RU-0025', pota_name = 'Meschyorsky National Park', pota_manual = 1 WHERE nid = 6709;
+      UPDATE oopt_registry SET pota_ref = 'RU-0031', pota_name = 'Pleshcheyevo Ozero National Park', pota_manual = 1 WHERE nid = 6714;
+      UPDATE oopt_registry SET pota_ref = 'RU-0324', pota_name = 'Bird Harbor Nature Park', pota_manual = 1 WHERE nid = 7091;
       
       -- Fix NID 38306 (Вязовская ковыльная степь) coordinates in Samara and link to RU-1722
-      UPDATE oopt_registry SET lat = 52.67581, lon = 50.57111, pota_ref = 'RU-1722', pota_name = 'Вязовская ковыльная степь Natural Monument' WHERE nid = 38306;
+      UPDATE oopt_registry SET lat = 52.67581, lon = 50.57111, pota_ref = 'RU-1722', pota_name = 'Вязовская ковыльная степь Natural Monument', pota_manual = 1 WHERE nid = 38306;
       UPDATE oopt_boundaries SET minpriroda_lat = 52.67581, minpriroda_lon = 50.57111 WHERE nid = 38306;
       
       -- Fix NID 81 (Русская Арктика) linking to RU-0061 (ZFI) instead of RU-0034
-      UPDATE oopt_registry SET pota_ref = 'RU-0061', pota_name = 'Russian Arctic National Park' WHERE nid = 81;
+      UPDATE oopt_registry SET pota_ref = 'RU-0061', pota_name = 'Russian Arctic National Park', pota_manual = 1 WHERE nid = 81;
       
       -- Fix NID 64976 (Пёзский заказник) linking to RU-0034
-      UPDATE oopt_registry SET pota_ref = 'RU-0034', pota_name = 'Pyozsky State Natural Reserve' WHERE nid = 64976;
+      UPDATE oopt_registry SET pota_ref = 'RU-0034', pota_name = 'Pyozsky State Natural Reserve', pota_manual = 1 WHERE nid = 64976;
 
       -- Link NID 34504 (Костромская слобода) to RU-1723
-      UPDATE oopt_registry SET pota_ref = 'RU-1723', pota_name = 'Костромская слобода Recreation Site' WHERE nid = 34504;
+      UPDATE oopt_registry SET pota_ref = 'RU-1723', pota_name = 'Костромская слобода Recreation Site', pota_manual = 1 WHERE nid = 34504;
+
+      -- Coordinator (Manu R2BBX) verified manual links (protected from auto-reset)
+      UPDATE oopt_registry SET pota_ref = 'RU-0927', pota_name = 'Большой Арктический State Nature Preserve', pota_manual = 1 WHERE nid = 70;
+      UPDATE oopt_registry SET pota_ref = 'RU-0933', pota_name = 'Североземельский State Natural Reserve', pota_manual = 1 WHERE nid = 33;
+      UPDATE oopt_registry SET pota_ref = 'RU-0043', pota_name = 'Shorsky National Park', pota_manual = 1 WHERE nid = 6728;
+      UPDATE oopt_registry SET pota_ref = 'RU-0344', pota_name = 'Ozyorsky Spruce Forest Natural Monument', pota_manual = 1 WHERE nid = 163;
+      UPDATE oopt_registry SET pota_ref = 'RU-0962', pota_name = 'Магаданский State Nature Preserve', pota_manual = 1 WHERE nid = 276;
+      UPDATE oopt_registry SET pota_ref = 'RU-5122', pota_name = 'Пойма State Natural Reserve', pota_manual = 1 WHERE nid = 10992;
+      UPDATE oopt_registry SET pota_ref = 'RU-4721', pota_name = 'Болото Большое-I Natural Monument', pota_manual = 1 WHERE nid = 20293;
+      UPDATE oopt_registry SET pota_ref = 'RU-6139', pota_name = 'Урочище Большой лес Natural Monument', pota_manual = 1 WHERE nid = 66279;
     `);
   } catch (_) {}
 

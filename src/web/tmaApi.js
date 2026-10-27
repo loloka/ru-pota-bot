@@ -2372,6 +2372,7 @@ export function createTmaRouter(telegramClient) {
           FROM oopt_registry
           WHERE pota_ref IS NULL
             AND (pota_status IS NULL OR pota_status != 'submitted')
+            AND (is_duplicate = 0 OR is_duplicate IS NULL)
             AND lat IS NOT NULL AND lat != 0
             AND lon IS NOT NULL AND lon != 0
             AND LOWER(status) = 'действующий'
@@ -2391,6 +2392,7 @@ export function createTmaRouter(telegramClient) {
             FROM oopt_registry
             WHERE pota_ref IS NULL
               AND (pota_status IS NULL OR pota_status != 'submitted')
+              AND (is_duplicate = 0 OR is_duplicate IS NULL)
               AND lat BETWEEN ? AND ?
               AND lon BETWEEN ? AND ?
               AND LOWER(status) = 'действующий'
@@ -2413,6 +2415,7 @@ export function createTmaRouter(telegramClient) {
             FROM oopt_registry
             WHERE pota_ref IS NULL 
               AND (pota_status IS NULL OR pota_status != 'submitted')
+              AND (is_duplicate = 0 OR is_duplicate IS NULL)
               AND lat IS NOT NULL AND lat != 0 
               AND lon IS NOT NULL AND lon != 0
               AND LOWER(status) = 'действующий'

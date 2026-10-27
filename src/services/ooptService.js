@@ -805,7 +805,7 @@ export function getOoptList({
   } else if (pota === 'queued') {
     conditions.push(`pota_ref IS NULL AND pota_status = 'submitted'`);
   } else if (pota === 'candidate') {
-    conditions.push(`pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted')`);
+    conditions.push(`pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted') AND (is_duplicate = 0 OR is_duplicate IS NULL)`);
   } else if (pota === 'placeholder_link' || pota === 'placeholder') {
     conditions.push(`(nid > 66061 OR rusoir_url LIKE '%карта.оцзк%') AND (rusoir_url IS NULL OR rusoir_url = '' OR rusoir_url LIKE '%карта.оцзк%')`);
   }
@@ -1971,14 +1971,14 @@ export function getRegionalPotaStats() {
 
   let candRows = [];
   try {
-    candRows = db.prepare("SELECT ate, COUNT(*) as cnt FROM oopt_registry WHERE pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted') AND lat IS NOT NULL AND lat != 0 AND lon IS NOT NULL AND lon != 0 AND LOWER(status) = 'действующий' AND (sig IS NULL OR sig != 'local') GROUP BY ate").all();
+    candRows = db.prepare("SELECT ate, COUNT(*) as cnt FROM oopt_registry WHERE pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted') AND (is_duplicate = 0 OR is_duplicate IS NULL) AND lat IS NOT NULL AND lat != 0 AND lon IS NOT NULL AND lon != 0 AND LOWER(status) = 'действующий' AND (sig IS NULL OR sig != 'local') GROUP BY ate").all();
   } catch (err) {
     console.warn('[OOPT Service] ⚠️ Failed to query candidate counts:', err.message);
   }
 
   let queuedRows = [];
   try {
-    queuedRows = db.prepare("SELECT ate, COUNT(*) as cnt FROM oopt_registry WHERE pota_ref IS NULL AND pota_status = 'submitted' AND lat IS NOT NULL AND lat != 0 AND lon IS NOT NULL AND lon != 0 GROUP BY ate").all();
+    queuedRows = db.prepare("SELECT ate, COUNT(*) as cnt FROM oopt_registry WHERE pota_ref IS NULL AND pota_status = 'submitted' AND (is_duplicate = 0 OR is_duplicate IS NULL) AND lat IS NOT NULL AND lat != 0 AND lon IS NOT NULL AND lon != 0 GROUP BY ate").all();
   } catch (err) {
     console.warn('[OOPT Service] ⚠️ Failed to query queued counts:', err.message);
   }
@@ -2142,8 +2142,8 @@ export function getRegionalPotaStats() {
   const fjItem = regionMap.get('RU-FJ');
   if (fjItem) {
     const fjTotal = db.prepare("SELECT COUNT(*) as cnt FROM oopt_registry WHERE title LIKE '%Франца-Иосифа%' OR title LIKE '%Русская Арктика%'").get()?.cnt || 0;
-    const fjCand = db.prepare("SELECT COUNT(*) as cnt FROM oopt_registry WHERE (title LIKE '%Франца-Иосифа%' OR title LIKE '%Русская Арктика%') AND pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted') AND LOWER(status) = 'действующий'").get()?.cnt || 0;
-    const fjQueued = db.prepare("SELECT COUNT(*) as cnt FROM oopt_registry WHERE (title LIKE '%Франца-Иосифа%' OR title LIKE '%Русская Арктика%') AND pota_ref IS NULL AND pota_status = 'submitted'").get()?.cnt || 0;
+    const fjCand = db.prepare("SELECT COUNT(*) as cnt FROM oopt_registry WHERE (title LIKE '%Франца-Иосифа%' OR title LIKE '%Русская Арктика%') AND pota_ref IS NULL AND (pota_status IS NULL OR pota_status != 'submitted') AND (is_duplicate = 0 OR is_duplicate IS NULL) AND LOWER(status) = 'действующий'").get()?.cnt || 0;
+    const fjQueued = db.prepare("SELECT COUNT(*) as cnt FROM oopt_registry WHERE (title LIKE '%Франца-Иосифа%' OR title LIKE '%Русская Арктика%') AND pota_ref IS NULL AND pota_status = 'submitted' AND (is_duplicate = 0 OR is_duplicate IS NULL)").get()?.cnt || 0;
     fjItem.ooptCandidates = fjTotal;
     fjItem.candidatesCount = fjCand;
     fjItem.queuedCount = fjQueued;
@@ -3478,7 +3478,12 @@ export function syncPotaMatches() {
       if (pLat && pLon && o.lat && o.lon) {
         const dist = getDistanceKm(pLat, pLon, o.lat, o.lon);
         if (dist !== null) {
-          // Guard: If no direct NextGIS node/slug hint, reject pairs further than 20 km to prevent cross-city false matches
+          // Near-coordinate match (within 350m): identical or proximate reserve location
+          if (dist <= 0.35) {
+            score += 300;
+            properNameMatch = true;
+          }
+          // Guard: If no direct NextGIS node/slug hint or exact coords, reject pairs further than 20 km to prevent cross-city false matches
           if (!targetNid && !targetSlug && dist > 20) continue;
           if (dist > 120) continue;
           if (dist < 1.5) score += 50;
@@ -3571,8 +3576,10 @@ export function syncPotaMatches() {
   // Greedy 1-to-1 bipartite assignment by highest score
   potentialMatches.sort((a, b) => b.score - a.score);
 
-  const assignedOopt = new Set();
-  const assignedPota = new Set();
+  // Pre-load verified manual links so auto-sync never overwrites or re-assigns them
+  const manualRows = db.prepare('SELECT nid, pota_ref FROM oopt_registry WHERE pota_manual = 1 AND pota_ref IS NOT NULL').all();
+  const assignedOopt = new Set(manualRows.map(r => r.nid));
+  const assignedPota = new Set(manualRows.map(r => r.pota_ref));
   const finalMatches = [];
 
   for (const m of potentialMatches) {
@@ -3583,15 +3590,15 @@ export function syncPotaMatches() {
     }
   }
 
-  // Update Database: reset old matches then apply high-confidence matches and backfill missing coordinates
-  const resetStmt = db.prepare('UPDATE oopt_registry SET pota_ref = NULL, pota_name = NULL');
+  // Update Database: reset automatic matches (preserving manual ones) then apply high-confidence matches and backfill missing coordinates
+  const resetStmt = db.prepare('UPDATE oopt_registry SET pota_ref = NULL, pota_name = NULL WHERE pota_manual = 0 OR pota_manual IS NULL');
   const updateStmt = db.prepare(`
     UPDATE oopt_registry 
     SET pota_ref = ?, 
         pota_name = ?,
         lat = CASE WHEN (lat IS NULL OR lat = 0) AND ? IS NOT NULL THEN ? ELSE lat END,
         lon = CASE WHEN (lon IS NULL OR lon = 0) AND ? IS NOT NULL THEN ? ELSE lon END
-    WHERE nid = ?
+    WHERE nid = ? AND (pota_manual = 0 OR pota_manual IS NULL)
   `);
 
   const transaction = db.transaction((list) => {
@@ -3611,11 +3618,85 @@ export function syncPotaMatches() {
 
   transaction(finalMatches);
 
+  // Auto-deduplicate duplicate records (same title & proximate coords)
+  try {
+    deduplicateOoptRegistry();
+  } catch (dupErr) {
+    console.warn('[OOPT Service] ⚠️ Deduplication notice:', dupErr.message);
+  }
+
   // Invalidate in-memory stats cache so UI counter updates immediately
   cachedStats = null;
 
-  console.log(`[OOPT Service] 🌲 Synced POTA matches: ${finalMatches.length} / ${ruPota.length} Russian parks mapped to OOPT registry!`);
-  return { matched: finalMatches.length };
+  console.log(`[OOPT Service] 🌲 Synced POTA matches: ${finalMatches.length} / ${ruPota.length} Russian parks mapped to OOPT registry (plus ${manualRows.length} manual links preserved)!`);
+  return { matched: finalMatches.length + manualRows.length };
+}
+
+/**
+ * Deduplicates duplicate records in oopt_registry (e.g. re-imported objects with same title and coords).
+ * Flags duplicate as is_duplicate = 1 and duplicate_of = keeper.nid.
+ */
+export function deduplicateOoptRegistry() {
+  const duplicateTitles = db.prepare(`
+    SELECT LOWER(TRIM(title)) as norm_title, COUNT(*) as cnt 
+    FROM oopt_registry 
+    WHERE title IS NOT NULL AND TRIM(title) != '' 
+    GROUP BY LOWER(TRIM(title)) 
+    HAVING cnt > 1
+  `).all();
+
+  const getRowsStmt = db.prepare(`
+    SELECT nid, title, ate, lat, lon, pota_ref, pota_status, rusoir_url 
+    FROM oopt_registry 
+    WHERE LOWER(TRIM(title)) = ?
+    ORDER BY nid ASC
+  `);
+
+  const markDupStmt = db.prepare(`
+    UPDATE oopt_registry 
+    SET is_duplicate = 1, duplicate_of = ? 
+    WHERE nid = ?
+  `);
+
+  let markedCount = 0;
+  const tx = db.transaction(() => {
+    for (const group of duplicateTitles) {
+      const rows = getRowsStmt.all(group.norm_title);
+      for (let i = 0; i < rows.length; i++) {
+        for (let j = i + 1; j < rows.length; j++) {
+          const a = rows[i];
+          const b = rows[j];
+          if (!a.lat || !a.lon || !b.lat || !b.lon) continue;
+          const dLat = a.lat - b.lat;
+          const dLon = a.lon - b.lon;
+          const distSq = dLat * dLat + dLon * dLon;
+          // Proximate distance (under ~5-7 km)
+          if (distSq < 0.005) {
+            let keeper = a;
+            let dup = b;
+            if (b.pota_ref && !a.pota_ref) {
+              keeper = b;
+              dup = a;
+            } else if (b.pota_status === 'submitted' && a.pota_status !== 'submitted') {
+              keeper = b;
+              dup = a;
+            } else if (!b.pota_ref && !a.pota_ref && a.nid > 66061 && b.nid <= 66061) {
+              keeper = b;
+              dup = a;
+            }
+            markDupStmt.run(keeper.nid, dup.nid);
+            markedCount++;
+          }
+        }
+      }
+    }
+  });
+
+  tx();
+  if (markedCount > 0) {
+    console.log(`[OOPT Service] 🧹 Deduplicated oopt_registry: ${markedCount} duplicate twins flagged.`);
+  }
+  return { markedCount };
 }
 
 /**
@@ -3931,6 +4012,7 @@ export function exportElJefePotaCsv(options = {}) {
     SELECT nid, title, category, sig, sig_display, status, ate, rf_subjects, lat, lon, area, rusoir_url
     FROM oopt_registry
     WHERE pota_ref IS NULL 
+      AND (is_duplicate = 0 OR is_duplicate IS NULL)
       ${options.includeSubmitted ? '' : "AND (pota_status IS NULL OR pota_status != 'submitted')"}
       AND lat IS NOT NULL AND lat != 0 
       AND lon IS NOT NULL AND lon != 0
@@ -4193,6 +4275,7 @@ export function getOoptMapPoints(options = {}) {
     FROM oopt_registry
     WHERE pota_ref IS NULL 
       AND pota_status = 'submitted'
+      AND (is_duplicate = 0 OR is_duplicate IS NULL)
       AND lat IS NOT NULL AND lat != 0 
       AND lon IS NOT NULL AND lon != 0
   `;
@@ -4233,6 +4316,7 @@ export function getOoptMapPoints(options = {}) {
       FROM oopt_registry
       WHERE pota_ref IS NULL 
         AND (pota_status IS NULL OR pota_status != 'submitted')
+        AND (is_duplicate = 0 OR is_duplicate IS NULL)
         AND lat IS NOT NULL AND lat != 0 
         AND lon IS NOT NULL AND lon != 0
         AND LOWER(status) = 'действующий'
@@ -4254,6 +4338,7 @@ export function getOoptMapPoints(options = {}) {
         FROM oopt_registry
         WHERE pota_ref IS NULL 
           AND (pota_status IS NULL OR pota_status != 'submitted')
+          AND (is_duplicate = 0 OR is_duplicate IS NULL)
           AND lat IS NOT NULL AND lat != 0 
           AND lon IS NOT NULL AND lon != 0
           AND LOWER(status) = 'действующий'
@@ -4298,7 +4383,7 @@ export function unlinkOoptFromPota(nid) {
   const row = db.prepare('SELECT nid, title, pota_ref, pota_name FROM oopt_registry WHERE nid = ?').get(nidNum);
   if (!row) throw new Error(`Объект ООПТ с NID ${nidNum} не найден`);
   
-  db.prepare('UPDATE oopt_registry SET pota_ref = NULL, pota_name = NULL WHERE nid = ?').run(nidNum);
+  db.prepare('UPDATE oopt_registry SET pota_ref = NULL, pota_name = NULL, pota_manual = 0 WHERE nid = ?').run(nidNum);
   cachedStats = null;
   return { success: true, nid: nidNum, unlinked_ref: row.pota_ref, unlinked_name: row.pota_name };
 }
@@ -4318,7 +4403,7 @@ export function linkOoptToPota(nid, potaRef) {
   const potaPark = ruParks.find(p => p.reference === cleanRef);
   const potaName = potaPark ? potaPark.name : cleanRef;
 
-  db.prepare('UPDATE oopt_registry SET pota_ref = ?, pota_name = ? WHERE nid = ?').run(cleanRef, potaName, nidNum);
+  db.prepare('UPDATE oopt_registry SET pota_ref = ?, pota_name = ?, pota_manual = 1 WHERE nid = ?').run(cleanRef, potaName, nidNum);
   cachedStats = null;
   return { success: true, nid: nidNum, pota_ref: cleanRef, pota_name: potaName };
 }
@@ -4590,8 +4675,18 @@ export function calculateGeometryCentroid(geometry) {
   if (geometry.type === 'Polygon') {
     if (geometry.coordinates.length > 0) processRing(geometry.coordinates[0]);
   } else if (geometry.type === 'MultiPolygon') {
+    // Pick the largest polygon tract by vertex count so centroid lands strictly inside an actual tract,
+    // rather than averaging disjoint island/cluster tracts into empty ocean or terrain between them
+    let largestPoly = null;
+    let maxPts = 0;
     for (const poly of geometry.coordinates) {
-      if (poly && poly.length > 0) processRing(poly[0]);
+      if (poly && poly[0] && Array.isArray(poly[0]) && poly[0].length > maxPts) {
+        maxPts = poly[0].length;
+        largestPoly = poly[0];
+      }
+    }
+    if (largestPoly) {
+      processRing(largestPoly);
     }
   } else if (geometry.type === 'Point' && geometry.coordinates.length >= 2) {
     return { lat: parseFloat(geometry.coordinates[1]), lon: parseFloat(geometry.coordinates[0]) };
@@ -4786,6 +4881,7 @@ export default {
   exportPlaceholderLinksCsv,
   unlinkOoptFromPota,
   linkOoptToPota,
+  deduplicateOoptRegistry,
   getMatchDiagnostics,
   getOoptBoundary,
 };

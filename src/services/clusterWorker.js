@@ -9,9 +9,27 @@ dotenv.config();
 
 const POLL_INTERVAL_MS = parseInt(process.env.POLL_INTERVAL_MS || '60000', 10);
 const ACTIVITY_CHANNEL_ID = process.env.ACTIVITY_CHANNEL_ID;
+const RDA_BROADCAST_CHAT_ID = process.env.RDA_BROADCAST_CHAT_ID;
 const ALLOWED_PREFIXES = (process.env.ALLOWED_PREFIXES || 'RU-,BY-,KZ-').split(',').map(p => p.trim());
 const CLUSTER_SPOT_COOLDOWN_MINUTES = parseInt(process.env.CLUSTER_SPOT_COOLDOWN_MINUTES || '30', 10);
 const SPOT_COOLDOWN_MS = CLUSTER_SPOT_COOLDOWN_MINUTES * 60 * 1000;
+
+/**
+ * Extracts and formats RDA district code from spot comments (e.g. RDA: MO-01, RDA SP-05, РДА МО-01, RDA:TL12)
+ */
+export const extractRdaCode = (comments = '') => {
+  if (!comments) return null;
+  const match = comments.match(/(?:\bRDA|\bРДА)[:\s#]+([A-Za-zА-Яа-я0-9\/-]+)/i);
+  if (!match) return null;
+  const cyrToLat = {
+    'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X'
+  };
+  let raw = match[1].toUpperCase().trim();
+  raw = raw.replace(/[АВЕКМНОРСТУХ]/g, ch => cyrToLat[ch] || ch);
+  const districtMatch = raw.match(/([A-Z]{2})[-_\s]?([0-9]{2}(?:\/[A-Z]{2}[-_\s]?[0-9]{2})*)/);
+  if (!districtMatch) return null;
+  return districtMatch[0].replace(/\s+/g, '').replace(/([A-Z]{2})([0-9]{2})/g, '$1-$2');
+};
 
 // In-memory cache of recent broadcasts to throttle repetitive RBN skimmers
 // Keys stored:
@@ -323,10 +341,12 @@ export const startClusterWorker = (telegramClient) => {
         if (locResolved.regionName) locParts.push(locResolved.regionName);
         const locLine = locParts.length > 0 ? `\n📍 <b>${locParts.join(' • ')}</b>` : '';
         const parkTitle = spot.name ? ` — <i>${spot.name}</i>` : '';
+        const rdaCode = extractRdaCode(spot.comments);
+        const rdaBadge = rdaCode ? ` | 🏷️ <b>RDA: ${rdaCode}</b>` : '';
 
         const msg = `🌐 <b>POTA Cluster Spot</b>\n` +
                     `📻 <b>${actLink}</b> @ 🏞️ <b>${refLink}</b>${parkTitle}${locLine}\n` +
-                    `⚙️ Freq: ${spot.frequency} kHz | ${mode}\n` +
+                    `⚙️ Freq: ${spot.frequency} kHz | ${mode}${rdaBadge}\n` +
                     (spot.comments ? `📝 ${spot.comments}` : '');
 
         let msgId = null;
@@ -345,6 +365,22 @@ export const startClusterWorker = (telegramClient) => {
           const sentMsg = await telegramClient.sendMessage(channelId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
           msgId = sentMsg.message_id;
           console.log(`\x1b[34m[Broadcast]\x1b[0m 📢 Спот ${spot.activator} опубликован в канал`);
+
+          // Optional RDA group/channel forwarding
+          if (rdaCode && RDA_BROADCAST_CHAT_ID) {
+            try {
+              let rdaTarget = RDA_BROADCAST_CHAT_ID;
+              if (rdaTarget && !rdaTarget.startsWith('-100') && !rdaTarget.startsWith('@') && /^[0-9-]+$/.test(rdaTarget)) {
+                rdaTarget = rdaTarget.startsWith('-') ? '-100' + rdaTarget.substring(1) : '-100' + rdaTarget;
+              } else if (rdaTarget && rdaTarget.includes('t.me/')) {
+                rdaTarget = '@' + rdaTarget.split('t.me/')[1].replace('/', '');
+              }
+              await telegramClient.sendMessage(rdaTarget, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+              console.log(`\x1b[34m[Broadcast]\x1b[0m 🏷️ Спот с RDA ${rdaCode} ретранслирован в RDA-канал (${rdaTarget})`);
+            } catch (rdaErr) {
+              console.warn('[Broadcast Warning] ⚠️ Ошибка отправки в RDA-канал:', rdaErr.message);
+            }
+          }
 
           // Unpin earlier pinned spots for this station in channel so pins don't stack up
           try {

@@ -1639,6 +1639,11 @@ export const startAdminServer = (telegramClient) => {
                       <label class="form-label small fw-bold mb-0">11. Уточнение / Comments (не обязательно):</label>
                       <span id="subm-clarify-counter" class="badge bg-light text-secondary border font-monospace" style="font-size: 11px;">0 / 255</span>
                     </div>
+                    <div class="d-flex flex-wrap gap-1 mb-1.5">
+                      <button type="button" class="btn btn-outline-info clarify-preset-btn" style="font-size: 11px; padding: 2px 7px;" data-text="Частично/полностью на частной территории: активация с ближайшей прилегающей парковки или места отдыха." title="Вставить шаблон">+ Частная территория</button>
+                      <button type="button" class="btn btn-outline-secondary clarify-preset-btn" style="font-size: 11px; padding: 2px 7px;" data-text="Природный памятник / отдельный точечный объект." title="Вставить шаблон">+ Точечный объект</button>
+                      <button type="button" class="btn btn-outline-secondary clarify-preset-btn" style="font-size: 11px; padding: 2px 7px;" data-text="Границы по материалам лесоустройства / кадастра." title="Вставить шаблон">+ Кадастр / Границы</button>
+                    </div>
                     <div class="input-group input-group-sm">
                       <textarea class="form-control form-control-sm" id="subm-clarify" rows="3" placeholder="Границы, кластерные участки, вложенные ООПТ (строгий лимит 255 символов)"></textarea>
                       <button class="btn btn-outline-secondary btn-copy-coord d-flex align-items-center justify-content-center" type="button" data-target="subm-clarify" title="Скопировать уточнение / comments"><i class="bi bi-clipboard"></i></button>
@@ -4129,6 +4134,22 @@ export const startAdminServer = (telegramClient) => {
             if (el && el.tagName === 'SELECT') el.addEventListener('change', updateSubmitterPreview);
           });
 
+          // Quick preset buttons for clarification field
+          document.querySelectorAll('.clarify-preset-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var txt = this.getAttribute('data-text');
+              var clarifyEl = document.getElementById('subm-clarify');
+              if (!clarifyEl) return;
+              var cur = (clarifyEl.value || '').trim();
+              if (cur && !cur.includes(txt)) {
+                clarifyEl.value = (cur + ' ' + txt).slice(0, 255);
+              } else if (!cur) {
+                clarifyEl.value = txt.slice(0, 255);
+              }
+              clarifyEl.dispatchEvent(new Event('input'));
+            });
+          });
+
           // Smart coordinate parsing & auto-split for lat/lon (Zero-backslash regexes for template literal safety)
           function parseCoordString(text) {
             if (!text || typeof text !== 'string') return null;
@@ -5879,6 +5900,27 @@ export const startAdminServer = (telegramClient) => {
                   } catch (_) {}
                 }
               }
+
+              var toggleCollapseBtn = e.target.closest('.btn-toggle-card-collapse');
+              if (toggleCollapseBtn) {
+                var card = toggleCollapseBtn.closest('.oopt-map-card');
+                if (card) {
+                  var collapsedBar = card.querySelector('.popup-collapsed-bar');
+                  var expandedContent = card.querySelector('.popup-expanded-content');
+                  if (collapsedBar && expandedContent) {
+                    if (expandedContent.style.display === 'none') {
+                      expandedContent.style.display = 'block';
+                      collapsedBar.style.display = 'none';
+                    } else {
+                      expandedContent.style.display = 'none';
+                      collapsedBar.style.display = 'flex';
+                    }
+                    if (adminOoptMap && adminOoptMap._popup && adminOoptMap._popup.update) {
+                      adminOoptMap._popup.update();
+                    }
+                  }
+                }
+              }
             });
 
             document.getElementById('layer-matched-check')?.addEventListener('change', function(e) {
@@ -6218,20 +6260,29 @@ export const startAdminServer = (telegramClient) => {
               var siteBtn = m.site ? '<a href="' + m.site + '" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #0d6efd; border-radius:3px; color:#0d6efd;">NextGIS</a>' : '';
               var diagBtn = '<button class="btn btn-xs btn-outline-info btn-oopt-diagnostics" data-nid="' + m.nid + '" data-ref="' + m.ref + '" style="font-size:10px; padding:2px 8px; border:1px solid #0dcaf0; border-radius:3px; background:none; cursor:pointer;" title="Инспектор сопоставления">🔍 Инспектор</button>';
               var unlinkBtn = '<button class="btn btn-xs btn-outline-danger btn-oopt-unlink" data-nid="' + m.nid + '" data-ref="' + m.ref + '" style="font-size:10px; padding:2px 8px; border:1px solid #dc3545; border-radius:3px; background:none; cursor:pointer;" title="Отвязать ООПТ от парка POTA">✂️ Отвязать</button>';
-              var popupHtml = '<div style="font-family:sans-serif; min-width:240px; font-size:12px;">' +
-                '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#198754;">' +
-                  '<span style="background:#d1e7dd; padding:1px 6px; border-radius:4px; font-size:11px; margin-right:4px;">' + m.ref + '</span> ' + m.title +
+              var popupHtml = '<div class="oopt-map-card" style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
+                '<div class="popup-collapsed-bar" style="display:none; align-items:center; justify-content:space-between; gap:6px;">' +
+                  '<span style="font-weight:bold; color:#198754; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">⭐ ' + m.ref + ' ' + (m.title || '') + '</span>' +
+                  '<button type="button" class="btn btn-xs btn-outline-success btn-toggle-card-collapse" style="font-size:10px; padding:1px 5px; border:1px solid #198754; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢</button>' +
                 '</div>' +
-                '<div style="color:#555; margin-bottom:4px;"><strong>POTA:</strong> ' + (m.potaName || m.ref) + '</div>' +
-                '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (m.category || 'ООПТ') + ' (' + (m.sigDisplay || m.sig) + ')</div>' +
-                '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (m.ate || '') + '</div>' +
-                areaHtml +
-                '<div id="boundary-status-' + m.nid + '" style="margin-top:6px; font-size:11px;"></div>' +
-                '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
-                  '<a href="https://pota.app/#/park/' + m.ref + '" target="_blank" class="btn btn-xs btn-outline-success" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #198754; border-radius:3px; color:#198754;">Карточка POTA</a>' +
-                  siteBtn +
-                  diagBtn +
-                  unlinkBtn +
+                '<div class="popup-expanded-content">' +
+                  '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px; margin-bottom:4px; padding-right:12px;">' +
+                    '<div style="font-size:14px; font-weight:bold; color:#198754;">' +
+                      '<span style="background:#d1e7dd; padding:1px 6px; border-radius:4px; font-size:11px; margin-right:4px;">' + m.ref + '</span> ' + m.title +
+                    '</div>' +
+                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" style="font-size:10px; padding:0px 5px; line-height:1.2; border:1px solid #ced4da; border-radius:3px; background:#f8f9fa; cursor:pointer; color:#495057;" title="Свернуть карточку (открыть границы ООПТ)">➖</button>' +
+                  '</div>' +
+                  '<div style="color:#555; margin-bottom:4px;"><strong>POTA:</strong> ' + (m.potaName || m.ref) + '</div>' +
+                  '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (m.category || 'ООПТ') + ' (' + (m.sigDisplay || m.sig) + ')</div>' +
+                  '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (m.ate || '') + '</div>' +
+                  areaHtml +
+                  '<div id="boundary-status-' + m.nid + '" style="margin-top:6px; font-size:11px;"></div>' +
+                  '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
+                    '<a href="https://pota.app/#/park/' + m.ref + '" target="_blank" class="btn btn-xs btn-outline-success" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #198754; border-radius:3px; color:#198754;">Карточка POTA</a>' +
+                    siteBtn +
+                    diagBtn +
+                    unlinkBtn +
+                  '</div>' +
                 '</div>' +
               '</div>';
 
@@ -6253,16 +6304,25 @@ export const startAdminServer = (telegramClient) => {
             (data.unmatchedPota || []).forEach(function(u) {
               var siteBtn = u.website ? '<a href="' + u.website + '" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #6c757d; border-radius:3px; color:#495057;">Сайт</a>' : '';
               var diagBtn = '<button class="btn btn-xs btn-outline-info btn-oopt-diagnostics" data-ref="' + u.ref + '" style="font-size:10px; padding:2px 8px; border:1px solid #0dcaf0; border-radius:3px; background:none; cursor:pointer;" title="Сравнить с кандидатами ООПТ">🔍 Инспектор</button>';
-              var popupHtml = '<div style="font-family:sans-serif; min-width:240px; font-size:12px;">' +
-                '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#d39e00;">' +
-                  '<span style="background:#fff3cd; color:#664d03; padding:1px 6px; border-radius:4px; font-size:11px; margin-right:4px;">' + u.ref + '</span> ' + u.name +
+              var popupHtml = '<div class="oopt-map-card" style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
+                '<div class="popup-collapsed-bar" style="display:none; align-items:center; justify-content:space-between; gap:6px;">' +
+                  '<span style="font-weight:bold; color:#d39e00; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">⭐ ' + u.ref + ' ' + (u.name || '') + '</span>' +
+                  '<button type="button" class="btn btn-xs btn-outline-warning btn-toggle-card-collapse" style="font-size:10px; padding:1px 5px; border:1px solid #d39e00; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢</button>' +
                 '</div>' +
-                '<div style="color:#b02a37; font-weight:600; margin-bottom:4px;">⚠️ Не сопоставлен с реестром ООПТ РФ</div>' +
-                '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (u.location || '') + '</div>' +
-                '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
-                  '<a href="https://pota.app/#/park/' + u.ref + '" target="_blank" class="btn btn-xs btn-outline-warning" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #d39e00; border-radius:3px; color:#664d03;">Карточка POTA</a>' +
-                  siteBtn +
-                  diagBtn +
+                '<div class="popup-expanded-content">' +
+                  '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px; margin-bottom:4px; padding-right:12px;">' +
+                    '<div style="font-size:14px; font-weight:bold; color:#d39e00;">' +
+                      '<span style="background:#fff3cd; color:#664d03; padding:1px 6px; border-radius:4px; font-size:11px; margin-right:4px;">' + u.ref + '</span> ' + u.name +
+                    '</div>' +
+                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" style="font-size:10px; padding:0px 5px; line-height:1.2; border:1px solid #ced4da; border-radius:3px; background:#f8f9fa; cursor:pointer; color:#495057;" title="Свернуть карточку">➖</button>' +
+                  '</div>' +
+                  '<div style="color:#b02a37; font-weight:600; margin-bottom:4px;">⚠️ Не сопоставлен с реестром ООПТ РФ</div>' +
+                  '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (u.location || '') + '</div>' +
+                  '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
+                    '<a href="https://pota.app/#/park/' + u.ref + '" target="_blank" class="btn btn-xs btn-outline-warning" style="font-size:10px; padding:2px 8px; text-decoration:none; border:1px solid #d39e00; border-radius:3px; color:#664d03;">Карточка POTA</a>' +
+                    siteBtn +
+                    diagBtn +
+                  '</div>' +
                 '</div>' +
               '</div>';
 
@@ -6289,21 +6349,30 @@ export const startAdminServer = (telegramClient) => {
 
               var submitterInfo = q.submittedAt ? '<div style="color:#0a58ca; font-size:11px; margin-bottom:4px;">⏱️ Подано: ' + q.submittedAt.slice(0, 10) + (q.submittedBy ? ' (' + q.submittedBy + ')' : '') + '</div>' : '';
 
-              var popupHtml = '<div style="font-family:sans-serif; min-width:240px; font-size:12px;">' +
-                '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#0d6efd;">' +
-                  q.title +
+              var popupHtml = '<div class="oopt-map-card" style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
+                '<div class="popup-collapsed-bar" style="display:none; align-items:center; justify-content:space-between; gap:6px;">' +
+                  '<span style="font-weight:bold; color:#0d6efd; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">⭐ ' + (q.title || '') + '</span>' +
+                  '<button type="button" class="btn btn-xs btn-outline-primary btn-toggle-card-collapse" style="font-size:10px; padding:1px 5px; border:1px solid #0d6efd; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢</button>' +
                 '</div>' +
-                '<div style="color:#0d6efd; font-weight:600; margin-bottom:4px;">🔵 В очереди на добавление в POTA</div>' +
-                submitterInfo +
-                '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (q.category || 'ООПТ') + ' (' + (q.sigDisplay || q.sig) + ')</div>' +
-                '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (q.ate || '') + '</div>' +
-                areaHtml +
-                '<div id="boundary-status-' + q.nid + '" style="margin-top:6px; font-size:11px;"></div>' +
-                '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
-                  siteBtn +
-                  copyBtn +
-                  diagBtn +
-                  unmarkBtn +
+                '<div class="popup-expanded-content">' +
+                  '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px; margin-bottom:4px; padding-right:12px;">' +
+                    '<div style="font-size:14px; font-weight:bold; color:#0d6efd;">' +
+                      q.title +
+                    '</div>' +
+                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" style="font-size:10px; padding:0px 5px; line-height:1.2; border:1px solid #ced4da; border-radius:3px; background:#f8f9fa; cursor:pointer; color:#495057;" title="Свернуть карточку (открыть границы ООПТ)">➖</button>' +
+                  '</div>' +
+                  '<div style="color:#0d6efd; font-weight:600; margin-bottom:4px;">🔵 В очереди на добавление в POTA</div>' +
+                  submitterInfo +
+                  '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (q.category || 'ООПТ') + ' (' + (q.sigDisplay || q.sig) + ')</div>' +
+                  '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (q.ate || '') + '</div>' +
+                  areaHtml +
+                  '<div id="boundary-status-' + q.nid + '" style="margin-top:6px; font-size:11px;"></div>' +
+                  '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
+                    siteBtn +
+                    copyBtn +
+                    diagBtn +
+                    unmarkBtn +
+                  '</div>' +
                 '</div>' +
               '</div>';
 
@@ -6330,21 +6399,30 @@ export const startAdminServer = (telegramClient) => {
               var linkBtn = '<button class="btn btn-xs btn-outline-success btn-oopt-link" data-nid="' + c.nid + '" data-title="' + safeTitle + '" style="font-size:10px; padding:2px 8px; border:1px solid #198754; border-radius:3px; background:none; cursor:pointer;" title="Вручную связать этот объект с парком POTA">🔗 Связать с POTA</button>';
               var diagBtn = '<button class="btn btn-xs btn-outline-info btn-oopt-diagnostics" data-nid="' + c.nid + '" style="font-size:10px; padding:2px 8px; border:1px solid #0dcaf0; border-radius:3px; background:none; cursor:pointer;" title="Инспектор сопоставления">🔍 Инспектор</button>';
 
-              var popupHtml = '<div style="font-family:sans-serif; min-width:240px; font-size:12px;">' +
-                '<div style="font-size:14px; font-weight:bold; margin-bottom:4px; color:#495057;">' +
-                  c.title +
+              var popupHtml = '<div class="oopt-map-card" style="font-family:sans-serif; min-width:220px; font-size:12px;">' +
+                '<div class="popup-collapsed-bar" style="display:none; align-items:center; justify-content:space-between; gap:6px;">' +
+                  '<span style="font-weight:bold; color:#495057; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">⭐ ' + (c.title || '') + '</span>' +
+                  '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" style="font-size:10px; padding:1px 5px; border:1px solid #6c757d; border-radius:3px; background:none; cursor:pointer;" title="Развернуть карточку">⤢</button>' +
                 '</div>' +
-                '<div style="color:#6c757d; font-weight:600; margin-bottom:4px;">⚪ Кандидат на добавление в POTA</div>' +
-                '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (c.category || 'ООПТ') + ' (' + (c.sigDisplay || c.sig) + ')</div>' +
-                '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (c.ate || '') + '</div>' +
-                areaHtml +
-                '<div id="boundary-status-' + c.nid + '" style="margin-top:6px; font-size:11px;"></div>' +
-                '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
-                  siteBtn +
-                  copyBtn +
-                  markBtn +
-                  linkBtn +
-                  diagBtn +
+                '<div class="popup-expanded-content">' +
+                  '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px; margin-bottom:4px; padding-right:12px;">' +
+                    '<div style="font-size:14px; font-weight:bold; color:#495057;">' +
+                      c.title +
+                    '</div>' +
+                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" style="font-size:10px; padding:0px 5px; line-height:1.2; border:1px solid #ced4da; border-radius:3px; background:#f8f9fa; cursor:pointer; color:#495057;" title="Свернуть карточку (открыть границы ООПТ)">➖</button>' +
+                  '</div>' +
+                  '<div style="color:#6c757d; font-weight:600; margin-bottom:4px;">⚪ Кандидат на добавление в POTA</div>' +
+                  '<div style="color:#555; margin-bottom:4px;"><strong>Категория:</strong> ' + (c.category || 'ООПТ') + ' (' + (c.sigDisplay || c.sig) + ')</div>' +
+                  '<div style="color:#666; font-size:11px; margin-bottom:6px;">📍 ' + (c.ate || '') + '</div>' +
+                  areaHtml +
+                  '<div id="boundary-status-' + c.nid + '" style="margin-top:6px; font-size:11px;"></div>' +
+                  '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">' +
+                    siteBtn +
+                    copyBtn +
+                    markBtn +
+                    linkBtn +
+                    diagBtn +
+                  '</div>' +
                 '</div>' +
               '</div>';
 

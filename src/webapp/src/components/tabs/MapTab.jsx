@@ -153,6 +153,8 @@ export default function MapTab({
   const razaLayerRef = useRef(null);
   const newRdaLayerRef = useRef(null);
   const customOoptMarkerRef = useRef(null);
+  const isTopCandidatesLoadedRef = useRef(false);
+  const lastCandidateBboxRef = useRef('');
 
   const [parks, setParks] = useState([]);
   const [candidates, setCandidates] = useState([]);
@@ -172,10 +174,6 @@ export default function MapTab({
   
   const [selectedItem, setSelectedItem] = useState(null); // park or raza or airfield
   const [isCardCollapsed, setIsCardCollapsed] = useState(false);
-
-  useEffect(() => {
-    setIsCardCollapsed(false);
-  }, [selectedItem?.reference, selectedItem?.nid, selectedItem?.name]);
   const [showParkModal, setShowParkModal] = useState(false);
   const [detailedPark, setDetailedPark] = useState(null);
   const [showRouteModal, setShowRouteModal] = useState(false);
@@ -257,6 +255,7 @@ export default function MapTab({
       maxZoom: 18,
       zoomControl: false, // Custom buttons
       attributionControl: false,
+      preferCanvas: true,
     });
 
     const currentBase = BASE_MAPS[baseMapType] || BASE_MAPS.twogis;
@@ -375,6 +374,7 @@ export default function MapTab({
   const focusItem = useCallback((item, zoomLevel = 12) => {
     if (!item || !mapInstanceRef.current) return;
     telegram.haptic.impact('medium');
+    setIsCardCollapsed(false);
     setSelectedItem(item);
     setShowSuggestions(false);
     
@@ -763,14 +763,20 @@ export default function MapTab({
       const zoom = map.getZoom();
       if (zoom >= 7) {
         const bounds = map.getBounds();
-        const bbox = `${bounds.getSouth().toFixed(4)},${bounds.getWest().toFixed(4)},${bounds.getNorth().toFixed(4)},${bounds.getEast().toFixed(4)}`;
+        const bbox = `${bounds.getSouth().toFixed(3)},${bounds.getWest().toFixed(3)},${bounds.getNorth().toFixed(3)},${bounds.getEast().toFixed(3)}`;
+        if (lastCandidateBboxRef.current === bbox) return;
+        lastCandidateBboxRef.current = bbox;
+
         const res = await api.getOoptMapCandidates({ bbox });
         if (res && res.candidates) {
           setCandidates(res.candidates);
         }
       } else {
+        // Country-wide overview (zoom < 7): fetch top regional candidates only once
+        if (isTopCandidatesLoadedRef.current) return;
         const res = await api.getOoptMapCandidates({ top: true });
         if (res && res.candidates) {
+          isTopCandidatesLoadedRef.current = true;
           setCandidates(res.candidates);
         }
       }
@@ -796,7 +802,7 @@ export default function MapTab({
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         fetchCandidates(map);
-      }, 350);
+      }, 400);
     };
 
     map.on('moveend', onMapMove);
@@ -806,7 +812,7 @@ export default function MapTab({
     };
   }, [showCandidates, fetchCandidates]);
 
-  // Render Grey Candidate Markers
+  // Render Grey Candidate Markers (using Canvas CircleMarkers for 60fps performance)
   useEffect(() => {
     const map = mapInstanceRef.current;
     const candidatesGroup = candidatesLayerRef.current;
@@ -829,20 +835,18 @@ export default function MapTab({
     visible.forEach(cand => {
       if (!cand.lat || !cand.lon) return;
 
-      const markerHtml = `
-        <div class="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-400 dark:border-slate-500 flex items-center justify-center text-slate-500 dark:text-slate-400 shadow-md text-[10px] cursor-pointer hover:scale-125 transition transform -translate-x-1/2 -translate-y-1/2 select-none" title="${cand.title}">
-          <span class="opacity-80">🌲</span>
-        </div>
-      `;
-
-      const customIcon = L.divIcon({
-        html: markerHtml,
-        className: 'custom-oopt-cand-pin',
-        iconSize: [26, 26],
-        iconAnchor: [13, 13],
+      const marker = L.circleMarker([cand.lat, cand.lon], {
+        radius: 4.5,
+        color: '#475569',
+        fillColor: '#94a3b8',
+        fillOpacity: 0.85,
+        weight: 1.5,
       });
 
-      const marker = L.marker([cand.lat, cand.lon], { icon: customIcon });
+      marker.bindTooltip(cand.title, {
+        direction: 'top',
+        offset: [0, -4],
+      });
 
       marker.on('click', () => {
         focusItem({

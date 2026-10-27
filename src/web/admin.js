@@ -1442,6 +1442,25 @@ export const startAdminServer = (telegramClient) => {
                       </tbody>
                     </table>
                   </div>
+
+                  <!-- Audit Pagination Bar -->
+                  <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2" id="audit-pagination-container">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="small text-muted" id="audit-pagination-info">Показано: 0 из 0</span>
+                      <div class="d-flex align-items-center gap-1">
+                        <label for="audit-page-size-select" class="small text-muted mb-0">Показывать по:</label>
+                        <select class="form-select form-select-sm" id="audit-page-size-select" style="width: auto; padding: 2px 24px 2px 8px; font-size: 12px;">
+                          <option value="50" selected>50</option>
+                          <option value="100">100</option>
+                          <option value="250">250</option>
+                          <option value="500">500</option>
+                        </select>
+                      </div>
+                    </div>
+                    <nav aria-label="Пагинация аудита ссылок">
+                      <ul class="pagination pagination-sm mb-0" id="audit-pagination-list"></ul>
+                    </nav>
+                  </div>
                 </div>
 
                 <!-- Tab: Services Health -->
@@ -1861,6 +1880,87 @@ export const startAdminServer = (telegramClient) => {
               window.history.replaceState(null, null, event.target.hash);
             });
           });
+
+          // Global Leaflet map card collapse/expand handler
+          window.toggleOoptCardCollapse = function(el, e) {
+            if (e) {
+              if (typeof e.stopPropagation === 'function') e.stopPropagation();
+              if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+              if (typeof e.preventDefault === 'function') e.preventDefault();
+            }
+            if (!el) return;
+            var card = el.closest('.oopt-map-card');
+            if (!card) {
+              var popupContent = el.closest('.leaflet-popup-content') || el.closest('.leaflet-popup');
+              if (popupContent) card = popupContent.querySelector('.oopt-map-card');
+            }
+            if (!card) {
+              card = document.querySelector('.leaflet-popup-pane .oopt-map-card');
+            }
+            if (!card) return;
+
+            // Debounce guard to prevent double-toggle if both capture and inline fire
+            var now = Date.now();
+            if (card._lastToggle && (now - card._lastToggle < 300)) return;
+            card._lastToggle = now;
+
+            var collapsedBar = card.querySelector('.popup-collapsed-bar');
+            var expandedContent = card.querySelector('.popup-expanded-content');
+            if (!collapsedBar || !expandedContent) return;
+
+            var isCurrentlyCollapsed = (collapsedBar.style.display !== 'none');
+            var popupContentNode = card.closest('.leaflet-popup-content');
+
+            if (isCurrentlyCollapsed) {
+              // Expand
+              expandedContent.style.display = 'block';
+              collapsedBar.style.display = 'none';
+              if (popupContentNode) {
+                popupContentNode.style.width = '';
+                popupContentNode.style.minWidth = '';
+              }
+            } else {
+              // Collapse
+              expandedContent.style.display = 'none';
+              collapsedBar.style.display = 'flex';
+              if (popupContentNode) {
+                popupContentNode.style.width = 'auto';
+                popupContentNode.style.minWidth = 'unset';
+              }
+            }
+
+            var map = window.adminOoptMap;
+            if (map && map._popup && typeof map._popup.update === 'function') {
+              map._popup.update();
+            }
+          };
+
+          window.zoomOoptBoundary = function(e) {
+            if (e) {
+              if (typeof e.stopPropagation === 'function') e.stopPropagation();
+              if (typeof e.preventDefault === 'function') e.preventDefault();
+            }
+            var grp = window.mapBoundaryGroup;
+            var map = window.adminOoptMap;
+            if (grp && grp.getLayers().length > 0 && map) {
+              try {
+                map.fitBounds(grp.getBounds(), { padding: [30, 30], maxZoom: 15 });
+              } catch (_) {}
+            }
+          };
+
+          // Global capture listener catches popup clicks across all Leaflet layers
+          document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.btn-toggle-card-collapse');
+            var bar = !btn && e.target.closest('.popup-collapsed-bar');
+            if (btn || bar) {
+              window.toggleOoptCardCollapse(btn || bar, e);
+            }
+            var zoomBtn = e.target.closest('.btn-zoom-boundary');
+            if (zoomBtn) {
+              window.zoomOoptBoundary(e);
+            }
+          }, true);
 
           async function approveUserBtn(btn) {
             const id = btn.getAttribute('data-id');
@@ -5379,6 +5479,49 @@ export const startAdminServer = (telegramClient) => {
             });
           }
 
+          var auditCurrentPage = 1;
+          var auditPageSize = 50;
+
+          function renderAuditPagination(totalPages) {
+            var paginationEl = document.getElementById('audit-pagination-list');
+            if (!paginationEl) return;
+            if (totalPages <= 1) {
+              paginationEl.innerHTML = '';
+              return;
+            }
+
+            var html = '';
+            var prevDisabled = (auditCurrentPage <= 1) ? ' disabled' : '';
+            html += '<li class="page-item' + prevDisabled + '"><a class="page-link" href="#" data-page="' + (auditCurrentPage - 1) + '" aria-label="Предыдущая">&laquo;</a></li>';
+
+            var pages = [];
+            if (totalPages <= 7) {
+              for (var i = 1; i <= totalPages; i++) pages.push(i);
+            } else {
+              pages.push(1);
+              if (auditCurrentPage > 3) pages.push('...');
+              var start = Math.max(2, auditCurrentPage - 1);
+              var end = Math.min(totalPages - 1, auditCurrentPage + 1);
+              for (var j = start; j <= end; j++) pages.push(j);
+              if (auditCurrentPage < totalPages - 2) pages.push('...');
+              pages.push(totalPages);
+            }
+
+            pages.forEach(function(pg) {
+              if (pg === '...') {
+                html += '<li class="page-item disabled"><span class="page-link" style="padding: 2px 8px; font-size: 12px;">…</span></li>';
+              } else {
+                var active = (pg === auditCurrentPage) ? ' active' : '';
+                html += '<li class="page-item' + active + '"><a class="page-link" href="#" data-page="' + pg + '" style="padding: 2px 8px; font-size: 12px;">' + pg + '</a></li>';
+              }
+            });
+
+            var nextDisabled = (auditCurrentPage >= totalPages) ? ' disabled' : '';
+            html += '<li class="page-item' + nextDisabled + '"><a class="page-link" href="#" data-page="' + (auditCurrentPage + 1) + '" aria-label="Следующая">&raquo;</a></li>';
+
+            paginationEl.innerHTML = html;
+          }
+
           function renderAuditTable() {
             var tbody = document.getElementById('audit-table-body');
             var search = (document.getElementById('audit-search-input')?.value || '').toLowerCase().trim();
@@ -5401,17 +5544,34 @@ export const startAdminServer = (telegramClient) => {
               return true;
             });
 
+            var totalItems = filtered.length;
+            var totalPages = Math.max(1, Math.ceil(totalItems / auditPageSize));
+            if (auditCurrentPage > totalPages) auditCurrentPage = totalPages;
+            if (auditCurrentPage < 1) auditCurrentPage = 1;
+
+            var startIdx = (auditCurrentPage - 1) * auditPageSize;
+            var endIdx = Math.min(startIdx + auditPageSize, totalItems);
+            var pageItems = filtered.slice(startIdx, endIdx);
+
             var countEl = document.getElementById('audit-count-info');
             if (countEl) {
-              countEl.textContent = 'Показано: ' + filtered.length + ' из ' + allAuditParks.length;
+              countEl.textContent = 'Найдено: ' + totalItems + ' из ' + allAuditParks.length;
             }
+            var pageInfoEl = document.getElementById('audit-pagination-info');
+            if (pageInfoEl) {
+              pageInfoEl.textContent = totalItems === 0 
+                ? 'Нет объектов' 
+                : 'Показано ' + (startIdx + 1) + '–' + endIdx + ' из ' + totalItems;
+            }
+
+            renderAuditPagination(totalPages);
 
             if (filtered.length === 0) {
               tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-4">Объекты не найдены по текущему фильтру</td></tr>';
               return;
             }
 
-            tbody.innerHTML = filtered.map(function(p) {
+            tbody.innerHTML = pageItems.map(function(p) {
               var currentLinkHtml = p.website
                 ? '<a href="' + escapeHtmlClient(p.website) + '" target="_blank" class="text-break font-monospace small"><i class="bi bi-box-arrow-up-right"></i> ' + escapeHtmlClient(p.website.length > 45 ? p.website.slice(0, 45) + '...' : p.website) + '</a>'
                 : '<span class="text-danger small"><i class="bi bi-x-circle"></i> Ссылка отсутствует</span>';
@@ -5441,10 +5601,37 @@ export const startAdminServer = (telegramClient) => {
           }
 
           // Search and filter listeners for Audit
-          document.getElementById('audit-search-input')?.addEventListener('input', renderAuditTable);
+          document.getElementById('audit-search-input')?.addEventListener('input', function() {
+            auditCurrentPage = 1;
+            renderAuditTable();
+          });
           document.getElementById('audit-filter-select')?.addEventListener('change', function(e) {
             currentAuditFilter = e.target.value;
+            auditCurrentPage = 1;
             updateActiveAuditCard();
+            renderAuditTable();
+          });
+
+          // Pagination events
+          document.getElementById('audit-pagination-list')?.addEventListener('click', function(e) {
+            var a = e.target.closest('a[data-page]');
+            if (a) {
+              e.preventDefault();
+              var p = parseInt(a.getAttribute('data-page'), 10);
+              if (p && p !== auditCurrentPage) {
+                auditCurrentPage = p;
+                renderAuditTable();
+                var tableContainer = document.getElementById('list-links');
+                if (tableContainer) {
+                  tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }
+            }
+          });
+
+          document.getElementById('audit-page-size-select')?.addEventListener('change', function(e) {
+            auditPageSize = parseInt(e.target.value, 10) || 50;
+            auditCurrentPage = 1;
             renderAuditTable();
           });
 
@@ -5454,6 +5641,7 @@ export const startAdminServer = (telegramClient) => {
               var f = this.getAttribute('data-filter');
               if (f) {
                 currentAuditFilter = f;
+                auditCurrentPage = 1;
                 var selectEl = document.getElementById('audit-filter-select');
                 if (selectEl) selectEl.value = f;
                 updateActiveAuditCard();
@@ -5645,6 +5833,7 @@ export const startAdminServer = (telegramClient) => {
               minZoom: 2,
               maxZoom: 17
             });
+            window.adminOoptMap = adminOoptMap;
 
             tile2Gis.addTo(adminOoptMap);
 
@@ -5653,6 +5842,7 @@ export const startAdminServer = (telegramClient) => {
             mapQueuedGroup = L.layerGroup().addTo(adminOoptMap);
             mapCandidatesGroup = L.layerGroup().addTo(adminOoptMap);
             mapBoundaryGroup = L.featureGroup().addTo(adminOoptMap);
+            window.mapBoundaryGroup = mapBoundaryGroup;
 
             adminOoptMap.on('popupopen', function(e) {
               if (mapBoundaryGroup) mapBoundaryGroup.clearLayers();
@@ -5806,59 +5996,6 @@ export const startAdminServer = (telegramClient) => {
             document.getElementById('btn-tile-osm')?.addEventListener('click', function() { switchMapTileLayer('osm'); });
             document.getElementById('btn-tile-topo')?.addEventListener('click', function() { switchMapTileLayer('topo'); });
 
-            window.toggleOoptCardCollapse = function(el, e) {
-              if (e) {
-                if (typeof e.stopPropagation === 'function') e.stopPropagation();
-                if (typeof e.preventDefault === 'function') e.preventDefault();
-              }
-              if (!el) return;
-              var card = el.closest('.oopt-map-card');
-              if (!card) {
-                var popupContent = el.closest('.leaflet-popup-content') || el.closest('.leaflet-popup');
-                if (popupContent) card = popupContent.querySelector('.oopt-map-card');
-              }
-              if (!card) return;
-
-              var collapsedBar = card.querySelector('.popup-collapsed-bar');
-              var expandedContent = card.querySelector('.popup-expanded-content');
-              if (!collapsedBar || !expandedContent) return;
-
-              var isCollapsed = (expandedContent.style.display === 'none');
-              if (isCollapsed) {
-                expandedContent.style.display = 'block';
-                collapsedBar.style.display = 'none';
-              } else {
-                expandedContent.style.display = 'none';
-                collapsedBar.style.display = 'flex';
-              }
-
-              if (adminOoptMap && adminOoptMap._popup && typeof adminOoptMap._popup.update === 'function') {
-                adminOoptMap._popup.update();
-              }
-            };
-
-            window.zoomOoptBoundary = function(e) {
-              if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-              if (mapBoundaryGroup && mapBoundaryGroup.getLayers().length > 0) {
-                try {
-                  adminOoptMap.fitBounds(mapBoundaryGroup.getBounds(), { padding: [30, 30], maxZoom: 15 });
-                } catch (_) {}
-              }
-            };
-
-            // Global capture-phase listener: catches clicks before Leaflet stopPropagation
-            document.addEventListener('click', function(e) {
-              var btn = e.target.closest('.btn-toggle-card-collapse');
-              var bar = !btn && e.target.closest('.popup-collapsed-bar');
-              if (btn || bar) {
-                window.toggleOoptCardCollapse(btn || bar, e);
-              }
-              var zoomBtn = e.target.closest('.btn-zoom-boundary');
-              if (zoomBtn) {
-                window.zoomOoptBoundary(e);
-              }
-            }, true);
-
             populateMapRegionsDropdown();
             loadAdminMapPoints('', false);
 
@@ -5945,37 +6082,6 @@ export const startAdminServer = (telegramClient) => {
                 var nid = parseInt(linkBtn.getAttribute('data-nid'), 10);
                 if (typeof window.linkOoptAction === 'function') {
                   window.linkOoptAction(nid, '', false);
-                }
-              }
-
-              var zoomBoundaryBtn = e.target.closest('.btn-zoom-boundary');
-              if (zoomBoundaryBtn) {
-                if (mapBoundaryGroup && mapBoundaryGroup.getLayers().length > 0) {
-                  try {
-                    adminOoptMap.fitBounds(mapBoundaryGroup.getBounds(), { padding: [30, 30], maxZoom: 15 });
-                  } catch (_) {}
-                }
-              }
-
-              var toggleCollapseBtn = e.target.closest('.btn-toggle-card-collapse');
-              var collapsedBarClick = !toggleCollapseBtn && e.target.closest('.popup-collapsed-bar');
-              if (toggleCollapseBtn || collapsedBarClick) {
-                var card = (toggleCollapseBtn || collapsedBarClick).closest('.oopt-map-card');
-                if (card) {
-                  var collapsedBar = card.querySelector('.popup-collapsed-bar');
-                  var expandedContent = card.querySelector('.popup-expanded-content');
-                  if (collapsedBar && expandedContent) {
-                    if (expandedContent.style.display === 'none') {
-                      expandedContent.style.display = 'block';
-                      collapsedBar.style.display = 'none';
-                    } else {
-                      expandedContent.style.display = 'none';
-                      collapsedBar.style.display = 'flex';
-                    }
-                    if (adminOoptMap && adminOoptMap._popup && adminOoptMap._popup.update) {
-                      adminOoptMap._popup.update();
-                    }
-                  }
                 }
               }
             });

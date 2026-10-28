@@ -1,5 +1,12 @@
 # История изменений (Changelog)
 
+## [1.16.145] - 2026-10-28 (Donate Tier Title: Coffee for Server Admin)
+### Улучшения интерфейса
+- **Карточка поддержки на [/donate](https://pota.r9o.ru/donate):**
+  - Заголовок первого уровня поддержки изменён на **«Чашка кофе для админа серверов»** (без позывного в заголовке).
+- **Синхронизация версий:**
+  - Версия повышена до `1.16.145` во всех ключевых файлах (`package.json`, `src/bot/index.js`, `src/api/potaApi.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.144] - 2026-10-28 (Header Navigation & Donate Page Copy Polish)
 ### Улучшения интерфейса
 - **Навигация в шапке (/donate, /contacts):**

@@ -182,7 +182,7 @@ export function renderDonateHtml(options = {}) {
           <span>RU-POTA</span>
         </a>
         <a href="/" class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1">
-          <i class="bi bi-map"></i> Карта ООПТ
+          <i class="bi bi-map"></i> Карта RU-POTA
         </a>
         <a href="https://pota.r9o.ru/app/" class="btn btn-sm btn-outline-success d-none d-md-inline-flex align-items-center gap-1">
           <i class="bi bi-phone"></i> Mini App
@@ -327,7 +327,7 @@ export function renderDonateHtml(options = {}) {
             <div>
               <div class="fs-4 mb-1">💌</div>
               <div class="fw-bold text-light">Своя сумма / Тёплый привет</div>
-              <div class="text-secondary small mt-1">Любая сумма или просто тёплые слова для всей радиолюбительской команды.</div>
+              <div class="text-secondary small mt-1">Любая сумма или просто тёплые слова для всей команды RU-POTA.</div>
             </div>
             <div class="fw-bold text-info fs-5 mt-3">Любая сумма</div>
           </div>

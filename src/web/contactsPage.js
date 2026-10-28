@@ -89,7 +89,7 @@ export function renderContactsHtml(options = {}) {
           <span>RU-POTA</span>
         </a>
         <a href="/" class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1">
-          <i class="bi bi-map"></i> Карта ООПТ
+          <i class="bi bi-map"></i> Карта RU-POTA
         </a>
         <a href="https://pota.r9o.ru/app/" class="btn btn-sm btn-outline-success d-none d-md-inline-flex align-items-center gap-1">
           <i class="bi bi-phone"></i> Mini App

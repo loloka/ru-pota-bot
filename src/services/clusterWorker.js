@@ -159,6 +159,10 @@ export const startClusterWorker = (telegramClient) => {
     console.log(`\x1b[36m[Cluster Worker]\x1b[0m 🔇 Исключены из трансляции в канал/группу: \x1b[35m${mutedList.join(', ')}\x1b[0m`);
   }
 
+  if (RDA_BROADCAST_CHAT_ID) {
+    console.log(`\x1b[36m[Cluster Worker]\x1b[0m 🏷️ Ретрансляция RDA-спотов включена в чат: \x1b[32m${RDA_BROADCAST_CHAT_ID}\x1b[0m`);
+  }
+
   const pollCluster = async () => {
     try {
       // Memory cleanup: purge entries older than 2 hours

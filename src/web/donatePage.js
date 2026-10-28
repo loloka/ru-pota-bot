@@ -270,12 +270,12 @@ export function renderDonateHtml(options = {}) {
       <div class="row g-3">
         <!-- Tier 1 -->
         <div class="col-md-4 col-sm-6">
-          <div class="tier-card" onclick="selectTier('Чашка кофе автору', 150, this)">
+          <div class="tier-card" onclick="selectTier('Чашка кофе для админа сайта R9OGL', 150, this)">
             <i class="bi bi-check-circle-fill selected-check"></i>
             <div>
               <div class="fs-4 mb-1">☕</div>
-              <div class="fw-bold text-light">Чашка кофе автору</div>
-              <div class="text-secondary small mt-1">Приятный заряд бодрости для ночного кодинга и обновления баз.</div>
+              <div class="fw-bold text-light">Чашка кофе для админа сайта R9OGL</div>
+              <div class="text-secondary small mt-1">Бодрит нашего программиста, ускоряет приём знаков, написание классных фишек для проекта и помогает дежурить днём и ночью, чтобы сервер никогда не упал!</div>
             </div>
             <div class="fw-bold text-warning fs-5 mt-3">150 ₽</div>
           </div>

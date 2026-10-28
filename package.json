@@ -1,8 +1,7 @@
 {
   "name": "ru-pota",
-  "version": "1.16.137",
+  "version": "1.16.138",
   "description": "Telegram Bot for RU-POTA (Parks on the Air) Community",
-
   "main": "src/bot/index.js",
   "type": "module",
   "scripts": {
@@ -19,6 +18,8 @@
     "build": "npm run webapp:build"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
     "axios": "^1.7.0",
     "better-sqlite3": "^11.0.0",
     "cookie-session": "^2.1.0",
@@ -26,15 +27,14 @@
     "express": "^5.2.1",
     "https-proxy-agent": "^7.0.6",
     "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3",
     "lucide-react": "^1.16.0",
+    "postcss": "^8.4.49",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "socks-proxy-agent": "^10.1.0",
-    "telegraf": "^4.16.3",
-    "@vitejs/plugin-react": "^4.3.4",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
+    "telegraf": "^4.16.3",
     "vite": "^5.4.11"
   }
 }

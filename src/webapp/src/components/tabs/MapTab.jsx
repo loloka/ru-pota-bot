@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { 
   Compass, 
   MapPin, 
@@ -268,7 +271,49 @@ export default function MapTab({
     baseTileRef.current = baseTile;
 
     // Layer groups
-    const markersGroup = L.layerGroup().addTo(map);
+    // Clustered Park Markers Group (eliminates 8,000+ DOM nodes and lag)
+    const markersGroup = L.markerClusterGroup ? L.markerClusterGroup({
+      maxClusterRadius: 42,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      disableClusteringAtZoom: 13,
+      chunkedLoading: true,
+      chunkInterval: 100,
+      chunkDelay: 20,
+      iconCreateFunction: (cluster) => {
+        const count = cluster.getChildCount();
+        const markers = cluster.getAllChildMarkers();
+        const hasActive = markers.some(m => m.options && m.options.isParkActive);
+
+        let sizeClass = 'w-9 h-9 text-xs';
+        if (count >= 100) sizeClass = 'w-10 h-10 text-xs';
+        if (count >= 1000) sizeClass = 'w-12 h-12 text-sm';
+
+        const displayCount = count >= 1000 
+          ? (count / 1000).toFixed(1).replace('.0', '') + 'k' 
+          : count;
+
+        return L.divIcon({
+          html: `
+            <div class="relative flex items-center justify-center cursor-pointer select-none">
+              ${hasActive ? '<div class="absolute -inset-1.5 rounded-full bg-emerald-400/50 animate-ping"></div>' : ''}
+              <div class="${sizeClass} rounded-full ${
+                hasActive 
+                  ? 'bg-gradient-to-tr from-emerald-500 to-emerald-400 text-slate-950 font-black ring-2 ring-white shadow-xl shadow-emerald-500/60' 
+                  : 'bg-emerald-700/95 dark:bg-emerald-600/95 border-2 border-white/90 dark:border-emerald-200/80 text-white font-bold shadow-lg shadow-black/30'
+              } flex items-center justify-center tracking-tight transition-transform hover:scale-110 active:scale-95">
+                ${displayCount}
+              </div>
+              ${hasActive ? '<div class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 border border-slate-950 flex items-center justify-center text-[9px] shadow">📡</div>' : ''}
+            </div>
+          `,
+          className: 'custom-cluster-badge',
+          iconSize: [48, 48],
+          iconAnchor: [24, 24],
+        });
+      }
+    }).addTo(map) : L.layerGroup().addTo(map);
     markersLayerRef.current = markersGroup;
 
     const candidatesGroup = L.layerGroup().addTo(map);
@@ -371,14 +416,15 @@ export default function MapTab({
   // ========================================================
   // 4. Focus Item (Park, RAZA zone, or Airfield) on Map
   // ========================================================
-  const focusItem = useCallback((item, zoomLevel = 12) => {
+  const focusItem = useCallback((item, zoomLevel = 13) => {
     if (!item || !mapInstanceRef.current) return;
     telegram.haptic.impact('medium');
     setIsCardCollapsed(false);
     setSelectedItem(item);
     setShowSuggestions(false);
     
-    mapInstanceRef.current.flyTo([item.lat, item.lon], zoomLevel, {
+    const targetZoom = Math.max(zoomLevel, 13);
+    mapInstanceRef.current.flyTo([item.lat, item.lon], targetZoom, {
       animate: true,
       duration: 1.0,
     });
@@ -721,6 +767,7 @@ export default function MapTab({
       return true;
     });
 
+    const markersToAdd = [];
     visible.forEach(park => {
       if (!park.lat || !park.lon) return;
 
@@ -742,14 +789,23 @@ export default function MapTab({
         iconAnchor: [16, 16],
       });
 
-      const marker = L.marker([park.lat, park.lon], { icon: customIcon });
-
-      marker.on('click', () => {
-        focusItem(park, 12);
+      const marker = L.marker([park.lat, park.lon], { 
+        icon: customIcon,
+        isParkActive: Boolean(park.isActive),
       });
 
-      markersGroup.addLayer(marker);
+      marker.on('click', () => {
+        focusItem(park, 13);
+      });
+
+      markersToAdd.push(marker);
     });
+
+    if (markersGroup.addLayers) {
+      markersGroup.addLayers(markersToAdd);
+    } else {
+      markersToAdd.forEach(m => markersGroup.addLayer(m));
+    }
   }, [parks, searchQuery, filterActiveOnly, focusItem]);
 
   // ========================================================

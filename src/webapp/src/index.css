@@ -256,3 +256,16 @@
   display: none !important;
 }
 
+/* Custom Leaflet MarkerCluster Styles for RU-POTA */
+.custom-cluster-badge {
+  background: transparent !important;
+  border: none !important;
+}
+.leaflet-cluster-anim .leaflet-marker-icon, 
+.leaflet-cluster-anim .leaflet-marker-shadow {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease-in;
+}
+.marker-cluster {
+  background-clip: padding-box;
+}
+

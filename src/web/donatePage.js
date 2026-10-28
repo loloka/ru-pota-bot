@@ -215,7 +215,7 @@ export function renderDonateHtml(options = {}) {
       </div>
       <h1 class="fw-bold tracking-tight mb-3">Поддержка проекта RU-POTA</h1>
       <p class="text-secondary fs-6 mx-auto lh-base" style="max-width: 720px;">
-        Проект развивается силами радиолюбителей. Мы держим быстрый кластер, карту всех 11&nbsp;000+ заповедников РФ, трансляцию спотов, мобильное приложение и бота. Всё это делается и поддерживается абсолютно бесплатно (Free).<br class="d-none d-md-inline">
+        Проект развивается силами радиолюбителей. Мы держим быстрый кластер, карту всех заповедников РФ, трансляцию спотов, мобильное приложение и бота. Всё это делается и поддерживается абсолютно бесплатно (Free).<br class="d-none d-md-inline">
         Если вы желаете поддержать проект добрым словом или делом — вы можете сделать это ниже 🤝
       </p>
     </div>
@@ -275,7 +275,7 @@ export function renderDonateHtml(options = {}) {
             <div>
               <div class="fs-4 mb-1">☕</div>
               <div class="fw-bold text-light">Чашка кофе для админа сайта R9OGL</div>
-              <div class="text-secondary small mt-1">Бодрит нашего программиста, ускоряет приём знаков, написание классных фишек для проекта и помогает дежурить днём и ночью, чтобы сервер никогда не упал!</div>
+              <div class="text-secondary small mt-1">Бодрит нашего программиста, ускоряет написание классных фишек для проекта и помогает дежурить днём и ночью, чтобы сервер никогда не упал!</div>
             </div>
             <div class="fw-bold text-warning fs-5 mt-3">150 ₽</div>
           </div>
@@ -447,7 +447,7 @@ export function renderDonateHtml(options = {}) {
               <strong class="text-light">R9OGL (Сан Саныч)</strong>
               <span class="text-warning small font-monospace">Разработчик</span>
             </div>
-            <div class="small text-secondary">«Архитектура бота, Mini App, полигоны ООПТ и серверная инфраструктура»</div>
+            <div class="small text-secondary">«Архитектура бота, Mini App, интерактивная карта ООПТ и серверная инфраструктура»</div>
           </div>
         </div>
 

@@ -15,23 +15,39 @@ const CLUSTER_SPOT_COOLDOWN_MINUTES = parseInt(process.env.CLUSTER_SPOT_COOLDOWN
 const SPOT_COOLDOWN_MS = CLUSTER_SPOT_COOLDOWN_MINUTES * 60 * 1000;
 
 /**
- * Extracts and formats RDA district code from spot comments (e.g. RDA: MO-01, RDA NS-03, RDA NS03, РДА МО-01, RDA:TL12, MO-01)
+ * Whitelist of official Russian RDA region prefixes (85 federal subjects + 4 new regions)
+ * Reference: https://rdaward.ru/?p=rda_top
  */
-export const extractRdaCode = (comments = '') => {
+export const VALID_RDA_PREFIXES = new Set([
+  'AB', 'AL', 'AM', 'AO', 'AR', 'BA', 'BL', 'BR', 'BU', 'CB', 'CH', 'CK', 'CT',
+  'DA', 'DO', 'ER', 'GA', 'HE', 'HK', 'HM', 'IN', 'IR', 'IV', 'KB', 'KC', 'KD',
+  'KE', 'KG', 'KI', 'KK', 'KL', 'KM', 'KN', 'KO', 'KP', 'KR', 'KS', 'KT', 'KU',
+  'LG', 'LN', 'LP', 'LU', 'MA', 'MD', 'MG', 'MO', 'MS', 'MU', 'NN', 'NO', 'NS',
+  'NV', 'OB', 'OM', 'OR', 'PE', 'PK', 'PM', 'PR', 'PS', 'RA', 'RO', 'SA', 'SE',
+  'SL', 'SM', 'SO', 'SP', 'SR', 'ST', 'SV', 'TA', 'TB', 'TL', 'TM', 'TN', 'TO',
+  'TS', 'TU', 'TV', 'TY', 'UD', 'UL', 'VG', 'VL', 'VN', 'VO', 'VR', 'YA', 'YN',
+  'YR', 'ZP'
+]);
+
+/**
+ * Extracts and formats RDA district code from spot comments (e.g. RDA: MO-01, RDA NS-03, RDA NS03, РДА МО-01, RDA:TL12, MO-01)
+ * Prevents false positives from RBN decibels (e.g. "6 dB 21 WPM") and validates region prefixes.
+ */
+export const extractRdaCode = (comments = '', isDedicatedRdaField = false) => {
   if (!comments) return null;
   const str = String(comments).trim();
-  // 1. Prefixed with RDA or РДА (with or without colon, space, dash, slash, brackets)
+  if (!str) return null;
+
+  // 1. Look for explicit RDA/РДА prefix (with :, space, -, =, /, or in brackets)
   const match = str.match(/(?:^|[\s,.\(\[\/#])(?:RDA|РДА)[:\s#=\-\/]*([A-Za-zА-Яа-я0-9\/-]+)/i);
   let raw = '';
   if (match) {
     raw = match[1].toUpperCase().trim();
-  } else {
-    // 2. Standalone RDA district like "MO-01", "NS-03" (common in dedicated RDA input fields)
-    const directMatch = str.match(/(?:^|[\s,.\(\[\/#])([A-Za-zА-Яа-я]{2})[-_\s]?([0-9]{2}(?:\/[A-Za-zА-Яа-я]{2}[-_\s]?[0-9]{2})*)\b/);
-    if (directMatch) {
-      raw = (directMatch[1] + directMatch[2]).toUpperCase().trim();
-    }
+  } else if (isDedicatedRdaField || /^([A-Za-zА-Яа-я]{2})[-_\s]?([0-9]{2}(?:\/[A-Za-zА-Яа-я]{2}[-_\s]?[0-9]{2})*)$/i.test(str)) {
+    // 2. Only allow standalone district code if explicitly from dedicated RDA field OR whole string is ONLY a district code (e.g. "NS-03" or "MO01")
+    raw = str.toUpperCase().trim();
   }
+
   if (!raw) return null;
 
   const cyrToLat = {
@@ -40,6 +56,13 @@ export const extractRdaCode = (comments = '') => {
   raw = raw.replace(/[АВЕКМНОРСТУХ]/g, ch => cyrToLat[ch] || ch);
   const districtMatch = raw.match(/([A-Z]{2})[-_\s]?([0-9]{2}(?:\/[A-Z]{2}[-_\s]?[0-9]{2})*)/);
   if (!districtMatch) return null;
+
+  const prefix = districtMatch[1];
+  // Strict validation: must be a valid Russian RDA region code (rejects "DB", "FT", "IC", etc.)
+  if (!VALID_RDA_PREFIXES.has(prefix)) {
+    return null;
+  }
+
   return districtMatch[0].replace(/\s+/g, '').replace(/([A-Z]{2})([0-9]{2})/g, '$1-$2');
 };
 

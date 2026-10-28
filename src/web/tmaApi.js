@@ -1815,7 +1815,7 @@ export function createTmaRouter(telegramClient) {
           await pinManager.pinSpotInChannel(telegramClient, channelId, channelMsgId);
 
           // Forward to RDA community channel if RDA is specified
-          const rdaCode = extractRdaCode(rda || fullComment);
+          const rdaCode = (rda && rda !== '-') ? extractRdaCode(rda, true) : extractRdaCode(fullComment, false);
           if (rdaCode) {
             await forwardSpotToRdaChannel(telegramClient, msg, rdaCode);
           }

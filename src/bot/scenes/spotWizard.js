@@ -250,7 +250,7 @@ export const spotWizard = new Scenes.WizardScene(
         await pinManager.pinSpotInChannel(ctx.telegram, channelId, msgId);
 
         // Forward to RDA community channel if RDA is specified
-        const rdaCode = extractRdaCode(s.rda || comment);
+        const rdaCode = (s.rda && s.rda !== '-') ? extractRdaCode(s.rda, true) : extractRdaCode(comment, false);
         if (rdaCode) {
           await forwardSpotToRdaChannel(ctx.telegram, formattedSpot, rdaCode);
         }

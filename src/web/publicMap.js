@@ -12,7 +12,7 @@ export function renderPublicMapHtml(options = {}) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Публичная карта ООПТ и парков POTA России | RU-POTA Hub</title>
+  <title>Карта парков POTA и ООПТ России | RU-POTA Hub</title>
   <meta name="description" content="Интерактивная карта ООПТ России, парков дипломной программы Parks on the Air (POTA), границ заповедников и районов RDA.">
   <link rel="icon" type="image/svg+xml" href="/app/favicon.svg">
   
@@ -29,7 +29,7 @@ export function renderPublicMapHtml(options = {}) {
 
   <style>
     :root {
-      --header-height: 58px;
+      --header-height: 56px;
     }
     * {
       box-sizing: border-box;
@@ -40,13 +40,13 @@ export function renderPublicMapHtml(options = {}) {
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       overflow: hidden;
-      background: #0f172a;
+      background: #0b0f19;
       color: #f8f9fa;
     }
     #public-header {
       height: var(--header-height);
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(8px);
+      background: rgba(11, 15, 25, 0.95);
+      backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       z-index: 1000;
       position: relative;
@@ -59,59 +59,122 @@ export function renderPublicMapHtml(options = {}) {
     #map {
       height: 100%;
       width: 100%;
-      background: #0f172a;
+      background: #0b0f19;
     }
     .brand-title {
       font-weight: 800;
-      letter-spacing: -0.5px;
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       color: #fff;
       text-decoration: none;
+      letter-spacing: -0.3px;
+      line-height: 1;
     }
     .brand-title:hover {
-      color: #34d399;
+      color: #10b981;
     }
-    .brand-badge {
-      font-size: 10px;
-      text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(16, 185, 129, 0.2);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.4);
+    .brand-title .logo-icon {
+      font-size: 24px;
+      line-height: 1;
     }
+    .brand-title .logo-text {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    /* Floating Control Panels */
     .map-floating-panel {
       position: absolute;
-      top: 12px;
-      left: 12px;
+      top: 14px;
+      left: 14px;
       z-index: 999;
       background: rgba(15, 23, 42, 0.88);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      padding: 8px 12px;
+      border-radius: 50px;
+      padding: 6px 14px;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-      max-width: calc(100vw - 24px);
+      max-width: calc(100vw - 28px);
     }
+    .filter-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+    .filter-chip:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .filter-chip.active-pota {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+    .filter-chip.active-candidates {
+      background: rgba(148, 163, 184, 0.15);
+      border-color: rgba(148, 163, 184, 0.4);
+      color: #cbd5e1;
+    }
+
+    /* Search Dropdown Suggestions */
+    #search-box-wrapper {
+      position: relative;
+    }
+    #search-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+      max-height: 340px;
+      overflow-y: auto;
+      z-index: 1050;
+      display: none;
+      margin-top: 4px;
+    }
+    .suggestion-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+    .suggestion-item:hover {
+      background: rgba(16, 185, 129, 0.15);
+    }
+
+    /* Floating Legend */
     .map-floating-legend {
       position: absolute;
       bottom: 16px;
-      left: 12px;
+      left: 14px;
       z-index: 999;
-      background: rgba(15, 23, 42, 0.88);
+      background: rgba(15, 23, 42, 0.9);
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      padding: 6px 14px;
-      font-size: 11px;
+      border-radius: 30px;
+      padding: 6px 16px;
+      font-size: 11.5px;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
     }
     .legend-item {
       display: flex;
@@ -124,13 +187,35 @@ export function renderPublicMapHtml(options = {}) {
       height: 10px;
       border-radius: 50%;
     }
-    /* Popup styling */
+
+    /* Restricted Region Warning Banner */
+    #region-restricted-banner {
+      position: absolute;
+      top: 68px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 998;
+      background: rgba(245, 158, 11, 0.95);
+      color: #000;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 6px 16px;
+      border-radius: 30px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    /* Leaflet Popup Styling */
     .leaflet-popup-content-wrapper {
       background: #1e293b;
       color: #f1f5f9;
       border-radius: 12px;
       box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       padding: 2px;
     }
     .leaflet-popup-tip {
@@ -143,22 +228,42 @@ export function renderPublicMapHtml(options = {}) {
       font-size: 12px;
       padding: 8px 10px;
     }
-    .btn-donate {
-      background: linear-gradient(135deg, #f59e0b, #d97706);
-      color: #fff;
-      font-weight: 600;
-      border: none;
+    .popup-collapsed-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+      padding: 2px 0;
     }
-    .btn-donate:hover {
-      background: linear-gradient(135deg, #d97706, #b45309);
-      color: #fff;
+
+    /* Leaflet zoom controls shifted to right */
+    .leaflet-top.leaflet-right {
+      margin-top: 10px;
+      margin-right: 10px;
     }
+    .leaflet-control-zoom {
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      border-radius: 10px !important;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+    }
+    .leaflet-control-zoom a {
+      background: #1e293b !important;
+      color: #f1f5f9 !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    .leaflet-control-zoom a:hover {
+      background: #334155 !important;
+      color: #10b981 !important;
+    }
+
     @media (max-width: 768px) {
       .hide-mobile {
         display: none !important;
       }
-      .brand-title span {
-        display: none;
+      .brand-title .logo-text {
+        font-size: 16px;
       }
     }
   </style>
@@ -167,52 +272,60 @@ export function renderPublicMapHtml(options = {}) {
 
   <!-- Top Navigation Header -->
   <header id="public-header" class="d-flex align-items-center justify-content-between px-3">
-    <!-- Left: Brand & Search -->
+    <!-- Left: Aligned Brand & Navigation Links -->
     <div class="d-flex align-items-center gap-2 gap-md-3">
       <a href="/" class="brand-title">
-        <span class="fs-4">🌲</span>
-        <strong class="fs-5">RU-POTA</strong>
-        <span class="brand-badge hide-mobile">Карта ООПТ</span>
+        <span class="logo-icon">🌲</span>
+        <span class="logo-text">RU-POTA</span>
       </a>
 
-      <!-- Region Dropdown -->
-      <div style="min-width: 180px; max-width: 260px;" class="hide-mobile">
+      <!-- Region Dropdown with Groups -->
+      <div style="min-width: 200px; max-width: 280px;" class="hide-mobile">
         <select id="region-select" class="form-select form-select-sm bg-dark text-light border-secondary">
           <option value="">🇷🇺 Вся Россия (обзор)</option>
         </select>
       </div>
 
-      <!-- Live Search Input -->
-      <div class="input-group input-group-sm" style="max-width: 220px;">
-        <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
-        <input type="text" id="search-input" class="form-control bg-dark text-light border-secondary" placeholder="Поиск (RU-0001, RDA, ООПТ)...">
+      <!-- Live Search Input with Autocomplete -->
+      <div id="search-box-wrapper" style="width: 240px;" class="hide-mobile">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
+          <input type="text" id="search-input" class="form-control bg-dark text-light border-secondary" placeholder="Парк, RDA, ООПТ, город..." autocomplete="off">
+        </div>
+        <div id="search-suggestions"></div>
       </div>
     </div>
 
-    <!-- Right: Actions & Login -->
+    <!-- Right: Navigation Buttons -->
     <div class="d-flex align-items-center gap-2">
-      <!-- Telegram Mini App -->
-      <a href="https://t.me/ru_pota_bot/app" target="_blank" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1" title="Открыть в Telegram">
-        <i class="bi bi-telegram"></i>
-        <span class="hide-mobile">Mini App</span>
+      <!-- Direct Mini App link -->
+      <a href="https://pota.r9o.ru/app/" target="_blank" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1.5" title="Запустить Telegram Mini App">
+        <i class="bi bi-phone"></i>
+        <span>Mini App</span>
       </a>
 
-      <!-- Donate / Server Support Button -->
-      <button type="button" class="btn btn-sm btn-donate d-flex align-items-center gap-1 shadow-sm" onclick="showDonateModal()" title="Поддержать сервер и развитие бота">
+      <!-- Contacts Page -->
+      <a href="/contacts" class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex align-items-center gap-1">
+        <i class="bi bi-info-circle"></i>
+        <span>Контакты</span>
+      </a>
+
+      <!-- Standalone Donate Page -->
+      <a href="/donate" class="btn btn-sm btn-warning fw-semibold d-flex align-items-center gap-1.5 shadow-sm text-dark">
         <i class="bi bi-heart-fill text-danger"></i>
         <span>Поддержать</span>
-      </button>
+      </a>
 
-      <!-- Reps / Admin Entry -->
+      <!-- Reps & Admin Login (Clear distinction: closed portal for reps & coordinators) -->
       ${isAuthed ? `
-        <a href="/" class="btn btn-sm btn-primary d-flex align-items-center gap-1">
+        <a href="/admin" class="btn btn-sm btn-primary d-flex align-items-center gap-1" title="Перейти в панель управления координатора">
           <i class="bi bi-speedometer2"></i>
-          <span class="hide-mobile">Панель</span>
+          <span>Админка</span>
         </a>
       ` : `
-        <a href="/login" class="btn btn-sm btn-outline-light d-flex align-items-center gap-1" title="Вход для региональных координаторов">
-          <i class="bi bi-box-arrow-in-right"></i>
-          <span class="hide-mobile">Вход</span>
+        <a href="/login" class="btn btn-sm btn-outline-light d-flex align-items-center gap-1" title="Вход в закрытую систему для региональных представителей и координаторов программы POTA">
+          <i class="bi bi-lock-fill text-warning"></i>
+          <span class="hide-mobile">Координаторам</span>
         </a>
       `}
     </div>
@@ -222,36 +335,41 @@ export function renderPublicMapHtml(options = {}) {
   <main id="map-container">
     <div id="map"></div>
 
-    <!-- Floating Filter Controls -->
+    <!-- Restricted Region Alert Banner -->
+    <div id="region-restricted-banner">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span id="region-restricted-text">Добавление новых парков временно ограничено правилами POTA USA. Границы ООПТ и районы RDA доступны для ознакомления.</span>
+    </div>
+
+    <!-- Floating Top-Left Filter & Layers Panel (Cleanly separated from zoom buttons) -->
     <div class="map-floating-panel">
-      <div class="d-flex flex-wrap align-items-center gap-2">
-        <!-- Layer filters -->
-        <div class="form-check form-check-inline m-0">
-          <input class="form-check-input" type="checkbox" id="filter-pota" checked>
-          <label class="form-check-label small fw-semibold text-success" for="filter-pota">
-            ⭐ Парки POTA (<span id="count-pota">...</span>)
-          </label>
-        </div>
-        <div class="form-check form-check-inline m-0">
-          <input class="form-check-input" type="checkbox" id="filter-candidates" checked>
-          <label class="form-check-label small fw-semibold text-secondary" for="filter-candidates">
-            🌲 Кандидаты ООПТ (<span id="count-candidates">...</span>)
-          </label>
+      <div class="d-flex align-items-center gap-2">
+        <!-- POTA Parks Toggle Chip -->
+        <div class="filter-chip active-pota" id="chip-pota" onclick="toggleLayerFilter('pota')">
+          <i class="bi bi-star-fill text-warning"></i>
+          <span>Парки POTA (<strong id="count-pota">...</strong>)</span>
         </div>
 
-        <!-- Overlays Dropdown -->
-        <div class="dropdown ms-auto">
-          <button class="btn btn-xs btn-outline-light dropdown-toggle py-0 px-2" type="button" data-bs-toggle="dropdown" style="font-size: 11px;">
-            <i class="bi bi-layers"></i> Слои
+        <!-- Candidate OOPT Toggle Chip -->
+        <div class="filter-chip active-candidates" id="chip-candidates" onclick="toggleLayerFilter('candidates')">
+          <i class="bi bi-tree-fill text-secondary"></i>
+          <span>Кандидаты ООПТ (<strong id="count-candidates">...</strong>)</span>
+        </div>
+
+        <!-- Prominent Layers Dropdown Button -->
+        <div class="dropdown">
+          <button class="btn btn-xs btn-outline-light rounded-pill px-2.5 py-1 dropdown-toggle fw-semibold d-flex align-items-center gap-1.5 shadow-sm" type="button" data-bs-toggle="dropdown" style="font-size: 11.5px; border-color: rgba(255,255,255,0.25);">
+            <i class="bi bi-stack text-success"></i>
+            <span>Слои</span>
           </button>
-          <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
-            <li><h6 class="dropdown-header">Подложка</h6></li>
-            <li><a class="dropdown-item active base-map-opt" href="#" data-base="twogis">2ГИС (Россия)</a></li>
-            <li><a class="dropdown-item base-map-opt" href="#" data-base="osm">OpenStreetMap</a></li>
-            <li><a class="dropdown-item base-map-opt" href="#" data-base="satellite">Спутник (Esri)</a></li>
-            <li><a class="dropdown-item base-map-opt" href="#" data-base="dark">Тёмная карта</a></li>
+          <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-start shadow-lg mt-1" style="min-width: 250px;">
+            <li><h6 class="dropdown-header text-uppercase text-secondary font-monospace" style="font-size: 10px;">Подложка карты</h6></li>
+            <li><a class="dropdown-item active base-map-opt" href="#" data-base="twogis">🇷🇺 2ГИС (Россия)</a></li>
+            <li><a class="dropdown-item base-map-opt" href="#" data-base="osm">🌍 OpenStreetMap</a></li>
+            <li><a class="dropdown-item base-map-opt" href="#" data-base="satellite">🛰️ Спутник (Esri)</a></li>
+            <li><a class="dropdown-item base-map-opt" href="#" data-base="dark">🌑 Тёмная карта</a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><h6 class="dropdown-header">Сетки и радиолюбительские слои</h6></li>
+            <li><h6 class="dropdown-header text-uppercase text-secondary font-monospace" style="font-size: 10px;">Радиолюбительские слои R1CF</h6></li>
             <li>
               <div class="dropdown-item">
                 <div class="form-check form-switch m-0">
@@ -292,7 +410,7 @@ export function renderPublicMapHtml(options = {}) {
     <!-- Floating Bottom Legend -->
     <div class="map-floating-legend hide-mobile">
       <div class="legend-item">
-        <span class="legend-dot" style="background: #198754; border: 1px solid #fff;"></span>
+        <span class="legend-dot" style="background: #10b981; border: 1.5px solid #fff;"></span>
         <span>Официальный парк POTA</span>
       </div>
       <div class="legend-item">
@@ -300,56 +418,15 @@ export function renderPublicMapHtml(options = {}) {
         <span>Кандидат ООПТ</span>
       </div>
       <div class="legend-item text-secondary">
-        <span>Клик по метке загружает точные границы полигона</span>
+        <span>Клик по точке загружает векторные границы ООПТ</span>
       </div>
     </div>
   </main>
-
-  <!-- Donate & Support Modal -->
-  <div class="modal fade" id="donateModal" tabindex="-1" aria-labelledby="donateModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content bg-dark text-light border-secondary shadow-lg">
-        <div class="modal-header border-secondary">
-          <h5 class="modal-title d-flex align-items-center gap-2" id="donateModalLabel">
-            <span>☕</span> Поддержка проекта RU-POTA
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <p class="mb-3">
-            Проект <strong>RU-POTA Bot</strong> и картографический хаб развиваются силами радиолюбителей-энтузиастов.
-          </p>
-          <div class="p-3 rounded bg-black bg-opacity-40 border border-secondary mb-3">
-            <div class="small text-secondary mb-1">На что идут средства:</div>
-            <ul class="small mb-0 ps-3">
-              <li>Оплата VPS-сервера, скоростного канала и базы данных</li>
-              <li>Синхронизация спотов с кластером POTA и каналом RDA</li>
-              <li>Сбор и геопривязка полигонов 11 000+ ООПТ России</li>
-              <li>Разработка мобильного Mini App и новых полезных фич</li>
-            </ul>
-          </div>
-          <p class="small text-secondary mb-3">
-            Любой донат помогает проекту оставаться бесплатным и мотивирует развивать новые инструменты для радиоэкспедиций!
-          </p>
-          
-          <div class="d-grid gap-2">
-            <a href="https://t.me/r9ogl" target="_blank" class="btn btn-warning fw-bold d-flex align-items-center justify-content-center gap-2">
-              <i class="bi bi-telegram"></i> Написать автору (Сан Саныч R9OGL)
-            </a>
-            <a href="https://t.me/ru_pota_bot" target="_blank" class="btn btn-outline-light btn-sm d-flex align-items-center justify-content-center gap-2">
-              <i class="bi bi-robot"></i> Telegram-бот @ru_pota_bot
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    // 1. Base Maps Configuration
     const BASE_MAPS = {
       twogis: {
         url: 'https://tile{s}.maps.2gis.com/tiles?x={x}&y={y}&z={z}',
@@ -377,25 +454,31 @@ export function renderPublicMapHtml(options = {}) {
     let baseLayer = null;
     let potaGroup = null;
     let candidateGroup = null;
+    let newRdaGroup = null;
     let currentBoundaryLayer = null;
     let wmsLayers = {};
+
+    let showPota = true;
+    let showCandidates = true;
 
     let allPointsData = { matched: [], unmatchedPota: [], candidates: [] };
     let currentRegion = '';
 
-    // Initialize Map
     function initMap() {
+      // Zoom controls explicitly positioned at topright to avoid overlapping filter panel
       map = L.map('map', {
         center: [55.75, 50.0],
         zoom: 5,
         minZoom: 3,
         maxZoom: 18,
-        zoomControl: true,
+        zoomControl: false,
         attributionControl: false,
         preferCanvas: true
       });
 
-      // Default base layer (2GIS)
+      L.control.zoom({ position: 'topright' }).addTo(map);
+
+      // Default base layer (2GIS Russia)
       baseLayer = L.tileLayer(BASE_MAPS.twogis.url, {
         subdomains: BASE_MAPS.twogis.subdomains,
         maxZoom: 18
@@ -403,11 +486,13 @@ export function renderPublicMapHtml(options = {}) {
 
       potaGroup = L.layerGroup().addTo(map);
       candidateGroup = L.layerGroup().addTo(map);
+      newRdaGroup = L.layerGroup().addTo(map);
 
-      // Initialize RDA WMS Overlay by default
+      // Initialize RDA WMS Overlay by default + New Regions RDA Layer
       toggleWms('rda', true);
+      loadNewRdaLayer();
 
-      // Event listeners for base maps
+      // Base map switchers
       document.querySelectorAll('.base-map-opt').forEach(el => {
         el.addEventListener('click', (e) => {
           e.preventDefault();
@@ -425,45 +510,69 @@ export function renderPublicMapHtml(options = {}) {
         });
       });
 
-      // Event listeners for WMS overlays
+      // WMS Overlays
       document.querySelectorAll('.wms-toggle').forEach(el => {
         el.addEventListener('change', () => {
           const lyr = el.getAttribute('data-layer');
           toggleWms(lyr, el.checked);
+          if (lyr === 'rda') {
+            if (el.checked) map.addLayer(newRdaGroup);
+            else map.removeLayer(newRdaGroup);
+          }
         });
       });
 
-      // Filter checkboxes
-      document.getElementById('filter-pota').addEventListener('change', (e) => {
-        if (e.target.checked) map.addLayer(potaGroup);
-        else map.removeLayer(potaGroup);
-      });
-      document.getElementById('filter-candidates').addEventListener('change', (e) => {
-        if (e.target.checked) map.addLayer(candidateGroup);
-        else map.removeLayer(candidateGroup);
-      });
-
-      // Region Dropdown
+      // Region Dropdown with Groups
       document.getElementById('region-select').addEventListener('change', (e) => {
-        currentRegion = e.target.value;
+        const val = e.target.value;
+        currentRegion = val;
+        const selectedOpt = e.target.options[e.target.selectedIndex];
+        const isRestricted = selectedOpt ? selectedOpt.getAttribute('data-restricted') === '1' : false;
+
+        const banner = document.getElementById('region-restricted-banner');
+        if (isRestricted) {
+          banner.style.display = 'inline-flex';
+        } else {
+          banner.style.display = 'none';
+        }
+
         loadPoints(currentRegion, true);
       });
 
-      // Search filter input
-      let searchDebounce = null;
-      document.getElementById('search-input').addEventListener('input', (e) => {
-        clearTimeout(searchDebounce);
-        searchDebounce = setTimeout(() => {
-          renderPoints(e.target.value.trim().toUpperCase());
-        }, 250);
-      });
+      // Search Autocomplete
+      initSearchAutocomplete();
 
       // Load initial data
-      loadRegions();
+      loadRegionsDropdown();
       loadPoints('', false);
     }
 
-    // Toggle WMS Layers from R1CF
+    // Toggle layer chip filter
+    window.toggleLayerFilter = function(type) {
+      if (type === 'pota') {
+        showPota = !showPota;
+        const chip = document.getElementById('chip-pota');
+        if (showPota) {
+          map.addLayer(potaGroup);
+          chip.classList.add('active-pota');
+        } else {
+          map.removeLayer(potaGroup);
+          chip.classList.remove('active-pota');
+        }
+      } else if (type === 'candidates') {
+        showCandidates = !showCandidates;
+        const chip = document.getElementById('chip-candidates');
+        if (showCandidates) {
+          map.addLayer(candidateGroup);
+          chip.classList.add('active-candidates');
+        } else {
+          map.removeLayer(candidateGroup);
+          chip.classList.remove('active-candidates');
+        }
+      }
+    };
+
+    // Toggle WMS Layers from R1CF GeoServer
     function toggleWms(id, enable) {
       const wmsConfig = {
         rda: { layer: 'RDA_2025X', style: 'rda_centroid_rx', minZoom: 3 },
@@ -493,21 +602,94 @@ export function renderPublicMapHtml(options = {}) {
       }
     }
 
-    // Load Regions Dropdown
-    async function loadRegions() {
+    // Load New Regions RDA Overlay (DO, LU, ZP, HE) matching R1CF style
+    async function loadNewRdaLayer() {
+      try {
+        const res = await fetch('/api/map/new-rda');
+        const data = await res.json();
+        newRdaGroup.clearLayers();
+
+        // 1. Magenta outlines
+        if (data.borders) {
+          const borderLyr = L.geoJSON(data.borders, {
+            style: {
+              color: '#d90077',
+              weight: 2,
+              opacity: 0.9,
+              fillColor: '#d90077',
+              fillOpacity: 0.02
+            },
+            interactive: false
+          });
+          newRdaGroup.addLayer(borderLyr);
+        }
+
+        // 2. Yellow/Magenta RDA Centroid Badges
+        if (Array.isArray(data.districts)) {
+          data.districts.forEach(d => {
+            const rdaHtml = \`
+              <div style="background:#fff83b; color:#000000; border:1.5px solid #d90077; border-radius:3px; padding:1px 4px; font-weight:800; font-size:11px; font-family:monospace; box-shadow:0 1px 3px rgba(0,0,0,0.45); white-space:nowrap; cursor:pointer; text-align:center;">
+                \${d.code}
+              </div>
+            \`;
+            const icon = L.divIcon({
+              html: rdaHtml,
+              className: 'custom-rda-badge',
+              iconSize: [44, 20],
+              iconAnchor: [22, 10]
+            });
+            const marker = L.marker([d.lat, d.lon], { icon });
+            marker.bindTooltip(\`<b>\${d.code}</b> — \${d.name} (\${d.region})\`, { direction: 'top' });
+            marker.on('click', () => {
+              map.flyTo([d.lat, d.lon], 13);
+            });
+            newRdaGroup.addLayer(marker);
+          });
+        }
+      } catch (err) {
+        console.warn('Error loading new RDA overlay:', err);
+      }
+    }
+
+    // Load Regions Dropdown with Groups (Matches Admin Panel categorization)
+    async function loadRegionsDropdown() {
       try {
         const res = await fetch('/api/map/regions');
         const data = await res.json();
         const sel = document.getElementById('region-select');
-        if (data && data.regions && sel) {
-          const list = data.regions.slice().sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-          list.forEach(r => {
-            const opt = document.createElement('option');
-            opt.value = r.name;
-            opt.textContent = \`\${r.name} (\${r.matchedParks || 0} POTA)\`;
-            sel.appendChild(opt);
-          });
-        }
+        if (!data || !data.regions || !sel) return;
+
+        const list = data.regions.slice().sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+
+        const groupEurope = document.createElement('optgroup');
+        groupEurope.label = '🇪🇺 Европейская Россия (R1, R2, R3, R4, R6)';
+
+        const groupAsia = document.createElement('optgroup');
+        groupAsia.label = '🌏 Азиатская Россия (R9, R0 — Урал, Сибирь, ДВ)';
+
+        const groupRestricted = document.createElement('optgroup');
+        groupRestricted.label = '⚠️ Новые субъекты РФ (ограничено POTA USA)';
+
+        list.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.name;
+          if (r.isRestricted) {
+            opt.setAttribute('data-restricted', '1');
+            opt.textContent = \`\${r.name} (\${r.code}) — [ ⚠️ POTA USA ]\`;
+            groupRestricted.appendChild(opt);
+          } else {
+            opt.textContent = \`\${r.name} (\${r.code}) — \${r.matchedParks || 0} парков\`;
+            if (r.zone === 'asia') {
+              groupAsia.appendChild(opt);
+            } else {
+              groupEurope.appendChild(opt);
+            }
+          }
+        });
+
+        sel.appendChild(groupEurope);
+        sel.appendChild(groupAsia);
+        sel.appendChild(groupRestricted);
       } catch (err) {
         console.warn('Error loading regions:', err);
       }
@@ -521,49 +703,47 @@ export function renderPublicMapHtml(options = {}) {
         const res = await fetch(url);
         allPointsData = await res.json();
 
-        document.getElementById('count-pota').textContent = (allPointsData.matched?.length || 0) + (allPointsData.unmatchedPota?.length || 0);
+        const potaTotal = (allPointsData.matched?.length || 0) + (allPointsData.unmatchedPota?.length || 0);
+        document.getElementById('count-pota').textContent = potaTotal;
         document.getElementById('count-candidates').textContent = allPointsData.candidates?.length || 0;
 
-        renderPoints('', fitBounds);
+        renderPoints(fitBounds);
       } catch (err) {
         console.error('Error loading points:', err);
       }
     }
 
     // Render Points on Map
-    function renderPoints(searchQuery = '', fitBounds = false) {
+    function renderPoints(fitBounds = false) {
       potaGroup.clearLayers();
       candidateGroup.clearLayers();
-
       const bounds = [];
-      const query = searchQuery ? searchQuery.toUpperCase() : '';
 
-      // 1. Official Matched POTA Parks (Green)
+      // 1. Matched Official POTA Parks (Green)
       (allPointsData.matched || []).forEach(p => {
         if (!p.lat || !p.lon) return;
-        if (query) {
-          const match = (p.ref && p.ref.toUpperCase().includes(query)) ||
-                        (p.title && p.title.toUpperCase().includes(query)) ||
-                        (p.potaName && p.potaName.toUpperCase().includes(query)) ||
-                        (p.ate && p.ate.toUpperCase().includes(query));
-          if (!match) return;
-        }
 
         const areaStr = p.area ? \`📏 Площадь: <strong>\${Number(p.area).toLocaleString('ru-RU')} га</strong>\` : '';
         const popupHtml = \`
-          <div class="oopt-card-popup">
-            <div class="d-flex align-items-center justify-content-between mb-1">
-              <span class="badge bg-success fw-bold">\${p.ref}</span>
-              <small class="text-secondary">\${p.sigDisplay || 'Федеральное'}</small>
+          <div class="oopt-card-popup" id="card-popup-\${p.nid}">
+            <div class="popup-collapsed-bar" onclick="togglePopupCollapse(\${p.nid})" title="Нажмите, чтобы развернуть карточку">
+              <span class="fw-bold text-success small">⭐ \${p.ref} \${p.title || ''}</span>
+              <button type="button" class="btn btn-xs btn-outline-success py-0 px-1.5" style="font-size:10px;">⤢ Развернуть</button>
             </div>
-            <div class="fw-bold fs-6 text-light mb-1">\${p.title || p.potaName}</div>
-            <div class="text-secondary small mb-1">📍 \${p.ate || ''}</div>
-            <div class="text-secondary small mb-2">\${areaStr}</div>
-            <div id="boundary-status-\${p.nid}" class="small mb-2"></div>
-            <div class="d-flex flex-wrap gap-1 mt-2">
-              <button class="btn btn-xs btn-outline-info py-0 px-2" style="font-size:11px;" onclick="zoomToBoundary(\${p.nid})">📐 Границы</button>
-              <a href="https://pota.app/#/park/\${p.ref}" target="_blank" class="btn btn-xs btn-outline-success py-0 px-2" style="font-size:11px;">POTA.app</a>
-              \${p.site ? \`<a href="\${p.site}" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:11px;">Паспорт</a>\` : ''}
+            <div class="popup-expanded-content">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="badge bg-success fw-bold">\${p.ref}</span>
+                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:10px;" onclick="togglePopupCollapse(\${p.nid})" title="Свернуть карточку, чтобы открыть вид на полигон">⭐ Свернуть</button>
+              </div>
+              <div class="fw-bold fs-6 text-light mb-1">\${p.title || p.potaName}</div>
+              <div class="text-secondary small mb-1">📍 \${p.ate || ''}</div>
+              <div class="text-secondary small mb-2">\${areaStr}</div>
+              <div id="boundary-status-\${p.nid}" class="small mb-2"></div>
+              <div class="d-flex flex-wrap gap-1 mt-2">
+                <button class="btn btn-xs btn-outline-info py-0 px-2" style="font-size:11px;" onclick="zoomToBoundary()">📐 Границы</button>
+                <a href="https://pota.app/#/park/\${p.ref}" target="_blank" class="btn btn-xs btn-outline-success py-0 px-2" style="font-size:11px;">POTA.app</a>
+                \${p.site ? \`<a href="\${p.site}" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:11px;">Паспорт</a>\` : ''}
+              </div>
             </div>
           </div>
         \`;
@@ -581,18 +761,13 @@ export function renderPublicMapHtml(options = {}) {
         });
 
         potaGroup.addLayer(marker);
+        p._marker = marker;
         bounds.push([p.lat, p.lon]);
       });
 
       // 2. Unmatched POTA Parks (Yellow/Orange)
       (allPointsData.unmatchedPota || []).forEach(p => {
         if (!p.lat || !p.lon) return;
-        if (query) {
-          const match = (p.ref && p.ref.toUpperCase().includes(query)) ||
-                        (p.name && p.name.toUpperCase().includes(query)) ||
-                        (p.location && p.location.toUpperCase().includes(query));
-          if (!match) return;
-        }
 
         const popupHtml = \`
           <div class="oopt-card-popup">
@@ -617,32 +792,34 @@ export function renderPublicMapHtml(options = {}) {
         }).bindPopup(popupHtml);
 
         potaGroup.addLayer(marker);
+        p._marker = marker;
         bounds.push([p.lat, p.lon]);
       });
 
       // 3. Candidate OOPTs (Grey/Slate)
       (allPointsData.candidates || []).forEach(c => {
         if (!c.lat || !c.lon) return;
-        if (query) {
-          const match = (c.title && c.title.toUpperCase().includes(query)) ||
-                        (c.ate && c.ate.toUpperCase().includes(query));
-          if (!match) return;
-        }
 
         const areaStr = c.area ? \`📏 Площадь: <strong>\${Number(c.area).toLocaleString('ru-RU')} га</strong>\` : '';
         const popupHtml = \`
-          <div class="oopt-card-popup">
-            <div class="d-flex align-items-center justify-content-between mb-1">
-              <span class="badge bg-secondary">Кандидат ООПТ</span>
-              <small class="text-secondary">\${c.sigDisplay || 'Региональное'}</small>
+          <div class="oopt-card-popup" id="card-popup-\${c.nid}">
+            <div class="popup-collapsed-bar" onclick="togglePopupCollapse(\${c.nid})" title="Нажмите, чтобы развернуть карточку">
+              <span class="fw-bold text-secondary small">🌲 \${c.title || ''}</span>
+              <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:10px;">⤢ Развернуть</button>
             </div>
-            <div class="fw-bold fs-6 text-light mb-1">\${c.title}</div>
-            <div class="text-secondary small mb-1">📍 \${c.ate || ''}</div>
-            <div class="text-secondary small mb-2">\${areaStr}</div>
-            <div id="boundary-status-\${c.nid}" class="small mb-2"></div>
-            <div class="d-flex flex-wrap gap-1 mt-2">
-              <button class="btn btn-xs btn-outline-info py-0 px-2" style="font-size:11px;" onclick="zoomToBoundary(\${c.nid})">📐 Границы</button>
-              \${c.site ? \`<a href="\${c.site}" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:11px;">Паспорт</a>\` : ''}
+            <div class="popup-expanded-content">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="badge bg-secondary">Кандидат ООПТ</span>
+                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:10px;" onclick="togglePopupCollapse(\${c.nid})" title="Свернуть карточку">⭐ Свернуть</button>
+              </div>
+              <div class="fw-bold fs-6 text-light mb-1">\${c.title}</div>
+              <div class="text-secondary small mb-1">📍 \${c.ate || ''}</div>
+              <div class="text-secondary small mb-2">\${areaStr}</div>
+              <div id="boundary-status-\${c.nid}" class="small mb-2"></div>
+              <div class="d-flex flex-wrap gap-1 mt-2">
+                <button class="btn btn-xs btn-outline-info py-0 px-2" style="font-size:11px;" onclick="zoomToBoundary()">📐 Границы</button>
+                \${c.site ? \`<a href="\${c.site}" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size:11px;">Паспорт</a>\` : ''}
+              </div>
             </div>
           </div>
         \`;
@@ -660,6 +837,7 @@ export function renderPublicMapHtml(options = {}) {
         });
 
         candidateGroup.addLayer(marker);
+        c._marker = marker;
         bounds.push([c.lat, c.lon]);
       });
 
@@ -670,7 +848,22 @@ export function renderPublicMapHtml(options = {}) {
       }
     }
 
-    // Load & Render Polygon Boundary for an OOPT
+    // Toggle card collapse in popup
+    window.togglePopupCollapse = function(nid) {
+      const card = document.getElementById('card-popup-' + nid);
+      if (!card) return;
+      const bar = card.querySelector('.popup-collapsed-bar');
+      const content = card.querySelector('.popup-expanded-content');
+      if (bar.style.display === 'none' || !bar.style.display) {
+        bar.style.display = 'flex';
+        content.style.display = 'none';
+      } else {
+        bar.style.display = 'none';
+        content.style.display = 'block';
+      }
+    };
+
+    // Load and draw vector GeoJSON boundary
     async function loadAndDrawBoundary(nid, title) {
       if (!nid) return;
       const statusEl = document.getElementById('boundary-status-' + nid);
@@ -711,18 +904,158 @@ export function renderPublicMapHtml(options = {}) {
       }
     }
 
-    window.zoomToBoundary = function(nid) {
+    window.zoomToBoundary = function() {
       if (window._lastBoundaryBounds) {
         map.fitBounds(window._lastBoundaryBounds, { padding: [40, 40] });
       }
     };
 
-    window.showDonateModal = function() {
-      const modal = new bootstrap.Modal(document.getElementById('donateModal'));
-      modal.show();
+    // Search Autocomplete (Parks, RDA, Cities)
+    function initSearchAutocomplete() {
+      const input = document.getElementById('search-input');
+      const suggestions = document.getElementById('search-suggestions');
+      let debounce = null;
+
+      input.addEventListener('input', (e) => {
+        clearTimeout(debounce);
+        const query = e.target.value.trim().toUpperCase();
+        if (query.length < 2) {
+          suggestions.style.display = 'none';
+          return;
+        }
+
+        debounce = setTimeout(() => {
+          showSearchSuggestions(query);
+        }, 200);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+          suggestions.style.display = 'none';
+        }
+      });
+    }
+
+    function showSearchSuggestions(query) {
+      const suggestions = document.getElementById('search-suggestions');
+      const items = [];
+
+      // 1. Match POTA Parks
+      (allPointsData.matched || []).forEach(p => {
+        if (items.length >= 8) return;
+        const refMatch = p.ref && p.ref.toUpperCase().includes(query);
+        const nameMatch = p.title && p.title.toUpperCase().includes(query);
+        if (refMatch || nameMatch) {
+          items.push({
+            type: 'pota',
+            icon: '⭐',
+            title: \`\${p.ref} \${p.title}\`,
+            subtitle: p.ate || 'ООПТ',
+            lat: p.lat,
+            lon: p.lon,
+            item: p
+          });
+        }
+      });
+
+      // 2. Match Candidates
+      (allPointsData.candidates || []).forEach(c => {
+        if (items.length >= 12) return;
+        if (c.title && c.title.toUpperCase().includes(query)) {
+          items.push({
+            type: 'cand',
+            icon: '🌲',
+            title: c.title,
+            subtitle: c.ate || 'Кандидат ООПТ',
+            lat: c.lat,
+            lon: c.lon,
+            item: c
+          });
+        }
+      });
+
+      // 3. Known Top Russian Cities / Geocoding
+      const TOP_CITIES = [
+        { name: 'Москва', lat: 55.7558, lon: 37.6173 },
+        { name: 'Санкт-Петербург', lat: 59.9343, lon: 30.3351 },
+        { name: 'Новосибирск', lat: 55.0084, lon: 82.9357 },
+        { name: 'Екатеринбург', lat: 56.8389, lon: 60.6057 },
+        { name: 'Казань', lat: 55.8304, lon: 49.0661 },
+        { name: 'Нижний Новгород', lat: 56.3269, lon: 44.0059 },
+        { name: 'Самара', lat: 53.1959, lon: 50.1002 },
+        { name: 'Челябинск', lat: 55.1644, lon: 61.4368 },
+        { name: 'Красноярск', lat: 56.0153, lon: 92.8932 },
+        { name: 'Уфа', lat: 54.7388, lon: 55.9721 },
+        { name: 'Ростов-на-Дону', lat: 47.2357, lon: 39.7015 },
+        { name: 'Краснодар', lat: 45.0355, lon: 38.9753 },
+        { name: 'Сочи', lat: 43.6028, lon: 39.7342 },
+        { name: 'Владивосток', lat: 43.1198, lon: 131.8869 },
+        { name: 'Хабаровск', lat: 48.4827, lon: 135.0838 },
+        { name: 'Иркутск', lat: 52.2871, lon: 104.3050 },
+        { name: 'Калининград', lat: 54.7104, lon: 20.4522 },
+        { name: 'Архангельск', lat: 64.5472, lon: 40.5601 },
+        { name: 'Мурманск', lat: 68.9585, lon: 33.0827 },
+        { name: 'Петропавловск-Камчатский', lat: 53.0167, lon: 158.6500 }
+      ];
+
+      TOP_CITIES.forEach(city => {
+        if (items.length >= 15) return;
+        if (city.name.toUpperCase().includes(query)) {
+          items.push({
+            type: 'city',
+            icon: '🏙️',
+            title: city.name,
+            subtitle: 'Город РФ',
+            lat: city.lat,
+            lon: city.lon
+          });
+        }
+      });
+
+      if (items.length === 0) {
+        suggestions.innerHTML = '<div class="p-2 text-secondary text-center small">Ничего не найдено</div>';
+        suggestions.style.display = 'block';
+        return;
+      }
+
+      suggestions.innerHTML = items.map((it, idx) => \`
+        <div class="suggestion-item d-flex align-items-center justify-content-between" onclick="selectSuggestion(\${idx})">
+          <div class="text-truncate">
+            <span class="me-1">\${it.icon}</span>
+            <strong class="text-light">\${it.title}</strong>
+            <div class="text-secondary small">\${it.subtitle}</div>
+          </div>
+          <span class="badge bg-dark border border-secondary text-secondary small">Перейти</span>
+        </div>
+      \`).join('');
+
+      window._currentSuggestions = items;
+      suggestions.style.display = 'block';
+    }
+
+    window.selectSuggestion = function(idx) {
+      const items = window._currentSuggestions || [];
+      const it = items[idx];
+      if (!it) return;
+
+      document.getElementById('search-suggestions').style.display = 'none';
+      document.getElementById('search-input').value = it.title;
+
+      if (it.type === 'city') {
+        map.flyTo([it.lat, it.lon], 11);
+      } else if (it.item) {
+        map.flyTo([it.lat, it.lon], 13);
+        setTimeout(() => {
+          if (it.item._marker) {
+            it.item._marker.openPopup();
+          }
+          if (it.item.nid) {
+            loadAndDrawBoundary(it.item.nid, it.item.title);
+          }
+        }, 500);
+      }
     };
 
-    // Initialize when DOM ready
     document.addEventListener('DOMContentLoaded', initMap);
   </script>
 </body>

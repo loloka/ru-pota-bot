@@ -27,8 +27,20 @@ try {
   assert.ok(setCookies.length > 0, 'Must receive session cookies');
   const cookieHeader = setCookies.map(c => c.split(';')[0]).join('; ');
 
-  // 2. Fetch Dashboard HTML
-  const dashRes = await fetch('http://127.0.0.1:9995/', {
+  // 2. Fetch Public Map (Root /)
+  const publicRes = await fetch('http://127.0.0.1:9995/');
+  assert.strictEqual(publicRes.status, 200, 'Public map must return 200 OK');
+  const publicHtml = await publicRes.text();
+  assert.ok(publicHtml.includes('RU-POTA'), 'Public map must contain RU-POTA brand');
+
+  // 2b. Fetch Donate & Contacts pages
+  const donateRes = await fetch('http://127.0.0.1:9995/donate');
+  assert.strictEqual(donateRes.status, 200, 'Donate page must return 200 OK');
+  const contactsRes = await fetch('http://127.0.0.1:9995/contacts');
+  assert.strictEqual(contactsRes.status, 200, 'Contacts page must return 200 OK');
+
+  // 2c. Fetch Dashboard HTML (/admin)
+  const dashRes = await fetch('http://127.0.0.1:9995/admin', {
     headers: { 'Cookie': cookieHeader }
   });
   assert.strictEqual(dashRes.status, 200, 'Dashboard must return 200 OK');

@@ -7,6 +7,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
 import { renderPublicMapHtml } from './publicMap.js';
+import { renderDonateHtml } from './donatePage.js';
+import { renderContactsHtml } from './contactsPage.js';
+import { NEW_REGIONS_BORDERS } from '../webapp/src/data/newRegionsBorders.js';
+import { NEW_RDA_DISTRICTS } from '../webapp/src/data/newRdaDistricts.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
 import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, exportPlaceholderLinksCsv, getOoptMapPoints, markOoptAsSubmitted, unmarkOoptAsSubmitted, resetOoptQueue, updateOoptUrl, importOoptUrlsFromCsv, ensureOoptRegistryPopulated, unlinkOoptFromPota, linkOoptToPota, getMatchDiagnostics, getOoptBoundary } from '../services/ooptService.js';
@@ -97,6 +101,12 @@ export const startAdminServer = (telegramClient) => {
     res.sendFile(path.join(webappDist, 'index.html'));
   });
 
+  // Static assets (logos, SBP QR code, banners)
+  const assetsDir = path.resolve(__dirname, '../../assets');
+  app.use('/assets', express.static(assetsDir, {
+    maxAge: 86400000 // 1 day
+  }));
+
   // Public RU-POTA Handbook & Quick Guide (HTML & PDF)
   const docsDir = path.resolve(__dirname, '../../docs');
   app.get(['/guide', '/memo', '/pamyatka', '/guide.html', '/memo.html', '/pamyatka.html', '/pamjatka'], (req, res) => {
@@ -167,7 +177,7 @@ export const startAdminServer = (telegramClient) => {
   // Login Page
   app.get('/login', (req, res) => {
     if (req.session && req.session.authed) {
-      return res.redirect('/');
+      return res.redirect('/admin');
     }
     const html = `
       <!DOCTYPE html>
@@ -215,7 +225,7 @@ export const startAdminServer = (telegramClient) => {
     if (submittedPassword && submittedPassword === adminPassword) {
       failedAttempts.delete(ip);
       req.session.authed = true;
-      return res.redirect('/');
+      return res.redirect('/admin');
     }
     
     attempt.count += 1;
@@ -361,23 +371,32 @@ export const startAdminServer = (telegramClient) => {
     }
   });
 
-  // Public Interactive Map (Direct URL)
-  app.get('/map', (req, res) => {
+  // Public Interactive Map (Direct URLs for public visitors)
+  app.get(['/', '/map'], (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.send(renderPublicMapHtml({ isAuthed: Boolean(req.session && req.session.authed) }));
   });
 
-  // Admin Dashboard alias
-  app.get('/admin', requireAuth, (req, res) => {
-    res.redirect('/');
+  // Dedicated Support & Donate Page
+  app.get('/donate', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(renderDonateHtml({ isAuthed: Boolean(req.session && req.session.authed) }));
   });
 
-  // Root URL: Public Map for visitors, Admin Dashboard for authenticated coordinators
-  app.get('/', (req, res) => {
-    if (!req.session || !req.session.authed) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      return res.send(renderPublicMapHtml({ isAuthed: false }));
-    }
+  // Dedicated Contacts Page
+  app.get('/contacts', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(renderContactsHtml({ isAuthed: Boolean(req.session && req.session.authed) }));
+  });
+
+  // New RDA Overlay Layer Data Endpoint (Borders + Centroid Badges)
+  app.get('/api/map/new-rda', (req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.json({ borders: NEW_REGIONS_BORDERS, districts: NEW_RDA_DISTRICTS });
+  });
+
+  // Admin Dashboard (requires coordinator/admin authentication)
+  app.get('/admin', requireAuth, (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -639,8 +658,10 @@ export const startAdminServer = (telegramClient) => {
       <body>
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
           <div class="container-fluid">
-            <a class="navbar-brand" href="#">🌲 RU-POTA Admin</a>
-            <div class="d-flex">
+            <a class="navbar-brand" href="/admin">🌲 RU-POTA Admin</a>
+            <div class="d-flex align-items-center gap-2">
+              <a href="/" target="_blank" class="btn btn-outline-success btn-sm"><i class="bi bi-map"></i> Публичная карта</a>
+              <a href="https://pota.r9o.ru/app/" target="_blank" class="btn btn-outline-info btn-sm"><i class="bi bi-phone"></i> Mini App</a>
               <a href="/logout" class="btn btn-outline-light btn-sm">Выйти</a>
             </div>
           </div>

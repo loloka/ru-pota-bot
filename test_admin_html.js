@@ -64,7 +64,62 @@ try {
   }
 
   assert.ok(scriptCount > 0, 'Must have found at least 1 inline <script> block');
-  console.log('\n--- ALL WEB ADMIN HTML & JS SYNTAX TESTS PASSED! ---');
+
+  // 4. Test Donation & Wall of Appreciation workflow
+  console.log('\n--- TESTING DONATION SUBMISSION & ADMIN MODERATION ---');
+  const postRes = await fetch('http://127.0.0.1:9995/api/donate/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'R9OGL / Александр',
+      role: 'activator',
+      tier_title: 'Месяц жизни VPS-сервера',
+      amount: 450,
+      message: 'Тестовое пожелание чистого эфира и 73!',
+      is_anonymous: 0
+    })
+  });
+  assert.strictEqual(postRes.status, 200, 'POST /api/donate/submit must return 200 OK');
+  const postData = await postRes.json();
+  assert.strictEqual(postData.ok, true, 'Submission ok flag must be true');
+  console.log('✅ PASS: Donation submitted successfully');
+
+  // Admin query donations
+  const adminDonationsRes = await fetch('http://127.0.0.1:9995/api/admin/donations', {
+    headers: { 'Cookie': cookieHeader }
+  });
+  assert.strictEqual(adminDonationsRes.status, 200, 'Admin donations list must return 200 OK');
+  const donationsList = await adminDonationsRes.json();
+  const testItem = donationsList.find(d => d.message === 'Тестовое пожелание чистого эфира и 73!');
+  assert.ok(testItem, 'Test donation must be in admin list');
+  assert.strictEqual(testItem.status, 'pending', 'Status must be pending');
+  console.log(`✅ PASS: Found pending donation in admin list (id=${testItem.id})`);
+
+  // Admin approve donation
+  const approveRes = await fetch(`http://127.0.0.1:9995/api/admin/donations/${testItem.id}/approve`, {
+    method: 'POST',
+    headers: { 'Cookie': cookieHeader }
+  });
+  assert.strictEqual(approveRes.status, 200, 'Admin approve must return 200 OK');
+  console.log('✅ PASS: Donation approved by admin');
+
+  // Check /donate page contains approved donor info
+  const updatedDonateRes = await fetch('http://127.0.0.1:9995/donate');
+  const updatedDonateHtml = await updatedDonateRes.text();
+  assert.ok(updatedDonateHtml.includes('Тестовое пожелание чистого эфира и 73!'), 'Approved donation must appear on /donate wall');
+  assert.ok(updatedDonateHtml.includes('R9OGL / Александр'), 'Donor name must appear on /donate');
+  assert.ok(updatedDonateHtml.includes('450 ₽'), 'Amount must appear on /donate');
+  console.log('✅ PASS: Approved donation successfully rendered on Wall of Appreciation');
+
+  // Admin delete test donation
+  const deleteRes = await fetch(`http://127.0.0.1:9995/api/admin/donations/${testItem.id}/delete`, {
+    method: 'POST',
+    headers: { 'Cookie': cookieHeader }
+  });
+  assert.strictEqual(deleteRes.status, 200, 'Admin delete must return 200 OK');
+  console.log('✅ PASS: Test donation cleaned up from database');
+
+  console.log('\n--- ALL WEB ADMIN & DONATION TESTS PASSED! ---');
   process.exit(0);
 } catch (err) {
   console.error('Test failed:', err);

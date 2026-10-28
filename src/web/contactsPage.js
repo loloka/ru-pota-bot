@@ -199,15 +199,15 @@ export function renderContactsHtml(options = {}) {
           <div class="p-3 rounded bg-black bg-opacity-30 border border-secondary border-opacity-25 h-100">
             <div class="d-flex justify-content-between align-items-start mb-2">
               <div>
-                <strong class="text-light fs-6">Мануэль R2BBX</strong>
+                <strong class="text-light fs-6">R2BBX (Ману)</strong>
                 <div class="text-warning small font-monospace">Координатор программы POTA в России</div>
               </div>
             </div>
             <p class="text-secondary small mb-2">
               Включение новых заповедников в мировой каталог POTA, проверка заявок активаторов, координация региональных представителей.
             </p>
-            <a href="https://t.me/r2bbx" target="_blank" class="text-info small text-decoration-none">
-              <i class="bi bi-telegram"></i> @r2bbx
+            <a href="https://t.me/ManuUmAn" target="_blank" class="text-info small text-decoration-none">
+              <i class="bi bi-telegram"></i> @ManuUmAn
             </a>
           </div>
         </div>

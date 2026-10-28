@@ -203,6 +203,20 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_scheduled_broadcasts_ref ON scheduled_broadcasts (reference);
   CREATE INDEX IF NOT EXISTS idx_scheduled_broadcasts_act ON scheduled_broadcasts (activator);
+
+  CREATE TABLE IF NOT EXISTS donations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    callsign TEXT,
+    role TEXT DEFAULT 'activator',
+    amount INTEGER DEFAULT 0,
+    tier_title TEXT,
+    message TEXT,
+    is_anonymous INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_donations_status ON donations (status);
 `);
 
 // Migration for existing tables

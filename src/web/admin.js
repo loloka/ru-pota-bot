@@ -380,7 +380,50 @@ export const startAdminServer = (telegramClient) => {
   // Dedicated Support & Donate Page
   app.get('/donate', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.send(renderDonateHtml({ isAuthed: Boolean(req.session && req.session.authed) }));
+    let approvedDonations = [];
+    try {
+      approvedDonations = db.prepare("SELECT * FROM donations WHERE status = 'approved' ORDER BY id DESC").all();
+    } catch (e) {
+      console.warn('[Web Donate] Error fetching approved donations:', e.message);
+    }
+    res.send(renderDonateHtml({ isAuthed: Boolean(req.session && req.session.authed), approvedDonations }));
+  });
+
+  // Public submission endpoint for donations & messages to Wall of Appreciation
+  app.post('/api/donate/submit', (req, res) => {
+    try {
+      const { name, role, tier_title, amount, message, is_anonymous } = req.body || {};
+      const cleanName = (name || '').trim();
+      if (!cleanName) {
+        return res.status(400).json({ ok: false, error: 'Пожалуйста, укажите ваш позывной или имя' });
+      }
+
+      const cleanRole = ['activator', 'hunter', 'friend'].includes(role) ? role : 'activator';
+      const cleanAmount = Math.max(0, parseInt(amount, 10) || 0);
+      const cleanTier = (tier_title || '').slice(0, 100);
+      const cleanMessage = (message || '').slice(0, 500).trim();
+      const isAnon = is_anonymous ? 1 : 0;
+
+      let cleanCallsign = null;
+      if (/^[A-Z0-9\/]{3,10}$/i.test(cleanName)) {
+        cleanCallsign = cleanName.toUpperCase();
+      }
+
+      const stmt = db.prepare(`
+        INSERT INTO donations (name, callsign, role, amount, tier_title, message, is_anonymous, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+      `);
+      stmt.run(cleanName, cleanCallsign, cleanRole, cleanAmount, cleanTier, cleanMessage, isAnon);
+
+      console.log(`[Web Donate] ☕ Новая запись на Стену признания от "${cleanName}" (${cleanRole}, ${cleanAmount} ₽, "${cleanTier}")`);
+      return res.json({
+        ok: true,
+        message: 'Спасибо огромное за поддержку! Ваше сообщение отправлено на модерацию и скоро появится на Стене признания 🤝 73 & 44!'
+      });
+    } catch (err) {
+      console.error('[Web Donate] Ошибка при сохранении доната:', err);
+      return res.status(500).json({ ok: false, error: 'Внутренняя ошибка сервера при сохранении' });
+    }
   });
 
   // Dedicated Contacts Page
@@ -440,6 +483,18 @@ export const startAdminServer = (telegramClient) => {
         auditStats = audit.stats;
       }
     } catch (e) {}
+
+    // 5. Donations & Wall of Appreciation stats
+    let allDonations = [];
+    try {
+      allDonations = db.prepare("SELECT * FROM donations ORDER BY id DESC").all();
+    } catch (e) {}
+    const pendingDonations = allDonations.filter(d => d.status === 'pending');
+    const pendingDonationsCount = pendingDonations.length;
+    const approvedDonationsCount = allDonations.filter(d => d.status === 'approved').length;
+    const totalDonationsSum = allDonations
+      .filter(d => d.status === 'approved')
+      .reduce((sum, d) => sum + (d.amount || 0), 0);
 
     const escapeHtmlServer = (str) => {
       if (!str) return '';
@@ -619,6 +674,59 @@ export const startAdminServer = (telegramClient) => {
       `;
     };
 
+    const generateDonationRow = (d) => {
+      const statusBadge = d.status === 'approved'
+        ? '<span class="badge bg-success">Одобрено</span>'
+        : (d.status === 'rejected'
+           ? '<span class="badge bg-secondary">Отклонено</span>'
+           : '<span class="badge bg-warning text-dark">На модерации</span>');
+
+      let roleBadge = '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1"><i class="bi bi-broadcast-pin"></i> Активатор</span>';
+      if (d.role === 'hunter') {
+        roleBadge = '<span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2 py-1"><i class="bi bi-headphones"></i> Охотник</span>';
+      } else if (d.role === 'friend') {
+        roleBadge = '<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1"><i class="bi bi-heart"></i> Друг</span>';
+      }
+
+      const nameDisplay = escapeHtmlServer(d.name || d.callsign || 'Аноним');
+      const anonBadge = d.is_anonymous ? '<span class="badge bg-light text-muted border ms-1" title="Анонимный показ на стене">Аноним</span>' : '';
+      const tierDisplay = d.tier_title ? `<div class="small text-muted"><i class="bi bi-tag-fill me-1"></i>${escapeHtmlServer(d.tier_title)}</div>` : '';
+      const amountDisplay = d.amount > 0 ? `<strong class="text-success">${d.amount.toLocaleString('ru-RU')} ₽</strong>` : '<span class="text-muted">—</span>';
+      const messageDisplay = d.message ? `<em>«${escapeHtmlServer(d.message)}»</em>` : '<span class="text-muted small">Без текста</span>';
+      const dateDisplay = new Date(d.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+      return `
+        <tr id="donation-row-${d.id}" class="${d.status === 'pending' ? 'table-warning bg-opacity-10' : ''}">
+          <td class="font-monospace text-muted">#${d.id}</td>
+          <td>
+            <div class="fw-bold">${nameDisplay} ${anonBadge}</div>
+            ${d.callsign ? `<div class="font-monospace small text-primary">${escapeHtmlServer(d.callsign)}</div>` : ''}
+          </td>
+          <td>${roleBadge}</td>
+          <td>
+            ${amountDisplay}
+            ${tierDisplay}
+          </td>
+          <td style="max-width: 260px; word-break: break-word;">${messageDisplay}</td>
+          <td id="donation-status-${d.id}">${statusBadge}</td>
+          <td class="small text-muted">${dateDisplay}</td>
+          <td>
+            <div class="btn-group btn-group-sm" role="group">
+              <button type="button" class="btn btn-outline-success" onclick="approveDonation(${d.id})" title="Одобрить и показать на стене">
+                <i class="bi bi-check-lg"></i>
+              </button>
+              <button type="button" class="btn btn-outline-warning" onclick="rejectDonation(${d.id})" title="Отклонить">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <button type="button" class="btn btn-outline-danger" onclick="deleteDonation(${d.id})" title="Удалить">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    };
+
     const html = `
       <!DOCTYPE html>
       <html lang="ru">
@@ -681,6 +789,7 @@ export const startAdminServer = (telegramClient) => {
                 <a class="list-group-item list-group-item-action" id="list-regions-list" data-bs-toggle="list" href="#list-regions" role="tab" aria-controls="list-regions"><i class="bi bi-geo-alt"></i> Регионы POTA</a>
                 <a class="list-group-item list-group-item-action" id="list-links-list" data-bs-toggle="list" href="#list-links" role="tab" aria-controls="list-links"><i class="bi bi-link-45deg"></i> Аудит ссылок POTA <span class="badge bg-warning text-dark rounded-pill ms-1" id="links-wiki-badge" title="Википедия: ${auditStats.wikipedia}">${auditStats.wikipedia}</span> <span class="badge bg-danger rounded-pill ms-1" id="links-empty-badge" title="Без ссылок (Алярма): ${auditStats.empty}">${auditStats.empty}</span></a>
                 <a class="list-group-item list-group-item-action" id="list-services-list" data-bs-toggle="list" href="#list-services" role="tab" aria-controls="list-services"><i class="bi bi-activity"></i> Доступность сервисов <span class="badge bg-success rounded-pill ms-1" id="services-summary-badge">...</span></a>
+                <a class="list-group-item list-group-item-action" id="list-donations-list" data-bs-toggle="list" href="#list-donations" role="tab" aria-controls="list-donations"><i class="bi bi-heart-fill text-danger"></i> Донаты и Стена <span class="badge bg-warning text-dark rounded-pill ms-1 ${pendingDonationsCount > 0 ? '' : 'd-none'}" id="donations-pending-badge">${pendingDonationsCount}</span></a>
                 <a class="list-group-item list-group-item-action" id="list-console-list" data-bs-toggle="list" href="#list-console" role="tab" aria-controls="list-console"><i class="bi bi-terminal"></i> Live Консоль</a>
               </div>
             </div>
@@ -1549,6 +1658,78 @@ export const startAdminServer = (telegramClient) => {
                   <div id="log-container">Ожидание логов...</div>
                 </div>
 
+                <!-- Tab: Donations -->
+                <div class="tab-pane fade" id="list-donations" role="tabpanel" aria-labelledby="list-donations-list">
+                  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <div>
+                      <h3 class="mb-1"><i class="bi bi-heart-fill text-danger"></i> Донаты и Стена признания</h3>
+                      <div class="text-muted small">Модерация пожеланий и добровольных пожертвований со страницы <code>/donate</code></div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                      <a href="/donate" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-box-arrow-up-right"></i> Открыть /donate
+                      </a>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
+                        <i class="bi bi-arrow-clockwise"></i> Обновить
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- KPI Stats row -->
+                  <div class="row g-3 mb-4">
+                    <div class="col-sm-4">
+                      <div class="card border-warning border-opacity-50 shadow-sm h-100">
+                        <div class="card-body py-3">
+                          <div class="text-secondary small fw-semibold text-uppercase">Ожидают модерации</div>
+                          <div class="fs-3 fw-bold text-warning" id="admin-donations-pending-count">${pendingDonationsCount}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-sm-4">
+                      <div class="card border-success border-opacity-50 shadow-sm h-100">
+                        <div class="card-body py-3">
+                          <div class="text-secondary small fw-semibold text-uppercase">Одобрено на Стене</div>
+                          <div class="fs-3 fw-bold text-success" id="admin-donations-approved-count">${approvedDonationsCount}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-sm-4">
+                      <div class="card border-info border-opacity-50 shadow-sm h-100">
+                        <div class="card-body py-3">
+                          <div class="text-secondary small fw-semibold text-uppercase">Сумма подтверждённых</div>
+                          <div class="fs-3 fw-bold text-info">${totalDonationsSum.toLocaleString('ru-RU')} ₽</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Donations table -->
+                  <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                      <h5 class="mb-0 fw-bold">Все записи (${allDonations.length})</h5>
+                    </div>
+                    <div class="table-responsive">
+                      <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                          <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Имя / Позывной</th>
+                            <th>Роль</th>
+                            <th>Сумма & Вариант</th>
+                            <th>Сообщение на стену</th>
+                            <th>Статус</th>
+                            <th>Дата</th>
+                            <th style="width: 120px;">Действия</th>
+                          </tr>
+                        </thead>
+                        <tbody id="donations-table-body">
+                          ${allDonations.length > 0 ? allDonations.map(generateDonationRow).join('') : '<tr><td colspan="8" class="text-center py-4 text-muted">Записей пока нет</td></tr>'}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
               </div>
         </div>
 
@@ -2089,6 +2270,93 @@ export const startAdminServer = (telegramClient) => {
                 }
               } catch(e) {
                 if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка удаления' });
+              }
+            }
+          }
+
+          async function approveDonation(id) {
+            try {
+              const res = await fetch('/api/admin/donations/' + id + '/approve', { method: 'POST' });
+              if (res.ok) {
+                if (Toast) Toast.fire({ icon: 'success', title: 'Донат #' + id + ' одобрен на стене!' });
+                const statusCell = document.getElementById('donation-status-' + id);
+                if (statusCell) statusCell.innerHTML = '<span class="badge bg-success">Одобрено</span>';
+                const row = document.getElementById('donation-row-' + id);
+                if (row) row.classList.remove('table-warning', 'bg-opacity-10');
+                decrementPendingDonations();
+              } else {
+                if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка одобрения' });
+              }
+            } catch (e) {
+              if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка сети' });
+            }
+          }
+
+          async function rejectDonation(id) {
+            try {
+              const res = await fetch('/api/admin/donations/' + id + '/reject', { method: 'POST' });
+              if (res.ok) {
+                if (Toast) Toast.fire({ icon: 'info', title: 'Донат #' + id + ' отклонён' });
+                const statusCell = document.getElementById('donation-status-' + id);
+                if (statusCell) statusCell.innerHTML = '<span class="badge bg-secondary">Отклонено</span>';
+                const row = document.getElementById('donation-row-' + id);
+                if (row) row.classList.remove('table-warning', 'bg-opacity-10');
+                decrementPendingDonations();
+              } else {
+                if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка отклонения' });
+              }
+            } catch (e) {
+              if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка сети' });
+            }
+          }
+
+          async function deleteDonation(id) {
+            let isConfirmed = false;
+            if (typeof Swal !== 'undefined') {
+              const res = await Swal.fire({
+                title: 'Удалить запись #' + id + '?',
+                text: 'Это действие необратимо!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonText: 'Отмена',
+                confirmButtonText: 'Да, удалить'
+              });
+              isConfirmed = res.isConfirmed;
+            } else {
+              isConfirmed = confirm('Удалить запись #' + id + '?');
+            }
+
+            if (isConfirmed) {
+              try {
+                const res = await fetch('/api/admin/donations/' + id + '/delete', { method: 'POST' });
+                if (res.ok) {
+                  const row = document.getElementById('donation-row-' + id);
+                  if (row) {
+                    row.classList.add('spot-row-leave');
+                    setTimeout(() => row.remove(), 400);
+                  }
+                  if (Toast) Toast.fire({ icon: 'success', title: 'Запись удалена' });
+                  decrementPendingDonations();
+                } else {
+                  if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка удаления' });
+                }
+              } catch (e) {
+                if (Toast) Toast.fire({ icon: 'error', title: 'Ошибка сети' });
+              }
+            }
+          }
+
+          function decrementPendingDonations() {
+            const countEl = document.getElementById('admin-donations-pending-count');
+            const badge = document.getElementById('donations-pending-badge');
+            if (countEl) {
+              let cur = parseInt(countEl.innerText, 10) || 0;
+              if (cur > 0) cur--;
+              countEl.innerText = cur;
+              if (badge) {
+                badge.innerText = cur;
+                if (cur === 0) badge.classList.add('d-none');
               }
             }
           }
@@ -7038,6 +7306,52 @@ export const startAdminServer = (telegramClient) => {
     } catch (err) {
       console.error('Error deleting user:', err);
       res.status(500).json({ error: 'Error deleting user' });
+    }
+  });
+
+  // Donations moderation routes
+  app.get('/api/admin/donations', requireAuth, (req, res) => {
+    try {
+      const donations = db.prepare("SELECT * FROM donations ORDER BY id DESC").all();
+      res.json(donations);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/admin/donations/:id/approve', requireAuth, (req, res) => {
+    const id = Number(req.params.id);
+    try {
+      db.prepare("UPDATE donations SET status = 'approved' WHERE id = ?").run(id);
+      console.log(`[Web Admin] ☕ Благодарность #${id} одобрена для показа на Стене признания`);
+      res.json({ success: true });
+    } catch (e) {
+      console.error('[Web Admin] Ошибка одобрения доната:', e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/admin/donations/:id/reject', requireAuth, (req, res) => {
+    const id = Number(req.params.id);
+    try {
+      db.prepare("UPDATE donations SET status = 'rejected' WHERE id = ?").run(id);
+      console.log(`[Web Admin] ☕ Благодарность #${id} отклонена`);
+      res.json({ success: true });
+    } catch (e) {
+      console.error('[Web Admin] Ошибка отклонения доната:', e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/admin/donations/:id/delete', requireAuth, (req, res) => {
+    const id = Number(req.params.id);
+    try {
+      db.prepare("DELETE FROM donations WHERE id = ?").run(id);
+      console.log(`[Web Admin] ☕ Запись #${id} удалена из таблицы donations`);
+      res.json({ success: true });
+    } catch (e) {
+      console.error('[Web Admin] Ошибка удаления доната:', e);
+      res.status(500).json({ error: e.message });
     }
   });
 

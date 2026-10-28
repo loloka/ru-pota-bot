@@ -1,5 +1,17 @@
 # История изменений (Changelog)
 
+## [1.16.135] - 2026-10-28 (Robust RDA Regex Detection & Multi-Channel Spot Forwarding)
+### Новые функции и улучшения
+- **Умное распознавание районов RDA во всех возможных форматах (`src/services/clusterWorker.js`):**
+  - Обновлена функция `extractRdaCode()`: поддерживаются варианты написания без двоеточия (`RDA NS-03`), без дефиса (`RDA NS03`), с тире (`RDA-NS-03`), в скобках (`[RDA NS-03]`, `(RDA: MO-01)`), а также на кириллице (`РДА МО-01`).
+  - Добавлена поддержка одиночных кодов районов (`NS-03`, `MO-01`) без префикса «RDA», что гарантирует захват района из отдельных полей форм бота и Mini App.
+  - Сохранена корректная транслитерация кириллических букв в каноническую латиницу и поддержка мульти-дистриктов (`MO-01/MO-02`).
+- **Ретрансляция спотов в RDA-сообщество из всех источников (`src/bot/scenes/spotWizard.js`, `src/web/tmaApi.js`, `src/services/clusterWorker.js`):**
+  - Экспортирована функция `forwardSpotToRdaChannel(telegramClient, msg, rdaCode)`.
+  - Автоматическая пересылка в канал `RDA-INFORMER` (`-1001589754010`) теперь работает **как для внешних спотов из глобального кластера POTA, так и для спотов, отправленных через нашего Telegram-бота (`/spot`) или Telegram Mini App / Web Hub**.
+- **Синхронизация версий:**
+  - Версия проекта повышена до `1.16.135` во всех ключевых файлах (`package.json`, `src/bot/index.js`, `src/api/potaApi.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.134] - 2026-10-28 (Web Admin Map Card Collapse Fix, Links Audit Pagination & TMA Map 60fps Optimization)
 ### Новые функции и улучшения
 - **Исправление сворачивания карточек на карте в Web Admin (`src/web/admin.js`):**

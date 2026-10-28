@@ -4,6 +4,7 @@ import db from '../../db/database.js';
 import { potaApi } from '../../api/potaApi.js';
 import { deleteUserMessage, replyWithAutoDelete, getMainMenu, getBaseCallsign, isBroadcastMutedCallsign } from '../utils.js';
 import { pinManager } from '../../services/pinManager.js';
+import { extractRdaCode, forwardSpotToRdaChannel } from '../../services/clusterWorker.js';
 import axios from 'axios';
 dotenv.config();
 
@@ -247,6 +248,12 @@ export const spotWizard = new Scenes.WizardScene(
         
         // Pin spot silently in channel, schedule auto-unpin, and clean up Telegram's pin service message
         await pinManager.pinSpotInChannel(ctx.telegram, channelId, msgId);
+
+        // Forward to RDA community channel if RDA is specified
+        const rdaCode = extractRdaCode(s.rda || comment);
+        if (rdaCode) {
+          await forwardSpotToRdaChannel(ctx.telegram, formattedSpot, rdaCode);
+        }
       }
 
       // Normalize frequency data for full bot & TMA compatibility

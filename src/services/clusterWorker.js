@@ -15,20 +15,53 @@ const CLUSTER_SPOT_COOLDOWN_MINUTES = parseInt(process.env.CLUSTER_SPOT_COOLDOWN
 const SPOT_COOLDOWN_MS = CLUSTER_SPOT_COOLDOWN_MINUTES * 60 * 1000;
 
 /**
- * Extracts and formats RDA district code from spot comments (e.g. RDA: MO-01, RDA SP-05, РДА МО-01, RDA:TL12)
+ * Extracts and formats RDA district code from spot comments (e.g. RDA: MO-01, RDA NS-03, RDA NS03, РДА МО-01, RDA:TL12, MO-01)
  */
 export const extractRdaCode = (comments = '') => {
   if (!comments) return null;
-  const match = comments.match(/(?:\bRDA|\bРДА)[:\s#]+([A-Za-zА-Яа-я0-9\/-]+)/i);
-  if (!match) return null;
+  const str = String(comments).trim();
+  // 1. Prefixed with RDA or РДА (with or without colon, space, dash, slash, brackets)
+  const match = str.match(/(?:^|[\s,.\(\[\/#])(?:RDA|РДА)[:\s#=\-\/]*([A-Za-zА-Яа-я0-9\/-]+)/i);
+  let raw = '';
+  if (match) {
+    raw = match[1].toUpperCase().trim();
+  } else {
+    // 2. Standalone RDA district like "MO-01", "NS-03" (common in dedicated RDA input fields)
+    const directMatch = str.match(/(?:^|[\s,.\(\[\/#])([A-Za-zА-Яа-я]{2})[-_\s]?([0-9]{2}(?:\/[A-Za-zА-Яа-я]{2}[-_\s]?[0-9]{2})*)\b/);
+    if (directMatch) {
+      raw = (directMatch[1] + directMatch[2]).toUpperCase().trim();
+    }
+  }
+  if (!raw) return null;
+
   const cyrToLat = {
     'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X'
   };
-  let raw = match[1].toUpperCase().trim();
   raw = raw.replace(/[АВЕКМНОРСТУХ]/g, ch => cyrToLat[ch] || ch);
   const districtMatch = raw.match(/([A-Z]{2})[-_\s]?([0-9]{2}(?:\/[A-Z]{2}[-_\s]?[0-9]{2})*)/);
   if (!districtMatch) return null;
   return districtMatch[0].replace(/\s+/g, '').replace(/([A-Z]{2})([0-9]{2})/g, '$1-$2');
+};
+
+/**
+ * Forwards spot to official RDA community group/channel if RDA_BROADCAST_CHAT_ID is set
+ */
+export const forwardSpotToRdaChannel = async (telegramClient, msg, rdaCode) => {
+  if (!rdaCode || !RDA_BROADCAST_CHAT_ID || !telegramClient) return false;
+  try {
+    let rdaTarget = RDA_BROADCAST_CHAT_ID;
+    if (rdaTarget && !rdaTarget.startsWith('-100') && !rdaTarget.startsWith('@') && /^[0-9-]+$/.test(rdaTarget)) {
+      rdaTarget = rdaTarget.startsWith('-') ? '-100' + rdaTarget.substring(1) : '-100' + rdaTarget;
+    } else if (rdaTarget && rdaTarget.includes('t.me/')) {
+      rdaTarget = '@' + rdaTarget.split('t.me/')[1].replace('/', '');
+    }
+    await telegramClient.sendMessage(rdaTarget, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+    console.log(`\x1b[34m[Broadcast]\x1b[0m 🏷️ Спот с RDA ${rdaCode} ретранслирован в RDA-канал (${rdaTarget})`);
+    return true;
+  } catch (rdaErr) {
+    console.warn('[Broadcast Warning] ⚠️ Ошибка отправки в RDA-канал:', rdaErr.message);
+    return false;
+  }
 };
 
 // In-memory cache of recent broadcasts to throttle repetitive RBN skimmers
@@ -371,19 +404,8 @@ export const startClusterWorker = (telegramClient) => {
           console.log(`\x1b[34m[Broadcast]\x1b[0m 📢 Спот ${spot.activator} опубликован в канал`);
 
           // Optional RDA group/channel forwarding
-          if (rdaCode && RDA_BROADCAST_CHAT_ID) {
-            try {
-              let rdaTarget = RDA_BROADCAST_CHAT_ID;
-              if (rdaTarget && !rdaTarget.startsWith('-100') && !rdaTarget.startsWith('@') && /^[0-9-]+$/.test(rdaTarget)) {
-                rdaTarget = rdaTarget.startsWith('-') ? '-100' + rdaTarget.substring(1) : '-100' + rdaTarget;
-              } else if (rdaTarget && rdaTarget.includes('t.me/')) {
-                rdaTarget = '@' + rdaTarget.split('t.me/')[1].replace('/', '');
-              }
-              await telegramClient.sendMessage(rdaTarget, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
-              console.log(`\x1b[34m[Broadcast]\x1b[0m 🏷️ Спот с RDA ${rdaCode} ретранслирован в RDA-канал (${rdaTarget})`);
-            } catch (rdaErr) {
-              console.warn('[Broadcast Warning] ⚠️ Ошибка отправки в RDA-канал:', rdaErr.message);
-            }
+          if (rdaCode) {
+            await forwardSpotToRdaChannel(telegramClient, msg, rdaCode);
           }
 
           // Unpin earlier pinned spots for this station in channel so pins don't stack up

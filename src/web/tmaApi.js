@@ -7,6 +7,7 @@ import db from '../db/database.js';
 import { potaApi } from '../api/potaApi.js';
 import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import { pinManager } from '../services/pinManager.js';
+import { extractRdaCode, forwardSpotToRdaChannel } from '../services/clusterWorker.js';
 import { getBaseCallsign, isBroadcastMutedCallsign } from '../bot/utils.js';
 import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry, translateOoptNameOnline, cleanOoptName, transliterateRuToEn } from '../services/ooptService.js';
 import crypto from 'crypto';
@@ -1812,6 +1813,12 @@ export function createTmaRouter(telegramClient) {
 
           // Pin spot silently in channel, schedule auto-unpin, and clean up Telegram's pin service message
           await pinManager.pinSpotInChannel(telegramClient, channelId, channelMsgId);
+
+          // Forward to RDA community channel if RDA is specified
+          const rdaCode = extractRdaCode(rda || fullComment);
+          if (rdaCode) {
+            await forwardSpotToRdaChannel(telegramClient, msg, rdaCode);
+          }
 
           // Update msg_id in spots table
           db.prepare('UPDATE spots SET msg_id = ? WHERE id = ?').run(channelMsgId, insertResult.lastInsertRowid);

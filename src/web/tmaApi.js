@@ -1209,15 +1209,20 @@ export function createTmaRouter(telegramClient) {
         const freqMHz = freqKHz > 1000 ? (freqKHz / 1000).toFixed(3) : (freqKHz || 0);
         const titleRu = ooptTitlesMap.get(pRef) || null;
 
-        return {
+        const parkObj = {
           ...p,
-          titleRu,
-          isActive,
-          activeStation: isActive ? `${spot.activator} (${freqMHz} MHz ${spot.mode})` : null,
-          activeCallsign: isActive ? spot.activator : null,
-          activeFreq: isActive ? freqMHz : null,
-          activeMode: isActive ? spot.mode : null,
+          titleRu: titleRu || undefined,
+          isActive: isActive || undefined,
         };
+
+        if (isActive) {
+          parkObj.activeStation = `${spot.activator} (${freqMHz} MHz ${spot.mode})`;
+          parkObj.activeCallsign = spot.activator;
+          parkObj.activeFreq = freqMHz;
+          parkObj.activeMode = spot.mode;
+        }
+
+        return parkObj;
       });
 
       const filtered = mapped.filter(p => {
@@ -1239,6 +1244,7 @@ export function createTmaRouter(telegramClient) {
         return true;
       });
 
+      res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
       res.json({
         total: filtered.length,
         activeCount: filtered.filter(p => p.isActive).length,

@@ -1,10 +1,12 @@
 import express from 'express';
+import compression from 'compression';
 import cookieSession from 'cookie-session';
 import db from '../db/database.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createTmaRouter } from './tmaApi.js';
+import { renderPublicMapHtml } from './publicMap.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
 import { pinManager } from '../services/pinManager.js';
 import { getOoptList, getOoptStats, getRegionalPotaStats, syncOoptRegistry, syncPotaParksWithApi, getUnmatchedPotaParks, exportUnmatchedPotaCsv, exportElJefePotaCsv, exportPlaceholderLinksCsv, getOoptMapPoints, markOoptAsSubmitted, unmarkOoptAsSubmitted, resetOoptQueue, updateOoptUrl, importOoptUrlsFromCsv, ensureOoptRegistryPopulated, unlinkOoptFromPota, linkOoptToPota, getMatchDiagnostics, getOoptBoundary } from '../services/ooptService.js';
@@ -59,6 +61,11 @@ export const startAdminServer = (telegramClient) => {
   app.set('trust proxy', 1);
   const PORT = process.env.PORT || 3000;
 
+  // Gzip compression for all API responses and static assets (reduces transfer sizes by up to 90%)
+  app.use(compression({
+    threshold: 1024,
+  }));
+
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
@@ -77,6 +84,9 @@ export const startAdminServer = (telegramClient) => {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');
+      } else {
+        // Hashed Vite assets (JS, CSS, images) can be safely cached long-term
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       }
     }
   }));
@@ -351,8 +361,23 @@ export const startAdminServer = (telegramClient) => {
     }
   });
 
-  // HTML Dashboard
-  app.get('/', requireAuth, (req, res) => {
+  // Public Interactive Map (Direct URL)
+  app.get('/map', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(renderPublicMapHtml({ isAuthed: Boolean(req.session && req.session.authed) }));
+  });
+
+  // Admin Dashboard alias
+  app.get('/admin', requireAuth, (req, res) => {
+    res.redirect('/');
+  });
+
+  // Root URL: Public Map for visitors, Admin Dashboard for authenticated coordinators
+  app.get('/', (req, res) => {
+    if (!req.session || !req.session.authed) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return res.send(renderPublicMapHtml({ isAuthed: false }));
+    }
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -7544,27 +7569,29 @@ export const startAdminServer = (telegramClient) => {
     res.sendFile(filePath);
   });
 
-  // OOPT & POTA Coverage Map Points API
-  app.get('/api/admin/map/oopt-pota-points', requireAuth, (req, res) => {
+  // OOPT & POTA Coverage Map Points API (accessible by Admin Map & Public Map)
+  app.get(['/api/admin/map/oopt-pota-points', '/api/map/points', '/api/public/map/points'], (req, res) => {
     try {
+      res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
       const data = getOoptMapPoints({
         region: req.query.region,
         limitCandidates: req.query.limit_candidates
       });
       res.json(data);
     } catch (err) {
-      console.error('[Admin] Map points error:', err);
+      console.error('[Admin/Public] Map points error:', err);
       res.status(500).json({ error: err.message });
     }
   });
 
-  // Regional POTA Statistics API Endpoint
-  app.get('/api/admin/regions/stats', requireAuth, (req, res) => {
+  // Regional POTA Statistics API Endpoint (accessible by Admin Map & Public Map)
+  app.get(['/api/admin/regions/stats', '/api/map/regions'], (req, res) => {
     try {
+      res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
       const stats = getRegionalPotaStats();
       res.json(stats);
     } catch (err) {
-      console.error('[Admin] Regional stats error:', err);
+      console.error('[Admin/Public] Regional stats error:', err);
       res.status(500).json({ error: err.message });
     }
   });

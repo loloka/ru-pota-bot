@@ -2054,6 +2054,15 @@ export function createTmaRouter(telegramClient) {
         console.log(`[TMA API] Operator ${tgUser.id} (${existingUser.callsign}) went QRT`);
       }
 
+      // Clear anti-flood throttle keys for this operator so they can respot immediately if needed
+      if (actCall) {
+        for (const [key] of recentTmaSpots.entries()) {
+          if (key.startsWith(`${actCall}:`)) {
+            recentTmaSpots.delete(key);
+          }
+        }
+      }
+
       res.json({
         success: true,
         message: 'Сессия в эфире завершена (QRT). Спот отправлен на POTA, закрепы сняты. Спасибо за активацию! 73 & 44',

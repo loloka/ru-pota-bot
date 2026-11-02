@@ -171,28 +171,83 @@ export default function Header({
               {/* Navigation links inside drawer */}
               <div className="mt-4 space-y-3 overflow-y-auto max-h-[calc(100dvh-var(--app-safe-top,0px)-180px)] pr-1">
                 
-                {/* Карты */}
+                {/* Веб-портал и Картография */}
                 <div className="space-y-1.5">
                   <span className="text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase px-1">
-                    {language === 'RU' ? 'Картография' : 'Cartography'}
+                    {language === 'RU' ? 'Веб-портал и Карты' : 'Web Portal & Maps'}
                   </span>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      telegram.haptic.impact('light');
-                      setMenuOpen(false);
-                      if (onOpenOsmAnd) onOpenOsmAnd();
-                    }}
-                    className="w-full flex items-center justify-between p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-slate-800 dark:text-slate-200 text-xs transition active:scale-98"
+                  <div className="space-y-1">
+                    <a 
+                      href="https://pota.r9o.ru/" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      onClick={() => telegram.haptic.impact('light')}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-slate-800 dark:text-slate-200 text-xs transition active:scale-98 group"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base select-none">🌐</span>
+                        <div>
+                          <span className="font-bold text-emerald-700 dark:text-emerald-400 block leading-tight group-hover:text-emerald-600">
+                            {language === 'RU' ? 'Главная страница (pota.r9o.ru)' : 'Main Portal (pota.r9o.ru)'}
+                          </span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                            {language === 'RU' ? 'Большая карта ООПТ, границы и районы RDA' : 'Interactive Map, boundaries & RDA districts'}
+                          </span>
+                        </div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-emerald-500" />
+                    </a>
+
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        telegram.haptic.impact('light');
+                        setMenuOpen(false);
+                        if (onOpenOsmAnd) onOpenOsmAnd();
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-slate-800 dark:text-slate-200 text-xs transition active:scale-98"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base select-none">🗺️</span>
+                        <div className="text-left">
+                          <span className="font-bold text-amber-700 dark:text-amber-400 block leading-tight">
+                            {language === 'RU' ? 'Карты OsmAnd (Офлайн)' : 'OsmAnd Maps (Offline)'}
+                          </span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                            {language === 'RU' ? 'Слой парков для навигатора без связи' : 'Offline parks layer for navigator'}
+                          </span>
+                        </div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-amber-500" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Поддержка проекта */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase px-1">
+                    {language === 'RU' ? 'Поддержка проекта' : 'Support RU-POTA'}
+                  </span>
+                  <a 
+                    href="https://pota.r9o.ru/donate" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    onClick={() => telegram.haptic.impact('light')}
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-slate-800 dark:text-slate-200 text-xs transition active:scale-98 group"
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className="text-base select-none">🗺️</span>
-                      <span className="font-bold text-amber-700 dark:text-amber-400">
-                        {language === 'RU' ? 'Карты OsmAnd (Офлайн)' : 'OsmAnd Maps (Offline)'}
-                      </span>
+                      <span className="text-base select-none">☕</span>
+                      <div>
+                        <span className="font-bold text-rose-700 dark:text-rose-400 block leading-tight group-hover:text-rose-600">
+                          {language === 'RU' ? 'Поддержать проект (Донат)' : 'Support the Project (Donate)'}
+                        </span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                          {language === 'RU' ? 'Чашка кофе для админа серверов и развитие' : 'Coffee for server admin & cloud infrastructure'}
+                        </span>
+                      </div>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-amber-500" />
-                  </button>
+                    <ExternalLink className="w-3.5 h-3.5 text-rose-500" />
+                  </a>
                 </div>
 
                 {/* Сообщество и активность */}
@@ -271,6 +326,27 @@ export default function Header({
                         </span>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                    </a>
+
+                    <a 
+                      href="https://pota.r9o.ru/guide" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      onClick={() => telegram.haptic.impact('light')}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-slate-800 dark:text-slate-200 text-xs transition active:scale-98"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base select-none">📘</span>
+                        <div>
+                          <span className="font-bold text-blue-700 dark:text-blue-400 block leading-tight">
+                            {language === 'RU' ? 'Памятка и регламент POTA' : 'RU-POTA Guide & Rules'}
+                          </span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                            pota.r9o.ru/guide
+                          </span>
+                        </div>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-blue-500" />
                     </a>
 
                     <a 

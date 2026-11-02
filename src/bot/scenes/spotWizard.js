@@ -252,7 +252,12 @@ export const spotWizard = new Scenes.WizardScene(
         // Forward to RDA community channel if RDA is specified
         const rdaCode = (s.rda && s.rda !== '-') ? extractRdaCode(s.rda, true) : extractRdaCode(comment, false);
         if (rdaCode) {
-          await forwardSpotToRdaChannel(ctx.telegram, formattedSpot, rdaCode);
+          await forwardSpotToRdaChannel(ctx.telegram, formattedSpot, rdaCode, {
+            callsign: s.callsign,
+            reference: s.reference,
+            freq: s.freqMHz || s.freq,
+            mode: s.mode
+          });
         }
       }
 

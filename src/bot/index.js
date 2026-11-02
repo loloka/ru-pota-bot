@@ -695,6 +695,14 @@ bot.action('spot_action_delete', async (ctx) => {
     }
   }
 
+  // 1b. Clean up spot from RDA community channel if active
+  if (user && user.callsign) {
+    try {
+      const { deleteSpotFromRdaChannel } = await import('../services/clusterWorker.js');
+      await deleteSpotFromRdaChannel(ctx.telegram, user.callsign);
+    } catch(e) {}
+  }
+
   // 2. Post official QRT spot to POTA API cluster if we have spot data
   if (spotData && spotData.reference) {
     try {
@@ -890,7 +898,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.146\x1b[0m 📡            \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.147\x1b[0m 📡            \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);

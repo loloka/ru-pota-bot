@@ -71,9 +71,10 @@ export const extractRdaCode = (comments = '', isDedicatedRdaField = false) => {
 };
 
 /**
- * Forwards spot to official RDA community group/channel if RDA_BROADCAST_CHAT_ID is set
+ * Forwards spot to official RDA community group/channel if RDA_BROADCAST_CHAT_ID is set.
+ * Automatically deletes previous spot of the same activator to avoid clutter and throttles rapid duplicates.
  */
-export const forwardSpotToRdaChannel = async (telegramClient, msg, rdaCode) => {
+export const forwardSpotToRdaChannel = async (telegramClient, msg, rdaCode, meta = {}) => {
   if (!rdaCode || !RDA_BROADCAST_CHAT_ID || !telegramClient) return false;
   try {
     let rdaTarget = RDA_BROADCAST_CHAT_ID;
@@ -82,13 +83,98 @@ export const forwardSpotToRdaChannel = async (telegramClient, msg, rdaCode) => {
     } else if (rdaTarget && rdaTarget.includes('t.me/')) {
       rdaTarget = '@' + rdaTarget.split('t.me/')[1].replace('/', '');
     }
-    await telegramClient.sendMessage(rdaTarget, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
-    console.log(`\x1b[34m[Broadcast]\x1b[0m 🏷️ Спот с RDA ${rdaCode} ретранслирован в RDA-канал (${rdaTarget})`);
+
+    let callsign = meta.callsign || meta.activatorCall || '';
+    if (!callsign) {
+      const match = msg.match(/(?:profile\/|<b>)([A-Z0-9/]+)(?:<\/a>|<\/b>)/i);
+      if (match) callsign = match[1];
+    }
+    if (callsign) {
+      callsign = callsign.toUpperCase().trim();
+    }
+
+    const now = Date.now();
+
+    // Check existing spot in RDA channel for this activator
+    if (callsign) {
+      try {
+        const prevSpot = db.prepare('SELECT message_id, chat_id, reference, frequency, mode, created_at FROM rda_broadcast_spots WHERE callsign = ?').get(callsign);
+        if (prevSpot) {
+          const isSameFreq = !meta.freq || String(meta.freq) === String(prevSpot.frequency);
+          const isSameMode = !meta.mode || String(meta.mode).toUpperCase() === String(prevSpot.mode).toUpperCase();
+          const isSameRef = !meta.reference || String(meta.reference).toUpperCase() === String(prevSpot.reference).toUpperCase();
+          const ageMs = now - prevSpot.created_at;
+
+          // Duplicate throttle: if exact same frequency, mode and park within 2.5 minutes (150s), skip duplicate
+          if (isSameFreq && isSameMode && isSameRef && ageMs < 150000) {
+            console.log(`\x1b[33m[RDA Broadcast]\x1b[0m ⏸️ Пропуск дублирующего спота ${callsign} в RDA-канал (кулдаун: прошло ${Math.round(ageMs/1000)}с)`);
+            return false;
+          }
+
+          // Activator changed frequency, mode, or renewed after cooldown -> Delete previous spot from RDA channel!
+          if (prevSpot.message_id) {
+            try {
+              await telegramClient.deleteMessage(prevSpot.chat_id || rdaTarget, prevSpot.message_id);
+              console.log(`\x1b[35m[RDA Broadcast]\x1b[0m 🧹 Удален предыдущий спот ${callsign} из RDA-канала (msg ${prevSpot.message_id})`);
+            } catch (delErr) {
+              // Message might have already been deleted
+            }
+          }
+        }
+      } catch (dbErr) {
+        console.warn('[RDA Broadcast] DB check error:', dbErr.message);
+      }
+    }
+
+    const sent = await telegramClient.sendMessage(rdaTarget, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+    console.log(`\x1b[34m[Broadcast]\x1b[0m 🏷️ Спот с RDA ${rdaCode} ретранслирован в RDA-канал (${rdaTarget}, msg ${sent.message_id})`);
+
+    // Record active post in SQLite
+    if (callsign && sent?.message_id) {
+      try {
+        db.prepare(`
+          INSERT INTO rda_broadcast_spots (callsign, message_id, chat_id, reference, frequency, mode, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(callsign) DO UPDATE SET
+            message_id = excluded.message_id,
+            chat_id = excluded.chat_id,
+            reference = excluded.reference,
+            frequency = excluded.frequency,
+            mode = excluded.mode,
+            created_at = excluded.created_at
+        `).run(callsign, sent.message_id, String(rdaTarget), meta.reference || '', String(meta.freq || ''), meta.mode || '', now);
+      } catch (saveErr) {
+        console.warn('[RDA Broadcast] DB save error:', saveErr.message);
+      }
+    }
+
     return true;
   } catch (rdaErr) {
     console.warn('[Broadcast Warning] ⚠️ Ошибка отправки в RDA-канал:', rdaErr.message);
     return false;
   }
+};
+
+/**
+ * Clean up spot from RDA community channel when station goes QRT
+ */
+export const deleteSpotFromRdaChannel = async (telegramClient, callsign) => {
+  if (!callsign || !RDA_BROADCAST_CHAT_ID || !telegramClient) return false;
+  try {
+    const cleanCall = callsign.toUpperCase().trim();
+    const prevSpot = db.prepare('SELECT message_id, chat_id FROM rda_broadcast_spots WHERE callsign = ?').get(cleanCall);
+    if (prevSpot && prevSpot.message_id) {
+      try {
+        await telegramClient.deleteMessage(prevSpot.chat_id, prevSpot.message_id);
+        console.log(`\x1b[35m[RDA Broadcast]\x1b[0m 🛑 Спот ${cleanCall} удален из RDA-канала при QRT (msg ${prevSpot.message_id})`);
+      } catch (delErr) {}
+      db.prepare('DELETE FROM rda_broadcast_spots WHERE callsign = ?').run(cleanCall);
+      return true;
+    }
+  } catch (err) {
+    console.warn('[RDA Broadcast] QRT deletion error:', err.message);
+  }
+  return false;
 };
 
 // In-memory cache of recent broadcasts to throttle repetitive RBN skimmers
@@ -432,7 +518,16 @@ export const startClusterWorker = (telegramClient) => {
 
           // Optional RDA group/channel forwarding
           if (rdaCode) {
-            await forwardSpotToRdaChannel(telegramClient, msg, rdaCode);
+            await forwardSpotToRdaChannel(telegramClient, msg, rdaCode, {
+              callsign: spot.activator,
+              reference: spot.reference,
+              freq: spot.frequency,
+              mode
+            });
+          }
+
+          if (isQrt) {
+            await deleteSpotFromRdaChannel(telegramClient, spot.activator);
           }
 
           // Unpin earlier pinned spots for this station in channel so pins don't stack up

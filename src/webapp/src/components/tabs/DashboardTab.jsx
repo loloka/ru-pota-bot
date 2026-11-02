@@ -48,6 +48,7 @@ export default function DashboardTab({
 }) {
   const [spotModalOpen, setSpotModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isRespotting, setIsRespotting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   
   // Live stations preview
@@ -274,6 +275,7 @@ export default function DashboardTab({
   };
 
   const handleRespot = async () => {
+    if (isRespotting) return;
     telegram.haptic.impact('medium');
     if (!effectiveActiveSpot) return;
 
@@ -286,6 +288,7 @@ export default function DashboardTab({
 
     const freqToSend = effectiveActiveSpot.freqMHz || effectiveActiveSpot.frequency || effectiveActiveSpot.freq || '14144';
 
+    setIsRespotting(true);
     try {
       await api.postSpot({
         callsign: actCall,
@@ -303,6 +306,8 @@ export default function DashboardTab({
     } catch (err) {
       telegram.haptic.notification('error');
       alert(`Error: ${err.message}`);
+    } finally {
+      setIsRespotting(false);
     }
   };
 
@@ -453,12 +458,13 @@ export default function DashboardTab({
             <div className="grid grid-cols-3 gap-2 pt-1">
               <button
                 type="button"
+                disabled={isRespotting}
                 onClick={handleRespot}
-                className="flex items-center justify-center gap-1 py-2.5 px-2 rounded-xl text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-glow-emerald transition active:scale-95"
+                className="flex items-center justify-center gap-1 py-2.5 px-2 rounded-xl text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 disabled:opacity-50 shadow-glow-emerald transition active:scale-95"
                 title={t('dash_respot')}
               >
-                <Radio className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">{t('dash_respot')}</span>
+                <Radio className={`w-3.5 h-3.5 shrink-0 ${isRespotting ? 'animate-spin' : ''}`} />
+                <span className="truncate">{isRespotting ? (language === 'RU' ? 'Секунду...' : 'Wait...') : t('dash_respot')}</span>
               </button>
 
               <button

@@ -217,6 +217,17 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
   CREATE INDEX IF NOT EXISTS idx_donations_status ON donations (status);
+
+  CREATE TABLE IF NOT EXISTS rda_broadcast_spots (
+    callsign TEXT PRIMARY KEY,
+    message_id INTEGER NOT NULL,
+    chat_id TEXT NOT NULL,
+    reference TEXT,
+    frequency TEXT,
+    mode TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_rda_broadcast_spots_call ON rda_broadcast_spots (callsign);
 `);
 
 // Migration for existing tables

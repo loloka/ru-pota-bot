@@ -7,7 +7,7 @@ import db from '../db/database.js';
 import { potaApi } from '../api/potaApi.js';
 import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import { pinManager } from '../services/pinManager.js';
-import { extractRdaCode, forwardSpotToRdaChannel } from '../services/clusterWorker.js';
+import { extractRdaCode, forwardSpotToRdaChannel, deleteSpotFromRdaChannel } from '../services/clusterWorker.js';
 import { getBaseCallsign, isBroadcastMutedCallsign } from '../bot/utils.js';
 import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry, translateOoptNameOnline, cleanOoptName, transliterateRuToEn } from '../services/ooptService.js';
 import crypto from 'crypto';
@@ -47,6 +47,9 @@ const parksByProgram = {
 
 const FALLBACK_PARKS_PATH = path.resolve(__dirname, '../data/parks_fallback.json');
 const RUNTIME_PARKS_CACHE_PATH = path.resolve(__dirname, '../../data/parks_cache.json');
+
+// In-memory anti-flood buffer for TMA & Web Hub spot submissions
+const recentTmaSpots = new Map();
 
 // 1. Initial load from runtime cache or local fallback dataset so map NEVER starts empty or missing countries
 try {
@@ -1765,6 +1768,26 @@ export function createTmaRouter(telegramClient) {
 
       console.log(`\x1b[36m[TMA API Spot]\x1b[0m 📻 \x1b[1m${activatorCall}\x1b[0m -> ${reference} (${freqMHz} MHz, ${mode}) | Споттер: \x1b[32m${registeredCallsign}\x1b[0m | Источник: \x1b[33m${spotSource}\x1b[0m | IP: \x1b[90m${clientIp || 'unknown'}\x1b[0m`);
 
+      // Server-side anti-flood throttle: prevent duplicate spot spam within 25 seconds
+      const spotThrottleKey = `${activatorCall}:${reference}:${freqNum}:${mode}`;
+      const lastSpotTime = recentTmaSpots.get(spotThrottleKey);
+      const now = Date.now();
+      if (lastSpotTime && (now - lastSpotTime < 25000)) {
+        console.log(`\x1b[33m[TMA API Spot]\x1b[0m ⏸️ Дублирующий спот ${activatorCall} пропущен (кулдаун: прошло ${Math.round((now - lastSpotTime)/1000)}с)`);
+        return res.json({
+          success: true,
+          throttled: true,
+          message: 'Спот уже был опубликован несколько секунд назад.',
+          activeSpot: spotData
+        });
+      }
+      recentTmaSpots.set(spotThrottleKey, now);
+      if (recentTmaSpots.size > 200) {
+        for (const [k, t] of recentTmaSpots.entries()) {
+          if (now - t > 60000) recentTmaSpots.delete(k);
+        }
+      }
+
       // 1. Save in SQLite
       const insertResult = db.prepare(`
         INSERT INTO spots (callsign, reference, frequency, mode, comment, source, ip_address)
@@ -1823,7 +1846,12 @@ export function createTmaRouter(telegramClient) {
           // Forward to RDA community channel if RDA is specified
           const rdaCode = (rda && rda !== '-') ? extractRdaCode(rda, true) : extractRdaCode(fullComment, false);
           if (rdaCode) {
-            await forwardSpotToRdaChannel(telegramClient, msg, rdaCode);
+            await forwardSpotToRdaChannel(telegramClient, msg, rdaCode, {
+              callsign: activatorCall,
+              reference,
+              freq: freqMHz,
+              mode
+            });
           }
 
           // Update msg_id in spots table
@@ -1966,6 +1994,13 @@ export function createTmaRouter(telegramClient) {
         } catch (unpinErr) {
           console.warn('[TMA API QRT] Unpin error:', unpinErr.message);
         }
+      }
+
+      // 1b. Clean up spot from RDA community channel if active
+      if (telegramClient && actCall) {
+        try {
+          await deleteSpotFromRdaChannel(telegramClient, actCall);
+        } catch (rdaErr) {}
       }
 
       // 2. Send official QRT spot to POTA API cluster

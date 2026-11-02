@@ -304,6 +304,12 @@ export function renderPublicMapHtml(options = {}) {
         <span>Mini App</span>
       </a>
 
+      <!-- Guide / Handbook -->
+      <a href="/guide" class="btn btn-sm btn-outline-info d-flex align-items-center gap-1.5" title="Памятка участника и регламент программы POTA">
+        <i class="bi bi-journal-text"></i>
+        <span>Гайд</span>
+      </a>
+
       <!-- Contacts Page -->
       <a href="/contacts" class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex align-items-center gap-1">
         <i class="bi bi-info-circle"></i>

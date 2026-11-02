@@ -225,6 +225,7 @@ db.exec(`
     reference TEXT,
     frequency TEXT,
     mode TEXT,
+    rda_code TEXT,
     created_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_rda_broadcast_spots_call ON rda_broadcast_spots (callsign);
@@ -363,6 +364,12 @@ try {
     db.exec(`ALTER TABLE pinned_spots ADD COLUMN channel_msg_id INTEGER`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_pinned_spots_channel_msg ON pinned_spots (channel_msg_id)`);
     console.log('[DB] Migrated pinned_spots table: added channel_msg_id column');
+  }
+
+  const rdaBroadcastCols = db.pragma('table_info(rda_broadcast_spots)');
+  if (rdaBroadcastCols && !rdaBroadcastCols.some(col => col.name === 'rda_code')) {
+    db.exec(`ALTER TABLE rda_broadcast_spots ADD COLUMN rda_code TEXT`);
+    console.log('[DB] Migrated rda_broadcast_spots table: added rda_code column');
   }
 
   // Ensure blocked_users table exists for RU-POTA Shield

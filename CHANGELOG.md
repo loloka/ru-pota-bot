@@ -1,5 +1,15 @@
 # История изменений (Changelog)
 
+## [1.16.148] - 2026-11-02 (RDA QRT Status Announcement Retention)
+### Улучшения информирования в канале RDA
+- **Публикация статуса QRT в RDA-информере (`src/services/clusterWorker.js`, `src/bot/index.js`, `src/web/tmaApi.js`):**
+  - При объявлении QRT (через Telegram-бот, Mini App или кластер POTA) предыдущий активный спот на частоте удаляется из канала RDA, а вместо него публикуется финальный пост о завершении сессии (`🛑 СЕССИЯ В ЭФИРЕ ЗАВЕРШЕНА (QRT)`).
+  - Участники радиолюбительского сообщества и охотники за RDA видят, что активатор закончил работу в эфире и свернул позицию.
+  - В таблице `rda_broadcast_spots` добавлена колонка `rda_code` с автоматической миграцией в SQLite, что гарантирует сохранение привязки к району RDA для QRT-оповещений.
+  - Реализована функция `forwardQrtToRdaChannel` с защитой от повторного дублирования анонса QRT из кластера POTA.
+- **Синхронизация версий:**
+  - Версия повышена до `1.16.148` во всех ключевых файлах (`package.json`, `src/bot/index.js`, `src/api/potaApi.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.147] - 2026-11-02 (RDA Broadcast Deduplication, Auto-Cleanup & Respot Debounce)
 ### Исправления и улучшения надёжности
 - **Дедупликация и автоудаление спотов в канале RDA-информера (`src/services/clusterWorker.js`, `src/db/database.js`):**

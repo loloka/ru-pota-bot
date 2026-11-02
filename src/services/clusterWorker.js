@@ -105,8 +105,8 @@ export const forwardSpotToRdaChannel = async (telegramClient, msg, rdaCode, meta
           const isSameRef = !meta.reference || String(meta.reference).toUpperCase() === String(prevSpot.reference).toUpperCase();
           const ageMs = now - prevSpot.created_at;
 
-          // Duplicate throttle: if exact same frequency, mode and park within 2.5 minutes (150s), skip duplicate
-          if (isSameFreq && isSameMode && isSameRef && ageMs < 150000) {
+          // Duplicate throttle: if exact same frequency, mode and park within 2.5 minutes (150s), skip duplicate (never throttle QRT announcements)
+          if (!meta.isQrt && isSameFreq && isSameMode && isSameRef && ageMs < 150000) {
             console.log(`\x1b[33m[RDA Broadcast]\x1b[0m ⏸️ Пропуск дублирующего спота ${callsign} в RDA-канал (кулдаун: прошло ${Math.round(ageMs/1000)}с)`);
             return false;
           }
@@ -133,16 +133,17 @@ export const forwardSpotToRdaChannel = async (telegramClient, msg, rdaCode, meta
     if (callsign && sent?.message_id) {
       try {
         db.prepare(`
-          INSERT INTO rda_broadcast_spots (callsign, message_id, chat_id, reference, frequency, mode, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO rda_broadcast_spots (callsign, message_id, chat_id, reference, frequency, mode, rda_code, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(callsign) DO UPDATE SET
             message_id = excluded.message_id,
             chat_id = excluded.chat_id,
             reference = excluded.reference,
             frequency = excluded.frequency,
             mode = excluded.mode,
+            rda_code = excluded.rda_code,
             created_at = excluded.created_at
-        `).run(callsign, sent.message_id, String(rdaTarget), meta.reference || '', String(meta.freq || ''), meta.mode || '', now);
+        `).run(callsign, sent.message_id, String(rdaTarget), meta.reference || '', String(meta.freq || ''), meta.mode || '', rdaCode || meta.rda || '', now);
       } catch (saveErr) {
         console.warn('[RDA Broadcast] DB save error:', saveErr.message);
       }
@@ -151,6 +152,84 @@ export const forwardSpotToRdaChannel = async (telegramClient, msg, rdaCode, meta
     return true;
   } catch (rdaErr) {
     console.warn('[Broadcast Warning] ⚠️ Ошибка отправки в RDA-канал:', rdaErr.message);
+    return false;
+  }
+};
+
+/**
+ * Broadcast QRT notice to RDA community channel, replacing previous active spot
+ */
+export const forwardQrtToRdaChannel = async (telegramClient, callsign, details = {}) => {
+  if (!callsign || !telegramClient) return false;
+  let rdaTarget = RDA_BROADCAST_CHAT_ID;
+  if (!rdaTarget) return false;
+
+  if (rdaTarget && !rdaTarget.startsWith('-100') && !rdaTarget.startsWith('@') && /^[0-9-]+$/.test(rdaTarget)) {
+    rdaTarget = rdaTarget.startsWith('-') ? '-100' + rdaTarget.substring(1) : '-100' + rdaTarget;
+  } else if (rdaTarget && rdaTarget.includes('t.me/')) {
+    rdaTarget = '@' + rdaTarget.split('t.me/')[1].replace('/', '');
+  }
+
+  const cleanCall = callsign.toUpperCase().trim();
+  let prevSpot = null;
+  try {
+    prevSpot = db.prepare('SELECT message_id, chat_id, reference, frequency, mode, rda_code FROM rda_broadcast_spots WHERE callsign = ?').get(cleanCall);
+  } catch (dbErr) {
+    console.warn('[RDA QRT] DB error:', dbErr.message);
+  }
+
+  const rda = details.rdaCode || details.rda || prevSpot?.rda_code || '';
+  // Only broadcast QRT to RDA channel if station was actually spotted in RDA channel or has an explicit RDA code
+  if (!prevSpot && !rda) {
+    return false;
+  }
+
+  const targetChatId = prevSpot?.chat_id || rdaTarget;
+
+  // 1. Delete previous active spot from RDA channel so only the QRT announcement remains
+  if (prevSpot && prevSpot.message_id) {
+    try {
+      await telegramClient.deleteMessage(targetChatId, prevSpot.message_id);
+      console.log(`\x1b[35m[RDA Broadcast]\x1b[0m 🧹 Удален активный спот ${cleanCall} из RDA-канала перед QRT (msg ${prevSpot.message_id})`);
+    } catch (delErr) {
+      // Message might have already been deleted
+    }
+  }
+
+  // 2. Format QRT announcement for RDA channel
+  const parkRef = details.reference || prevSpot?.reference || '';
+  const parkInfo = details.parkName ? ` (${details.parkName})` : '';
+  const rdaBadge = rda ? ` | 🏷️ <b>RDA: ${rda}</b>` : '';
+  const sourceTag = details.sourceTag || 'RU-POTA Hub';
+
+  const qrtMsg = `🛑 <b>СЕССИЯ В ЭФИРЕ ЗАВЕРШЕНА (QRT)</b>\n\n` +
+                 `📻 Оператор: <b>${cleanCall}</b>\n` +
+                 (parkRef ? `🏞️ Парк: <b>${parkRef}</b>${parkInfo}${rdaBadge}\n` : '') +
+                 `🌲 <i>Спасибо за активацию! Всем 73 & 44!</i>\n\n` +
+                 `📱 <i>Отправлено через ${sourceTag}</i>`;
+
+  // 3. Send QRT message to RDA channel
+  try {
+    const sent = await telegramClient.sendMessage(targetChatId, qrtMsg, { parse_mode: 'HTML', disable_web_page_preview: true });
+    console.log(`\x1b[35m[RDA Broadcast]\x1b[0m 🛑 Спот QRT для ${cleanCall} опубликован в RDA-канал (${targetChatId}, msg ${sent.message_id})`);
+
+    // 4. Update rda_broadcast_spots with the QRT message ID
+    db.prepare(`
+      INSERT INTO rda_broadcast_spots (callsign, message_id, chat_id, reference, frequency, mode, rda_code, created_at)
+      VALUES (?, ?, ?, ?, 'QRT', 'QRT', ?, ?)
+      ON CONFLICT(callsign) DO UPDATE SET
+        message_id = excluded.message_id,
+        chat_id = excluded.chat_id,
+        reference = excluded.reference,
+        frequency = 'QRT',
+        mode = 'QRT',
+        rda_code = excluded.rda_code,
+        created_at = excluded.created_at
+    `).run(cleanCall, sent.message_id, String(targetChatId), parkRef, rda, Date.now());
+
+    return true;
+  } catch (sendErr) {
+    console.warn('[RDA QRT Warning] ⚠️ Не удалось отправить QRT в RDA-канал:', sendErr.message);
     return false;
   }
 };
@@ -517,17 +596,26 @@ export const startClusterWorker = (telegramClient) => {
           console.log(`\x1b[34m[Broadcast]\x1b[0m 📢 Спот ${spot.activator} опубликован в канал`);
 
           // Optional RDA group/channel forwarding
-          if (rdaCode) {
-            await forwardSpotToRdaChannel(telegramClient, msg, rdaCode, {
+          let targetRdaCode = rdaCode;
+          let isAlreadyQrtInRda = false;
+          if (isQrt) {
+            try {
+              const prev = db.prepare('SELECT frequency, rda_code FROM rda_broadcast_spots WHERE callsign = ?').get(spot.activator);
+              if (prev) {
+                if (prev.frequency === 'QRT') isAlreadyQrtInRda = true;
+                if (!targetRdaCode && prev.rda_code) targetRdaCode = prev.rda_code;
+              }
+            } catch (e) {}
+          }
+
+          if (targetRdaCode && !isAlreadyQrtInRda) {
+            await forwardSpotToRdaChannel(telegramClient, msg, targetRdaCode, {
               callsign: spot.activator,
               reference: spot.reference,
               freq: spot.frequency,
-              mode
+              mode,
+              isQrt
             });
-          }
-
-          if (isQrt) {
-            await deleteSpotFromRdaChannel(telegramClient, spot.activator);
           }
 
           // Unpin earlier pinned spots for this station in channel so pins don't stack up

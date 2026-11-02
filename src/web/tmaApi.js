@@ -7,7 +7,7 @@ import db from '../db/database.js';
 import { potaApi } from '../api/potaApi.js';
 import { tmaUserMiddleware, requireTmaAuth } from './tmaAuth.js';
 import { pinManager } from '../services/pinManager.js';
-import { extractRdaCode, forwardSpotToRdaChannel, deleteSpotFromRdaChannel } from '../services/clusterWorker.js';
+import { extractRdaCode, forwardSpotToRdaChannel, forwardQrtToRdaChannel, deleteSpotFromRdaChannel } from '../services/clusterWorker.js';
 import { getBaseCallsign, isBroadcastMutedCallsign } from '../bot/utils.js';
 import { getOoptList, getOoptStats, getOoptDetails, syncOoptRegistry, translateOoptNameOnline, cleanOoptName, transliterateRuToEn } from '../services/ooptService.js';
 import crypto from 'crypto';
@@ -1996,11 +1996,19 @@ export function createTmaRouter(telegramClient) {
         }
       }
 
-      // 1b. Clean up spot from RDA community channel if active
+      // 1b. Broadcast QRT notice to RDA community channel (replaces active spot)
       if (telegramClient && actCall) {
         try {
-          await deleteSpotFromRdaChannel(telegramClient, actCall);
-        } catch (rdaErr) {}
+          const rdaCode = spotData?.rda || (spotData?.comment ? extractRdaCode(spotData.comment) : null);
+          await forwardQrtToRdaChannel(telegramClient, actCall, {
+            reference: parkRef,
+            parkName: spotData?.parkName,
+            rdaCode,
+            sourceTag: existingUser ? 'RU-POTA Hub' : 'RU-POTA Web'
+          });
+        } catch (rdaErr) {
+          console.warn('[TMA API QRT] RDA channel QRT broadcast error:', rdaErr.message);
+        }
       }
 
       // 2. Send official QRT spot to POTA API cluster

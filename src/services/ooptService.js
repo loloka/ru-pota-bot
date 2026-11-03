@@ -4812,6 +4812,7 @@ export async function getOoptBoundary(nid) {
         potaCoords: null,
         displacementMeters: 0,
         isDisplaced: false,
+        isServiceUnavailable: true,
         message: 'Не удалось загрузить границы с карты Минприроды (' + err.message + ')'
       };
     }

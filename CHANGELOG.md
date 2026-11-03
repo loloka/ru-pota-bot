@@ -1,5 +1,13 @@
 # История изменений (Changelog)
 
+## [1.16.150] - 2026-11-04 (Minpriroda Outage Diagnostics & Boundary Status UX)
+### Исправления и информирование
+- **Индикация статуса Минприроды на карте (`src/web/publicMap.js`, `src/web/admin.js`, `src/services/ooptService.js`):**
+  - При недоступности геосервера Минприроды (`карта.оцзк.рф`) вместо ложного «Полигон границ отсутствует в базе» теперь явно отображается статусная строка красного цвета: `⚠️ Ресурс картографии Минприроды временно недоступен`.
+  - В API `getOoptBoundary` добавлен признак `isServiceUnavailable: true` при сетевых таймаутах и ошибках подключения к внешнему геосерверу.
+- **Синхронизация версий:**
+  - Версия повышена до `1.16.150` во всех ключевых файлах (`package.json`, `src/bot/index.js`, `src/api/potaApi.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.149] - 2026-11-02 (Mini App Side Menu Links: Web Portal, Donate & Guide, QRT Immediate Respot Cache Invalidation)
 ### Улучшения интерфейса и стабильности споттинга
 - **Боковое меню Telegram Mini App (`src/webapp/src/components/layout/Header.jsx`):**

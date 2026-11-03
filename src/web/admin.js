@@ -6225,6 +6225,8 @@ export const startAdminServer = (telegramClient) => {
                       '<button type="button" class="btn btn-xs btn-outline-danger btn-zoom-boundary" onclick="window.zoomOoptBoundary(event)" style="font-size:10px; padding:1px 6px; border:1px solid #d63384; border-radius:3px; color:#d63384; background:none; cursor:pointer;" title="Показать весь полигон ООПТ">🔍 Весь полигон</button>' +
                     '</div>' +
                   '</div>';
+                } else if (data.isServiceUnavailable) {
+                  statusHtml += '<div style="color:#dc3545; font-size:11px; font-weight:600; margin-top:4px;">⚠️ Ресурс картографии Минприроды временно недоступен</div>';
                 } else {
                   statusHtml += '<div style="color:#6c757d; font-size:11px; margin-top:4px;">ℹ️ На карте Минприроды границы отсутствуют (точечный объект)</div>';
                 }

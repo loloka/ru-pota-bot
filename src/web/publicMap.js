@@ -900,13 +900,17 @@ export function renderPublicMapHtml(options = {}) {
           if (statusEl) {
             statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Границы отображены</span>';
           }
+        } else if (data && data.isServiceUnavailable) {
+          if (statusEl) {
+            statusEl.innerHTML = '<span class="text-danger fw-semibold"><i class="bi bi-exclamation-triangle-fill"></i> Ресурс картографии Минприроды временно недоступен</span>';
+          }
         } else {
           if (statusEl) {
             statusEl.innerHTML = '<span class="text-secondary"><i class="bi bi-info-circle"></i> Полигон границ отсутствует в базе</span>';
           }
         }
       } catch (e) {
-        if (statusEl) statusEl.innerHTML = '<span class="text-danger">Ошибка загрузки полигона</span>';
+        if (statusEl) statusEl.innerHTML = '<span class="text-danger fw-semibold"><i class="bi bi-exclamation-triangle-fill"></i> Ресурс картографии Минприроды временно недоступен</span>';
       }
     }
 

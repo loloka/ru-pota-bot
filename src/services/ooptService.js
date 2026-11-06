@@ -4855,6 +4855,82 @@ export async function getOoptBoundary(nid) {
   };
 }
 
+let isHarvesterRunning = false;
+
+/**
+ * Gentle background step to harvest uncollected POTA boundaries from Minpriroda
+ */
+export async function runBoundaryHarvesterStep(batchSize = 25, delayMs = 3000) {
+  if (isHarvesterRunning) return;
+  isHarvesterRunning = true;
+
+  try {
+    const candidates = db.prepare(`
+      SELECT r.nid, r.title, r.pota_ref
+      FROM oopt_registry r
+      LEFT JOIN oopt_boundaries b ON b.nid = r.nid
+      WHERE r.pota_ref IS NOT NULL 
+        AND b.nid IS NULL
+      ORDER BY r.pota_ref ASC
+      LIMIT ?
+    `).all(batchSize);
+
+    if (!candidates || candidates.length === 0) {
+      return;
+    }
+
+    let consecutiveErrors = 0;
+    let savedCount = 0;
+
+    for (let i = 0; i < candidates.length; i++) {
+      const item = candidates[i];
+      try {
+        const res = await getOoptBoundary(item.nid);
+        if (res && res.isServiceUnavailable) {
+          consecutiveErrors++;
+        } else {
+          consecutiveErrors = 0;
+          if (res && res.hasBoundary && res.geometry) savedCount++;
+        }
+      } catch (e) {
+        consecutiveErrors++;
+      }
+
+      if (consecutiveErrors >= 2) {
+        // Minpriroda down, stop early to avoid unnecessary network pressure
+        break;
+      }
+
+      if (i < candidates.length - 1) {
+        await new Promise(r => setTimeout(r, delayMs));
+      }
+    }
+
+    if (savedCount > 0) {
+      console.log(`\x1b[32m[Boundary Harvester]\x1b[0m 🌲 Фоновая выкачка: сохранено ${savedCount} полигонов ООПТ`);
+    }
+  } catch (err) {
+    // quiet
+  } finally {
+    isHarvesterRunning = false;
+  }
+}
+
+/**
+ * Periodic background task that gradually populates missing boundaries into SQLite
+ */
+export function startBackgroundBoundaryHarvester() {
+  // First run after 2 minutes on startup
+  setTimeout(() => {
+    runBoundaryHarvesterStep(20, 3000).catch(() => {});
+  }, 120000);
+
+  // Then run every 60 minutes
+  setInterval(() => {
+    runBoundaryHarvesterStep(30, 3000).catch(() => {});
+  }, 60 * 60 * 1000);
+}
+
 export default {
   syncOoptRegistry,
   syncPotaParksWithApi,
@@ -4885,4 +4961,6 @@ export default {
   deduplicateOoptRegistry,
   getMatchDiagnostics,
   getOoptBoundary,
+  runBoundaryHarvesterStep,
+  startBackgroundBoundaryHarvester,
 };

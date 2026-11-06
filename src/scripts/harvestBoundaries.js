@@ -55,13 +55,13 @@ async function main() {
     process.exit(0);
   }
 
-  // Find candidate parks that do not have detailed vector geometry yet
+  // Find candidate parks that have not been checked yet
   const candidates = db.prepare(`
     SELECT r.nid, r.title, r.pota_ref
     FROM oopt_registry r
     LEFT JOIN oopt_boundaries b ON b.nid = r.nid
     WHERE r.pota_ref IS NOT NULL 
-      AND (b.geometry IS NULL OR b.has_boundary IS NULL)
+      AND b.nid IS NULL
     ORDER BY r.pota_ref ASC
     LIMIT ?
   `).all(limit);
@@ -86,13 +86,13 @@ async function main() {
     try {
       const res = await getOoptBoundary(item.nid);
 
-      if (res && res.hasBoundary && !res.isBboxFallback && res.geometry) {
+      if (res && res.hasBoundary && res.geometry) {
         successCount++;
         consecutiveErrors = 0;
         console.log(`  ✅ ${prefix} -> Сохранён официальный полигон (${res.geometry.type})`);
-      } else if (res && res.isBboxFallback) {
+      } else if (res && res.isServiceUnavailable) {
         consecutiveErrors++;
-        console.log(`  ⚠️ ${prefix} -> Сервер Минприроды недоступен, сработал резервный BBox`);
+        console.log(`  ⚠️ ${prefix} -> Сервер Минприроды временно недоступен`);
       } else {
         emptyCount++;
         consecutiveErrors = 0;
@@ -102,7 +102,7 @@ async function main() {
       if (consecutiveErrors >= 3) {
         console.log(`\n🛑 Обнаружено 3 последовательных сбоя соединения с Минприродой.`);
         console.log(`   Сервер Минприроды карта.оцзк.рф временно отключен или блокирует запросы.`);
-        console.log(`   Приостанавливаем сборщик. На карте будет работать резервный контур BBox.`);
+        console.log(`   Приостанавливаем сборщик.`);
         break;
       }
 

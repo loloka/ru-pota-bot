@@ -38,7 +38,7 @@ import { statsWizard } from './scenes/statsWizard.js';
 import { startClusterWorker } from '../services/clusterWorker.js';
 import { startScheduleWorker } from '../services/scheduleWorker.js';
 import { pinManager, isChannelChat } from '../services/pinManager.js';
-import { syncPotaParksWithApi, ensureOoptRegistryPopulated } from '../services/ooptService.js';
+import { syncPotaParksWithApi, ensureOoptRegistryPopulated, startBackgroundBoundaryHarvester } from '../services/ooptService.js';
 
 // Import admin server
 import { startAdminServer } from '../web/admin.js';
@@ -906,7 +906,7 @@ bot.catch((err, ctx) => {
 
 console.log(`
 \x1b[32m╔════════════════════════════════════════════════════╗\x1b[0m
-\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.152\x1b[0m 📡            \x1b[32m║\x1b[0m
+\x1b[32m║\x1b[0m   🌲 \x1b[1mRU-POTA Telegram Bot v1.16.153\x1b[0m 📡            \x1b[32m║\x1b[0m
 \x1b[32m║\x1b[0m   Сообщество: \x1b[33mParks on the Air (RU-POTA)\x1b[0m          \x1b[32m║\x1b[0m
 \x1b[32m╚════════════════════════════════════════════════════╝\x1b[0m
 `);
@@ -985,6 +985,9 @@ setInterval(() => {
     console.warn('\x1b[33m[POTA Sync]\x1b[0m ⚠️ Ошибка суточной синхронизации парков POTA:', err.message);
   });
 }, 24 * 60 * 60 * 1000);
+
+// Start gentle background harvester for OOPT boundaries (checks hourly if Minpriroda is up)
+startBackgroundBoundaryHarvester();
 
 // Enable graceful stop
 process.once('SIGINT', () => {

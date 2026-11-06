@@ -35,27 +35,43 @@ export function renderDonateHtml(options = {}) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Поддержать проект RU-POTA ☕📡 | Parks on the Air Russia</title>
-  <meta name="description" content="Добровольная поддержка сервера, картографического кластера и разработки бота сообщества RU-POTA.">
+  <meta name="description" content="Добровольная поддержка сервера, картографического кластера и развития экосистемы RU-POTA.">
   <link rel="icon" type="image/svg+xml" href="/app/favicon.svg">
 
   <!-- Bootstrap 5 & Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
   <style>
+    :root {
+      --bg-dark: #090d16;
+      --card-bg: rgba(17, 24, 39, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-cyan: #06b6d4;
+    }
+
     body {
-      background-color: #0b0f19;
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.06) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(6, 182, 212, 0.05) 0px, transparent 50%);
+      background-attachment: fixed;
       color: #f1f5f9;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
+
     .header-nav {
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
     }
     .brand-link {
       color: #fff;
@@ -66,21 +82,25 @@ export function renderDonateHtml(options = {}) {
       gap: 6px;
     }
     .brand-link:hover {
-      color: #10b981;
+      color: var(--accent-emerald);
     }
+
     .glass-card {
-      background: rgba(19, 27, 46, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
       border-radius: 16px;
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
     }
-    .tier-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1.5px solid rgba(255, 255, 255, 0.12);
+
+    /* Goal Cards */
+    .goal-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1.5px solid var(--card-border);
       border-radius: 14px;
       padding: 16px;
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
       height: 100%;
       display: flex;
       flex-direction: column;
@@ -88,33 +108,77 @@ export function renderDonateHtml(options = {}) {
       user-select: none;
       position: relative;
     }
-    .tier-card:hover {
-      border-color: #10b981;
-      transform: translateY(-2px);
-      background: rgba(16, 185, 129, 0.05);
-      box-shadow: 0 8px 20px -4px rgba(16, 185, 129, 0.2);
+    .goal-card:hover {
+      border-color: rgba(245, 158, 11, 0.6);
+      transform: translateY(-3px);
+      background: rgba(245, 158, 11, 0.04);
+      box-shadow: 0 12px 24px -6px rgba(245, 158, 11, 0.15);
     }
-    .tier-card.active {
-      border-color: #10b981;
-      background: rgba(16, 185, 129, 0.09);
-      box-shadow: 0 0 0 2px #10b981, 0 10px 25px -5px rgba(16, 185, 129, 0.35);
+    .goal-card.active {
+      border-color: var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.08);
+      box-shadow: 0 0 0 2px var(--accent-emerald), 0 12px 28px -6px rgba(16, 185, 129, 0.3);
     }
-    .tier-card .selected-check {
+    .goal-card .selected-check {
       display: none;
       position: absolute;
       top: 12px;
       right: 12px;
-      color: #10b981;
-      font-size: 1.1rem;
+      color: var(--accent-emerald);
+      font-size: 1.15rem;
     }
-    .tier-card.active .selected-check {
+    .goal-card.active .selected-check {
       display: block;
     }
-    .sbp-box {
-      background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(217, 119, 6, 0.03));
-      border: 1.5px solid rgba(245, 158, 11, 0.35);
-      border-radius: 16px;
+    .goal-badge {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-bottom: 8px;
     }
+
+    /* SBP Payment Box */
+    .sbp-container {
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.85));
+      border: 1.5px solid rgba(245, 158, 11, 0.3);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+    }
+    .sbp-tabs .nav-link {
+      color: #94a3b8;
+      border: none;
+      font-weight: 600;
+      padding: 12px 20px;
+      border-radius: 12px;
+      transition: all 0.2s ease;
+    }
+    .sbp-tabs .nav-link:hover {
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .sbp-tabs .nav-link.active {
+      color: #0b0f19;
+      background: #f59e0b;
+      font-weight: 700;
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+    }
+
+    .phone-spoiler-box {
+      background: rgba(11, 15, 25, 0.6);
+      border: 1.5px dashed rgba(245, 158, 11, 0.4);
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
     .qr-frame {
       background: #fff;
       padding: 12px;
@@ -123,14 +187,32 @@ export function renderDonateHtml(options = {}) {
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
     }
     .qr-img {
-      width: 210px;
-      height: 210px;
+      width: 190px;
+      height: 190px;
       display: block;
       object-fit: contain;
     }
-    .wall-card {
+
+    .value-pill {
       background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13.5px;
+      height: 100%;
+    }
+    .value-pill i {
+      font-size: 1.15rem;
+      margin-top: 1px;
+    }
+
+    /* Wall of Supporters */
+    .wall-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--card-border);
       border-radius: 12px;
       padding: 14px 16px;
       transition: all 0.2s ease;
@@ -138,36 +220,44 @@ export function renderDonateHtml(options = {}) {
     .wall-card:hover {
       background: rgba(255, 255, 255, 0.05);
       border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
     }
     .wall-badge {
-      background: rgba(16, 185, 129, 0.2);
+      background: rgba(16, 185, 129, 0.15);
       color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.4);
+      border: 1px solid rgba(16, 185, 129, 0.3);
       font-size: 11px;
       font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 6px;
+      padding: 3px 10px;
+      border-radius: 8px;
     }
+
     .form-control, .form-select {
-      background-color: rgba(15, 23, 42, 0.8);
+      background-color: rgba(15, 23, 42, 0.85);
       border: 1px solid rgba(255, 255, 255, 0.15);
       color: #fff;
       border-radius: 10px;
     }
     .form-control:focus, .form-select:focus {
       background-color: rgba(15, 23, 42, 0.95);
-      border-color: #10b981;
+      border-color: var(--accent-emerald);
       color: #fff;
       box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.25);
     }
-    .form-control::placeholder {
-      color: rgba(255, 255, 255, 0.4);
-    }
     .role-btn-group .btn-check:checked + .btn {
-      background-color: #10b981;
-      border-color: #10b981;
-      color: #000;
+      background-color: var(--accent-emerald);
+      border-color: var(--accent-emerald);
+      color: #0b0f19;
       font-weight: 700;
+    }
+
+    /* Pulse animation */
+    @keyframes subtle-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(0.99); }
+    }
+    .pulse-target {
+      animation: subtle-pulse 3s infinite ease-in-out;
     }
   </style>
 </head>
@@ -201,7 +291,7 @@ export function renderDonateHtml(options = {}) {
             <i class="bi bi-speedometer2"></i> Админ-панель
           </a>
         ` : `
-          <a href="/login" class="btn btn-sm btn-outline-light" title="Вход в закрытую панель для региональных представителей">
+          <a href="/login" class="btn btn-sm btn-outline-light" title="Вход для региональных координаторов">
             <i class="bi bi-lock"></i> Координаторам
           </a>
         `}
@@ -210,129 +300,220 @@ export function renderDonateHtml(options = {}) {
   </header>
 
   <!-- Main Content -->
-  <main class="container my-4 my-md-5 flex-grow-1" style="max-width: 920px;">
+  <main class="container my-4 my-md-5 flex-grow-1" style="max-width: 940px;">
+    
     <!-- Title Section -->
     <div class="text-center mb-4 mb-md-5">
       <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-warning bg-opacity-10 border border-warning border-opacity-25 text-warning small fw-bold mb-2">
-        <i class="bi bi-heart-fill"></i> ДОБРОВОЛЬНАЯ ПОДДЕРЖКА
+        <i class="bi bi-heart-fill"></i> СООБЩЕСТВО ДЛЯ СООБЩЕСТВА
       </div>
       <h1 class="fw-bold tracking-tight mb-3">Поддержка проекта RU-POTA</h1>
-      <p class="text-secondary fs-6 mx-auto lh-base" style="max-width: 720px;">
-        Проект развивается силами радиолюбителей. Мы держим быстрый кластер, карту всех заповедников РФ, трансляцию спотов, мобильное приложение и бота. Всё это делается и поддерживается абсолютно бесплатно (Free).<br class="d-none d-md-inline">
-        Если вы желаете поддержать проект добрым словом или делом — вы можете сделать это ниже 🤝
+      <p class="text-secondary fs-6 mx-auto lh-base" style="max-width: 740px;">
+        RU-POTA Hub развивается как открытый независимый проект радиолюбителей. Базовый сервер администрируется нами и оплачивается со взносов радиолюбителей НСО. Но проекту нужны ресурсы для расширения: выделенный диск под векторные границы, отдельный домен и канал связи с кластером POTA.
       </p>
     </div>
 
-    <!-- SBP Payment Box -->
-    <div class="sbp-box p-4 p-md-5 mb-5 shadow-lg">
-      <div class="row align-items-center g-4">
-        <!-- QR Code -->
-        <div class="col-md-5 text-center">
-          <div class="qr-frame">
-            <img src="/assets/ozon_sbp_qr.png" alt="СБП QR Ozon Банк" class="qr-img">
-          </div>
-          <div class="small text-secondary mt-2">
-            Отсканируйте камерой смартфона или приложением любого банка РФ
+    <!-- Value Highlights Grid -->
+    <div class="row g-2 g-md-3 mb-5">
+      <div class="col-6 col-md-3">
+        <div class="value-pill">
+          <i class="bi bi-lightning-charge-fill text-warning"></i>
+          <div><strong>Мгновенный споттинг:</strong> пуши в Telegram за 3 сек в эфире</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="value-pill">
+          <i class="bi bi-geo-alt-fill text-success"></i>
+          <div><strong>Большая карта:</strong> 7 900+ парков POTA и все районы RDA</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="value-pill">
+          <i class="bi bi-phone-fill text-info"></i>
+          <div><strong>Telegram Mini App:</strong> споты и QRT прямо с телефона в поле</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="value-pill">
+          <i class="bi bi-shield-check text-purple" style="color: #c084fc;"></i>
+          <div><strong>Антиспам-щит:</strong> защита наших чатов от ботов и спамеров</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SBP Interactive Box -->
+    <div class="sbp-container p-4 p-md-5 mb-5 shadow-lg">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+        <div>
+          <span class="badge bg-warning text-dark fw-bold mb-1">СБП · БЫСТРЫЙ ПЕРЕВОД БЕЗ КОМИССИИ</span>
+          <h3 class="fw-bold text-light mb-0">Выберите удобный способ перевода</h3>
+        </div>
+        
+        <!-- Tabs -->
+        <ul class="nav nav-pills sbp-tabs bg-dark bg-opacity-50 p-1 rounded-3" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-phone-btn" data-bs-toggle="pill" data-bs-target="#tab-phone" type="button" role="tab">
+              <i class="bi bi-phone me-1"></i> По номеру СБП
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-qr-btn" data-bs-toggle="pill" data-bs-target="#tab-qr" type="button" role="tab">
+              <i class="bi bi-qr-code me-1"></i> По QR-коду
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="tab-content">
+        <!-- Tab 1: By Phone Number (Under anti-crawler spoiler) -->
+        <div class="tab-pane fade show active" id="tab-phone" role="tabpanel">
+          <div class="row align-items-center g-4">
+            <div class="col-lg-8">
+              <p class="text-secondary mb-3">
+                Перевод по номеру телефона через Систему Быстрых Платежей (СБП) без комиссии из любого банка РФ:
+              </p>
+              
+              <div class="phone-spoiler-box mb-3">
+                <div>
+                  <div class="text-secondary small mb-1">Номер телефона получателя (СБП):</div>
+                  <div id="phoneDisplay" class="font-monospace fw-bold fs-4 text-warning tracking-wider">
+                    +7 903 •••-••-••
+                  </div>
+                </div>
+
+                <button type="button" class="btn btn-warning fw-bold px-3 py-2 shadow-sm d-flex align-items-center gap-2" id="revealPhoneBtn" onclick="revealAndCopyPhone()">
+                  <i class="bi bi-eye-fill"></i>
+                  <span>Показать и скопировать</span>
+                </button>
+              </div>
+
+              <div class="small text-secondary mb-2">
+                🏦 <strong>Банки получателя:</strong> <strong>Т-Банк</strong> (основной), <strong>Сбербанк</strong> или <strong>Ozon Банк</strong><br>
+                👤 <strong>Получатель:</strong> Александр С. (позывной: <strong>R9OGL</strong>)
+              </div>
+              <div class="small text-muted">
+                💡 <em>При переводе в графе «Сообщение получателю» вы можете указать свой позывной — мы добавим вас на Стену почёта!</em>
+              </div>
+            </div>
+
+            <div class="col-lg-4 text-center d-none d-lg-block">
+              <div class="p-3 rounded-4 bg-dark bg-opacity-40 border border-secondary border-opacity-20 text-center">
+                <i class="bi bi-phone-vibrate text-warning fs-1 d-block mb-2"></i>
+                <div class="fw-bold small text-light">Любой мобильный банк</div>
+                <div class="text-secondary" style="font-size: 11px;">Сбербанк Онлайн, Т-Банк, ВТБ, Альфа, Райффайзен и др.</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Details & Direct Link -->
-        <div class="col-md-7">
-          <div class="d-inline-block px-2 py-0.5 rounded bg-warning text-dark fw-bold small mb-2">
-            СБП · БЫСТРЫЙ ПЛАТЁЖ БЕЗ КОМИССИИ
-          </div>
-          <h3 class="fw-bold text-light mb-2">Перевод через Систему Быстрых Платежей</h3>
-          <p class="text-secondary small mb-3">
-            Платёж зачисляется на Ozon Банк (получатель: <strong>Александр С. / R9OGL</strong>). Поддерживается любой российский банк (Сбер, Т-Банк, ВТБ, Альфа и др.).
-          </p>
+        <!-- Tab 2: By QR Code / Link -->
+        <div class="tab-pane fade" id="tab-qr" role="tabpanel">
+          <div class="row align-items-center g-4">
+            <div class="col-md-5 text-center">
+              <div class="qr-frame">
+                <img src="/assets/ozon_sbp_qr.png" alt="СБП QR Ozon Банк" class="qr-img">
+              </div>
+              <div class="small text-secondary mt-2">
+                Отсканируйте камерой смартфона
+              </div>
+            </div>
 
-          <div class="d-flex flex-column gap-2 mb-3">
-            <a href="https://finance.ozon.ru/apps/sbp/ozonbankpay/01a0c427-d792-7435-8819-ce9c84f7b78e" target="_blank" rel="noopener" class="btn btn-warning fw-bold py-2.5 d-flex align-items-center justify-content-center gap-2 shadow">
-              <i class="bi bi-qr-code-scan"></i> Открыть платёж в приложении банка
-            </a>
-            <button type="button" class="btn btn-outline-light btn-sm" onclick="copySbpLink()">
-              <i class="bi bi-clipboard"></i> Скопировать ссылку на оплату СБП
-            </button>
-          </div>
-
-          <div class="small text-secondary">
-            💡 После перевода вы можете заполнить форму ниже, указав ваше пожелание — оно появится на <strong>Стене признания</strong> после одобрения!
+            <div class="col-md-7">
+              <h5 class="fw-bold text-light mb-2">Прямой платёж на Ozon Банк</h5>
+              <p class="text-secondary small mb-3">
+                Платёж зачисляется моментально через шлюз Ozon Банка на имя Александра С. (R9OGL).
+              </p>
+              <div class="d-flex flex-column gap-2 mb-3">
+                <a href="https://finance.ozon.ru/apps/sbp/ozonbankpay/01a0c427-d792-7435-8819-ce9c84f7b78e" target="_blank" rel="noopener" class="btn btn-warning fw-bold py-2.5 d-flex align-items-center justify-content-center gap-2 shadow">
+                  <i class="bi bi-qr-code-scan"></i> Открыть в приложении банка
+                </a>
+                <button type="button" class="btn btn-outline-light btn-sm" onclick="copySbpLink()">
+                  <i class="bi bi-clipboard"></i> Скопировать ссылку на оплату
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Tiers Section -->
+    <!-- Concrete Community Goals & Targets Section -->
     <div class="mb-5">
       <div class="d-flex align-items-center justify-content-between mb-3">
-        <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
-          <span>📻</span> Варианты участия и ориентиры
-        </h4>
-        <span class="text-secondary small">Кликните вариант для предзаполнения</span>
+        <div>
+          <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
+            <span>🎯</span> Текущие цели и ориентиры сообщества
+          </h4>
+          <span class="text-secondary small">Выберите цель — сумма автоматически подставится в форму ниже</span>
+        </div>
       </div>
+
       <div class="row g-3">
-        <!-- Tier 1 -->
-        <div class="col-md-4 col-sm-6">
-          <div class="tier-card" onclick="selectTier('Чашка кофе для админа серверов', 150, this)">
+        <!-- Target 1: Memory & Boundaries Storage -->
+        <div class="col-md-6 col-lg-3">
+          <div class="goal-card active pulse-target" onclick="selectTier('+10 ГБ SSD под векторные границы ООПТ', 800, this)">
             <i class="bi bi-check-circle-fill selected-check"></i>
             <div>
-              <div class="fs-4 mb-1">☕</div>
-              <div class="fw-bold text-light">Чашка кофе для админа серверов</div>
-              <div class="text-secondary small mt-1">Бодрит нашего программиста, ускоряет написание классных фишек для проекта и помогает дежурить днём и ночью, чтобы сервер никогда не упал!</div>
+              <span class="goal-badge bg-warning bg-opacity-20 text-warning border border-warning border-opacity-30">
+                <i class="bi bi-hdd-network"></i> Хранилище
+              </span>
+              <div class="fw-bold text-light mb-1">+10 ГБ SSD под границы ООПТ</div>
+              <div class="text-secondary small">
+                Дополнительное дисковое пространство на год для автономного хранения 11 000+ полигонов и кэша карты без зависимости от Минприроды.
+              </div>
             </div>
-            <div class="fw-bold text-warning fs-5 mt-3">150 ₽</div>
+            <div class="fw-bold text-warning fs-5 mt-3">800 ₽ <span class="small text-secondary fw-normal">/ год</span></div>
           </div>
         </div>
 
-        <!-- Tier 2 -->
-        <div class="col-md-4 col-sm-6">
-          <div class="tier-card active" onclick="selectTier('Месяц жизни VPS-сервера', 450, this)">
+        <!-- Target 2: Dedicated RU-POTA Domain -->
+        <div class="col-md-6 col-lg-3">
+          <div class="goal-card" onclick="selectTier('Выделенный домен для проекта RU-POTA', 120, this)">
             <i class="bi bi-check-circle-fill selected-check"></i>
             <div>
-              <div class="fs-4 mb-1">🖥️</div>
-              <div class="fw-bold text-light">Месяц жизни VPS-сервера</div>
-              <div class="text-secondary small mt-1">Аренда скоростного VPS под бот, веб-карту и кластер.</div>
+              <span class="goal-badge bg-info bg-opacity-20 text-info border border-info border-opacity-30">
+                <i class="bi bi-globe2"></i> Домен
+              </span>
+              <div class="fw-bold text-light mb-1">Свой домен для проекта</div>
+              <div class="text-secondary small">
+                Регистрация отдельного постоянного доменного имени для сайта, карты и Mini App сообщества RU-POTA.
+              </div>
             </div>
-            <div class="fw-bold text-success fs-5 mt-3">450 ₽</div>
+            <div class="fw-bold text-info fs-5 mt-3">120 ₽ <span class="small text-secondary fw-normal">/ 1-й год</span></div>
           </div>
         </div>
 
-        <!-- Tier 3 -->
-        <div class="col-md-4 col-sm-6">
-          <div class="tier-card" onclick="selectTier('Канал до Европейского сервера POTA', 850, this)">
+        <!-- Target 3: Fast POTA & TG Proxy Line -->
+        <div class="col-md-6 col-lg-3">
+          <div class="goal-card" onclick="selectTier('Выделенный канал связи с кластером POTA и TG', 400, this)">
             <i class="bi bi-check-circle-fill selected-check"></i>
             <div>
-              <div class="fs-4 mb-1">📡</div>
-              <div class="fw-bold text-light">Канал до серверов POTA</div>
-              <div class="text-secondary small mt-1">Чтобы сигнал нашего кластера POTA уверенно долетал до Европейского сервера POTA.</div>
+              <span class="goal-badge bg-success bg-opacity-20 text-success border border-success border-opacity-30">
+                <i class="bi bi-broadcast"></i> Канал связи
+              </span>
+              <div class="fw-bold text-light mb-1">Канал с кластером POTA</div>
+              <div class="text-secondary small">
+                Выделенный прокси-сервер для мгновенного обмена спотами с серверами POTA и надёжной доставки в Telegram.
+              </div>
             </div>
-            <div class="fw-bold text-warning fs-5 mt-3">850 ₽</div>
+            <div class="fw-bold text-success fs-5 mt-3">400 ₽ <span class="small text-secondary fw-normal">/ мес</span></div>
           </div>
         </div>
 
-        <!-- Tier 4 -->
-        <div class="col-md-6 col-sm-6">
-          <div class="tier-card" onclick="selectTier('Разработка новых функций для нашего сообщества', 1500, this)">
+        <!-- Target 4: Coffee / Dev Appreciation -->
+        <div class="col-md-6 col-lg-3">
+          <div class="goal-card" onclick="selectTier('Чашка кофе разработчику за ночной код', 150, this)">
             <i class="bi bi-check-circle-fill selected-check"></i>
             <div>
-              <div class="fs-4 mb-1">🛠️</div>
-              <div class="fw-bold text-light">Разработка новых функций</div>
-              <div class="text-secondary small mt-1">Разработка новых функций для нашего сообщества.</div>
+              <span class="goal-badge bg-purple bg-opacity-20 text-purple border border-purple border-opacity-30" style="color: #c084fc; border-color: rgba(192, 132, 252, 0.4);">
+                <i class="bi bi-cup-hot"></i> Вдохновение
+              </span>
+              <div class="fw-bold text-light mb-1">Чашка кофе разработчику</div>
+              <div class="text-secondary small">
+                За бессонные ночи кодинга, исправление багов и добавление новых крутых функций в экосистему бота.
+              </div>
             </div>
-            <div class="fw-bold text-warning fs-5 mt-3">1 500 ₽</div>
-          </div>
-        </div>
-
-        <!-- Tier 5 -->
-        <div class="col-md-6 col-sm-12">
-          <div class="tier-card" onclick="selectTier('Своя сумма / Тёплый привет', 0, this)">
-            <i class="bi bi-check-circle-fill selected-check"></i>
-            <div>
-              <div class="fs-4 mb-1">💌</div>
-              <div class="fw-bold text-light">Своя сумма / Тёплый привет</div>
-              <div class="text-secondary small mt-1">Любая сумма или просто тёплые слова для всей команды RU-POTA.</div>
-            </div>
-            <div class="fw-bold text-info fs-5 mt-3">Любая сумма</div>
+            <div class="fw-bold text-warning fs-5 mt-3">150 ₽ <span class="small text-secondary fw-normal">/ респект</span></div>
           </div>
         </div>
       </div>
@@ -345,11 +526,11 @@ export function renderDonateHtml(options = {}) {
         <h4 class="fw-bold mb-0 text-light">Оставить след на Стене признания</h4>
       </div>
       <p class="text-secondary small mb-4">
-        Сделали перевод или просто хотите поддержать команду? Заполните карточку ниже. После быстрой модерации ваше пожелание и позывной появятся на Стене почёта сообщества!
+        Сделали перевод или хотите передать привет сообществу? Заполните карточку ниже. После быстрой модерации ваше пожелание и позывной появятся на Стене почёта сообщества!
       </p>
 
       <form id="donationForm" onsubmit="submitDonation(event)">
-        <input type="hidden" id="tierTitleInput" value="Месяц жизни VPS-сервера">
+        <input type="hidden" id="tierTitleInput" value="+10 ГБ SSD под векторные границы ООПТ">
 
         <div class="row g-3 mb-3">
           <!-- Callsign / Name -->
@@ -385,11 +566,11 @@ export function renderDonateHtml(options = {}) {
           <div class="col-md-6">
             <label for="donorAmount" class="form-label small text-secondary fw-semibold">Сумма поддержки (₽)</label>
             <div class="input-group">
-              <input type="number" class="form-control" id="donorAmount" value="450" min="0" step="50" placeholder="Сумма в рублях">
+              <input type="number" class="form-control" id="donorAmount" value="800" min="0" step="50" placeholder="Сумма в рублях">
               <span class="input-group-text bg-dark text-secondary border-secondary">₽</span>
             </div>
             <div class="form-text text-secondary" id="selectedTierLabel">
-              Выбран вариант: <strong>Месяц жизни VPS-сервера</strong>
+              Выбран вариант: <strong>+10 ГБ SSD под векторные границы ООПТ</strong>
             </div>
           </div>
 
@@ -410,7 +591,7 @@ export function renderDonateHtml(options = {}) {
 
         <!-- Submit Button -->
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <button type="submit" class="btn btn-success fw-bold px-4 py-2 d-inline-flex align-items-center gap-2 shadow" id="submitBtn">
+          <button type="submit" class="btn btn-success fw-bold px-4 py-2.5 d-inline-flex align-items-center gap-2 shadow" id="submitBtn">
             <i class="bi bi-send-fill"></i> Отправить на стену признания
           </button>
           <span class="text-secondary small">
@@ -511,7 +692,7 @@ export function renderDonateHtml(options = {}) {
 
     <!-- Contact & Feedback -->
     <div class="text-center text-secondary small py-2">
-      По любым вопросам, сотрудничеству или альтернативным способам перевода:  
+      По любым вопросам, сотрудничеству или реквизитам:  
       <a href="https://t.me/r9ogl" target="_blank" class="text-warning text-decoration-none fw-semibold">@r9ogl в Telegram</a> или в наш чат <a href="https://t.me/POTA_RU" target="_blank" class="text-success text-decoration-none fw-semibold">t.me/POTA_RU</a>
     </div>
   </main>
@@ -524,6 +705,61 @@ export function renderDonateHtml(options = {}) {
   </footer>
 
   <script>
+    // Obfuscated SBP Phone (safe from search scrapers)
+    const _pData = ["+", "7", "9", "0", "3", "9", "0", "3", "6", "2", "3", "1"];
+    let isPhoneRevealed = false;
+
+    function getDecodedPhone() {
+      return _pData.join('');
+    }
+
+    function revealAndCopyPhone() {
+      const rawPhone = getDecodedPhone();
+      const formattedPhone = '+7 (903) 903-62-31';
+
+      const phoneEl = document.getElementById('phoneDisplay');
+      const btn = document.getElementById('revealPhoneBtn');
+
+      phoneEl.innerHTML = formattedPhone;
+      phoneEl.classList.remove('tracking-wider');
+      btn.innerHTML = '<i class="bi bi-check2-all text-dark"></i> <span>Скопировано!</span>';
+      btn.classList.remove('btn-warning');
+      btn.classList.add('btn-success');
+
+      navigator.clipboard.writeText(rawPhone).then(() => {
+        // Trigger small celebration confetti
+        try {
+          confetti({
+            particleCount: 35,
+            spread: 60,
+            origin: { y: 0.75 },
+            colors: ['#10b981', '#f59e0b', '#3b82f6']
+          });
+        } catch (_) {}
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Номер скопирован в буфер!',
+          html: '<b>' + formattedPhone + '</b><br><span class="small text-secondary">СБП: Т-Банк, Сбербанк или Ozon (Александр С.)</span>',
+          background: '#1e293b',
+          color: '#f8f9fa',
+          confirmButtonColor: '#10b981',
+          timer: 3500
+        });
+      }).catch(() => {
+        Swal.fire({
+          icon: 'info',
+          title: 'Номер для СБП:',
+          text: formattedPhone,
+          background: '#1e293b',
+          color: '#f8f9fa',
+          confirmButtonColor: '#10b981'
+        });
+      });
+
+      isPhoneRevealed = true;
+    }
+
     function copySbpLink() {
       const link = 'https://finance.ozon.ru/apps/sbp/ozonbankpay/01a0c427-d792-7435-8819-ce9c84f7b78e';
       navigator.clipboard.writeText(link).then(() => {
@@ -540,7 +776,7 @@ export function renderDonateHtml(options = {}) {
     }
 
     function selectTier(title, amount, element) {
-      document.querySelectorAll('.tier-card').forEach(card => card.classList.remove('active'));
+      document.querySelectorAll('.goal-card').forEach(card => card.classList.remove('active'));
       if (element) {
         element.classList.add('active');
       }
@@ -594,6 +830,14 @@ export function renderDonateHtml(options = {}) {
         const data = await res.json();
 
         if (data.ok) {
+          try {
+            confetti({
+              particleCount: 50,
+              spread: 70,
+              origin: { y: 0.6 }
+            });
+          } catch (_) {}
+
           Swal.fire({
             icon: 'success',
             title: 'Спасибо за поддержку! 🤝',
@@ -603,9 +847,9 @@ export function renderDonateHtml(options = {}) {
             confirmButtonColor: '#10b981'
           });
           document.getElementById('donationForm').reset();
-          document.getElementById('tierTitleInput').value = 'Месяц жизни VPS-сервера';
-          document.getElementById('donorAmount').value = '450';
-          document.getElementById('selectedTierLabel').innerHTML = 'Выбран вариант: <strong>Месяц жизни VPS-сервера</strong>';
+          document.getElementById('tierTitleInput').value = '+10 ГБ SSD под векторные границы ООПТ';
+          document.getElementById('donorAmount').value = '800';
+          document.getElementById('selectedTierLabel').innerHTML = 'Выбран вариант: <strong>+10 ГБ SSD под векторные границы ООПТ</strong>';
         } else {
           Swal.fire({
             icon: 'error',

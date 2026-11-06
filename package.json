@@ -1,6 +1,6 @@
 {
   "name": "ru-pota",
-  "version": "1.16.150",
+  "version": "1.16.151",
   "description": "Telegram Bot for RU-POTA (Parks on the Air) Community",
   "main": "src/bot/index.js",
   "type": "module",
@@ -13,6 +13,8 @@
     "update:oopt": "node src/scripts/downloadOopt.js",
     "harvest:oopt": "node src/scripts/harvestMinprirodaDetails.js",
     "harvest:oopt:status": "node src/scripts/harvestMinprirodaDetails.js --status",
+    "harvest:boundaries": "node src/scripts/harvestBoundaries.js",
+    "harvest:boundaries:status": "node src/scripts/harvestBoundaries.js --status",
     "webapp:dev": "vite src/webapp",
     "webapp:build": "vite build src/webapp",
     "build": "npm run webapp:build"

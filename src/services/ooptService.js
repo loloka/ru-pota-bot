@@ -4714,7 +4714,7 @@ export async function getOoptBoundary(nid) {
   }
 
   // 1. Get OOPT record from SQLite
-  const oopt = db.prepare('SELECT nid, title, category, ate, lat, lon, pota_ref, pota_name FROM oopt_registry WHERE nid = ?').get(numNid);
+  const oopt = db.prepare('SELECT nid, title, category, ate, lat, lon, pota_ref, pota_name, bbox FROM oopt_registry WHERE nid = ?').get(numNid);
   if (!oopt) {
     return { nid: numNid, hasBoundary: false, geometry: null, message: 'Объект не найден в реестре ООПТ РФ' };
   }
@@ -4801,21 +4801,35 @@ export async function getOoptBoundary(nid) {
 
     } catch (err) {
       console.warn(`[OOPT Service] ⚠️ Error fetching boundary for NID ${numNid} from Minpriroda:`, err.message);
-      return {
-        nid: numNid,
-        title: oopt.title,
-        pota_ref: oopt.pota_ref,
-        pota_name: oopt.pota_name,
-        hasBoundary: false,
-        geometry: null,
-        minprirodaCoords: (mpLat && mpLon) ? { lat: mpLat, lon: mpLon } : null,
-        potaCoords: null,
-        displacementMeters: 0,
-        isDisplaced: false,
-        isServiceUnavailable: true,
-        message: 'Не удалось загрузить границы с карты Минприроды (' + err.message + ')'
-      };
+      hasBoundary = false;
+      geometry = null;
     }
+  }
+
+  // 3b. Offline Fallback: If no detailed polygon from Minpriroda (or Minpriroda is down),
+  // but we have a valid bounding box (bbox) in SQLite, construct rectangular territory boundary!
+  let isBboxFallback = false;
+  if (!geometry && oopt.bbox) {
+    try {
+      const rawBbox = typeof oopt.bbox === 'string' ? JSON.parse(oopt.bbox) : oopt.bbox;
+      if (Array.isArray(rawBbox) && rawBbox.length === 4) {
+        const [minLon, minLat, maxLon, maxLat] = rawBbox.map(Number);
+        if (!isNaN(minLon) && !isNaN(minLat) && !isNaN(maxLon) && !isNaN(maxLat) && (minLon !== maxLon || minLat !== maxLat)) {
+          geometry = {
+            type: 'Polygon',
+            coordinates: [[
+              [minLon, minLat],
+              [maxLon, minLat],
+              [maxLon, maxLat],
+              [minLon, maxLat],
+              [minLon, minLat]
+            ]]
+          };
+          hasBoundary = true;
+          isBboxFallback = true;
+        }
+      }
+    } catch (_) {}
   }
 
   // 4. Calculate POTA coordinates & displacement if matched
@@ -4846,12 +4860,15 @@ export async function getOoptBoundary(nid) {
     pota_ref: oopt.pota_ref,
     pota_name: oopt.pota_name,
     hasBoundary,
+    isBboxFallback,
     geometry,
     minprirodaCoords: (mpLat && mpLon) ? { lat: mpLat, lon: mpLon } : null,
     potaCoords,
     displacementMeters,
     isDisplaced,
-    message: hasBoundary ? 'Границы ООПТ получены с Минприроды' : 'На карте Минприроды границы отсутствуют (только точечный объект)'
+    message: hasBoundary 
+      ? (isBboxFallback ? 'Отображён территориальный охват ООПТ (резервный контур)' : 'Границы ООПТ получены с Минприроды')
+      : 'На карте Минприроды границы отсутствуют (только точечный объект)'
   };
 }
 

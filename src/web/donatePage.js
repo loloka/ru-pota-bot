@@ -451,7 +451,7 @@ export function renderDonateHtml(options = {}) {
               </div>
 
               <div class="text-secondary-light mb-2 small">
-                🏦 <strong>Банки получателя:</strong> <strong>Т-Банк</strong> (основной), <strong>Сбербанк</strong> или <strong>Ozon Банк</strong><br>
+                🏦 <strong>Банки получателя:</strong> <strong>Сбербанк</strong> или <strong>Ozon Банк</strong><br>
                 👤 <strong>Получатель:</strong> Александр С. (позывной: <strong>R9OGL</strong>)
               </div>
 
@@ -460,7 +460,7 @@ export function renderDonateHtml(options = {}) {
                 <div class="d-flex align-items-start gap-2">
                   <span class="fs-5 text-warning lh-1">💡</span>
                   <div style="color: #f1f5f9; font-size: 13.5px; line-height: 1.5;">
-                    При переводе в графе <strong>«Сообщение получателю»</strong> вы можете указать свой <strong>позывной</strong> — мы внесём вас на Стену почёта!
+                    При переводе в графе <strong>«Сообщение получателю»</strong> вы можете указать свой <strong>позывной</strong> — мы внесём вас на Стену спонсоров!
                   </div>
                 </div>
               </div>
@@ -470,7 +470,7 @@ export function renderDonateHtml(options = {}) {
               <div class="p-4 rounded-4 bg-dark bg-opacity-50 border border-secondary border-opacity-25 text-center">
                 <i class="bi bi-phone-vibrate text-warning fs-1 d-block mb-2"></i>
                 <div class="fw-bold text-light mb-1">Любой мобильный банк</div>
-                <div class="text-secondary-light small">Сбербанк Онлайн, Т-Банк, ВТБ, Альфа, Райффайзен и др.</div>
+                <div class="text-secondary-light small">Сбербанк Онлайн, Ozon Банк, ВТБ, Альфа и др.</div>
               </div>
             </div>
           </div>
@@ -630,7 +630,7 @@ export function renderDonateHtml(options = {}) {
         <h4 class="fw-bold mb-0 text-light">Оставить след на Стене признания</h4>
       </div>
       <p class="text-secondary-light small mb-4">
-        Сделали перевод или хотите передать привет сообществу? Заполните карточку ниже. После быстрой модерации ваше пожелание и позывной появятся на Стене почёта сообщества!
+        Сделали перевод или хотите передать привет сообществу? Заполните карточку ниже. После быстрой модерации ваше пожелание и позывной появятся на Стене спонсоров сообщества!
       </p>
 
       <form id="donationForm" onsubmit="submitDonation(event)">
@@ -863,7 +863,7 @@ export function renderDonateHtml(options = {}) {
         Swal.fire({
           icon: 'success',
           title: 'Номер скопирован в буфер!',
-          html: '<b>' + formattedPhone + '</b><br><span class="small text-secondary-light">СБП: Т-Банк, Сбербанк или Ozon (Александр С.)</span>',
+          html: '<b>' + formattedPhone + '</b><br><span class="small text-secondary-light">СБП: Сбербанк или Ozon Банк (Александр С.)</span>',
           background: '#1e293b',
           color: '#f8f9fa',
           confirmButtonColor: '#10b981',

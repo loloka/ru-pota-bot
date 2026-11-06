@@ -1,5 +1,13 @@
 # История изменений (Changelog)
 
+## [1.16.156] - 2026-11-06 (Donate Banking & Terminology Update: Sberbank / Ozon Only, Wall of Sponsors)
+### Улучшения страницы поддержки
+- **Обновление банков и формулировок (`src/web/donatePage.js`):**
+  - Убраны упоминания Т-Банка — оставлены исключительно **Сбербанк** и **Ozon Банк**.
+  - Термин «Стена почёта» заменён на **«Стена спонсоров»** во всех подсказках и формах.
+- **Синхронизация версий:**
+  - Версия повышена до `1.16.156` во всех ключевых файлах (`package.json`, `src/bot/index.js`, `src/api/potaApi.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.155] - 2026-11-06 (Donate UX Polish: Fix QR Tab Switcher, High-Contrast Text & Badges, Restore 1500₽ Dev Tier)
 ### Улучшения веб-портала и страницы поддержки
 - **Исправление переключателя вкладок СБП (`src/web/donatePage.js`):**

@@ -837,6 +837,31 @@ export function renderDonateHtml(options = {}) {
       return _pData.join('');
     }
 
+    function copyToClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text).catch(() => {
+          fallbackCopyText(text);
+        });
+      }
+      fallbackCopyText(text);
+      return Promise.resolve();
+    }
+
+    function fallbackCopyText(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+      } catch (_) {}
+      document.body.removeChild(ta);
+    }
+
     function revealAndCopyPhone() {
       const rawPhone = getDecodedPhone();
       const formattedPhone = '+7 (903) 903-62-31';
@@ -850,7 +875,8 @@ export function renderDonateHtml(options = {}) {
       btn.classList.remove('btn-warning');
       btn.classList.add('btn-success');
 
-      navigator.clipboard.writeText(rawPhone).then(() => {
+      fallbackCopyText(rawPhone);
+      copyToClipboard(rawPhone).then(() => {
         try {
           confetti({
             particleCount: 35,
@@ -885,7 +911,8 @@ export function renderDonateHtml(options = {}) {
 
     function copySbpLink() {
       const link = 'https://finance.ozon.ru/apps/sbp/ozonbankpay/01a0c427-d792-7435-8819-ce9c84f7b78e';
-      navigator.clipboard.writeText(link).then(() => {
+      fallbackCopyText(link);
+      copyToClipboard(link).then(() => {
         Swal.fire({
           icon: 'success',
           title: 'Ссылка СБП скопирована!',

@@ -1,5 +1,12 @@
 # История изменений (Changelog)
 
+## [1.16.158] - 2026-11-06 (Mobile Clipboard Fallback & Rock-Solid Phone Copying)
+### Улучшения страницы поддержки
+- **Отказоустойчивое копирование на смартфонах (`src/web/donatePage.js`):**
+  - Добавлен синхронный фоллбек `document.execCommand('copy')` через скрытый `textarea` в дополнение к `navigator.clipboard.writeText`. Это решает проблему блокировок буфера обмена в мобильных браузерах (iOS Safari, Android WebView) с первого касания.
+- **Синхронизация версий:**
+  - Версия повышена до `1.16.158` во всех ключевых файлах (`package.json`, `src/bot/index.js`, `src/api/potaApi.js`, `README.md`, `README.en.md`, `CHANGELOG.md`).
+
 ## [1.16.157] - 2026-11-06 (Donate Copy Edit: Private Team Funding Wording)
 ### Корректировка текстов страницы поддержки
 - **Обновление описания (`src/web/donatePage.js`):**

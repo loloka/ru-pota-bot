@@ -286,6 +286,17 @@ export function renderDonateHtml(options = {}) {
       padding: 3px 10px;
       border-radius: 8px;
     }
+    .donor-amount-badge {
+      background: rgba(245, 158, 11, 0.15) !important;
+      color: #fbbf24 !important;
+      border: 1.5px solid rgba(245, 158, 11, 0.45) !important;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 8px;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
 
     .form-label {
       color: #f1f5f9 !important;
@@ -772,7 +783,7 @@ export function renderDonateHtml(options = {}) {
                         <strong class="text-light fs-6">${displayName}</strong>
                         ${roleBadge}
                       </div>
-                      ${amountText ? `<span class="badge bg-warning bg-opacity-20 text-warning border border-warning border-opacity-25">${amountText}</span>` : ''}
+                      ${amountText ? `<span class="donor-amount-badge">${amountText}</span>` : ''}
                     </div>
                     ${tierText ? `<div class="small text-info mb-1"><i class="bi bi-tag-fill me-1"></i>${tierText}</div>` : ''}
                     ${message ? `<div class="small text-secondary-light fst-italic mt-2">«${message}»</div>` : ''}

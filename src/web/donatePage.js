@@ -532,15 +532,15 @@ export function renderDonateHtml(options = {}) {
       <div class="row g-3">
         <!-- Target 1: Memory & Boundaries Storage -->
         <div class="col-md-6 col-lg-4">
-          <div class="goal-card active pulse-target" onclick="selectTier('+10 ГБ SSD под векторные границы ООПТ', 800, this)">
+          <div class="goal-card active pulse-target" onclick="selectTier('Дополнительное место на диске под границы ООПТ', 800, this)">
             <i class="bi bi-check-circle-fill selected-check"></i>
             <div>
               <span class="goal-badge badge-storage">
                 <i class="bi bi-hdd-network"></i> Хранилище
               </span>
-              <div class="fw-bold text-light mb-1 fs-6">+10 ГБ SSD под границы ООПТ</div>
+              <div class="fw-bold text-light mb-1 fs-6">Доп. место на диске</div>
               <div class="text-secondary-light small lh-sm">
-                Дополнительный диск на год для локального хранения 11 000+ полигонов и кэша карты без зависимости от Минприроды.
+                Дополнительное место на диске на год для локального хранения 11 000+ полигонов и кэша карты без зависимости от Минприроды.
               </div>
             </div>
             <div class="fw-bold text-warning fs-5 mt-3">800 ₽ <span class="small text-secondary-light fw-normal">/ год</span></div>
@@ -549,7 +549,7 @@ export function renderDonateHtml(options = {}) {
 
         <!-- Target 2: Dedicated RU-POTA Domain -->
         <div class="col-md-6 col-lg-4">
-          <div class="goal-card" onclick="selectTier('Свой домен для проекта RU-POTA (1-й год + продление)', 120, this)">
+          <div class="goal-card" onclick="selectTier('Свой домен для проекта RU-POTA (1-й год + продление)', 160, this)">
             <i class="bi bi-check-circle-fill selected-check"></i>
             <div>
               <span class="goal-badge badge-domain">
@@ -557,10 +557,10 @@ export function renderDonateHtml(options = {}) {
               </span>
               <div class="fw-bold text-light mb-1 fs-6">Свой домен для проекта</div>
               <div class="text-secondary-light small lh-sm">
-                Регистрация отдельного имени для сайта, карты и Mini App. <strong>120 ₽</strong> на 1-й год (+1 200 ₽ продление на следующий год).
+                Регистрация отдельного имени для сайта, карты и Mini App. <strong>160 ₽</strong> на 1-й год (+1 200 ₽ продление на следующий год).
               </div>
             </div>
-            <div class="fw-bold text-info fs-5 mt-3">120 ₽ <span class="small text-secondary-light fw-normal">(+1 200 ₽ след. год)</span></div>
+            <div class="fw-bold text-info fs-5 mt-3">160 ₽ <span class="small text-secondary-light fw-normal">(+1 200 ₽ след. год)</span></div>
           </div>
         </div>
 
@@ -645,7 +645,7 @@ export function renderDonateHtml(options = {}) {
       </p>
 
       <form id="donationForm" onsubmit="submitDonation(event)">
-        <input type="hidden" id="tierTitleInput" value="+10 ГБ SSD под векторные границы ООПТ">
+        <input type="hidden" id="tierTitleInput" value="Дополнительное место на диске под границы ООПТ">
 
         <div class="row g-3 mb-3">
           <!-- Callsign / Name -->
@@ -685,7 +685,7 @@ export function renderDonateHtml(options = {}) {
               <span class="input-group-text bg-dark text-secondary-light border-secondary">₽</span>
             </div>
             <div class="form-text" id="selectedTierLabel">
-              Выбран вариант: <strong>+10 ГБ SSD под векторные границы ООПТ</strong>
+              Выбран вариант: <strong>Дополнительное место на диске под границы ООПТ</strong>
             </div>
           </div>
 
@@ -1008,9 +1008,9 @@ export function renderDonateHtml(options = {}) {
             confirmButtonColor: '#10b981'
           });
           document.getElementById('donationForm').reset();
-          document.getElementById('tierTitleInput').value = '+10 ГБ SSD под векторные границы ООПТ';
+          document.getElementById('tierTitleInput').value = 'Дополнительное место на диске под границы ООПТ';
           document.getElementById('donorAmount').value = '800';
-          document.getElementById('selectedTierLabel').innerHTML = 'Выбран вариант: <strong>+10 ГБ SSD под векторные границы ООПТ</strong>';
+          document.getElementById('selectedTierLabel').innerHTML = 'Выбран вариант: <strong>Дополнительное место на диске под границы ООПТ</strong>';
         } else {
           Swal.fire({
             icon: 'error',

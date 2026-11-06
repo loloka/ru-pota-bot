@@ -6207,27 +6207,22 @@ export const startAdminServer = (telegramClient) => {
                 var statusHtml = '';
 
                 if (data.hasBoundary && data.geometry) {
-                  var isFb = Boolean(data.isBboxFallback);
                   var polyLayer = L.geoJSON(data.geometry, {
                     style: {
-                      color: isFb ? '#f59e0b' : '#d63384',
-                      weight: isFb ? 2 : 2.5,
-                      dashArray: isFb ? '6, 6' : null,
+                      color: '#d63384',
+                      weight: 2.5,
                       opacity: 0.9,
-                      fillColor: isFb ? '#f59e0b' : '#e0245e',
-                      fillOpacity: isFb ? 0.15 : 0.22
+                      fillColor: '#e0245e',
+                      fillOpacity: 0.22
                     }
                   });
                   mapBoundaryGroup.addLayer(polyLayer);
 
-                  var badgeTitle = isFb ? '📐 Охват ООПТ (резервный)' : '📐 Границы Минприроды';
-                  var badgeColor = isFb ? '#f59e0b' : '#d63384';
-
-                  statusHtml += '<div style="color:' + badgeColor + '; font-size:11px; font-weight:600; margin-top:4px; display:flex; align-items:center; justify-content:space-between; gap:4px;">' +
-                    '<span>' + badgeTitle + '</span>' +
+                  statusHtml += '<div style="color:#d63384; font-size:11px; font-weight:600; margin-top:4px; display:flex; align-items:center; justify-content:space-between; gap:4px;">' +
+                    '<span>📐 Границы Минприроды</span>' +
                     '<div style="display:flex; gap:4px;">' +
                       '<button type="button" class="btn btn-xs btn-outline-secondary btn-toggle-card-collapse" onclick="window.toggleOoptCardCollapse(this, event)" style="font-size:10px; padding:1px 6px; border:1px solid #ced4da; border-radius:3px; color:#495057; background:#f8f9fa; cursor:pointer;" title="Свернуть карточку, чтобы открыть границы ООПТ">⭐ Свернуть</button>' +
-                      '<button type="button" class="btn btn-xs btn-outline-danger btn-zoom-boundary" onclick="window.zoomOoptBoundary(event)" style="font-size:10px; padding:1px 6px; border:1px solid ' + badgeColor + '; border-radius:3px; color:' + badgeColor + '; background:none; cursor:pointer;" title="Показать весь полигон ООПТ">🔍 Весь полигон</button>' +
+                      '<button type="button" class="btn btn-xs btn-outline-danger btn-zoom-boundary" onclick="window.zoomOoptBoundary(event)" style="font-size:10px; padding:1px 6px; border:1px solid #d63384; border-radius:3px; color:#d63384; background:none; cursor:pointer;" title="Показать весь полигон ООПТ">🔍 Весь полигон</button>' +
                     '</div>' +
                   '</div>';
                 } else if (data.isServiceUnavailable) {

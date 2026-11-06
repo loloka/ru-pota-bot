@@ -885,24 +885,20 @@ export function renderPublicMapHtml(options = {}) {
         }
 
         if (data && data.geometry) {
-          const isFallback = Boolean(data.isBboxFallback);
           currentBoundaryLayer = L.geoJSON(data.geometry, {
             style: {
-              color: isFallback ? '#f59e0b' : '#10b981',
-              weight: isFallback ? 2 : 2.5,
+              color: '#10b981',
+              weight: 2.5,
               opacity: 0.9,
-              dashArray: isFallback ? '6, 6' : null,
-              fillColor: isFallback ? '#f59e0b' : '#10b981',
-              fillOpacity: isFallback ? 0.15 : 0.25
+              fillColor: '#10b981',
+              fillOpacity: 0.25
             }
           }).addTo(map);
 
           window._lastBoundaryBounds = currentBoundaryLayer.getBounds();
 
           if (statusEl) {
-            statusEl.innerHTML = isFallback
-              ? '<span class="text-warning fw-semibold"><i class="bi bi-bounding-box"></i> Охват территории ООПТ (резервный контур)</span>'
-              : '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Официальные границы Минприроды</span>';
+            statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Официальные границы Минприроды</span>';
           }
         } else if (data && data.isServiceUnavailable) {
           if (statusEl) {

@@ -685,7 +685,7 @@ export function renderPublicMapHtml(options = {}) {
             groupRestricted.appendChild(opt);
           } else {
             opt.textContent = \`\${r.name} (\${r.code}) — \${r.matchedParks || 0} парков\`;
-            if (r.zone === 'asia') {
+            if (r.entityGroup === 'asia' || r.zone === 'asia') {
               groupAsia.appendChild(opt);
             } else {
               groupEurope.appendChild(opt);
@@ -693,9 +693,9 @@ export function renderPublicMapHtml(options = {}) {
           }
         });
 
-        sel.appendChild(groupEurope);
-        sel.appendChild(groupAsia);
-        sel.appendChild(groupRestricted);
+        if (groupEurope.children.length > 0) sel.appendChild(groupEurope);
+        if (groupAsia.children.length > 0) sel.appendChild(groupAsia);
+        if (groupRestricted.children.length > 0) sel.appendChild(groupRestricted);
       } catch (err) {
         console.warn('Error loading regions:', err);
       }

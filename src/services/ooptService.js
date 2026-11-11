@@ -2009,6 +2009,7 @@ export function getRegionalPotaStats() {
       name,
       dxEntity: dx,
       entityGroup,
+      zone: entityGroup,
       totalParks: 0,
       matchedParks: 0,
       unmatchedParks: 0,

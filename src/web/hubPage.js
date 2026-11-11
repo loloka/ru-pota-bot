@@ -785,6 +785,8 @@ export function renderHubHtml(options = {}) {
         <span>•</span>
         <a href="https://pota.app" target="_blank" class="text-muted text-decoration-none hover-white">pota.app ↗</a>
         <span>•</span>
+        <a href="https://r9o.ru/library" target="_blank" class="text-muted text-decoration-none hover-white" title="Радиолюбительские статьи, схемы и книги">Библиотека R9O ↗</a>
+        <span>•</span>
         <a href="/contacts" class="text-muted text-decoration-none hover-white">Контакты</a>
       </div>
       <div>

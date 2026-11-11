@@ -1,6 +1,6 @@
 # RU-POTA Telegram Bot & Mini App 🌲📡
 
-[![Version](https://img.shields.io/badge/version-1.16.161-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.17.2-blue.svg)](package.json)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![Telegraf](https://img.shields.io/badge/telegraf-4.x-orange.svg)](https://telegraf.js.org/)
 [![Database](https://img.shields.io/badge/SQLite-better--sqlite3%20(WAL)-lightgrey.svg)](https://github.com/WiseLibs/better-sqlite3)
@@ -18,12 +18,15 @@ The bot connects the Telegram community, the official POTA cluster API, personal
 
 | Resource | Link | Description |
 |---|---|---|
-| 📖 **Community Handbook** | [pota.r9o.ru/guide](https://pota.r9o.ru/guide) / [PDF](https://pota.r9o.ru/guide.pdf) | Official guide, protected area rules, quick start memo |
+| 🌲 **RU-POTA Web Hub** | [rupota.ru](https://rupota.ru/) | Central web portal: navigation, live spots, schedules and auth |
+| 🗺️ **Interactive Map** | [rupota.ru/map](https://rupota.ru/map) | Protected areas (OOPT), RDA districts, reserve borders and GPS |
+| 📖 **Community Handbook** | [rupota.ru/guide](https://rupota.ru/guide) / [PDF](https://rupota.ru/guide.pdf) | Official guide, protected area rules, quick start memo |
 | 🤖 **Telegram Bot** | [@ru_pota_bot](https://t.me/ru_pota_bot) | Main bot for spotting, subscriptions, and profile statistics |
 | 📱 **Telegram Mini App** | [t.me/ru_pota_bot/app](https://t.me/ru_pota_bot/app) | Fullscreen mobile hub: map, live cluster, directory & spotting |
-| 🌐 **Web Version** | [pota.r9o.ru/app/](https://pota.r9o.ru/app/) | Public guest access from any PC or mobile browser |
+| 🌐 **Web Version** | [rupota.ru/app/](https://rupota.ru/app/) | Public guest access from any PC or mobile browser |
 | 📢 **Activity Channel** | [@pota_activity](https://t.me/pota_activity) | Live broadcast of cluster spots and activator field announcements |
-| 💬 **Community Chat** | [RU-POTA Chat](https://t.me/pota_activity) | Open discussion group (tap "Discuss" in the channel) |
+| 💬 **Community Chat** | [@POTA_RU](https://t.me/POTA_RU) | Open discussion group for operators and hunters |
+| 💛 **Support & Wall of Fame** | [rupota.ru/donate](https://rupota.ru/donate) | Wall of appreciation and community hosting funding |
 | 🌐 **Official POTA** | [pota.app](https://pota.app) / [next.pota.app](https://next.pota.app) | International award program portal |
 
 ---

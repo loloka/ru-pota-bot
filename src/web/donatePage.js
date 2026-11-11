@@ -27,6 +27,8 @@ function formatRoleBadge(role) {
 
 export function renderDonateHtml(options = {}) {
   const isAuthed = Boolean(options.isAuthed);
+  const isAdmin = Boolean(options.isAdmin);
+  const user = options.user || null;
   const approvedDonations = Array.isArray(options.approvedDonations) ? options.approvedDonations : [];
 
   return `<!DOCTYPE html>
@@ -345,17 +347,19 @@ export function renderDonateHtml(options = {}) {
   <header class="header-nav py-2 px-3 sticky-top">
     <div class="container d-flex align-items-center justify-content-between">
       <div class="d-flex align-items-center gap-3">
-        <a href="/" class="brand-link fs-5">
-          <span>🌲</span>
-          <span>RU-POTA</span>
+        <a href="/" class="brand-link fs-5 text-decoration-none">
+          <div class="d-inline-flex align-items-center bg-white px-2 py-1 rounded-3 shadow-sm" style="line-height: 1;">
+            <img src="/assets/pota-logo.png" alt="POTA" style="width: 20px; height: 20px; object-fit: contain; margin-right: 5px;" />
+            <span style="color: #059669; font-weight: 900; font-size: 14px; letter-spacing: -0.3px;">RU POTA</span>
+          </div>
         </a>
-        <a href="/" class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1">
+        <a href="/map" class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1">
           <i class="bi bi-map"></i> Карта RU-POTA
         </a>
         <a href="/guide" class="btn btn-sm btn-outline-info d-none d-md-inline-flex align-items-center gap-1">
           <i class="bi bi-journal-text"></i> Гайд
         </a>
-        <a href="https://pota.r9o.ru/app/" class="btn btn-sm btn-outline-success d-none d-md-inline-flex align-items-center gap-1">
+        <a href="https://pota.r9o.ru/app/" target="_blank" class="btn btn-sm btn-outline-success d-none d-md-inline-flex align-items-center gap-1.5" title="Запустить Telegram Mini App">
           <i class="bi bi-phone"></i> Mini App
         </a>
         <a href="/contacts" class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1">
@@ -364,13 +368,17 @@ export function renderDonateHtml(options = {}) {
       </div>
 
       <div class="d-flex align-items-center gap-2">
-        ${isAuthed ? `
+        ${isAdmin ? `
           <a href="/admin" class="btn btn-sm btn-primary">
-            <i class="bi bi-speedometer2"></i> Админ-панель
+            <i class="bi bi-speedometer2"></i> Админка
+          </a>
+        ` : user ? `
+          <a href="/me" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-person-fill"></i> ${escapeHtml(user.callsign || user.first_name || 'Профиль')}
           </a>
         ` : `
-          <a href="/login" class="btn btn-sm btn-outline-light" title="Вход для региональных координаторов">
-            <i class="bi bi-lock"></i> Координаторам
+          <a href="/me" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-box-arrow-in-right"></i> Войти
           </a>
         `}
       </div>

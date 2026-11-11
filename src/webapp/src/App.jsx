@@ -17,7 +17,22 @@ import { api } from './services/api.js';
 import { getTranslation } from './services/i18n.js';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = (params.get('tab') || '').toLowerCase();
+      if (tabParam === 'spots' || tabParam === 'cluster') return 'cluster';
+      if (tabParam === 'map') return 'map';
+      if (tabParam === 'profile') return 'profile';
+      if (tabParam === 'subs' || tabParam === 'subscriptions') return 'subscriptions';
+      const hash = (window.location.hash || '').replace('#', '').toLowerCase();
+      if (hash === 'spots' || hash === 'cluster') return 'cluster';
+      if (hash === 'map') return 'map';
+      if (hash === 'profile') return 'profile';
+      if (hash === 'subs' || hash === 'subscriptions') return 'subscriptions';
+    } catch (_) {}
+    return 'dashboard';
+  });
   const [clusterFilter, setClusterFilter] = useState({ scope: 'ru', search: '' });
   
   // Theme state with localStorage persistence

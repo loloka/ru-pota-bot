@@ -6,6 +6,9 @@
 
 export function renderPublicMapHtml(options = {}) {
   const isAuthed = Boolean(options.isAuthed);
+  const isAdmin = Boolean(options.isAdmin);
+  const user = options.user || null;
+  const displayName = user?.callsign || user?.first_name || '';
 
   return `<!DOCTYPE html>
 <html lang="ru">
@@ -50,6 +53,28 @@ export function renderPublicMapHtml(options = {}) {
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       z-index: 1000;
       position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+    .header-search-region-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1 1 auto;
+      max-width: 580px;
+      margin: 0 16px;
+    }
+    #region-select-wrapper {
+      min-width: 190px;
+      max-width: 260px;
+      flex: 1 1 230px;
+    }
+    #search-box-wrapper {
+      position: relative;
+      min-width: 190px;
+      flex: 1 1 280px;
     }
     #map-container {
       height: calc(100vh - var(--header-height));
@@ -70,6 +95,7 @@ export function renderPublicMapHtml(options = {}) {
       text-decoration: none;
       letter-spacing: -0.3px;
       line-height: 1;
+      flex-shrink: 0;
     }
     .brand-title:hover {
       color: #10b981;
@@ -259,11 +285,83 @@ export function renderPublicMapHtml(options = {}) {
     }
 
     @media (max-width: 768px) {
-      .hide-mobile {
-        display: none !important;
+      :root {
+        --header-height: 94px;
+      }
+      #public-header {
+        height: var(--header-height);
+        flex-direction: column;
+        justify-content: center;
+        padding: 6px 12px !important;
+        gap: 6px;
+      }
+      .header-brand-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+      .header-search-region-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        margin: 0 !important;
+        max-width: 100% !important;
+      }
+      #region-select-wrapper {
+        flex: 1 1 45%;
+        min-width: 0;
+        max-width: none;
+      }
+      #search-box-wrapper {
+        flex: 1 1 55%;
+        min-width: 0;
+      }
+      #region-select {
+        height: 32px;
+        font-size: 12px;
+        padding: 2px 22px 2px 8px;
+        text-overflow: ellipsis;
+      }
+      #search-input {
+        height: 32px;
+        font-size: 12px;
+        padding: 2px 6px;
+      }
+      #search-suggestions {
+        position: fixed !important;
+        top: 96px !important;
+        left: 8px !important;
+        right: 8px !important;
+        max-height: 60vh !important;
+        z-index: 2000 !important;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.8) !important;
       }
       .brand-title .logo-text {
         font-size: 16px;
+      }
+      .map-floating-panel {
+        top: 8px !important;
+        left: 8px !important;
+        padding: 4px 10px !important;
+        max-width: calc(100vw - 16px) !important;
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        -webkit-overflow-scrolling: touch;
+      }
+      .filter-chip {
+        padding: 3px 8px !important;
+        font-size: 11px !important;
+      }
+      .map-floating-legend {
+        bottom: 8px !important;
+        left: 8px !important;
+        padding: 4px 10px !important;
+        font-size: 10.5px !important;
+        gap: 8px !important;
+        max-width: calc(100vw - 16px) !important;
+        overflow-x: auto !important;
       }
     }
   </style>
@@ -271,23 +369,64 @@ export function renderPublicMapHtml(options = {}) {
 <body>
 
   <!-- Top Navigation Header -->
-  <header id="public-header" class="d-flex align-items-center justify-content-between px-3">
-    <!-- Left: Aligned Brand & Navigation Links -->
-    <div class="d-flex align-items-center gap-2 gap-md-3">
-      <a href="/" class="brand-title">
-        <span class="logo-icon">🌲</span>
-        <span class="logo-text">RU-POTA</span>
-      </a>
+  <header id="public-header">
+    
+    <!-- Top Row (On desktop: aligned left with brand; On mobile: top row across screen) -->
+    <div class="header-brand-actions d-flex align-items-center justify-content-between">
+      
+      <!-- Brand & Home Link -->
+      <div class="d-flex align-items-center">
+        <a href="/" class="brand-title" title="RU-POTA Главная">
+          <img src="/assets/pota-logo.png" alt="POTA" style="width: 20px; height: 20px; object-fit: contain; margin-right: 4px;" />
+          <span class="logo-text">RU-POTA</span>
+        </a>
+      </div>
 
+      <!-- Mobile Right Quick Actions & Menu (<= 768px) -->
+      <div class="d-flex d-md-none align-items-center gap-1.5">
+        <a href="/donate" class="btn btn-sm btn-warning fw-semibold d-inline-flex align-items-center gap-1 shadow-sm text-dark py-1 px-2" style="font-size: 12px;" title="Поддержать проект">
+          <i class="bi bi-heart-fill text-danger"></i>
+          <span>Поддержать</span>
+        </a>
+
+        <!-- Mobile More Menu Dropdown -->
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-secondary py-1 px-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Меню">
+            <i class="bi bi-three-dots-vertical"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" style="min-width: 210px; z-index: 2005;">
+            <li><a class="dropdown-item" href="/"><i class="bi bi-grid-fill text-success me-2"></i>Хаб RU-POTA</a></li>
+            <li><a class="dropdown-item" href="/guide"><i class="bi bi-journal-text text-info me-2"></i>Гайд и регламент</a></li>
+            <li><a class="dropdown-item" href="https://pota.r9o.ru/app/" target="_blank"><i class="bi bi-phone text-success me-2"></i>Mini App</a></li>
+            <li><a class="dropdown-item" href="/donate"><i class="bi bi-heart-fill text-danger me-2"></i>Поддержать проект</a></li>
+            <li><a class="dropdown-item" href="/contacts"><i class="bi bi-info-circle text-secondary me-2"></i>Контакты</a></li>
+            <li><a class="dropdown-item" href="/chat"><i class="bi bi-chat-dots text-primary me-2"></i>Чат сообщества</a></li>
+            <li><hr class="dropdown-divider"></li>
+            ${user ? `
+              <li><a class="dropdown-item" href="/me"><i class="bi bi-person-fill text-success me-2"></i>Кабинет (${displayName})</a></li>
+            ` : `
+              <li><a class="dropdown-item" href="/me"><i class="bi bi-box-arrow-in-right text-success me-2"></i>Войти в кабинет</a></li>
+            `}
+            ${isAdmin ? `
+              <li><a class="dropdown-item text-primary" href="/admin"><i class="bi bi-gear-fill me-2"></i>Панель координатора</a></li>
+            ` : ''}
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Center Group: Region Selector & Live Search (Inline on desktop, full-width 2nd row on mobile) -->
+    <div class="header-search-region-group">
       <!-- Region Dropdown with Groups -->
-      <div style="min-width: 200px; max-width: 280px;" class="hide-mobile">
+      <div id="region-select-wrapper">
         <select id="region-select" class="form-select form-select-sm bg-dark text-light border-secondary">
           <option value="">🇷🇺 Вся Россия (обзор)</option>
         </select>
       </div>
 
       <!-- Live Search Input with Autocomplete -->
-      <div id="search-box-wrapper" style="width: 240px;" class="hide-mobile">
+      <div id="search-box-wrapper">
         <div class="input-group input-group-sm">
           <span class="input-group-text bg-dark border-secondary text-secondary"><i class="bi bi-search"></i></span>
           <input type="text" id="search-input" class="form-control bg-dark text-light border-secondary" placeholder="Парк, RDA, ООПТ, город..." autocomplete="off">
@@ -296,8 +435,8 @@ export function renderPublicMapHtml(options = {}) {
       </div>
     </div>
 
-    <!-- Right: Navigation Buttons -->
-    <div class="d-flex align-items-center gap-2">
+    <!-- Desktop Right Navigation Buttons (Hidden on mobile) -->
+    <div class="d-none d-md-flex align-items-center gap-2">
       <!-- Direct Mini App link -->
       <a href="https://pota.r9o.ru/app/" target="_blank" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1.5" title="Запустить Telegram Mini App">
         <i class="bi bi-phone"></i>
@@ -311,7 +450,7 @@ export function renderPublicMapHtml(options = {}) {
       </a>
 
       <!-- Contacts Page -->
-      <a href="/contacts" class="btn btn-sm btn-outline-secondary d-none d-sm-inline-flex align-items-center gap-1">
+      <a href="/contacts" class="btn btn-sm btn-outline-secondary d-none d-md-inline-flex align-items-center gap-1" title="Контакты и координаторы">
         <i class="bi bi-info-circle"></i>
         <span>Контакты</span>
       </a>
@@ -322,19 +461,25 @@ export function renderPublicMapHtml(options = {}) {
         <span>Поддержать</span>
       </a>
 
-      <!-- Reps & Admin Login (Clear distinction: closed portal for reps & coordinators) -->
-      ${isAuthed ? `
-        <a href="/admin" class="btn btn-sm btn-primary d-flex align-items-center gap-1" title="Перейти в панель управления координатора">
+      <!-- Reps & Admin link only when admin -->
+      ${isAdmin ? `
+        <a href="/admin" class="btn btn-sm btn-primary d-flex align-items-center gap-1" title="Панель управления координатора">
           <i class="bi bi-speedometer2"></i>
           <span>Админка</span>
         </a>
+      ` : user ? `
+        <a href="/me" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1" title="Личный кабинет">
+          <i class="bi bi-person-fill"></i>
+          <span>${displayName}</span>
+        </a>
       ` : `
-        <a href="/login" class="btn btn-sm btn-outline-light d-flex align-items-center gap-1" title="Вход в закрытую систему для региональных представителей и координаторов программы POTA">
-          <i class="bi bi-lock-fill text-warning"></i>
-          <span class="hide-mobile">Координаторам</span>
+        <a href="/me" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1" title="Войти в личный кабинет">
+          <i class="bi bi-box-arrow-in-right"></i>
+          <span>Войти</span>
         </a>
       `}
     </div>
+
   </header>
 
   <!-- Main Map Container -->
@@ -353,13 +498,13 @@ export function renderPublicMapHtml(options = {}) {
         <!-- POTA Parks Toggle Chip -->
         <div class="filter-chip active-pota" id="chip-pota" onclick="toggleLayerFilter('pota')">
           <i class="bi bi-star-fill text-warning"></i>
-          <span>Парки POTA (<strong id="count-pota">...</strong>)</span>
+          <span><span class="d-none d-sm-inline">Парки </span>POTA (<strong id="count-pota">...</strong>)</span>
         </div>
 
         <!-- Candidate OOPT Toggle Chip -->
         <div class="filter-chip active-candidates" id="chip-candidates" onclick="toggleLayerFilter('candidates')">
           <i class="bi bi-tree-fill text-secondary"></i>
-          <span>Кандидаты ООПТ (<strong id="count-candidates">...</strong>)</span>
+          <span><span class="d-none d-sm-inline">Кандидаты </span>ООПТ (<strong id="count-candidates">...</strong>)</span>
         </div>
 
         <!-- Prominent Layers Dropdown Button -->
@@ -483,6 +628,13 @@ export function renderPublicMapHtml(options = {}) {
       });
 
       L.control.zoom({ position: 'topright' }).addTo(map);
+
+      window.addEventListener('resize', () => {
+        if (map) map.invalidateSize();
+      });
+      window.addEventListener('orientationchange', () => {
+        setTimeout(() => { if (map) map.invalidateSize(); }, 200);
+      });
 
       // Default base layer (2GIS Russia)
       baseLayer = L.tileLayer(BASE_MAPS.twogis.url, {

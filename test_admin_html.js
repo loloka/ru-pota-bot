@@ -27,13 +27,37 @@ try {
   assert.ok(setCookies.length > 0, 'Must receive session cookies');
   const cookieHeader = setCookies.map(c => c.split(';')[0]).join('; ');
 
-  // 2. Fetch Public Map (Root /)
-  const publicRes = await fetch('http://127.0.0.1:9995/');
-  assert.strictEqual(publicRes.status, 200, 'Public map must return 200 OK');
-  const publicHtml = await publicRes.text();
-  assert.ok(publicHtml.includes('RU-POTA'), 'Public map must contain RU-POTA brand');
+  // 2. Fetch Hub Portal (Root /)
+  const hubRes = await fetch('http://127.0.0.1:9995/');
+  assert.strictEqual(hubRes.status, 200, 'Hub root must return 200 OK');
+  const hubHtml = await hubRes.text();
+  assert.ok(hubHtml.includes('RU-POTA'), 'Hub page must contain RU-POTA brand');
+  assert.ok(hubHtml.includes('Портал-хаб') || hubHtml.includes('Хаб'), 'Hub page must contain Hub title');
 
-  // 2b. Fetch Donate & Contacts pages
+  // 2b. Fetch Dedicated Public Map (/map)
+  const mapRes = await fetch('http://127.0.0.1:9995/map');
+  assert.strictEqual(mapRes.status, 200, 'Map page must return 200 OK');
+  const mapHtml = await mapRes.text();
+  assert.ok(mapHtml.includes('leaflet') || mapHtml.includes('map-container'), 'Map page must contain map container');
+
+  // 2c. Backward compatibility query redirect to /map
+  const mapRedirectRes = await fetch('http://127.0.0.1:9995/?ref=RU-0001', { redirect: 'manual' });
+  assert.strictEqual(mapRedirectRes.status, 302, 'Map params on root must redirect (302)');
+  assert.ok(mapRedirectRes.headers.get('location').includes('/map?ref=RU-0001'), 'Must redirect to /map with query');
+
+  // 2d. Fetch Sections: Spots, Schedule, Parks, Chat, Me, Guide
+  const spotsRes = await fetch('http://127.0.0.1:9995/spots');
+  assert.strictEqual(spotsRes.status, 200, 'Spots page must return 200 OK');
+  const scheduleRes = await fetch('http://127.0.0.1:9995/schedule');
+  assert.strictEqual(scheduleRes.status, 200, 'Schedule page must return 200 OK');
+  const parksRes = await fetch('http://127.0.0.1:9995/parks');
+  assert.strictEqual(parksRes.status, 200, 'Parks page must return 200 OK');
+  const meRes = await fetch('http://127.0.0.1:9995/me');
+  assert.strictEqual(meRes.status, 200, 'Me page must return 200 OK');
+  const chatRes = await fetch('http://127.0.0.1:9995/chat', { redirect: 'manual' });
+  assert.strictEqual(chatRes.status, 302, 'Chat route must redirect (302)');
+
+  // 2e. Fetch Donate & Contacts pages
   const donateRes = await fetch('http://127.0.0.1:9995/donate');
   assert.strictEqual(donateRes.status, 200, 'Donate page must return 200 OK');
   const contactsRes = await fetch('http://127.0.0.1:9995/contacts');

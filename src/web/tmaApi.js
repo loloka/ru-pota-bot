@@ -145,6 +145,18 @@ async function refreshParksFromApi() {
   }
 }
 
+/**
+ * Return current stats on loaded POTA parks dictionary
+ */
+export function getPotaParksStats() {
+  return {
+    ruCount: parksByProgram.RU ? parksByProgram.RU.length : 0,
+    byCount: parksByProgram.BY ? parksByProgram.BY.length : 0,
+    kzCount: parksByProgram.KZ ? parksByProgram.KZ.length : 0,
+    totalCount: Array.isArray(cachedParks) ? cachedParks.length : 0
+  };
+}
+
 let cachedRaza = null;
 let lastRazaFetchTime = 0;
 
@@ -929,6 +941,25 @@ export function createTmaRouter(telegramClient) {
         const lat = s.latitude || null;
         const lon = s.longitude || null;
 
+        // Extract RDA district code from spot comments
+        const rda = extractRdaCode(s.comments || '') || null;
+
+        // Auto-associate with Russian Protected Areas (ООПТ) card
+        let ooptInfo = null;
+        if (ref && ref.startsWith('RU-')) {
+          try {
+            const ooptRow = db.prepare('SELECT title, sig_display, category, rf_subjects FROM oopt_registry WHERE pota_ref = ? LIMIT 1').get(ref);
+            if (ooptRow) {
+              ooptInfo = {
+                title: ooptRow.title,
+                sig: ooptRow.sig_display || 'ООПТ',
+                category: ooptRow.category || '',
+                region: ooptRow.rf_subjects || ''
+              };
+            }
+          } catch (e) {}
+        }
+
         return {
           id: s.spotId || `pota-${idx}`,
           spotId: s.spotId,
@@ -950,6 +981,8 @@ export function createTmaRouter(telegramClient) {
           band: calculatedBand,
           spotter: s.spotter || '',
           comment: s.comments || '',
+          rda,
+          oopt: ooptInfo,
           timeAgo: formatTimeAgo(s.spotTime),
           diffMinutes: getDiffMinutes(s.spotTime),
           timestamp: parseSpotTimestamp(s.spotTime),
@@ -984,6 +1017,22 @@ export function createTmaRouter(telegramClient) {
           }
         } catch (e) {}
 
+        const rda = extractRdaCode(s.comment || '') || null;
+        let ooptInfo = null;
+        if (s.reference && s.reference.startsWith('RU-')) {
+          try {
+            const ooptRow = db.prepare('SELECT title, sig_display, category, rf_subjects FROM oopt_registry WHERE pota_ref = ? LIMIT 1').get(s.reference);
+            if (ooptRow) {
+              ooptInfo = {
+                title: ooptRow.title,
+                sig: ooptRow.sig_display || 'ООПТ',
+                category: ooptRow.category || '',
+                region: ooptRow.rf_subjects || ''
+              };
+            }
+          } catch (e) {}
+        }
+
         return {
           id: `local-${s.id}`,
           spotId: null,
@@ -1005,6 +1054,8 @@ export function createTmaRouter(telegramClient) {
           band: calculatedBand,
           spotter: 'RU-POTA TMA',
           comment: s.comment || '',
+          rda,
+          oopt: ooptInfo,
           timeAgo: formatTimeAgo(s.created_at),
           diffMinutes: getDiffMinutes(s.created_at),
           timestamp: parseSpotTimestamp(s.created_at),
@@ -1038,6 +1089,9 @@ export function createTmaRouter(telegramClient) {
             s.callsign.toUpperCase().includes(search) ||
             s.park.toUpperCase().includes(search) ||
             (s.parkName && s.parkName.toUpperCase().includes(search)) ||
+            (s.comment && s.comment.toUpperCase().includes(search)) ||
+            (s.rda && s.rda.toUpperCase().includes(search)) ||
+            (s.oopt && s.oopt.title && s.oopt.title.toUpperCase().includes(search)) ||
             (s.countryName && s.countryName.toUpperCase().includes(search)) ||
             (s.countryNameEn && s.countryNameEn.toUpperCase().includes(search)) ||
             (s.regionName && s.regionName.toUpperCase().includes(search)) ||

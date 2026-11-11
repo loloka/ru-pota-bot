@@ -137,7 +137,24 @@ export function tmaUserMiddleware(req, res, next) {
     }
   }
 
-  // 3. Guest request without Telegram session or valid Web Token
+  // 3. Check Express Web Session (e.g. users logged in via /auth/telegram/callback or /auth/code-login)
+  if (!rawInitData && req.session && req.session.telegramUser) {
+    const sessUser = req.session.telegramUser;
+    req.telegramUser = sessUser;
+    try {
+      const dbUser = db.prepare(`
+        SELECT telegram_id, callsign, status, notifications_enabled, reject_reason, last_spot_data, last_spot_msg_id 
+        FROM users 
+        WHERE telegram_id = ?
+      `).get(sessUser.id || sessUser.telegram_id);
+      req.dbUser = dbUser || null;
+    } catch (e) {
+      req.dbUser = null;
+    }
+    return next();
+  }
+
+  // 4. Guest request without Telegram session, Web Token or Web Session
   if (!rawInitData) {
     req.telegramUser = null;
     req.dbUser = null;

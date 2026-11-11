@@ -1,6 +1,6 @@
 # RU-POTA Telegram Bot & Mini App 🌲📡
 
-[![Version](https://img.shields.io/badge/version-1.16.161-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.17.2-blue.svg)](package.json)
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![Telegraf](https://img.shields.io/badge/telegraf-4.x-orange.svg)](https://telegraf.js.org/)
@@ -19,12 +19,15 @@
 
 | Ресурс | Ссылка | Описание |
 |---|---|---|
-| 📖 **Памятка участника** | [pota.r9o.ru/guide](https://pota.r9o.ru/guide) / [PDF](https://pota.r9o.ru/guide.pdf) | Официальное руководство, правила ООПТ, быстрый старт |
+| 🌲 **Хаб-портал RU-POTA** | [rupota.ru](https://rupota.ru/) | Главный веб-хаб сообщества: навигация, споты, анонсы и авторизация |
+| 🗺️ **Интерактивная карта** | [rupota.ru/map](https://rupota.ru/map) | Карта ООПТ, районов RDA, границ заповедников и геолокация |
+| 📖 **Памятка участника** | [rupota.ru/guide](https://rupota.ru/guide) / [PDF](https://rupota.ru/guide.pdf) | Официальное руководство, правила ООПТ, быстрый старт |
 | 🤖 **Telegram-бот** | [@ru_pota_bot](https://t.me/ru_pota_bot) | Основной бот для отправки спотов, подписок и статистики |
 | 📱 **Telegram Mini App** | [t.me/ru_pota_bot/app](https://t.me/ru_pota_bot/app) | Мобильный хаб во весь экран: карта, кластер, поиск и споттинг в Telegram |
-| 🌐 **Веб-версия (Web)** | [pota.r9o.ru/app/](https://pota.r9o.ru/app/) | Открытый гостевой доступ через любой браузер на ПК и смартфоне |
+| 🌐 **Веб-версия (Web)** | [rupota.ru/app/](https://rupota.ru/app/) | Открытый гостевой доступ через любой браузер на ПК и смартфоне |
 | 📢 **Канал активности** | [@pota_activity](https://t.me/pota_activity) | Прямая трансляция спотов из кластера и анонсов активаций |
-| 💬 **Чат сообщества** | [Чат RU-POTA](https://t.me/pota_activity) | Открытая группа для общения (кнопка «Обсудить» в канале) |
+| 💬 **Чат сообщества** | [@POTA_RU](https://t.me/POTA_RU) | Открытая группа радиолюбителей для общения и взаимопомощи |
+| 💛 **Развитие и донаты** | [rupota.ru/donate](https://rupota.ru/donate) | Стена признания спонсоров и добровольная поддержка сервера |
 | 🌐 **Официальный POTA** | [pota.app](https://pota.app) / [next.pota.app](https://next.pota.app) | Международная дипломная программа |
 
 ---

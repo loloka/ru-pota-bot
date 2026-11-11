@@ -229,6 +229,7 @@ db.exec(`
     created_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_rda_broadcast_spots_call ON rda_broadcast_spots (callsign);
+  CREATE INDEX IF NOT EXISTS idx_oopt_registry_pota_ref ON oopt_registry (pota_ref);
 `);
 
 // Migration for existing tables

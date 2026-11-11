@@ -1,14 +1,18 @@
 import express from 'express';
 import compression from 'compression';
 import cookieSession from 'cookie-session';
+import crypto from 'crypto';
 import db from '../db/database.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createTmaRouter } from './tmaApi.js';
+import { createTmaRouter, getPotaParksStats } from './tmaApi.js';
 import { renderPublicMapHtml } from './publicMap.js';
 import { renderDonateHtml } from './donatePage.js';
 import { renderContactsHtml } from './contactsPage.js';
+import { renderHubHtml } from './hubPage.js';
+import { renderPlaceholderHtml } from './placeholderPage.js';
+import { renderMeHtml } from './mePage.js';
 import { NEW_REGIONS_BORDERS } from '../webapp/src/data/newRegionsBorders.js';
 import { NEW_RDA_DISTRICTS } from '../webapp/src/data/newRdaDistricts.js';
 import { WELCOME_PINNED_POST } from '../bot/texts/welcomePost.js';
@@ -237,7 +241,7 @@ export const startAdminServer = (telegramClient) => {
 
   app.get('/logout', (req, res) => {
     req.session = null;
-    res.redirect('/login');
+    res.redirect('/');
   });
 
   // API for logs (SSE or polling)
@@ -371,10 +375,280 @@ export const startAdminServer = (telegramClient) => {
     }
   });
 
-  // Public Interactive Map (Direct URLs for public visitors)
-  app.get(['/', '/map'], (req, res) => {
+  // Central RU-POTA Hub Portal (rupota.ru/)
+  app.get('/', (req, res) => {
+    // Backward compatibility: If map specific query parameters are provided, redirect cleanly to /map
+    const hasMapParams = Boolean(
+      req.query.ref || req.query.lat || req.query.lng || req.query.lon || req.query.zoom || req.query.oopt
+    );
+    if (hasMapParams) {
+      const qs = new URLSearchParams(req.query).toString();
+      return res.redirect(302, `/map${qs ? '?' + qs : ''}`);
+    }
+
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.send(renderPublicMapHtml({ isAuthed: Boolean(req.session && req.session.authed) }));
+
+    // Live cluster & registry statistics
+    let stats = {
+      potaParksCount: 8766,
+      ooptCount: 11348,
+      activeSpotsCount: 0,
+      regionsCount: 89
+    };
+    try {
+      const potaStats = typeof getPotaParksStats === 'function' ? getPotaParksStats() : null;
+      if (potaStats && potaStats.ruCount > 0) {
+        stats.potaParksCount = potaStats.ruCount;
+      } else {
+        const potaRow = db.prepare('SELECT count(*) as c FROM oopt_registry WHERE pota_ref IS NOT NULL').get();
+        if (potaRow && potaRow.c) stats.potaParksCount = potaRow.c;
+      }
+      const ooptRow = db.prepare('SELECT count(*) as c FROM oopt_registry').get();
+      const spotsRow = db.prepare("SELECT count(*) as c FROM spots WHERE created_at > datetime('now', '-2 hours')").get();
+      if (ooptRow && ooptRow.c) stats.ooptCount = ooptRow.c;
+      if (spotsRow && spotsRow.c) stats.activeSpotsCount = spotsRow.c;
+    } catch (e) {
+      // safe fallback
+    }
+
+    const user = req.session && req.session.telegramUser ? req.session.telegramUser : null;
+    const isAuthed = Boolean(user || (req.session && req.session.authed));
+    const isAdmin = Boolean(
+      req.session && (req.session.isAdmin || (user && String(user.id) === String(process.env.ADMIN_ID)) || req.session.authed)
+    );
+
+    res.send(renderHubHtml({ user, isAuthed, isAdmin, stats }));
+  });
+
+  // Dedicated Public Interactive Map Route
+  app.get('/map', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    const user = req.session && req.session.telegramUser ? req.session.telegramUser : null;
+    const isAuthed = Boolean(user || (req.session && req.session.authed));
+    const isAdmin = Boolean(
+      req.session && (req.session.isAdmin || (user && String(user.id) === String(process.env.ADMIN_ID)) || req.session.authed)
+    );
+    res.send(renderPublicMapHtml({ isAuthed, isAdmin, user }));
+  });
+
+  // 📻 Live Spots Section (/spots) -> redirect to full-featured Mini App Cluster tab!
+  app.get('/spots', (req, res) => {
+    return res.redirect(302, '/app/?tab=cluster');
+  });
+
+  // 📅 Activation Schedule Section (/schedule) - 40% WIP (Rule 2/3 placeholder)
+  app.get('/schedule', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    const user = req.session && req.session.telegramUser ? req.session.telegramUser : null;
+    const isAuthed = Boolean(user || (req.session && req.session.authed));
+    const isAdmin = Boolean(
+      req.session && (req.session.isAdmin || (user && String(user.id) === String(process.env.ADMIN_ID)) || req.session.authed)
+    );
+    res.send(renderPlaceholderHtml({
+      title: 'Анонсы полевых выездов',
+      icon: 'bi-calendar-event-fill',
+      badge: 'Этап 2',
+      percent: 40,
+      description: 'Календарь запланированных радиоэкспедиций и выездов операторов RU-POTA с возможностью заявить свой выезд.',
+      features: [
+        'Синхронизация с POTA Schedules и публикация из Telegram бота',
+        'Карта запланированных экспедиций на ближайшие выходные',
+        'Подписка на персональные алерты перед началом активации',
+        'Учёт погодных условий и состояния полевых дорог'
+      ],
+      user,
+      isAuthed,
+      isAdmin
+    }));
+  });
+
+  // 📋 Reference Parks Registry Section (/parks) - 55% WIP («Народная база»)
+  app.get('/parks', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    const user = req.session && req.session.telegramUser ? req.session.telegramUser : null;
+    const isAuthed = Boolean(user || (req.session && req.session.authed));
+    const isAdmin = Boolean(
+      req.session && (req.session.isAdmin || (user && String(user.id) === String(process.env.ADMIN_ID)) || req.session.authed)
+    );
+    res.send(renderPlaceholderHtml({
+      title: 'Список парков RU-POTA',
+      icon: 'bi-card-list',
+      badge: 'Этап 2',
+      percent: 55,
+      description: 'Полный каталог всех 8 766 парков дипломной программы в России с поиском, фильтрами по субъектам РФ, экспортом в CSV/KML и карточками «Народной базы».',
+      features: [
+        '«Народная база» отзывов: подъезд, дороги, сотовая связь, стоянка, фото',
+        'Фильтрация по статусам: активирован / ни разу не активирован (New One)',
+        'Поиск по номеру референции, названию ООПТ и району RDA',
+        'Экспорт списка для навигаторов (GPX, KML, CSV) и работа оффлайн'
+      ],
+      user,
+      isAuthed,
+      isAdmin
+    }));
+  });
+
+  // 💬 Community Chat Link (/chat)
+  app.get('/chat', (req, res) => {
+    res.redirect(302, 'https://t.me/POTA_RU');
+  });
+
+  // 👤 User Account & Telegram Login (/me) - В разработке
+  app.get('/me', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    const user = req.session && req.session.telegramUser ? req.session.telegramUser : null;
+    const isAuthed = Boolean(user || (req.session && req.session.authed));
+    const isAdmin = Boolean(
+      req.session && (req.session.isAdmin || (user && String(user.id) === String(process.env.ADMIN_ID)) || req.session.authed)
+    );
+    res.send(renderPlaceholderHtml({
+      title: 'Личный кабинет',
+      icon: 'bi-person-badge',
+      badge: 'В разработке',
+      percent: 45,
+      description: 'Личный кабинет оператора RU-POTA: привязка позывного, профиль радиолюбителя, статистика активаций и охоты за парками, управление персональными подписками.',
+      features: [
+        'Единый профиль участника программы RU-POTA',
+        'Интеграция с базой позывных QRZ.ru и сервисом POTA',
+        'Личная статистика полевых выходов и связей из парков',
+        'Управление персональными подписками на споты и уведомления'
+      ],
+      user,
+      isAuthed,
+      isAdmin
+    }));
+  });
+
+  // Telegram Login Widget Authentication Callback
+  app.get('/auth/telegram/callback', (req, res) => {
+    try {
+      const botToken = process.env.BOT_TOKEN;
+      const { hash, ...userData } = req.query;
+      if (!hash || !userData.auth_date) {
+        return res.redirect('/me?error=' + encodeURIComponent('Отсутствуют данные авторизации Telegram'));
+      }
+
+      // Check auth_date not older than 24 hours
+      const now = Math.floor(Date.now() / 1000);
+      if (now - Number(userData.auth_date) > 86400) {
+        return res.redirect('/me?error=' + encodeURIComponent('Срок действия сессии Telegram истёк'));
+      }
+
+      if (botToken) {
+        const dataCheckArr = [];
+        for (const key of Object.keys(userData).sort()) {
+          if (userData[key] !== undefined && userData[key] !== null) {
+            dataCheckArr.push(`${key}=${userData[key]}`);
+          }
+        }
+        const dataCheckString = dataCheckArr.join('\n');
+        const secretKey = crypto.createHash('sha256').update(botToken).digest();
+        const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+
+        if (calculatedHash !== hash) {
+          console.warn('[Telegram Web Login] ❌ Неверная HMAC-подпись от Telegram Login Widget');
+          return res.redirect('/me?error=' + encodeURIComponent('Ошибка проверки подписи Telegram'));
+        }
+      }
+
+      const tgId = Number(userData.id);
+      const firstName = userData.first_name || '';
+      const lastName = userData.last_name || '';
+      const username = userData.username || '';
+      const photoUrl = userData.photo_url || null;
+
+      let dbUser = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(tgId);
+      if (dbUser) {
+        db.prepare(`
+          UPDATE users 
+          SET first_name = COALESCE(?, first_name),
+              last_name = COALESCE(?, last_name),
+              username = COALESCE(?, username),
+              avatar_url = COALESCE(?, avatar_url)
+          WHERE telegram_id = ?
+        `).run(firstName, lastName, username, photoUrl, tgId);
+        dbUser = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(tgId);
+      } else {
+        db.prepare(`
+          INSERT INTO users (telegram_id, callsign, first_name, last_name, username, avatar_url, status)
+          VALUES (?, ?, ?, ?, ?, ?, 'guest')
+        `).run(tgId, username ? username.toUpperCase() : `USER_${tgId}`, firstName, lastName, username, photoUrl);
+        dbUser = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(tgId);
+      }
+
+      const isAdmin = String(tgId) === String(process.env.ADMIN_ID);
+      req.session.telegramUser = {
+        id: tgId,
+        telegram_id: tgId,
+        callsign: dbUser.callsign || '',
+        first_name: firstName,
+        last_name: lastName,
+        username: username,
+        avatar_url: photoUrl,
+        status: dbUser.status || 'guest',
+        isAdmin
+      };
+      if (isAdmin) {
+        req.session.isAdmin = true;
+        req.session.authed = true;
+      }
+
+      console.log(`\x1b[32m[Telegram Web Login]\x1b[0m 🌐 Успешный вход через Widget: ${dbUser.callsign || tgId} (TG: ${tgId}, admin: ${isAdmin})`);
+      res.redirect('/me?success=logged_in');
+    } catch (err) {
+      console.error('[Telegram Web Login] Ошибка обработки callback:', err);
+      res.redirect('/me?error=' + encodeURIComponent('Внутренняя ошибка сервера'));
+    }
+  });
+
+  // Fast 6-Digit Code Login from Bot (/auth/code-login)
+  app.post('/auth/code-login', (req, res) => {
+    try {
+      const code = (req.body?.code || '').trim();
+      if (!code) {
+        return res.redirect('/me?error=invalid_code');
+      }
+      const now = Date.now();
+      const session = db.prepare(`
+        SELECT * FROM telegram_login_sessions 
+        WHERE code = ? AND (status = 'confirmed' OR status = 'used') AND expires_at > ?
+        ORDER BY id DESC LIMIT 1
+      `).get(code, now);
+
+      if (!session || !session.telegram_id) {
+        return res.redirect('/me?error=invalid_code');
+      }
+
+      const dbUser = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(session.telegram_id);
+      if (!dbUser) {
+        return res.redirect('/me?error=invalid_code');
+      }
+
+      db.prepare(`UPDATE telegram_login_sessions SET status = 'used' WHERE id = ?`).run(session.id);
+      const isAdmin = String(dbUser.telegram_id) === String(process.env.ADMIN_ID);
+
+      req.session.telegramUser = {
+        id: dbUser.telegram_id,
+        telegram_id: dbUser.telegram_id,
+        callsign: dbUser.callsign || '',
+        first_name: dbUser.first_name || '',
+        last_name: dbUser.last_name || '',
+        username: dbUser.username || '',
+        avatar_url: dbUser.avatar_url || null,
+        status: dbUser.status || 'approved',
+        isAdmin
+      };
+      if (isAdmin) {
+        req.session.isAdmin = true;
+        req.session.authed = true;
+      }
+
+      console.log(`\x1b[32m[Telegram Code Login]\x1b[0m 🌐 Успешный вход по коду ${code}: ${dbUser.callsign} (TG: ${dbUser.telegram_id})`);
+      res.redirect('/me?success=logged_in');
+    } catch (err) {
+      console.error('[Telegram Code Login] Ошибка входа по коду:', err);
+      res.redirect('/me?error=' + encodeURIComponent('Внутренняя ошибка сервера'));
+    }
   });
 
   // Dedicated Support & Donate Page
@@ -386,7 +660,12 @@ export const startAdminServer = (telegramClient) => {
     } catch (e) {
       console.warn('[Web Donate] Error fetching approved donations:', e.message);
     }
-    res.send(renderDonateHtml({ isAuthed: Boolean(req.session && req.session.authed), approvedDonations }));
+    const user = req.session && req.session.telegramUser ? req.session.telegramUser : null;
+    const isAuthed = Boolean(user || (req.session && req.session.authed));
+    const isAdmin = Boolean(
+      req.session && (req.session.isAdmin || (user && String(user.id) === String(process.env.ADMIN_ID)) || req.session.authed)
+    );
+    res.send(renderDonateHtml({ isAuthed, isAdmin, user, approvedDonations }));
   });
 
   // Public submission endpoint for donations & messages to Wall of Appreciation
@@ -429,7 +708,12 @@ export const startAdminServer = (telegramClient) => {
   // Dedicated Contacts Page
   app.get('/contacts', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.send(renderContactsHtml({ isAuthed: Boolean(req.session && req.session.authed) }));
+    const user = req.session && req.session.telegramUser ? req.session.telegramUser : null;
+    const isAuthed = Boolean(user || (req.session && req.session.authed));
+    const isAdmin = Boolean(
+      req.session && (req.session.isAdmin || (user && String(user.id) === String(process.env.ADMIN_ID)) || req.session.authed)
+    );
+    res.send(renderContactsHtml({ isAuthed, isAdmin, user }));
   });
 
   // New RDA Overlay Layer Data Endpoint (Borders + Centroid Badges)

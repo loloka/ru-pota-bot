@@ -115,17 +115,17 @@ export async function checkSingleService(serviceDef) {
     } else if (serviceDef.type === 'telegram_api') {
       if (tgClient && typeof tgClient.getMe === 'function') {
         const mePromise = tgClient.getMe();
-        const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout (3.5s)')), 3500));
+        const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout (>6s)')), 6000));
         const me = await Promise.race([mePromise, timeoutPromise]);
         result.status = 'up';
         result.code = 200;
         result.latency = Date.now() - t0;
         result.details = `@${me.username || 'bot'} (ID: ${me.id})`;
       } else {
-        const res = await axios.get('https://api.telegram.org/', {
-          timeout: 3500,
+        const res = await apiClient.get('https://api.telegram.org/', {
+          timeout: 6000,
           headers: {
-            'User-Agent': 'RU-POTA-Bot/1.16.93 (Telegram Bot; Node.js)'
+            'User-Agent': 'RU-POTA-Bot/1.17.2 (Telegram Bot; Node.js)'
           }
         });
         result.status = res.status >= 200 && res.status < 500 ? 'up' : 'down';
@@ -134,7 +134,7 @@ export async function checkSingleService(serviceDef) {
         result.details = 'Шлюз api.telegram.org доступен';
       }
     } else if (serviceDef.type === 'pota_api') {
-      const res = await apiClient.get('/spot/activator', { timeout: 3500 });
+      const res = await apiClient.get('/spot/activator', { timeout: 6000 });
       result.status = res.status === 200 ? 'up' : 'down';
       result.code = res.status;
       result.latency = Date.now() - t0;
@@ -142,7 +142,7 @@ export async function checkSingleService(serviceDef) {
       result.details = `Активных спотов в кластере: ${spotsCount}`;
     } else {
       const res = await axios.get(serviceDef.checkUrl || serviceDef.url, {
-        timeout: 3500,
+        timeout: 5000,
         proxy: false,
         httpsAgent: new https.Agent({ family: 4, autoSelectFamily: false, keepAlive: false }),
         headers: {

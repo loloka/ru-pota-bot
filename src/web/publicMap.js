@@ -642,9 +642,27 @@ export function renderPublicMapHtml(options = {}) {
         maxZoom: 18
       }).addTo(map);
 
+      // Create dedicated boundaryPane below overlayPane (400) for vector boundaries
+      // pointer-events: none ensures boundaries never intercept clicks intended for markers
+      map.createPane('boundaryPane');
+      map.getPane('boundaryPane').style.zIndex = 350;
+      map.getPane('boundaryPane').style.pointerEvents = 'none';
+
       potaGroup = L.layerGroup().addTo(map);
       candidateGroup = L.layerGroup().addTo(map);
       newRdaGroup = L.layerGroup().addTo(map);
+
+      // Clean up boundary when popup is dismissed/closed (cross button or click outside)
+      map.on('popupclose', () => {
+        setTimeout(() => {
+          const openPopup = document.querySelector('.leaflet-popup');
+          if (!openPopup && currentBoundaryLayer) {
+            map.removeLayer(currentBoundaryLayer);
+            currentBoundaryLayer = null;
+            window._lastBoundaryBounds = null;
+          }
+        }, 60);
+      });
 
       // Initialize RDA WMS Overlay by default + New Regions RDA Layer
       toggleWms('rda', true);
@@ -1038,12 +1056,15 @@ export function renderPublicMapHtml(options = {}) {
 
         if (data && data.geometry) {
           currentBoundaryLayer = L.geoJSON(data.geometry, {
+            pane: 'boundaryPane',
+            interactive: false,
             style: {
               color: '#10b981',
               weight: 2.5,
               opacity: 0.9,
               fillColor: '#10b981',
-              fillOpacity: 0.25
+              fillOpacity: 0.25,
+              interactive: false
             }
           }).addTo(map);
 

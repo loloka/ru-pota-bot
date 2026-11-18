@@ -6515,6 +6515,10 @@ export const startAdminServer = (telegramClient) => {
 
             tile2Gis.addTo(adminOoptMap);
 
+            adminOoptMap.createPane('adminBoundaryPane');
+            adminOoptMap.getPane('adminBoundaryPane').style.zIndex = 350;
+            adminOoptMap.getPane('adminBoundaryPane').style.pointerEvents = 'none';
+
             mapMatchedGroup = L.layerGroup().addTo(adminOoptMap);
             mapUnmatchedGroup = L.layerGroup().addTo(adminOoptMap);
             mapQueuedGroup = L.layerGroup().addTo(adminOoptMap);
@@ -6572,12 +6576,15 @@ export const startAdminServer = (telegramClient) => {
 
                 if (data.hasBoundary && data.geometry) {
                   var polyLayer = L.geoJSON(data.geometry, {
+                    pane: 'adminBoundaryPane',
+                    interactive: false,
                     style: {
                       color: '#d63384',
                       weight: 2.5,
                       opacity: 0.9,
                       fillColor: '#e0245e',
-                      fillOpacity: 0.22
+                      fillOpacity: 0.22,
+                      interactive: false
                     }
                   });
                   mapBoundaryGroup.addLayer(polyLayer);

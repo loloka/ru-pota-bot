@@ -164,9 +164,9 @@ export async function checkSingleService(serviceDef) {
     result.code = err.response?.status || null;
 
     if (serviceDef.id === 'oopt_registry' && (err.code === 'ECONNABORTED' || err.message?.includes('timeout') || err.message?.includes('ECONNREFUSED'))) {
-      result.error = 'Блокировка дата-центров (Ростелеком): доступ с хостингов ограничен (работает только с домашних/мобильных провайдеров РФ). Локальная база ООПТ (11 342 объекта) в боте работает автономно.';
+      result.error = 'Блокировка дата-центров (Ростелеком): доступ с хостингов ограничен (работает только с домашних/мобильных провайдеров РФ). Локальная база ООПТ (11 354 объекта) и 100% векторных полигонов в боте работают автономно.';
     } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-      result.error = 'Таймаут соединения (>3.5 сек): сервер перегружен или не отвечает';
+      result.error = 'Таймаут соединения (>6 сек): сервер перегружен или не отвечает';
     } else if (err.code === 'ECONNREFUSED') {
       result.error = 'Отказ в соединении (ECONNREFUSED): порт закрыт или сервис выключен';
     } else if (err.code === 'ENOTFOUND') {
